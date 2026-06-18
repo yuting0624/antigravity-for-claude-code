@@ -15,9 +15,8 @@ you → Claude Code (conductor: requirements / architecture / verify / review)
          └── agy → Antigravity (Gemini): scaffold, tests, review, migrate, search
 ```
 
-> Grounded in Google's *"The New SDLC With Vibe Coding"* (May 2026): intelligent
-> model routing, the conductor→orchestrator model, and "generation is solved;
-> verification is the craft."
+> Built on widely-discussed agentic-coding ideas — intelligent model routing, the
+> conductor→orchestrator model, and "generation is solved; verification is the craft."
 
 ## What you can do
 
