@@ -5,8 +5,9 @@ into 要件定義 → 基本設計 → 詳細設計, each web-grounded), **deplo
 measure 3 arms to test whether the hybrid wins on cost **at this larger scale** (it lost
 on the small weather app — see `AB-RESULTS.md`).
 
-Commands verified against **google-adk 2.2.0** on this machine (`data-agent-bq`, SA
-`claude-code-sa`, ADC OK). Adversarially reviewed; the host-specific traps below are real.
+Commands verified against **google-adk 2.2.0** (run on a Vertex-enabled GCP project with
+ADC + a service account holding `roles/aiplatform.user`). Adversarially reviewed; the
+host-specific traps below are real.
 
 ---
 
@@ -24,9 +25,9 @@ uv pip install --python ~/expB/.venv312/bin/python --default-index https://pypi.
 
 **Verify deploy prereqs (don't discover these mid-demo):**
 ```bash
-gcloud services enable aiplatform.googleapis.com --project data-agent-bq
-gcloud storage buckets create gs://data-agent-bq-adk-staging --location=us-central1 || true  # optional; CLI deploy doesn't need a flag
-# SA needs Vertex AI permissions — confirm claude-code-sa has roles/aiplatform.user (+ storage.objectAdmin on the bucket)
+gcloud services enable aiplatform.googleapis.com --project YOUR_PROJECT
+gcloud storage buckets create gs://YOUR_PROJECT-adk-staging --location=us-central1 || true  # optional; CLI deploy doesn't need a flag
+# SA needs Vertex AI permissions — confirm your service account has roles/aiplatform.user (+ storage.objectAdmin on the bucket)
 ```
 
 > Traps (verified): Python must be **3.9–3.12** (3.14 unsupported). `adk deploy agent_engine`
@@ -44,8 +45,8 @@ gcloud storage buckets create gs://data-agent-bq-adk-staging --location=us-centr
 TASK: Build a production ADK multi-agent system and deploy it to Vertex AI Agent Engine
 (Gemini Enterprise Agent Platform), in the current directory.
 
-GCP: project=data-agent-bq, region=us-central1, ADC present, staging bucket
-gs://data-agent-bq-adk-staging. Use the venv at ~/expB/.venv312 (adk 2.2.0). Do NOT use
+GCP: project=YOUR_PROJECT, region=us-central1, ADC present, staging bucket
+gs://YOUR_PROJECT-adk-staging. Use the venv at ~/expB/.venv312 (adk 2.2.0). Do NOT use
 Python 3.14.
 
 ARCHITECTURE (the "Agent グラウンドデザイン"):
@@ -87,8 +88,8 @@ import vertexai
 from vertexai.preview.reasoning_engines import AdkApp
 from vertexai import agent_engines
 from sdlc_agent.agent import root_agent
-vertexai.init(project="data-agent-bq", location="us-central1",
-              staging_bucket="gs://data-agent-bq-adk-staging")
+vertexai.init(project="YOUR_PROJECT", location="us-central1",
+              staging_bucket="gs://YOUR_PROJECT-adk-staging")
 app = AdkApp(agent=root_agent, enable_tracing=True)
 remote = agent_engines.create(
     agent_engine=app, display_name="SDLC Expert Agent",
