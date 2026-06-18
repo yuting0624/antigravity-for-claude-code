@@ -1,0 +1,21 @@
+{
+  "name": "antigravity",
+  "version": "0.7.1",
+  "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
+  "author": {
+    "name": "linyuting"
+  },
+  "homepage": "https://antigravity.google/docs/cli-using",
+  "keywords": [
+    "antigravity",
+    "gemini",
+    "multi-agent",
+    "orchestration",
+    "delegation",
+    "sdlc",
+    "agentic-engineering",
+    "model-routing",
+    "vibe-coding",
+    "deep-research"
+  ]
+}
