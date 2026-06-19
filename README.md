@@ -89,18 +89,19 @@ bash tests/run-tests.sh   # no dependencies; stubs `agy` to check arg parsing, e
 
 ## Install
 
-**Local (quickest for trying / demo):**
-```bash
-git clone <this-repo> ~/antigravity-for-claude-code
-chmod +x ~/antigravity-for-claude-code/scripts/*.sh
+**From the marketplace (recommended)** — in Claude Code:
 ```
-Then add it as a local plugin in Claude Code (`/plugin`), or copy the skill in:
-```bash
-cp -r ~/antigravity-for-claude-code/skills/antigravity ~/.claude/skills/
+/plugin marketplace add yuting0624/antigravity-for-claude-code
+/plugin install antigravity@antigravity-for-claude-code
 ```
+Then run `/antigravity:setup` to confirm `agy` is installed + authenticated.
 
-**Shared (for the team / marketplace):** publish this repo and reference it from a
-`marketplace.json`; colleagues then run `/plugin install antigravity`.
+**For local development** (hacking on the plugin) — launch Claude Code pointed at a
+working copy (loads the live files; `$CLAUDE_PLUGIN_ROOT` resolves correctly):
+```bash
+git clone https://github.com/yuting0624/antigravity-for-claude-code ~/antigravity-for-claude-code
+claude --plugin-dir ~/antigravity-for-claude-code
+```
 
 ## Usage
 
