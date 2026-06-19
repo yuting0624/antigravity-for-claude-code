@@ -35,9 +35,6 @@ Routing deterministic bulk work to Gemini Flash (≪ Claude per token) is intell
 model routing. **But it is not a flat saving:** below a break-even task size the hybrid
 costs *more* (the orchestration/`cache_read` tax exceeds the cheap-token discount), and
 above it lean-context routing cuts frontier-model spend by a measured margin. There is
-**no flat 8×/46%** — quote the measured number and the break-even, not a headline ratio.
-See [`docs/AB-RESULTS.md`](docs/AB-RESULTS.md) for the data and the [`## Cost discipline`]
-rules in the skill for how to actually get the savings.
 
 ## What's inside
 
@@ -187,8 +184,7 @@ This plugin's cost claim is **regime-dependent and measured**, not a slide figur
   solo Claude @ high effort and ~64% cheaper than @ max**, at equal quality (same eval
   gate) — and the cheap Gemini work isn't even counted.
 
-See [`docs/AB-RESULTS.md`](docs/AB-RESULTS.md) for the full A/B (Tests 1 & 2). Quote the
-break-even and the measured % — never a flat "8×/46×".
+See [`docs/AB-RESULTS.md`](docs/AB-RESULTS.md) for the full A/B (Tests 1 & 2).
 
 ## Disclaimer
 
