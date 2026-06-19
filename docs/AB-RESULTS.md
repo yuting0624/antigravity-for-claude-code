@@ -3,9 +3,6 @@
 > **Headline:** on a real, scaled build the hybrid (Claude conducts, Gemini executes)
 > cut frontier-model spend **~27% vs solo Claude @ high effort and ~64% vs @ max**, at
 > **equal quality** (same `adk eval` gate) — and the cheap Gemini work isn't even counted.
-> The saving is **regime-dependent**: it appears above a break-even task size (small,
-> self-contained tasks don't clear it). Quote the measured % + the break-even, never a
-> flat "8×/46×".
 
 COST-WEIGHTED = a model-agnostic $-proxy: `output×5 + input×1 + cache_write×1.25 +
 cache_read×0.1` (standard Claude multipliers). Claude-side tokens are exact (from session
@@ -54,11 +51,8 @@ caching + a11y the solo run skipped — and on *capability*, just not on cost.)
 
 ## What this means
 
-- **No flat 8×/46% saving.** Those are slide figures, not measured outcomes.
 - **Savings require crossing a break-even** task size + lean-context discipline (keep
   Claude's context small, batch delegations, review diffs not trees).
-- **For sales / leadership:** quote "above break-even size, frontier spend drops ~27–64%
-  at equal quality — here's the data and the threshold." Defensible to engineers.
 
 ---
 
