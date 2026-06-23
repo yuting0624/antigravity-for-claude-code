@@ -8,6 +8,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 ok()   { printf '  ✓ %s\n' "$*"; }
 bad()  { printf '  ✗ %s\n' "$*"; FAIL=1; }
+warn() { printf '  ⚠ %s\n' "$*"; }   # advisory; does NOT fail the check
 info() { printf '    %s\n' "$*"; }
 FAIL=0
 
@@ -65,6 +66,17 @@ for h in check-agy.sh inject-policy.sh validate-delegate-bash.sh; do
     bad "hooks/$h not executable"; info "fix: chmod +x \"$ROOT/hooks/$h\""
   fi
 done
+
+# 4c. WSL: agy --add-dir over a Windows mount (/mnt/*) reads via a slow 9p bridge
+if grep -qi microsoft /proc/version 2>/dev/null || [ -n "${WSL_DISTRO_NAME:-}" ]; then
+  case "$PWD" in
+    /mnt/*)
+      warn "WSL + workspace on a Windows mount ($PWD)"
+      info "agy --add-dir reads this over a slow 9p bridge (the 'agy is slow' trap — calls can take 20s+)."
+      info "fix: move the repo into the WSL Linux filesystem (e.g. ~/projects) for ~10x faster I/O" ;;
+    *) ok "WSL detected; workspace is on the Linux filesystem" ;;
+  esac
+fi
 
 # 5. plugin version
 PJ="$ROOT/.claude-plugin/plugin.json"

@@ -3,6 +3,12 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.11.1
+- **WSL slow-mount guard**: `agy-delegate.sh` warns when `--add-dir` targets a Windows
+  mount (`/mnt/*`) under WSL — agy reads it over a slow 9p bridge, so even trivial calls
+  can take 20s+ — and `doctor` flags a workspace on `/mnt/*`. Fix: keep the repo on the
+  WSL Linux filesystem (`~`). Also documented in known-limits. (Reported via Reddit.)
+
 ## 0.11.0
 - **Auto-injected routing policy** (`hooks/`): a `SessionStart` hook injects the
   plugin's **cost-aware** routing policy as session context (delegate above the

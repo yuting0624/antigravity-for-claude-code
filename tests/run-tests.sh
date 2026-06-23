@@ -111,6 +111,13 @@ check "--print-command shows the tier model" 0 "$rc" "Pro" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
 
+# WSL slow-mount note: fires only under WSL AND when --add-dir is on /mnt/*
+out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /mnt/c/proj --print-command "hi" 2>&1); rc=$?
+check "WSL + /mnt --dir -> slow-mount note" 0 "$rc" "9p bridge" "$out"
+out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /home/u/proj --print-command "hi" 2>&1); rc=$?
+if printf '%s' "$out" | grep -q "9p bridge"; then echo "FAIL: slow-mount note fired for a Linux-FS --dir"; FAIL=$((FAIL+1));
+else echo "ok: no slow-mount note for a Linux-FS --dir"; PASS=$((PASS+1)); fi
+
 echo "== hooks =="
 HOOKS="$ROOT/hooks"
 

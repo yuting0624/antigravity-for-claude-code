@@ -145,6 +145,7 @@ Delegation doesn't save money by itself — these do (also in the skill):
 **Known limits (agy v1.0.x)**
 - `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
 - No `--output-format json` (plain text); `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`).
+- **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
 
 </details>
 

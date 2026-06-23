@@ -84,6 +84,9 @@ model_for_tier() {
   esac
 }
 
+# True when running under WSL (Windows Subsystem for Linux).
+on_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; }
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -t|--tier)      need "$#" "$1"; TIER="$2"; TIER_EXPLICIT=1; shift 2 ;;
@@ -121,6 +124,18 @@ if [ "$TIER_EXPLICIT" -eq 0 ]; then
 fi
 
 [ -n "$MODEL" ] || MODEL="$(model_for_tier "$TIER")"
+
+# WSL gotcha: agy reads --add-dir over the /mnt/* Windows mount via a slow 9p bridge,
+# so even trivial calls can take 20s+. Warn (don't fail); the fix is to move the repo
+# into the WSL Linux filesystem (~).
+if on_wsl; then
+  for d in "${ADD_DIRS[@]:-}"; do
+    [ -n "$d" ] || continue
+    case "$d" in
+      /mnt/*) echo "agy-delegate: note: --add-dir '$d' is on a Windows mount under WSL; agy reads it over a slow 9p bridge (calls can take 20s+). Move the repo into the Linux FS (~) for ~10x faster I/O." >&2; break ;;
+    esac
+  done
+fi
 
 # --- assemble agy args ---
 # NOTE: in agy, -p/--print/--prompt TAKES THE PROMPT AS ITS VALUE, so it must come
