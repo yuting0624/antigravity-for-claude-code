@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
@@ -36,6 +36,30 @@
       "title": "Inject routing policy at session start",
       "description": "When on, a SessionStart hook injects this plugin's cost-aware routing policy (delegate above the break-even, keep Claude's context lean, always verify agy's output) as session context, so the discipline applies without invoking the skill. Set to off/false/0/no to suppress.",
       "default": "on"
+    },
+    "default_model": {
+      "type": "string",
+      "title": "Default executor model (exact agy model name)",
+      "description": "agy is multi-model. Set an exact model name from `agy models` (e.g. a Claude/GPT model on plans that expose them) to use as the executor when --tier/--model are not passed. Leave empty to use the tier mapping (Gemini by default). The 'Claude conducts, a different/cheaper model executes' design gives the cost + cross-model-verification benefit, so a non-Claude executor is recommended.",
+      "default": ""
+    },
+    "tier_flash": {
+      "type": "string",
+      "title": "Model for the 'flash' tier",
+      "description": "Override the exact agy model the 'flash' tier maps to (default: Gemini 3.5 Flash (High)). Use a name from `agy models`.",
+      "default": ""
+    },
+    "tier_flash_lo": {
+      "type": "string",
+      "title": "Model for the 'flash-lo' tier",
+      "description": "Override the exact agy model the 'flash-lo' tier maps to (default: Gemini 3.5 Flash (Low)). Use a name from `agy models`.",
+      "default": ""
+    },
+    "tier_pro": {
+      "type": "string",
+      "title": "Model for the 'pro' tier",
+      "description": "Override the exact agy model the 'pro' tier maps to (default: Gemini 3.1 Pro (High)). Use a name from `agy models`.",
+      "default": ""
     }
   }
 }

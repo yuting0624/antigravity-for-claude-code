@@ -27,13 +27,17 @@ if command -v agy >/dev/null 2>&1; then
   MODELS="$(agy models 2>/dev/null || true)"
   if [ -n "$MODELS" ]; then
     ok "agy authenticated — $(printf '%s' "$MODELS" | grep -c . ) models available"
-    # 2b. tier->model names still exist (agy renames models across versions)
-    for m in "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; do
+    # 2b. configured tier->model names exist (respecting userConfig remaps). agy is
+    # multi-model and plan-dependent, so a miss is a WARNING, not a failure.
+    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.5 Flash (High)}"
+    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.5 Flash (Low)}"
+    PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}"
+    for m in "$FLASH" "$FLASH_LO" "$PRO"; do
       if printf '%s' "$MODELS" | grep -qF "$m"; then
         ok "tier model present: $m"
       else
-        bad "tier model NOT in 'agy models': $m"
-        info "fix: update model_for_tier() in agy-delegate.sh to a current name (run \`agy models\`)"
+        warn "tier model not in 'agy models': $m"
+        info "agy is multi-model/plan-dependent — remap tiers via CLAUDE_PLUGIN_OPTION_TIER_* (or set _DEFAULT_MODEL), or pass --model <name from \`agy models\`)"
       fi
     done
   else

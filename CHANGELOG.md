@@ -3,6 +3,17 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.12.0
+- **Configurable executor model** (agy is multi-model): tiers still default to Gemini, but
+  each is remappable to any `agy models` entry (Claude/GPT on plans that expose them) via
+  `tier_flash` / `tier_flash_lo` / `tier_pro`, plus a `default_model` (exact name) option —
+  all `CLAUDE_PLUGIN_OPTION_*`. Precedence: `--model` > explicit `--tier` > `default_model`
+  > default tier. Keeps Gemini as the recommended default (a different/cheaper executor is
+  what yields the cost + cross-model-verification benefit).
+- **doctor**: tier-model check now respects the remaps and **warns instead of failing** when a
+  model isn't in `agy models` (agy is plan-dependent), with a remap hint.
+- (Reported via Reddit: agy supports Claude/GPT on non-Vertex plans.)
+
 ## 0.11.1
 - **WSL slow-mount guard**: `agy-delegate.sh` warns when `--add-dir` targets a Windows
   mount (`/mnt/*`) under WSL — agy reads it over a slow 9p bridge, so even trivial calls

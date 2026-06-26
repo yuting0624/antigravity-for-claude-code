@@ -27,7 +27,7 @@
 #       --sandbox                    Run agent with terminal sandbox restrictions
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
-#   -m, --model <exact name>         Override tier with an exact agy model name
+#   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
 #       --print-command              Print the resolved agy command and exit (dry run)
 #   -h, --help                       Show this help
 #
@@ -37,8 +37,10 @@
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
 #   AGY_SIGNAL {"status":"QUOTA_EXHAUSTED","reason":"...","model":"...","retry":"--continue"}
 #
-# Defaults can be set via plugin userConfig (env): CLAUDE_PLUGIN_OPTION_DEFAULT_TIER,
-# CLAUDE_PLUGIN_OPTION_TIMEOUT. Explicit --tier/--timeout always override.
+# agy is multi-model: tiers map to Gemini by default, but you can point delegation at any
+# model `agy models` lists (e.g. Claude/GPT on plans that expose them). Defaults via plugin
+# userConfig (env): CLAUDE_PLUGIN_OPTION_DEFAULT_TIER, _TIMEOUT, _DEFAULT_MODEL (exact name),
+# and per-tier remaps _TIER_FLASH / _TIER_FLASH_LO / _TIER_PRO. Explicit --model/--tier win.
 #
 set -euo pipefail
 
@@ -75,11 +77,13 @@ signal() {
 usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
 
 # --- map a tier to an exact agy model name (see `agy models`) ---
+# Defaults are Gemini, but each tier is remappable to any agy model via userConfig
+# (env), so non-Vertex/non-Gemini plans (Claude/GPT) work without code changes.
 model_for_tier() {
   case "$1" in
-    flash)    echo "Gemini 3.5 Flash (High)" ;;
-    flash-lo) echo "Gemini 3.5 Flash (Low)" ;;
-    pro)      echo "Gemini 3.1 Pro (High)" ;;
+    flash)    echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.5 Flash (High)}" ;;
+    flash-lo) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.5 Flash (Low)}" ;;
+    pro)      echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}" ;;
     *) die "unknown tier '$1' (use flash | flash-lo | pro)" ;;
   esac
 }
@@ -114,16 +118,23 @@ if [ "$PRINT_CMD" -ne 1 ] && ! command -v agy >/dev/null 2>&1; then
   exit 13
 fi
 
-# A bad default tier from userConfig (env) shouldn't make every call die — fall back to
-# flash with a warning. An explicit --tier typo still errors (treated as user intent).
-if [ "$TIER_EXPLICIT" -eq 0 ]; then
-  case "$TIER" in
-    flash|flash-lo|pro) ;;
-    *) echo "agy-delegate: invalid default tier '$TIER' (set CLAUDE_PLUGIN_OPTION_DEFAULT_TIER to flash|flash-lo|pro); using flash" >&2; TIER="flash" ;;
-  esac
+# Resolve the executor model. Precedence:
+#   --model > explicit --tier > userConfig default_model > default tier (mapped).
+# agy is multi-model; tiers default to Gemini but are remappable (see model_for_tier).
+if [ -z "$MODEL" ]; then
+  if [ "$TIER_EXPLICIT" -eq 1 ]; then
+    MODEL="$(model_for_tier "$TIER")"
+  elif [ -n "${CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL:-}" ]; then
+    MODEL="$CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL"
+  else
+    # default tier from userConfig; a bad value shouldn't make every call die.
+    case "$TIER" in
+      flash|flash-lo|pro) ;;
+      *) echo "agy-delegate: invalid default tier '$TIER' (set CLAUDE_PLUGIN_OPTION_DEFAULT_TIER to flash|flash-lo|pro); using flash" >&2; TIER="flash" ;;
+    esac
+    MODEL="$(model_for_tier "$TIER")"
+  fi
 fi
-
-[ -n "$MODEL" ] || MODEL="$(model_for_tier "$TIER")"
 
 # WSL gotcha: agy reads --add-dir over the /mnt/* Windows mount via a slow 9p bridge,
 # so even trivial calls can take 20s+. Warn (don't fail); the fix is to move the repo

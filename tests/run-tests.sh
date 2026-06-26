@@ -86,6 +86,16 @@ check "userConfig default_tier=pro -> Pro model" 0 "$rc" "Gemini 3.1 Pro (High)"
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
 check "explicit --tier overrides userConfig" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
 
+# multi-model: default_model + per-tier remap (agy supports Claude/GPT on some plans)
+out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "userConfig default_model -> used as-is" 0 "$rc" "Claude Sonnet 4.5" "$out"
+out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
+check "explicit --tier beats default_model" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" -m "GPT-X" "hi" 2>/dev/null); rc=$?
+check "explicit --model beats default_model" 0 "$rc" "GPT-X" "$out"
+out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_TIER_FLASH="Claude Sonnet 4.5" "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
+check "tier_flash remap -> flash uses remapped model" 0 "$rc" "Claude Sonnet 4.5" "$out"
+
 # default + userConfig timeout, with explicit flag winning
 out=$(STUB_MODE=args "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "default timeout -> --print-timeout 5m" 0 "$rc" "--print-timeout 5m" "$out"

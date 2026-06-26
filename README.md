@@ -118,6 +118,12 @@ ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh
 | `flash-lo` | Gemini 3.5 Flash (Low) | cheapest, trivial tasks |
 | `pro` | Gemini 3.1 Pro (High) | harder reasoning / cross-checks |
 
+**agy is multi-model.** Tiers default to Gemini, but you can use any model `agy models` lists
+(Claude / GPT on plans that expose them): pass `--model "<exact name>"`, or set it persistently
+via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_lo` / `tier_pro`
+(env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
+conductor — that's what gives both the cost saving and the cross-model verification.
+
 </details>
 
 <details>
