@@ -3,6 +3,23 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.13.0
+- **Windows headless hang fixed / diagnosed** ([#6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)):
+  on native Windows without a console (ConPTY), headless `agy -p` / `agy models` could
+  hard-hang with a 0-byte log when stdio is redirected.
+  - **`agy-delegate.sh`**: wraps agy in a wall-clock guard (GNU `timeout`/`gtimeout`,
+    with `--kill-after`) sized from `--timeout` + head-room, so a hang now returns a
+    structured **TIMEOUT (exit 12)** + `AGY_SIGNAL` instead of blocking forever. Warns on
+    native Windows when no `timeout` binary is available.
+  - **`doctor.sh`**: `agy models` is now time-bounded and **distinguishes a hang from an
+    auth failure** — it no longer tells you to re-authenticate when agy is actually hung
+    headless (the misdiagnosis that cost the reporter hours). A genuine empty result still
+    reports "not authenticated".
+  - **README**: added a Platform-support note (macOS/Linux/WSL supported; native Windows
+    not recommended for headless delegation) and a known-limit entry.
+  - **tests**: added a hang → wall-clock-guard → exit 12 case (skips cleanly without `timeout`).
+  - Thanks to **@rokushikii** for the detailed, reproducible report.
+
 ## 0.12.0
 - **Configurable executor model** (agy is multi-model): tiers still default to Gemini, but
   each is remappable to any `agy models` entry (Claude/GPT on plans that expose them) via

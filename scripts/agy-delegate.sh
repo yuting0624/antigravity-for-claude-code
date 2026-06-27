@@ -91,6 +91,46 @@ model_for_tier() {
 # True when running under WSL (Windows Subsystem for Linux).
 on_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; }
 
+# True on native Windows (Git Bash / MSYS / Cygwin) — NOT WSL. On native Windows
+# without a real console (ConPTY), agy v1.0.x can hard-hang with a 0-byte log when
+# its stdio is redirected (the issue this wall-clock guard defends against).
+on_windows_native() {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
+  case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
+  return 1
+}
+
+# Resolve a usable `timeout`-style command: GNU coreutils `timeout`, or macOS
+# Homebrew's `gtimeout`. Echoes the command name, or empty if neither exists.
+# We wrap agy in this so a headless/no-TTY hang (agy never returns) is bounded by
+# wall-clock — agy's own --print-timeout can't fire if it hangs before starting.
+timeout_cmd() {
+  if command -v timeout  >/dev/null 2>&1; then echo timeout;  return 0; fi
+  if command -v gtimeout >/dev/null 2>&1; then echo gtimeout; return 0; fi
+  return 1
+}
+
+# Convert an agy-style duration (e.g. 5m, 300s, 1h, or a bare number=seconds) to
+# whole seconds, then add a small head-room margin so the OUTER wall-clock guard
+# fires only AFTER agy's own --print-timeout has had its chance. Echoes seconds.
+outer_timeout_secs() {
+  local d="${1:-5m}" n unit secs
+  n="${d%[smh]}"; unit="${d#"$n"}"
+  case "$n" in (*[!0-9]*|'') n=300; unit=s ;; esac
+  case "$unit" in
+    h) secs=$(( n * 3600 )) ;;
+    m) secs=$(( n * 60 )) ;;
+    s|'') secs=$(( n )) ;;
+    *) secs=$(( n )) ;;
+  esac
+  # head-room so the OUTER guard never pre-empts agy's own --print-timeout on a
+  # legitimately-slow-but-progressing call: +25% of the budget, min 10s, capped 120s.
+  local pad=$(( secs / 4 ))
+  [ "$pad" -lt 10 ]  && pad=10
+  [ "$pad" -gt 120 ] && pad=120
+  echo $(( secs + pad ))
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -t|--tier)      need "$#" "$1"; TIER="$2"; TIER_EXPLICIT=1; shift 2 ;;
@@ -169,10 +209,43 @@ fi
 # fixed /tmp path when multiple delegations run concurrently). Cleaned up on exit.
 ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
 trap 'rm -f "$ERR"' EXIT
+
+# Wall-clock guard: on a non-TTY caller (the whole point of this wrapper), agy can
+# hard-hang before its own --print-timeout engages (notably native Windows without
+# a ConPTY — see issue #6). Wrap in GNU `timeout`/`gtimeout` when available so we
+# always return instead of hanging forever. `timeout` exits 124 on kill -> map to
+# our TIMEOUT (12) and emit the structured signal, so orchestrators react cleanly.
+TO_CMD="$(timeout_cmd || true)"
+TO_SECS="$(outer_timeout_secs "$TIMEOUT")"
+
+if on_windows_native && [ -z "$TO_CMD" ]; then
+  # Native Windows + no timeout binary = highest hang risk with no safety net.
+  echo "agy-delegate: WARNING — native Windows without GNU \`timeout\`/\`gtimeout\` on PATH." >&2
+  echo "agy-delegate:   headless \`agy -p\` can hang here with a 0-byte log (no ConPTY). If this" >&2
+  echo "agy-delegate:   call never returns, run from WSL/macOS/Linux, or install coreutils \`timeout\`." >&2
+fi
+
 set +e
-OUT="$(agy "${ARGS[@]}" -p "$PROMPT" < /dev/null 2>"$ERR")"
-RC=$?
+if [ -n "$TO_CMD" ]; then
+  # --kill-after sends SIGKILL if agy ignores the initial SIGTERM (defensive).
+  OUT="$("$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" -p "$PROMPT" < /dev/null 2>"$ERR")"
+  RC=$?
+else
+  OUT="$(agy "${ARGS[@]}" -p "$PROMPT" < /dev/null 2>"$ERR")"
+  RC=$?
+fi
 set -e
+
+# `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had to
+# kill agy. Treat that as our structured TIMEOUT (exit 12), not a generic failure.
+if [ -n "$TO_CMD" ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; }; then
+  echo "agy-delegate: agy hit the wall-clock guard (${TO_SECS}s) and was terminated — likely a headless/no-TTY hang." >&2
+  if on_windows_native; then
+    echo "agy-delegate:   native Windows: agy needs a console (ConPTY); run delegation from WSL/macOS/Linux." >&2
+  fi
+  signal TIMEOUT "agy wall-clock guard fired after ${TO_SECS}s (headless/no-TTY hang?)"
+  exit 12
+fi
 
 if [ $RC -ne 0 ]; then
   echo "agy-delegate: agy exited $RC" >&2

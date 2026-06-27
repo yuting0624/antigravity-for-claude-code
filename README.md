@@ -72,6 +72,8 @@ In Claude Code:
 
 **Prerequisites:** the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`) installed & authenticated (`agy models` lists Gemini models), and Claude Code. For the same-bill cost benefit, run Claude Code on Vertex too.
 
+**Platform support:** macOS, Linux, and **WSL** are the supported targets for headless delegation. **Native Windows (Git Bash/MSYS) is not recommended** — `agy -p` can hang with a 0-byte log when run without a real console (ConPTY); see [issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6). The wrapper now bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`, returning a clean TIMEOUT instead of hanging), and `doctor` distinguishes a hang from an auth failure — but for reliable headless use, run from **WSL/macOS/Linux**.
+
 ## 🧩 Slash commands
 
 <img src="docs/command-menu.png" alt="The /antigravity commands in Claude Code's slash-command menu" width="640">
@@ -151,6 +153,7 @@ Delegation doesn't save money by itself — these do (also in the skill):
 **Known limits (agy v1.0.x)**
 - `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
 - No `--output-format json` (plain text); `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`).
+- **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
 - **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
 
 </details>
