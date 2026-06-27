@@ -78,8 +78,6 @@ In Claude Code:
 
 <img src="docs/image.png" alt="The /antigravity slash commands in a Claude Code terminal session" width="720">
 
-<img src="docs/command-menu.png" alt="Close-up of the /antigravity commands in Claude Code's slash-command menu" width="640">
-
 *The plugin's commands show up natively in Claude Code's `/` menu.*
 
 | command | what it does |
