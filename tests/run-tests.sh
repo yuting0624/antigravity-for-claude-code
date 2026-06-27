@@ -79,6 +79,17 @@ check "agy auth -> exit 11 + signal" 11 "$rc" "AUTH_REQUIRED" "$out"
 out=$(STUB_MODE=timeout "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
 
+# wall-clock guard: a HANGING agy (sleeps far past the timeout) must be killed and
+# mapped to TIMEOUT (exit 12), not hang the wrapper forever (issue #6). Requires a
+# real `timeout`/`gtimeout`; skip cleanly if neither is on PATH.
+if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
+  # outer guard for --timeout 1s = 1 + min-pad(10) = 11s; sleep well past it.
+  out=$(STUB_MODE=text STUB_SLEEP=20 "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
+  check "hanging agy -> wall-clock guard kills it -> exit 12" 12 "$rc" "TIMEOUT" "$out"
+else
+  echo "ok: (skipped) hang-guard test — no timeout/gtimeout on PATH"; PASS=$((PASS+1))
+fi
+
 # userConfig default tier via env; explicit --tier still wins
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "userConfig default_tier=pro -> Pro model" 0 "$rc" "Gemini 3.1 Pro (High)" "$out"
