@@ -3,7 +3,7 @@
 # 🛰️ Antigravity for Claude Code
 
 **Run the Antigravity CLI (Gemini) as a collaborating sub-agent, right inside Claude Code.**
-![Antigravity for Claude Code](docs/image.png)
+![Antigravity for Claude Code — Claude directs, Gemini executes](docs/hero.png)
 Claude conducts the judgement; Gemini does the heavy lifting — intelligent model routing across the SDLC.
 
 [![CI](https://github.com/yuting0624/antigravity-for-claude-code/actions/workflows/ci.yml/badge.svg)](https://github.com/yuting0624/antigravity-for-claude-code/actions/workflows/ci.yml)
@@ -76,7 +76,9 @@ In Claude Code:
 
 ## 🧩 Slash commands
 
-<img src="docs/command-menu.png" alt="The /antigravity commands in Claude Code's slash-command menu" width="640">
+<img src="docs/image.png" alt="The /antigravity slash commands in a Claude Code terminal session" width="720">
+
+<img src="docs/command-menu.png" alt="Close-up of the /antigravity commands in Claude Code's slash-command menu" width="640">
 
 *The plugin's commands show up natively in Claude Code's `/` menu.*
 
