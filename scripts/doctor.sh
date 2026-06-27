@@ -42,7 +42,9 @@ echo "Antigravity for Claude Code — doctor"
 
 # 1. agy on PATH
 if command -v agy >/dev/null 2>&1; then
-  ok "agy found: $(command -v agy)  ($(agy --version 2>/dev/null | head -1))"
+  # version probe is guarded too: `command -v` already proved agy exists, and on a
+  # headless hang even `agy --version` shouldn't be able to freeze doctor (issue #6).
+  ok "agy found: $(command -v agy)  ($(agy_guard 10 --version 2>/dev/null | head -1))"
 else
   bad "agy NOT on PATH"
   info "fix: install the Antigravity CLI, then ensure its bin dir is on PATH"

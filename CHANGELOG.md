@@ -11,7 +11,7 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
     with `--kill-after`) sized from `--timeout` + head-room, so a hang now returns a
     structured **TIMEOUT (exit 12)** + `AGY_SIGNAL` instead of blocking forever. Warns on
     native Windows when no `timeout` binary is available.
-  - **`doctor.sh`**: `agy models` is now time-bounded and **distinguishes a hang from an
+  - **`doctor.sh`**: `agy models` (and the version probe) are now time-bounded and **distinguish a hang from an
     auth failure** — it no longer tells you to re-authenticate when agy is actually hung
     headless (the misdiagnosis that cost the reporter hours). A genuine empty result still
     reports "not authenticated".
