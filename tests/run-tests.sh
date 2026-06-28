@@ -40,6 +40,7 @@ if [ "$1" = "logging" ] && [ "$2" = "read" ]; then
     perm)  echo "ERROR: (gcloud.logging.read) PERMISSION_DENIED: caller does not have permission logging.logEntries.list" >&2; exit 1 ;;
     empty) echo "[]" ;;
     fail)  echo "ERROR: (gcloud.logging.read) something broke" >&2; exit 1 ;;
+    big)   pad=$(printf 'A%.0s' {1..3000}); printf '[{"m":"%s"}]TAIL_SENTINEL\n' "$pad" ;;  # large payload w/ tail marker
     *)     echo '[{"severity":"ERROR","textPayload":"KeyError: DATABASE_URL","timestamp":"2026-06-28T00:00:00Z"}]' ;;
   esac
   exit 0
@@ -196,6 +197,12 @@ check "default resource type is cloud_run_revision" 0 "$rc" "cloud_run_revision"
 out=$("$CLOUD" --service svc --resource-type k8s_container --print-command 2>/dev/null); rc=$?
 check "--resource-type is parameterized" 0 "$rc" "k8s_container" "$out"
 
+# lean handoff: gcloud --format PROJECTS only the digest fields (not raw json),
+# dropping resource/insertId noise — shrinks the payload sent to agy.
+out=$("$CLOUD" --service svc --print-command 2>/dev/null); rc=$?
+check "gcloud --format projects digest fields (httpRequest.status)" 0 "$rc" "httpRequest.status" "$out"
+check "gcloud --format keeps the message body (jsonPayload)" 0 "$rc" "jsonPayload" "$out"
+
 # (c) read-only: no --apply path in the engine, and a real run writes no files to CWD.
 out=$("$CLOUD" --service svc --apply 2>/dev/null); rc=$?
 check "engine rejects --apply (write path is command-level, not here)" 1 "$rc"
@@ -222,6 +229,19 @@ check "no matching logs -> exit 0 + clear note" 0 "$rc" "no logs" "$out"
 # agy digest step failure surfaces as exit 5 (logs fetched fine, agy errored)
 out=$(GCLOUD_MODE=logs STUB_MODE=fail "$CLOUD" --service svc 2>/dev/null); rc=$?
 check "agy digest failure -> exit 5" 5 "$rc"
+
+# byte cap (backstop): a big payload + a tiny CLOUD_DEBUG_MAX_BYTES -> the tail is
+# clipped before agy and the instruction tells agy the digest may be partial.
+out=$(GCLOUD_MODE=big STUB_MODE=args CLOUD_DEBUG_MAX_BYTES=50 "$CLOUD" --service svc 2>/dev/null); rc=$?
+check "byte cap -> truncation NOTE handed to agy" 0 "$rc" "truncated to 50 bytes" "$out"
+if printf '%s' "$out" | grep -q "TAIL_SENTINEL"; then
+  echo "FAIL: payload tail not clipped (sentinel survived the cap)"; FAIL=$((FAIL+1));
+else echo "ok: payload clipped to the cap (tail dropped before agy)"; PASS=$((PASS+1)); fi
+# under the cap -> no truncation NOTE (no false positives on a normal payload)
+out=$(GCLOUD_MODE=logs STUB_MODE=args "$CLOUD" --service svc 2>/dev/null); rc=$?
+if printf '%s' "$out" | grep -q "truncated"; then
+  echo "FAIL: truncation NOTE on a payload under the cap"; FAIL=$((FAIL+1));
+else echo "ok: no truncation NOTE when under the cap"; PASS=$((PASS+1)); fi
 
 echo "== hooks =="
 HOOKS="$ROOT/hooks"

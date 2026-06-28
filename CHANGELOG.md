@@ -19,6 +19,12 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
     digest reuses `agy-delegate.sh` — no new delegation logic.
   - **Safety:** uses the existing `gcloud` ADC (never asks for tokens); a missing
     `roles/logging.viewer` exits with the exact `add-iam-policy-binding` fix.
+  - **Lean by construction:** the log payload handed to agy is field-projected
+    (`--format='json(timestamp,severity,textPayload,jsonPayload,httpRequest.status)'`,
+    dropping resource/insertId noise ~5-10x) and byte-capped before the handoff
+    (`CLOUD_DEBUG_MAX_BYTES`, default 200000; the tail is clipped and agy is told
+    the digest may be partial) — so the "cheap / lean handoff" claim holds even on
+    noisy services where `--limit` alone bounds entry *count* but not byte volume.
   - `doctor` checks the new script/shim; `tests/` stub `gcloud` + `agy` and cover the
     fetch→digest, default `--since`, read-only (no writes / no `--apply` in the engine), and
     permission-denied paths.

@@ -11,7 +11,8 @@ to agy (Gemini)** so your context stays lean. You ingest only agy's digest, neve
 Flags: $ARGUMENTS
 
 Defaults: `--since 1h`, `--limit 200`, **read-only** (diagnosis only). `--apply` is the only
-thing that writes anything, and only ever onto a branch for human review.
+thing that writes anything, and only ever onto a branch for human review. For a chatty service,
+narrowing `--since` tightens the digest (and cost) further.
 
 Do this:
 

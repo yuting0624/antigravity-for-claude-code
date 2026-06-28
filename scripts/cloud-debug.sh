@@ -33,6 +33,10 @@
 #       --print-command          Print the resolved gcloud + agy commands and exit (dry run)
 #   -h, --help                   Show this help
 #
+# Environment:
+#   CLOUD_DEBUG_MAX_BYTES        Cap (bytes) on the log payload handed to agy (default: 200000).
+#                                Past this the tail is clipped and agy is told the digest may be partial.
+#
 # Exit codes:
 #   0  ok (digest printed, or query succeeded with no matching logs)
 #   1  usage error
@@ -117,8 +121,15 @@ FILTER="$FILTER AND resource.labels.service_name=\"$SERVICE\""
 [ -n "$REGION" ] && FILTER="$FILTER AND resource.labels.location=\"$REGION\""
 FILTER="$FILTER AND severity>=$SEVERITY"
 
+# Project only the fields the digest needs — timestamp/severity (TIME DISTRIBUTION,
+# ERROR CLUSTERS) and the message body, which lands in textPayload or jsonPayload
+# depending on the service, plus the HTTP status. This drops resource/labels/
+# insertId noise that a plain `--format=json` would return, shrinking the payload
+# handed to agy ~5-10x (the "lean handoff" this command is supposed to deliver).
 GCLOUD_ARGS=(logging read "$FILTER"
-  "--freshness=$SINCE" "--limit=$LIMIT" --format=json "--project=$PROJECT")
+  "--freshness=$SINCE" "--limit=$LIMIT"
+  --format='json(timestamp,severity,textPayload,jsonPayload,httpRequest.status)'
+  "--project=$PROJECT")
 
 # --- the digest instruction handed to agy alongside the logs ---
 # Worded as a summary task (no implement/scaffold/migrate words) so agy-delegate's
@@ -191,6 +202,18 @@ case "${LOGS//[[:space:]]/}" in
     echo "cloud-debug: widen the window (--since), lower --severity, or confirm the service name/region."
     exit 0 ;;
 esac
+
+# Soft byte cap as a backstop: field projection already trims a lot, but a very
+# chatty service can still produce a large array. A digest tolerates a partial
+# window, so clip the tail and tell agy it was truncated. Overridable via env.
+# (${#LOGS} counts characters, not bytes — close enough; exactness isn't needed.)
+MAX_BYTES="${CLOUD_DEBUG_MAX_BYTES:-200000}"
+if [ "${#LOGS}" -gt "$MAX_BYTES" ]; then
+  LOGS="${LOGS:0:$MAX_BYTES}"
+  INSTRUCTION="$INSTRUCTION
+
+NOTE: log payload truncated to ${MAX_BYTES} bytes; the digest may be partial."
+fi
 
 # --- delegate the digest to agy (cheap tier; lean output back to Claude) ---
 set +e
