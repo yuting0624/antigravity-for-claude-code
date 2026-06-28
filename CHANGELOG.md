@@ -3,6 +3,25 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.14.0
+- **`bin/` entrypoints — fixes `$CLAUDE_PLUGIN_ROOT` failures on marketplace installs**
+  ([#11](https://github.com/yuting0624/antigravity-for-claude-code/issues/11)):
+  `$CLAUDE_PLUGIN_ROOT` is only substituted in structured config (hooks/MCP/LSP) and is
+  **not** exported to model-run Bash — so commands/skills that ran
+  `"$CLAUDE_PLUGIN_ROOT/scripts/…"` expanded to an empty path and failed. Scripts are now
+  invoked by **bare name via `bin/` shims** (Claude Code adds a plugin's `bin/` to the
+  Bash-tool PATH): `agy-delegate` / `agy-job` / `agy-cost-compare` / `agy-doctor`. Commands,
+  the skill, and the delegate subagent were updated; the PreToolUse gate accepts the bin
+  names; `doctor` checks the shims. (`scripts/` is unchanged — the shims forward to it.)
+- **Write-delegation guidance + guard**
+  ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)): without
+  `--yolo`, headless agy only *describes* edits and returns a confident success **while
+  writing no files**. The `delegate` command now makes `--yolo` explicit for write tasks
+  (on a branch), notes the harness may prompt for / block `--dangerously-skip-permissions`,
+  and flags the ~2-min sync Bash limit (→ background job). `agy-delegate.sh` now warns when a
+  write-looking prompt lacks `--yolo`. (The verification gate already caught the no-write.)
+- Thanks to **@erszcz** (#10) and **@Masterisk-F** (#11) for the reports.
+
 ## 0.13.0
 - **Windows headless hang fixed / diagnosed** ([#6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)):
   on native Windows without a console (ConPTY), headless `agy -p` / `agy models` could

@@ -188,6 +188,18 @@ if on_wsl; then
   done
 fi
 
+# Heads-up: a likely write task without --yolo. Without --yolo, headless agy only
+# DESCRIBES edits and returns success without writing any files (issue #10). Best-effort
+# heuristic; warn only. --print-command (dry run) is exempt.
+if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
+  shopt -s nocasematch
+  case "$PROMPT" in
+    *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
+      echo "agy-delegate: note: this looks like a write task but --yolo is not set — without it agy only DESCRIBES edits and writes nothing (still returns success). Add --yolo (and run on a branch) to actually write files." >&2 ;;
+  esac
+  shopt -u nocasematch
+fi
+
 # --- assemble agy args ---
 # NOTE: in agy, -p/--print/--prompt TAKES THE PROMPT AS ITS VALUE, so it must come
 # last with the prompt attached. Other flags go before it.

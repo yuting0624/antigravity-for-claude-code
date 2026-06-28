@@ -5,6 +5,6 @@ argument-hint: "<job-id>"
 
 Cancel a running background agy job.
 
-Run: `"$CLAUDE_PLUGIN_ROOT/scripts/agy-job.sh" cancel $ARGUMENTS`
+Run: `agy-job cancel $ARGUMENTS`
 
 Confirm to the user whether it was cancelled or had already finished.

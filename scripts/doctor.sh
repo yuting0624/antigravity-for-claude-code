@@ -120,6 +120,14 @@ for h in check-agy.sh inject-policy.sh validate-delegate-bash.sh; do
   fi
 done
 
+# 4b2. bin/ entrypoints executable (added to the Bash-tool PATH; commands/skills call
+#      these bare names — $CLAUDE_PLUGIN_ROOT is not exported to model-run Bash, issue #11)
+for b in agy-delegate agy-job agy-cost-compare agy-doctor; do
+  if [ -x "$ROOT/bin/$b" ]; then ok "bin/$b executable"; else
+    bad "bin/$b not executable"; info "fix: chmod +x \"$ROOT/bin/$b\""
+  fi
+done
+
 # 4c. WSL: agy --add-dir over a Windows mount (/mnt/*) reads via a slow 9p bridge
 if grep -qi microsoft /proc/version 2>/dev/null || [ -n "${WSL_DISTRO_NAME:-}" ]; then
   case "$PWD" in

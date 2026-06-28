@@ -12,7 +12,7 @@ Do this:
 1. Capture the diff: `git diff` (or the range/paths in the scope above; default to
    uncommitted + last commit if unspecified).
 2. Delegate the review to agy (pro tier) — pipe the diff in on stdin:
-   `git diff | "$CLAUDE_PLUGIN_ROOT/scripts/agy-delegate.sh" --tier pro -`
+   `git diff | agy-delegate --tier pro -`
    with an instruction to find correctness/security/performance bugs, be skeptical, and
    list each as `file:line — issue`. If `--adversarial` is set, also have it challenge the
    design decisions and tradeoffs, not just line bugs.

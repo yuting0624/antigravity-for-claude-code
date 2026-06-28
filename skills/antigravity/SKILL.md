@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.12.0
+version: 0.14.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -58,7 +58,7 @@ the cross-model verification value (Claude executing Claude loses both).
 ## How to call it
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/agy-delegate.sh" [options] "the task prompt"
+agy-delegate [options] "the task prompt"
 ```
 Options: `--tier flash|flash-lo|pro` · `--dir <path>` (workspace, repeatable) ·
 `--timeout 10m` · `--yolo` (auto-approve tools — needed for any tool use in headless
@@ -75,11 +75,11 @@ wrapper; it returns a digest for you to verify). Either way, *you* still own ver
 
 **Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout · `13`
 agy-missing (besides `2` failed / `3` empty) and prints a `AGY_SIGNAL {...}` line on
-stderr; `agy-job.sh status`/`result` surface it, so you can react (e.g. retry quota with
+stderr; `agy-job status`/`result` surface it, so you can react (e.g. retry quota with
 `--continue`) instead of scraping prose.
 
 **If Claude itself is running headless (`claude -p`, one-shot):** run delegations
-**synchronously** — let `agy-delegate.sh` BLOCK and return before you continue. Do NOT
+**synchronously** — let `agy-delegate` BLOCK and return before you continue. Do NOT
 background a delegation expecting a later turn / "harness re-invocation": there is none in
 `-p` mode, so you'd exit before the work finishes. (Backgrounding is only valid in an
 interactive session that will be re-invoked.)
@@ -127,6 +127,10 @@ If wrong: retry on `--tier pro`, sharpen the spec, or do that piece yourself.
 
 Read-only work (search, review, analysis) is low-risk. **When agy writes files or runs
 commands** (`--yolo` grants write + terminal):
+- **Write tasks MUST pass `--yolo`.** Without it, agy only *describes* the edits and returns a
+  confident "done" **without writing anything** (issue #10). Claude Code may also prompt for or
+  block `--dangerously-skip-permissions` — approve it or pre-allow `Bash(agy-delegate*)`. Always
+  verify the files actually changed (the gate catches the silent no-write).
 - Run it on a **dedicated git branch or worktree** so changes are isolated.
 - Add `--sandbox` for execution containment.
 - **Claude reviews the diff before merging** — never auto-merge agy's writes.
@@ -176,12 +180,12 @@ Claude's context lean and the round-trips few. Apply these as hard rules:
 Honest framing for any cost claim: there is **no flat 8×/46%**. Below the break-even the
 hybrid costs more; above it, lean-context routing cuts frontier-model spend by a
 *measured* margin. Quote the measured number and the break-even, never a headline ratio.
-Use `agy-cost-compare.sh` for the per-token gap (estimate; set real Vertex rates first).
+Use `agy-cost-compare` for the per-token gap (estimate; set real Vertex rates first).
 
 ## SDLC recipes
 
 ```bash
-ROOT="$CLAUDE_PLUGIN_ROOT/scripts/agy-delegate.sh"
+ROOT=agy-delegate
 
 # Scaffold from a spec (Claude wrote the spec/architecture)
 "$ROOT" --tier pro --yolo --sandbox --dir ./app \
@@ -249,7 +253,7 @@ unverified.**
 Iteration is Claude's job: `--print` does one agentic pass per call (no auto re-query
 when evidence is thin), so Claude must re-dispatch follow-up agy calls to close gaps.
 Token economics: bulky searched/fetched text is paid in cheap Gemini tokens and
-distilled to bullets+URLs before reaching Claude — use `agy-cost-compare.sh` to show it.
+distilled to bullets+URLs before reaching Claude — use `agy-cost-compare` to show it.
 
 ## What Antigravity brings that Claude lacks natively
 
@@ -268,7 +272,7 @@ Routing deterministic, high-volume work to Gemini Flash (≪ Claude per token) i
 **intelligent model routing**: higher CapEx (this harness) for lower OpEx (cheap model
 does the bulk). Use the cost demo as observability:
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/agy-cost-compare.sh" --tier flash "the task prompt"
+agy-cost-compare --tier flash "the task prompt"
 ```
 Estimates only (chars/4; agy exposes no token API in print mode). Set real Vertex rates
 via `CLAUDE_IN_PER_M`, `CLAUDE_OUT_PER_M`, `GEMINI_IN_PER_M`, `GEMINI_OUT_PER_M`.

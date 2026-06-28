@@ -132,6 +132,16 @@ check "--print-command shows the tier model" 0 "$rc" "Pro" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
 
+# write-task without --yolo -> warn (agy would only describe, not write) (issue #10)
+out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc=$?
+check "write prompt w/o --yolo -> warns" 0 "$rc" "DESCRIBES" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=$?
+if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
+else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
+if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
+else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
+
 # WSL slow-mount note: fires only under WSL AND when --add-dir is on /mnt/*
 out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /mnt/c/proj --print-command "hi" 2>&1); rc=$?
 check "WSL + /mnt --dir -> slow-mount note" 0 "$rc" "9p bridge" "$out"
@@ -181,6 +191,11 @@ printf '%s' '{"tool_input":{"command":"agy-job.sh start --tier pro \"b\""}}' | "
 check "gate allows the job wrapper -> exit 0" 0 "$rc"
 printf '%s' '{"tool_input":{"command":"rm -rf /tmp/x ; cat > f.txt"}}' | "$GATE" >/dev/null 2>&1; rc=$?
 check "gate blocks arbitrary bash -> exit 2" 2 "$rc"
+# gate also accepts the bin-name entrypoints (no .sh) the subagent now calls (issue #11)
+printf '%s' '{"tool_input":{"command":"agy-delegate --tier flash \"x\""}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate allows bin name agy-delegate -> exit 0" 0 "$rc"
+printf '%s' '{"tool_input":{"command":"agy-job status abc"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate allows bin name agy-job -> exit 0" 0 "$rc"
 
 AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")
@@ -189,6 +204,19 @@ else echo "FAIL: delegate agent tools line unexpected: '$tl'"; FAIL=$((FAIL+1));
 if grep -q "PreToolUse" "$AGENT" && grep -q "validate-delegate-bash.sh" "$AGENT"; then
   echo "ok: delegate agent wires the PreToolUse Bash gate"; PASS=$((PASS+1));
 else echo "FAIL: delegate agent missing PreToolUse gate"; FAIL=$((FAIL+1)); fi
+
+echo "== bin/ entrypoints (issue #11: \$CLAUDE_PLUGIN_ROOT not on model-run Bash) =="
+BIN="$ROOT/bin"
+for b in agy-delegate agy-job agy-cost-compare agy-doctor; do
+  if [ -x "$BIN/$b" ]; then echo "ok: bin/$b executable"; PASS=$((PASS+1));
+  else echo "FAIL: bin/$b missing or not executable"; FAIL=$((FAIL+1)); fi
+done
+# the shim must forward to scripts/ without needing $CLAUDE_PLUGIN_ROOT in the env
+out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/agy-delegate" --tier pro --print-command "hi" 2>/dev/null); rc=$?
+check "bin/agy-delegate forwards to the wrapper (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "--print-timeout" "$out"
+out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/agy-doctor" 2>/dev/null | head -1); rc=$?
+case "$out" in *doctor*) echo "ok: bin/agy-doctor forwards to doctor.sh"; PASS=$((PASS+1));;
+  *) echo "FAIL: bin/agy-doctor did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"
@@ -287,6 +315,19 @@ if m: need(os.path.isfile(p(m.group(1))), "agent gate references missing file: "
 
 for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delegate-bash.sh"):
     need(os.access(p(s), os.X_OK), "not executable: " + s)
+
+# bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported
+# to model-run Bash, so commands/skill must call these bare names on the PATH)
+for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor"):
+    need(os.access(p("bin", b), os.X_OK), "bin entrypoint missing/not executable: bin/" + b)
+
+# regression guard: commands & skill must NOT invoke $CLAUDE_PLUGIN_ROOT/scripts/* — that
+# path expands empty on marketplace installs (issue #11). They must use the bin names.
+for f in glob.glob(p("commands", "*.md")) + [p("skills", "antigravity", "SKILL.md")]:
+    if os.path.isfile(f):
+        t = open(f).read()
+        need("CLAUDE_PLUGIN_ROOT}/scripts/" not in t and "CLAUDE_PLUGIN_ROOT/scripts/" not in t,
+             "invokes $CLAUDE_PLUGIN_ROOT/scripts (empty on model Bash, issue #11): " + os.path.basename(f))
 
 if errs:
     print("CONTRACT FAIL:")

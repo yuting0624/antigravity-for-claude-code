@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# bin/ entrypoint on the Bash-tool PATH (Claude Code adds a plugin's bin/ to PATH).
+# $CLAUDE_PLUGIN_ROOT is NOT exported to model-run Bash (issue #11), so commands and
+# skills invoke this bare name; it forwards to the implementation in ../scripts/agy-cost-compare.sh.
+exec "$(cd "$(dirname "$0")/.." && pwd)/scripts/agy-cost-compare.sh" "$@"

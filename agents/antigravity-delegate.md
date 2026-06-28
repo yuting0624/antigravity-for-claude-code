@@ -52,12 +52,12 @@ claim success** — verification is the caller's (Claude's) job.
 ## Core rule — everything goes through the wrapper
 
 You have **no `Write` and no `Edit`**, and a `PreToolUse` gate **blocks every Bash
-command except the delegation wrapper** (`agy-delegate.sh` / `agy-job.sh`). So all
+command except the delegation wrapper** (`agy-delegate` / `agy-job`). So all
 file creation/editing and bulky work must be performed by agy, not by you — you
 cannot write files even via the shell. Never reconstruct file contents in your reply.
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/agy-delegate.sh" [options] "<task>"
+agy-delegate [options] "<task>"
 ```
 
 Options: `--tier flash|flash-lo|pro` · `--dir <repo-root>` (so agy reads

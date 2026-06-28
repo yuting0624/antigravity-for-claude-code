@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
