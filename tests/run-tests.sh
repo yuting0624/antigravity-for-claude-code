@@ -40,7 +40,8 @@ if [ "$1" = "logging" ] && [ "$2" = "read" ]; then
     perm)  echo "ERROR: (gcloud.logging.read) PERMISSION_DENIED: caller does not have permission logging.logEntries.list" >&2; exit 1 ;;
     empty) echo "[]" ;;
     fail)  echo "ERROR: (gcloud.logging.read) something broke" >&2; exit 1 ;;
-    big)   pad=$(printf 'A%.0s' {1..3000}); printf '[{"m":"%s"}]TAIL_SENTINEL\n' "$pad" ;;  # large payload w/ tail marker
+    big)   pad=$(printf 'A%.0s' {1..3000}); printf '[{"m":"%s"}]TAIL_SENTINEL\n' "$pad" ;;  # large ASCII payload w/ tail marker
+    bigjp) pad=$(printf 'あ%.0s' {1..3000}); printf '[{"m":"%s"}]TAIL_SENTINEL\n' "$pad" ;;  # large multibyte (3-byte/char) payload
     *)     echo '[{"severity":"ERROR","textPayload":"KeyError: DATABASE_URL","timestamp":"2026-06-28T00:00:00Z"}]' ;;
   esac
   exit 0
@@ -231,17 +232,24 @@ out=$(GCLOUD_MODE=logs STUB_MODE=fail "$CLOUD" --service svc 2>/dev/null); rc=$?
 check "agy digest failure -> exit 5" 5 "$rc"
 
 # byte cap (backstop): a big payload + a tiny CLOUD_DEBUG_MAX_BYTES -> the tail is
-# clipped before agy and the instruction tells agy the digest may be partial.
+# clipped before agy and the instruction tells agy what happened.
 out=$(GCLOUD_MODE=big STUB_MODE=args CLOUD_DEBUG_MAX_BYTES=50 "$CLOUD" --service svc 2>/dev/null); rc=$?
-check "byte cap -> truncation NOTE handed to agy" 0 "$rc" "truncated to 50 bytes" "$out"
+check "byte cap -> clip NOTE handed to agy" 0 "$rc" "clipped to 50 bytes" "$out"
+check "byte cap NOTE warns the JSON is now invalid" 0 "$rc" "no longer valid JSON" "$out"
 if printf '%s' "$out" | grep -q "TAIL_SENTINEL"; then
   echo "FAIL: payload tail not clipped (sentinel survived the cap)"; FAIL=$((FAIL+1));
 else echo "ok: payload clipped to the cap (tail dropped before agy)"; PASS=$((PASS+1)); fi
-# under the cap -> no truncation NOTE (no false positives on a normal payload)
+# the cap is BYTE-based, so a multibyte (3-byte/char) payload is clipped too
+out=$(GCLOUD_MODE=bigjp STUB_MODE=args CLOUD_DEBUG_MAX_BYTES=50 "$CLOUD" --service svc 2>/dev/null); rc=$?
+check "byte cap clips a multibyte payload too" 0 "$rc" "clipped to 50 bytes" "$out"
+if printf '%s' "$out" | grep -q "TAIL_SENTINEL"; then
+  echo "FAIL: multibyte payload tail not clipped (cap counting chars, not bytes?)"; FAIL=$((FAIL+1));
+else echo "ok: multibyte payload clipped (byte-accurate cap)"; PASS=$((PASS+1)); fi
+# under the cap -> no clip NOTE (no false positives on a normal payload)
 out=$(GCLOUD_MODE=logs STUB_MODE=args "$CLOUD" --service svc 2>/dev/null); rc=$?
-if printf '%s' "$out" | grep -q "truncated"; then
-  echo "FAIL: truncation NOTE on a payload under the cap"; FAIL=$((FAIL+1));
-else echo "ok: no truncation NOTE when under the cap"; PASS=$((PASS+1)); fi
+if printf '%s' "$out" | grep -q "clipped to"; then
+  echo "FAIL: clip NOTE on a payload under the cap"; FAIL=$((FAIL+1));
+else echo "ok: no clip NOTE when under the cap"; PASS=$((PASS+1)); fi
 
 echo "== hooks =="
 HOOKS="$ROOT/hooks"

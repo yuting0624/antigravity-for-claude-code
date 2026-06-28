@@ -126,6 +126,10 @@ FILTER="$FILTER AND severity>=$SEVERITY"
 # depending on the service, plus the HTTP status. This drops resource/labels/
 # insertId noise that a plain `--format=json` would return, shrinking the payload
 # handed to agy ~5-10x (the "lean handoff" this command is supposed to deliver).
+# We keep the whole jsonPayload (so structured message/stack_trace are included).
+# Known limit: Cloud Run can split a multi-line stack trace into separate
+# textPayload entries; they're all fetched but as adjacent array elements, so a
+# trace can land out of the window under a tight --limit (left as a future seam).
 GCLOUD_ARGS=(logging read "$FILTER"
   "--freshness=$SINCE" "--limit=$LIMIT"
   --format='json(timestamp,severity,textPayload,jsonPayload,httpRequest.status)'
@@ -205,14 +209,18 @@ esac
 
 # Soft byte cap as a backstop: field projection already trims a lot, but a very
 # chatty service can still produce a large array. A digest tolerates a partial
-# window, so clip the tail and tell agy it was truncated. Overridable via env.
-# (${#LOGS} counts characters, not bytes — close enough; exactness isn't needed.)
+# window, so clip the tail and tell agy what we did. Overridable via env.
+# Measure/clip under LC_ALL=C in a subshell so ${#..} and the substring are
+# BYTE-based regardless of the caller's locale — otherwise the cap would count
+# Unicode chars, undershooting by up to ~3x on multibyte (e.g. Japanese) logs.
+# (Subshell assignment, not a pipe, so it's safe under `set -euo pipefail`.)
 MAX_BYTES="${CLOUD_DEBUG_MAX_BYTES:-200000}"
-if [ "${#LOGS}" -gt "$MAX_BYTES" ]; then
-  LOGS="${LOGS:0:$MAX_BYTES}"
+if [ "$(LC_ALL=C; printf '%s' "${#LOGS}")" -gt "$MAX_BYTES" ]; then
+  LOGS="$(LC_ALL=C; printf '%s' "${LOGS:0:$MAX_BYTES}")"
+  # Clipping mid-array leaves invalid JSON; agy reads it leniently, but say so.
   INSTRUCTION="$INSTRUCTION
 
-NOTE: log payload truncated to ${MAX_BYTES} bytes; the digest may be partial."
+NOTE: the JSON array below was clipped to ${MAX_BYTES} bytes and is no longer valid JSON — parse it leniently; the digest may be partial."
 fi
 
 # --- delegate the digest to agy (cheap tier; lean output back to Claude) ---
