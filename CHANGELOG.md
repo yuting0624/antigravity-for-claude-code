@@ -19,6 +19,10 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
     digest reuses `agy-delegate.sh` — no new delegation logic.
   - **Safety:** uses the existing `gcloud` ADC (never asks for tokens); a missing
     `roles/logging.viewer` exits with the exact `add-iam-policy-binding` fix.
+  - **`--apply` dirty-tree guard + project visibility:** before branching, `--apply` checks
+    `git status --short` and stops if the tree is dirty (so a user's uncommitted changes can't
+    leak into the fix's diff/commit); and `--project` is now a surfaced flag, with the command
+    confirming the resolved project when it isn't passed (avoids reading the wrong GCP project).
   - **Lean by construction:** the log payload handed to agy is field-projected
     (`--format='json(timestamp,severity,textPayload,jsonPayload,httpRequest.status)'`,
     dropping resource/insertId noise ~5-10x) and byte-capped before the handoff
