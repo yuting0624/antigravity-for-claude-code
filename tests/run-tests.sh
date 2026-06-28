@@ -30,7 +30,33 @@ case "${STUB_MODE:-text}" in
 esac
 STUB
 chmod +x "$TMP/bin/agy"
+
+# --- stub `gcloud` on PATH; logging-read behavior controlled by $GCLOUD_MODE ----
+cat > "$TMP/bin/gcloud" <<'STUB'
+#!/usr/bin/env bash
+if [ "$1" = "config" ]; then echo "stub-project"; exit 0; fi   # config get-value project
+if [ "$1" = "logging" ] && [ "$2" = "read" ]; then
+  case "${GCLOUD_MODE:-logs}" in
+    perm)  echo "ERROR: (gcloud.logging.read) PERMISSION_DENIED: caller does not have permission logging.logEntries.list" >&2; exit 1 ;;
+    empty) echo "[]" ;;
+    fail)  echo "ERROR: (gcloud.logging.read) something broke" >&2; exit 1 ;;
+    *)     echo '[{"severity":"ERROR","textPayload":"KeyError: DATABASE_URL","timestamp":"2026-06-28T00:00:00Z"}]' ;;
+  esac
+  exit 0
+fi
+echo "gcloud-stub: unhandled args: $*" >&2; exit 99
+STUB
+chmod +x "$TMP/bin/gcloud"
+
 export PATH="$TMP/bin:$PATH"
+
+# A minimal PATH dir with common utils but deliberately NO gcloud/agy, so
+# "missing on PATH" tests stay deterministic on runners that ship gcloud in
+# /usr/bin (GitHub-hosted ubuntu does — so PATH=/usr/bin:/bin would still find it).
+mkdir -p "$TMP/min"
+for u in bash sh env dirname basename pwd sed cat mktemp grep tr cut find wc head tail sort uniq sleep python3 rm chmod; do
+  s="$(command -v "$u" 2>/dev/null)" && ln -sf "$s" "$TMP/min/$u"
+done
 
 check() { # desc  expected_rc  actual_rc  [substr]  [actual_out]
   local desc="$1" erc="$2" arc="$3" sub="${4:-}" out="${5:-}"
@@ -149,6 +175,54 @@ out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /home/u/proj --print-command "hi"
 if printf '%s' "$out" | grep -q "9p bridge"; then echo "FAIL: slow-mount note fired for a Linux-FS --dir"; FAIL=$((FAIL+1));
 else echo "ok: no slow-mount note for a Linux-FS --dir"; PASS=$((PASS+1)); fi
 
+echo "== cloud-debug.sh (Cloud Run log digest engine) =="
+CLOUD="$ROOT/scripts/cloud-debug.sh"
+
+# (a) logs fetched -> handed to agy -> digest printed (exit 0). agy stub -> STUB_OK.
+out=$(GCLOUD_MODE=logs "$CLOUD" --service svc 2>/dev/null); rc=$?
+check "logs -> agy digest -> exit 0" 0 "$rc" "STUB_OK" "$out"
+
+# (b) --since defaults to 1h; an explicit --since wins. (dry run; no calls made)
+out=$("$CLOUD" --service svc --print-command 2>/dev/null); rc=$?
+check "default --since -> --freshness=1h" 0 "$rc" "--freshness=1h" "$out"
+out=$("$CLOUD" --service svc --since 3h --print-command 2>/dev/null); rc=$?
+check "explicit --since overrides default" 0 "$rc" "--freshness=3h" "$out"
+
+# the resolved gcloud verb is READ-only (logging read), and the resource type is
+# parameterized (default cloud_run_revision; overridable for a future gke/functions cmd)
+check "engine uses read-only 'logging read'" 0 "$rc" "logging read" "$out"
+out=$("$CLOUD" --service svc --print-command 2>/dev/null); rc=$?
+check "default resource type is cloud_run_revision" 0 "$rc" "cloud_run_revision" "$out"
+out=$("$CLOUD" --service svc --resource-type k8s_container --print-command 2>/dev/null); rc=$?
+check "--resource-type is parameterized" 0 "$rc" "k8s_container" "$out"
+
+# (c) read-only: no --apply path in the engine, and a real run writes no files to CWD.
+out=$("$CLOUD" --service svc --apply 2>/dev/null); rc=$?
+check "engine rejects --apply (write path is command-level, not here)" 1 "$rc"
+WORK="$TMP/cdwork"; mkdir -p "$WORK"
+( cd "$WORK" && GCLOUD_MODE=logs "$CLOUD" --service svc >/dev/null 2>&1 )
+nf=$(find "$WORK" -type f | wc -l)
+if [ "$nf" -eq 0 ]; then echo "ok: a diagnosis run writes no files to the project"; PASS=$((PASS+1));
+else echo "FAIL: cloud-debug wrote $nf file(s) to CWD on a read-only run"; FAIL=$((FAIL+1)); fi
+
+# (d) missing roles/logging.viewer -> exit 3 with actionable guidance
+out=$(GCLOUD_MODE=perm "$CLOUD" --service svc 2>&1); rc=$?
+check "permission denied -> exit 3 + logging.viewer guidance" 3 "$rc" "logging.viewer" "$out"
+
+# misc: required --service, generic gcloud failure, gcloud missing, no logs
+out=$("$CLOUD" 2>/dev/null); rc=$?
+check "missing --service -> exit 1" 1 "$rc"
+out=$(GCLOUD_MODE=fail "$CLOUD" --service svc 2>/dev/null); rc=$?
+check "generic gcloud failure -> exit 2" 2 "$rc"
+out=$(PATH="$TMP/min" "$CLOUD" --service svc 2>&1); rc=$?
+check "gcloud missing on PATH -> exit 4" 4 "$rc" "gcloud" "$out"
+out=$(GCLOUD_MODE=empty "$CLOUD" --service svc 2>/dev/null); rc=$?
+check "no matching logs -> exit 0 + clear note" 0 "$rc" "no logs" "$out"
+
+# agy digest step failure surfaces as exit 5 (logs fetched fine, agy errored)
+out=$(GCLOUD_MODE=logs STUB_MODE=fail "$CLOUD" --service svc 2>/dev/null); rc=$?
+check "agy digest failure -> exit 5" 5 "$rc"
+
 echo "== hooks =="
 HOOKS="$ROOT/hooks"
 
@@ -207,7 +281,7 @@ else echo "FAIL: delegate agent missing PreToolUse gate"; FAIL=$((FAIL+1)); fi
 
 echo "== bin/ entrypoints (issue #11: \$CLAUDE_PLUGIN_ROOT not on model-run Bash) =="
 BIN="$ROOT/bin"
-for b in agy-delegate agy-job agy-cost-compare agy-doctor; do
+for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug; do
   if [ -x "$BIN/$b" ]; then echo "ok: bin/$b executable"; PASS=$((PASS+1));
   else echo "FAIL: bin/$b missing or not executable"; FAIL=$((FAIL+1)); fi
 done
@@ -217,6 +291,8 @@ check "bin/agy-delegate forwards to the wrapper (no CLAUDE_PLUGIN_ROOT)" 0 "$rc"
 out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/agy-doctor" 2>/dev/null | head -1); rc=$?
 case "$out" in *doctor*) echo "ok: bin/agy-doctor forwards to doctor.sh"; PASS=$((PASS+1));;
   *) echo "FAIL: bin/agy-doctor did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
+out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/cloud-debug" --service svc --print-command 2>/dev/null); rc=$?
+check "bin/cloud-debug forwards to cloud-debug.sh (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "logging read" "$out"
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"
@@ -318,7 +394,7 @@ for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delega
 
 # bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported
 # to model-run Bash, so commands/skill must call these bare names on the PATH)
-for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor"):
+for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug"):
     need(os.access(p("bin", b), os.X_OK), "bin entrypoint missing/not executable: bin/" + b)
 
 # regression guard: commands & skill must NOT invoke $CLAUDE_PLUGIN_ROOT/scripts/* — that

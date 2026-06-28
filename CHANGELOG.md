@@ -3,6 +3,26 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.15.0
+- **New command — `/antigravity:cloud-run-debug`** (Conductor/Executor demo): diagnose a failing
+  Cloud Run service. agy (Gemini) does the bulk, cheap work — pulling `severity>=ERROR` logs via
+  `gcloud logging read` and clustering them into a structured digest (error clusters /
+  representative stack traces / time distribution / likely root-cause candidates) — and Claude
+  ingests only that digest to infer the root cause and propose a fix. The lean handoff keeps
+  Claude's context (and cost) down.
+  - **Read-only by default** — diagnosis + proposal only. `--apply` is the only write path, and it
+    only ever lands the fix on a dedicated branch with the diff shown for a human to review/merge;
+    nothing is deployed or merged automatically.
+  - **Narrow surface, generic engine:** one user-facing command, but the engine
+    (`scripts/cloud-debug.sh`, shimmed as `bin/cloud-debug`) takes `--resource-type` (default
+    `cloud_run_revision`) so a future gke-/functions-debug can reuse it without a rewrite. The
+    digest reuses `agy-delegate.sh` — no new delegation logic.
+  - **Safety:** uses the existing `gcloud` ADC (never asks for tokens); a missing
+    `roles/logging.viewer` exits with the exact `add-iam-policy-binding` fix.
+  - `doctor` checks the new script/shim; `tests/` stub `gcloud` + `agy` and cover the
+    fetch→digest, default `--since`, read-only (no writes / no `--apply` in the engine), and
+    permission-denied paths.
+
 ## 0.14.0
 - **`bin/` entrypoints — fixes `$CLAUDE_PLUGIN_ROOT` failures on marketplace installs**
   ([#11](https://github.com/yuting0624/antigravity-for-claude-code/issues/11)):
