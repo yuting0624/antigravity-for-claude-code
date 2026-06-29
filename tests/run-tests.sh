@@ -390,6 +390,14 @@ pj = json.load(open(p(".claude-plugin", "plugin.json")))
 need(pj.get("name") == "antigravity", "plugin.json name != antigravity")
 need(bool(pj.get("version")), "plugin.json missing version")
 
+# SKILL.md version frontmatter must track plugin.json (PR #14 drifted them: a version
+# bump that forgets the skill leaves stale docs and breaks update recognition reasoning)
+skill_txt = open(p("skills", "antigravity", "SKILL.md")).read()
+sm = re.search(r"(?m)^version:\s*(\S+)\s*$", skill_txt)
+need(bool(sm), "SKILL.md missing version frontmatter")
+if sm: need(sm.group(1) == pj.get("version"),
+            "SKILL.md version (%s) != plugin.json version (%s)" % (sm.group(1), pj.get("version")))
+
 mp = json.load(open(p(".claude-plugin", "marketplace.json")))
 plugins = mp.get("plugins", [])
 need(bool(plugins) and plugins[0].get("source") == "./", "marketplace plugins[0].source != ./")
@@ -432,6 +440,24 @@ for f in glob.glob(p("commands", "*.md")) + [p("skills", "antigravity", "SKILL.m
         t = open(f).read()
         need("CLAUDE_PLUGIN_ROOT}/scripts/" not in t and "CLAUDE_PLUGIN_ROOT/scripts/" not in t,
              "invokes $CLAUDE_PLUGIN_ROOT/scripts (empty on model Bash, issue #11): " + os.path.basename(f))
+
+# regression guard: any SessionStart `additionalContext` injected into the MODEL must not
+# reference $CLAUDE_PLUGIN_ROOT — it isn't exported to model-run Bash, so the model gets an
+# empty path and the instruction fails (issue #15). Structured hook *command* fields are
+# exempt (substitution works there) — only injected context strings are checked.
+def _ctx_strings(o):
+    if isinstance(o, dict):
+        for k, v in o.items():
+            if k == "additionalContext" and isinstance(v, str): yield v
+            else: yield from _ctx_strings(v)
+    elif isinstance(o, list):
+        for x in o: yield from _ctx_strings(x)
+for hf in glob.glob(p("hooks", "*.json")):
+    try: hd = json.load(open(hf))
+    except Exception: continue
+    for ac in _ctx_strings(hd):
+        need("CLAUDE_PLUGIN_ROOT" not in ac,
+             "injected additionalContext references $CLAUDE_PLUGIN_ROOT (empty on model Bash, issue #15): " + os.path.basename(hf))
 
 if errs:
     print("CONTRACT FAIL:")

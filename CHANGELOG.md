@@ -3,6 +3,24 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.15.1
+- **Injected routing policy no longer references `$CLAUDE_PLUGIN_ROOT`**
+  ([#15](https://github.com/yuting0624/antigravity-for-claude-code/issues/15), fix by
+  **@Masterisk-F** in #16): the SessionStart `additionalContext` in
+  `hooks/policy-context.json` still told the model to run
+  `"$CLAUDE_PLUGIN_ROOT/scripts/agy-delegate.sh"` — but that variable isn't exported to
+  model-run Bash (same root cause as #11), so it expanded empty and the model had to
+  rediscover the `bin/` entrypoint. Now uses the bare `agy-delegate` bin name. (The #11
+  bin/ migration updated commands/skill/agents but missed this injected string.)
+  - This ships as a **version bump** so `/plugin marketplace update` recognizes the fix —
+    #16 landed on `master` without one, leaving installs on 0.15.0 unable to see it.
+- **Regression guard widened**: the contract test now also fails if any SessionStart
+  `additionalContext` references `$CLAUDE_PLUGIN_ROOT` (not just commands/skill markdown),
+  so this class of bug can't recur in injected context.
+- **Version-drift guard**: the contract test now asserts `SKILL.md`'s `version:` matches
+  `plugin.json` — they had drifted (skill stuck at 0.14.0 while the plugin was 0.15.0);
+  re-synced to 0.15.1.
+
 ## 0.15.0
 - **New command — `/antigravity:cloud-run-debug`** (Conductor/Executor demo): diagnose a failing
   Cloud Run service. agy (Gemini) does the bulk, cheap work — pulling `severity>=ERROR` logs via
