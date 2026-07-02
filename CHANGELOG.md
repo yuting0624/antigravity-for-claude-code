@@ -4,6 +4,19 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
 ## 0.16.0
+- **Internal fan-out recipe + `agy-trace`** (community pointer to upstream
+  antigravity-cli#105; **verified headless on agy 1.0.12**): agy's `invoke_subagent`
+  sandbox only allows TypeNames `self`/`research` — custom TypeNames are rejected. The
+  skill now documents the **role-delegation pattern** (TypeName `self` + a specialist
+  `Role`) for one-delegation internal fan-out, so coordination tokens land on the cheap
+  (Gemini) side instead of the frontier side. Spawning needs no `--yolo` (writes inside
+  the work still do).
+  - Each spawned subagent leaves a **readable step-by-step `transcript.jsonl`** under
+    `~/.gemini/antigravity-cli/brain/<conversationId>/` — unlike the opaque conversation
+    `.db` blobs. New **`agy-trace`** (script + bin shim) pretty-prints one (`agy-trace
+    <conversationId>`), lists recent ones (`--list`), or emits raw JSONL (`--raw`) so
+    Claude can run a real trajectory audit on what subagents actually did.
+  - Skill's trajectory-check gate updated accordingly; `doctor` covers the new script/shim.
 - **`--digest` flag + digest-size guard** — the cost discipline's biggest lever ("ingest
   digests, not dumps") is now enforced in code, not just prose
   ([#5](https://github.com/yuting0624/antigravity-for-claude-code/issues/5)):

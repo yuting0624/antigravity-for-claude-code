@@ -43,6 +43,7 @@ you → Claude Code (conduct: design / verify / review)
 - **Adds tools Claude lacks natively** — live **Google/web search**, **Vertex AI Search** over your internal data, deep research, Cloud Logging. Claude reviews and re-checks the results.
 - **Cross-model verification** — an independent, different-model opinion on your code.
 - **Background jobs** — fire a long delegation, keep working, collect later.
+- **Internal fan-out** — one delegation, and agy spawns role-assigned subagents on the cheap side (`TypeName "self"` + Role); each leaves a **readable trajectory** you audit with `agy-trace`.
 - **Built-in cost discipline** — measured, not guessed (see below).
 - **Drops in with the discipline on** — a `SessionStart` hook injects the *cost-aware*
   routing policy automatically (toggle in plugin settings), and the `antigravity-delegate`
@@ -174,7 +175,7 @@ skills/antigravity/SKILL.md   WHEN + HOW Claude collaborates with agy
 agents/           antigravity-delegate subagent (file work runs on Gemini, not Claude)
 commands/         slash commands (delegate, review, research, cloud-run-debug, setup, status, result, cancel)
 hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
-scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · measure-session · doctor
+scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · measure-session · doctor
 docs/             AB-RESULTS (measured A/B) · TROUBLESHOOTING · DEMO-KIT
 prices.json       Vertex rate config (verify before quoting)
 ```

@@ -328,7 +328,7 @@ else echo "FAIL: delegate agent missing PreToolUse gate"; FAIL=$((FAIL+1)); fi
 
 echo "== bin/ entrypoints (issue #11: \$CLAUDE_PLUGIN_ROOT not on model-run Bash) =="
 BIN="$ROOT/bin"
-for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug; do
+for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace; do
   if [ -x "$BIN/$b" ]; then echo "ok: bin/$b executable"; PASS=$((PASS+1));
   else echo "FAIL: bin/$b missing or not executable"; FAIL=$((FAIL+1)); fi
 done
@@ -340,6 +340,29 @@ case "$out" in *doctor*) echo "ok: bin/agy-doctor forwards to doctor.sh"; PASS=$
   *) echo "FAIL: bin/agy-doctor did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
 out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/cloud-debug" --service svc --print-command 2>/dev/null); rc=$?
 check "bin/cloud-debug forwards to cloud-debug.sh (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "logging read" "$out"
+
+echo "== agy-trace.sh (subagent trajectory reader) =="
+TRACE="$ROOT/scripts/agy-trace.sh"
+# fixture: a brain dir with one subagent transcript (shape matches agy 1.0.12)
+FIXBRAIN="$TMP/brain"
+mkdir -p "$FIXBRAIN/conv-123/.system_generated/logs"
+cat > "$FIXBRAIN/conv-123/.system_generated/logs/transcript.jsonl" <<'JSONL'
+{"step_index":0,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","content":"<USER_REQUEST>do the thing</USER_REQUEST>"}
+{"step_index":1,"source":"SYSTEM","type":"PLANNER_RESPONSE","status":"DONE","content":"I did the thing and reported back."}
+JSONL
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" conv-123 2>&1); rc=$?
+check "trace by conversationId -> pretty steps" 0 "$rc" "USER_INPUT" "$out"
+check "trace shows planner step" 0 "$rc" "PLANNER_RESPONSE" "$out"
+out=$("$TRACE" "$FIXBRAIN/conv-123/.system_generated/logs/transcript.jsonl" 2>&1); rc=$?
+check "trace by literal path works" 0 "$rc" "USER_INPUT" "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --raw conv-123 2>&1); rc=$?
+check "--raw emits raw JSONL" 0 "$rc" '"step_index":0' "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --list 2>&1); rc=$?
+check "--list shows the transcript" 0 "$rc" "conv-123" "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" no-such-conv 2>&1); rc=$?
+check "unknown conversationId -> exit 2" 2 "$rc" "no transcript" "$out"
+out=$(env -u CLAUDE_PLUGIN_ROOT AGY_BRAIN_DIR="$FIXBRAIN" "$BIN/agy-trace" conv-123 2>&1); rc=$?
+check "bin/agy-trace forwards (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "USER_INPUT" "$out"
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"
@@ -449,7 +472,7 @@ for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delega
 
 # bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported
 # to model-run Bash, so commands/skill must call these bare names on the PATH)
-for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug"):
+for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug", "agy-trace"):
     need(os.access(p("bin", b), os.X_OK), "bin entrypoint missing/not executable: bin/" + b)
 
 # regression guard: commands & skill must NOT invoke $CLAUDE_PLUGIN_ROOT/scripts/* — that
