@@ -25,6 +25,8 @@
 #       --timeout <dur>              Print-mode timeout, e.g. 10m (default: 5m)
 #       --yolo                       Auto-approve all tool permissions (DANGEROUS)
 #       --sandbox                    Run agent with terminal sandbox restrictions
+#       --digest                     Append a digest-only output contract to the prompt
+#                                    (ingest digests, not raw dumps — the biggest cost lever)
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
@@ -50,6 +52,7 @@ TIER_EXPLICIT=0
 MODEL=""
 YOLO=0
 SANDBOX=0
+DIGEST=0
 ADD_DIRS=()
 PROMPT=""
 CONTINUE=0
@@ -138,6 +141,7 @@ while [ $# -gt 0 ]; do
     --timeout)      need "$#" "$1"; TIMEOUT="$2"; shift 2 ;;
     --yolo)         YOLO=1; shift ;;
     --sandbox)      SANDBOX=1; shift ;;
+    --digest)       DIGEST=1; shift ;;               # ask agy for a digest-only reply
     -c|--continue)  CONTINUE=1; shift ;;            # resume most recent agy conversation
     --conversation) need "$#" "$1"; CONV_ID="$2"; shift 2 ;; # resume a specific conversation by ID
     -m|--model)     need "$#" "$1"; MODEL="$2"; shift 2 ;;
@@ -198,6 +202,16 @@ if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
       echo "agy-delegate: note: this looks like a write task but --yolo is not set — without it agy only DESCRIBES edits and writes nothing (still returns success). Add --yolo (and run on a branch) to actually write files." >&2 ;;
   esac
   shopt -u nocasematch
+fi
+
+# --digest: append an explicit output contract so agy returns a compact digest
+# instead of raw content. Ingesting digests (never dumps) is the plugin's single
+# biggest cost lever — it keeps the conductor's context lean (issue #5).
+# (Appended AFTER the write-task heuristic so that scans the user's prompt only.)
+if [ "$DIGEST" -eq 1 ]; then
+  PROMPT="$PROMPT
+
+OUTPUT CONTRACT (digest): reply with ONLY a compact digest — short bullets (findings / decisions / errors, with file:line references where useful). NO full file contents, NO raw logs, NO long code blocks. End with exactly one line: DIGEST: <one-sentence summary>."
 fi
 
 # --- assemble agy args ---
@@ -283,6 +297,16 @@ fi
 if [ -z "${OUT//[$' \t\n\r']/}" ]; then
   echo "agy-delegate: agy returned empty output (model='$MODEL')" >&2
   exit 3
+fi
+
+# Digest-size guard: the cost saving depends on the conductor ingesting a DIGEST,
+# not a raw dump — if the reply is dump-sized, say so on stderr (advisory only;
+# stdout passes through untouched). Tune via the digest_warn_chars plugin option
+# (env CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS; empty = 8000, 0 = off).
+WARN_CHARS="${CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS:-8000}"
+case "$WARN_CHARS" in (*[!0-9]*|'') WARN_CHARS=8000 ;; esac
+if [ "$WARN_CHARS" -gt 0 ] && [ "${#OUT}" -gt "$WARN_CHARS" ]; then
+  echo "agy-delegate: note: output is ${#OUT} chars (> ${WARN_CHARS}) — that looks like a raw dump, not a digest. Don't ingest this into the conductor's context: re-run with --digest, or have agy summarize it first. (plugin option digest_warn_chars tunes this; 0 disables.)" >&2
 fi
 
 printf '%s\n' "$OUT"

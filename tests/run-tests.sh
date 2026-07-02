@@ -26,6 +26,7 @@ case "${STUB_MODE:-text}" in
   quota)   echo "Error: quota exceeded for this model" >&2; exit 1 ;;     # -> wrapper exit 10
   auth)    echo "Error: request is unauthenticated; please sign in" >&2; exit 1 ;; # -> exit 11
   timeout) echo "Error: deadline exceeded (the request timed out)" >&2; exit 1 ;;  # -> exit 12
+  big)     printf 'x%.0s' $(seq 1 20000); echo ;;    # dump-sized reply -> digest guard warns
   *)       echo "STUB_OK" ;;
 esac
 STUB
@@ -169,6 +170,24 @@ else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
 if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
+
+# --digest appends the digest-only output contract to the prompt (issue #5)
+out=$(STUB_MODE=args "$DELEGATE" --digest "hi" 2>/dev/null); rc=$?
+check "--digest appends the output contract" 0 "$rc" "OUTPUT CONTRACT (digest)" "$out"
+out=$("$DELEGATE" --help); rc=$?
+check "usage documents --digest" 0 "$rc" "--digest" "$out"
+
+# digest-size guard: dump-sized reply -> stderr note; small reply -> silent; 0 disables
+out=$(STUB_MODE=big "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
+check "dump-sized output -> raw-dump note on stderr" 0 "$rc" "raw dump" "$out"
+out=$(STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired on a small reply"; FAIL=$((FAIL+1));
+else echo "ok: digest guard silent on a small reply"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=big CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS=0 "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired with digest_warn_chars=0"; FAIL=$((FAIL+1));
+else echo "ok: digest_warn_chars=0 disables the guard"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=text CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS=5 "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
+check "custom digest_warn_chars threshold respected" 0 "$rc" "raw dump" "$out"
 
 # WSL slow-mount note: fires only under WSL AND when --add-dir is on /mnt/*
 out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /mnt/c/proj --print-command "hi" 2>&1); rc=$?

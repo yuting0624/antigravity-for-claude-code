@@ -1,0 +1,55 @@
+name: Bug report
+description: Something broken? The fields below let us diagnose in one round-trip.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Every environment bug fixed so far (#6, #10, #11, #15) was
+        solved by exactly the info below. Please check
+        [docs/TROUBLESHOOTING.md](https://github.com/yuting0624/antigravity-for-claude-code/blob/master/docs/TROUBLESHOOTING.md)
+        first — your issue may already have a fix or a documented workaround.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Include the exact command you ran (e.g. `/antigravity:delegate ...` or `agy-delegate ...`) and the output/error you got.
+      placeholder: |
+        Ran: /antigravity:delegate --tier pro "..."
+        Got: ...
+        Expected: ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `agy-doctor` (or `/antigravity:setup`)
+      description: Paste the full output — it includes the plugin version, agy version/auth state, and platform checks. If `agy-doctor` isn't found, say so (that itself is diagnostic — likely a pre-0.14.0 install).
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS / platform
+      placeholder: "macOS 15 · Ubuntu 24.04 · WSL2 (Ubuntu) · Windows 11 (Git Bash)"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is the plugin installed?
+      description: Marketplace and local-dev installs resolve paths differently (see #11) — this matters.
+      options:
+        - Marketplace (/plugin install antigravity@antigravity-for-claude-code)
+        - Local dev (claude --plugin-dir ...)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: agyver
+    attributes:
+      label: agy CLI version
+      placeholder: "agy --version → 1.0.12 (also visible in doctor output)"
+    validations:
+      required: false

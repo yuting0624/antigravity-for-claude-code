@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
@@ -59,6 +59,12 @@
       "type": "string",
       "title": "Model for the 'pro' tier",
       "description": "Override the exact agy model the 'pro' tier maps to (default: Gemini 3.1 Pro (High)). Use a name from `agy models`.",
+      "default": ""
+    },
+    "digest_warn_chars": {
+      "type": "string",
+      "title": "Digest-size warning threshold (chars)",
+      "description": "agy-delegate warns on stderr when a reply exceeds this many characters — a raw dump instead of the digest the cost discipline calls for. Empty = 8000. Set 0 to disable.",
       "default": ""
     }
   }

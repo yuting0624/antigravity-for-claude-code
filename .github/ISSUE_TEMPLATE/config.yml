@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Troubleshooting guide
+    url: https://github.com/yuting0624/antigravity-for-claude-code/blob/master/docs/TROUBLESHOOTING.md
+    about: Windows/WSL problems, writes that silently don't happen, quota/auth/timeout exit codes — check here first.

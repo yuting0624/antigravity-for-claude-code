@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.15.1
+version: 0.16.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -62,8 +62,11 @@ agy-delegate [options] "the task prompt"
 ```
 Options: `--tier flash|flash-lo|pro` · `--dir <path>` (workspace, repeatable) ·
 `--timeout 10m` · `--yolo` (auto-approve tools — needed for any tool use in headless
-mode) · `--sandbox` · `--print-command` (dry run: show the resolved `agy` call, don't run
-it) · pipe a long prompt with a trailing `-`.
+mode) · `--sandbox` · `--digest` (append a digest-only output contract — use it for any
+bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
+because ingesting digests instead of dumps is the single biggest cost lever) ·
+`--print-command` (dry run: show the resolved `agy` call, don't run it) · pipe a long
+prompt with a trailing `-`.
 
 The wrapper handles agy's quirks (prompt is the value of `-p`; non-TTY stdout drop via
 `< /dev/null`; no `--output-format json`, so output is plain text you parse).

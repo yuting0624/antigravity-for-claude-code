@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose an improvement or new capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: The pain first, not the mechanism — what goes wrong or costs too much today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you'd like to see. A rough sketch is fine; PRs are welcome too (see CONTRIBUTING.md).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do it manually today via ..." if that's a thing.
+    validations:
+      required: false

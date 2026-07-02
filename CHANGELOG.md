@@ -3,6 +3,25 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.16.0
+- **`--digest` flag + digest-size guard** — the cost discipline's biggest lever ("ingest
+  digests, not dumps") is now enforced in code, not just prose
+  ([#5](https://github.com/yuting0624/antigravity-for-claude-code/issues/5)):
+  - `agy-delegate --digest` appends a digest-only **output contract** to the prompt
+    (compact bullets + a one-line `DIGEST:` trailer; no full files / raw logs).
+  - The wrapper now **warns on stderr when a reply comes back dump-sized** (default
+    threshold 8000 chars) so the conductor doesn't silently ingest a raw dump. New plugin
+    option `digest_warn_chars` tunes it (`0` disables).
+  - `delegate` command + skill updated to use `--digest` for bulk reads and to not ingest
+    a flagged dump.
+- **Support docs — one-round-trip diagnosis**: every environment bug so far (#6, #10,
+  #11, #15) needed the same three facts, so they're now asked up front:
+  - **Issue templates** (`.github/ISSUE_TEMPLATE/`): the bug form requires `agy-doctor`
+    output, OS/platform, and install method (marketplace vs `--plugin-dir`).
+  - **`docs/TROUBLESHOOTING.md`**: symptom-first fixes — Windows headless hang (and the
+    "agy works when I type it" console explanation), WSL `/mnt` slowness, silent
+    no-write without `--yolo`, exit-code/`AGY_SIGNAL` table, tier remaps, updating.
+
 ## 0.15.1
 - **Injected routing policy no longer references `$CLAUDE_PLUGIN_ROOT`**
   ([#15](https://github.com/yuting0624/antigravity-for-claude-code/issues/15), fix by

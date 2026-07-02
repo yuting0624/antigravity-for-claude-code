@@ -103,6 +103,9 @@ scripts/agy-delegate.sh --tier flash "Summarize this changelog in 3 bullets: ...
 # give Antigravity a workspace for multi-file agentic work
 scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
 
+# bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
+scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
+
 # live web / Google search (tools need --yolo in headless mode)
 scripts/agy-delegate.sh --tier pro --yolo "Web-search <X>. Give URLs + dates."
 
@@ -135,7 +138,7 @@ conductor — that's what gives both the cost saving and the cross-model verific
 Delegation doesn't save money by itself — these do (also in the skill):
 
 1. **Delegate above the break-even** — bulk/parallel/repetitive work, not tiny tasks.
-2. **Keep Claude's context lean** — don't re-read what agy already handled; take a **digest**, not raw output. (Biggest lever — it collapses `cache_read`.)
+2. **Keep Claude's context lean** — don't re-read what agy already handled; take a **digest**, not raw output. (Biggest lever — it collapses `cache_read`.) Enforced in code: `--digest` appends a digest-only output contract, and the wrapper **warns when a reply comes back dump-sized** (tune via the `digest_warn_chars` plugin option).
 3. **Batch** — one big delegation beats many round-trips.
 4. **Review the diff, not the whole tree.**
 
@@ -145,6 +148,8 @@ Delegation doesn't save money by itself — these do (also in the skill):
 
 <details>
 <summary><b>🚧 Guardrails &amp; known limits</b></summary>
+
+> **Something broken?** See **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — symptom-first fixes for Windows/WSL, writes that silently don't happen, quota/auth/timeout codes, and updating.
 
 **Guardrails**
 - Always **verify** agy's output (it can be wrong, and may even alter its environment to make a check pass — re-run gates yourself in a clean state).
@@ -170,7 +175,7 @@ agents/           antigravity-delegate subagent (file work runs on Gemini, not C
 commands/         slash commands (delegate, review, research, cloud-run-debug, setup, status, result, cancel)
 hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
 scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · measure-session · doctor
-docs/             AB-RESULTS (measured A/B) · DEMO-KIT
+docs/             AB-RESULTS (measured A/B) · TROUBLESHOOTING · DEMO-KIT
 prices.json       Vertex rate config (verify before quoting)
 ```
 

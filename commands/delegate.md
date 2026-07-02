@@ -18,9 +18,13 @@ Do this:
    `--yolo` (`--dangerously-skip-permissions`) — approve it when asked, or pre-allow it in
    settings; non-interactive (`claude -p`) without that permission can't write via agy.
 2. Run **synchronously** (you may be headless — do not background-and-wait):
-   `agy-delegate --tier <tier> [--dir .] [--yolo] "<task>"`
+   `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
+   For read/analysis tasks, add `--digest` — it appends a digest-only output contract so
+   agy returns compact bullets instead of raw content.
 3. Ingest only the **result/digest** — do NOT re-read the files agy already handled
-   (keeps your context lean; that's where the cost savings come from).
+   (keeps your context lean; that's where the cost savings come from). If the wrapper
+   prints a *"looks like a raw dump"* note on stderr, do NOT ingest the raw output —
+   re-run with `--digest` or ask agy to summarize it first.
 4. **Verify**: actually run/check the output; never trust a self-reported "done".
    Report what you delegated and how you verified it.
 
