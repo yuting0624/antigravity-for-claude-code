@@ -3,6 +3,17 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.16.1
+- **Internal fan-out recipe updated for agy 1.0.16** (re-verified per the recipe's own
+  "re-verify after upgrades" caveat — which became real within a day): **dynamic custom
+  subagents now work** — `define_subagent` a named specialist in-session, then
+  `invoke_subagent` it by TypeName (1.0.13–1.0.15 shipped this broken, upstream #521;
+  fixed in 1.0.16 via the JSON→Markdown definition change). The `self`+Role pattern
+  stays as the any-version fallback (re-verified on 1.0.16). `transcript.jsonl`
+  location is unchanged across 1.0.12→1.0.16, so `agy-trace` is unaffected. The recipe
+  now flags the whole surface as fast-moving (4 upstream releases in a week; official
+  static agent-config docs drift from behavior, upstream #527).
+
 ## 0.16.0
 - **Internal fan-out recipe + `agy-trace`** (community pointer to upstream
   antigravity-cli#105; **verified headless on agy 1.0.12**): agy's `invoke_subagent`

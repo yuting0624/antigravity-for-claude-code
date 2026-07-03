@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.16.0
+version: 0.16.1
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -223,12 +223,20 @@ ROOT=agy-delegate
 
 ## Internal fan-out recipe (agy spawns its own subagents)
 
-agy has a built-in `invoke_subagent` tool, but its sandbox only allows the pre-approved
-TypeNames **`self`** and **`research`** — a custom TypeName is rejected with
-`CORTEX_STEP_TYPE_INVOKE_SUBAGENT: ... not found or not allowed to be invoked`, even if
-it appears in `/agents` (upstream issue antigravity-cli#105). The working pattern
-(**verified headless on agy 1.0.12**) is **role delegation**: invoke TypeName `self` and
-inject the specialty via `Role` + `Prompt`.
+agy has built-in `define_subagent` / `invoke_subagent` tools. Which pattern works is
+**version-dependent** — this surface is moving fast upstream (4 releases in one week
+while we tracked it), so re-verify after any agy upgrade:
+
+- **agy ≥ 1.0.16 — dynamic custom subagents (preferred):** have agy `define_subagent` a
+  named specialist in-session (name / description / system_prompt), then
+  `invoke_subagent` it by that TypeName. **Verified headless on 1.0.16**: define →
+  invoke → result round-trips cleanly, real thread spawned. (1.0.13–1.0.15 shipped this
+  broken — defined agents failed to invoke, upstream #521; fixed in 1.0.16.)
+- **Any version — role delegation (fallback):** the sandbox pre-approves TypeNames
+  **`self`** and **`research`**; an *undefined* custom TypeName is rejected with
+  `CORTEX_STEP_TYPE_INVOKE_SUBAGENT: ... not found or not allowed to be invoked`
+  (upstream #105). Invoke TypeName `self` and inject the specialty via `Role` +
+  `Prompt` — verified on 1.0.12 **and re-verified on 1.0.16**.
 
 Use it for **orchestrator-mode work pushed down a level**: instead of Claude dispatching
 N parallel `agy-job` runs (N round-trips, coordination spend on the frontier side), send
@@ -236,6 +244,8 @@ ONE delegation and let agy fan out internally — the coordination tokens land o
 cheap side, and you ingest a single digest.
 
 ```bash
+# Any version (fallback form). On agy >= 1.0.16, swap the instruction to:
+# "define_subagent a named specialist per unit, then invoke each by its TypeName".
 agy-delegate --dir . --digest --timeout 10m \
   "Decompose <task> into up to 3 units. For each unit, invoke a background subagent
    with TypeName \"self\" and a specialist Role (e.g. 'Test Writer'), each following
@@ -243,20 +253,24 @@ agy-delegate --dir . --digest --timeout 10m \
    conversationId, and end with a DIGEST line."
 ```
 
-Verified behaviors (agy 1.0.12):
+Verified behaviors (1.0.12 → 1.0.16):
 - **Spawning needs no `--yolo`** — subagent invocation isn't permission-gated; file
   writes / web tools *inside* the subagents' work still need it.
 - Each spawn's tool result includes a `logAbsoluteUri` → a **readable step-by-step
   `transcript.jsonl`** under `~/.gemini/antigravity-cli/brain/<conversationId>/` —
-  *better* trajectory visibility than a plain delegation. Have the parent report each
-  `conversationId`, then audit with `agy-trace <id>` (`agy-trace --list` finds recent ones).
+  *better* trajectory visibility than a plain delegation. Location unchanged across
+  1.0.12→1.0.16, for both `define_subagent` and `self` spawns. Have the parent report
+  each `conversationId`, then audit with `agy-trace <id>` (`agy-trace --list` finds
+  recent ones).
 - Spawns are real and observable (new conversation threads appear) — but still run the
   verification gates on the merged result; more autonomy = more surface for error.
 
-Caveats: `self`+Role is a **workaround around the sandbox allowlist**, not a documented
-contract — re-verify after agy upgrades. Bound the fan-out width in the prompt (agy
-chooses parallelism otherwise). A wide fan-out takes longer wall-clock — raise
-`--timeout`, and in an interactive session prefer a background job (`agy-job`).
+Caveats: neither pattern is a documented contract yet — `self`+Role works around the
+sandbox allowlist, and even the official docs' static agent-config paths don't match
+observed behavior (upstream #527) — so **re-verify after agy upgrades** (1.0.16 changed
+this area within a day of our first verification). Bound the fan-out width in the
+prompt (agy chooses parallelism otherwise). A wide fan-out takes longer wall-clock —
+raise `--timeout`, and in an interactive session prefer a background job (`agy-job`).
 
 ## Deep-research recipe (multi-source)
 
