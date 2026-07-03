@@ -43,7 +43,7 @@ you → Claude Code (conduct: design / verify / review)
 - **Adds tools Claude lacks natively** — live **Google/web search**, **Vertex AI Search** over your internal data, deep research, Cloud Logging. Claude reviews and re-checks the results.
 - **Cross-model verification** — an independent, different-model opinion on your code.
 - **Background jobs** — fire a long delegation, keep working, collect later.
-- **Internal fan-out** — one delegation, and agy spawns role-assigned subagents on the cheap side (`TypeName "self"` + Role); each leaves a **readable trajectory** you audit with `agy-trace`.
+- **Internal fan-out** — one delegation, and agy spawns its own subagents on the cheap side (dynamic `define_subagent` on agy ≥ 1.0.16; `TypeName "self"` + Role on any version); each leaves a **readable trajectory** you audit with `agy-trace`.
 - **Built-in cost discipline** — measured, not guessed (see below).
 - **Drops in with the discipline on** — a `SessionStart` hook injects the *cost-aware*
   routing policy automatically (toggle in plugin settings), and the `antigravity-delegate`
