@@ -48,6 +48,10 @@ you → Claude Code (conduct: design / verify / review)
 - **Drops in with the discipline on** — a `SessionStart` hook injects the *cost-aware*
   routing policy automatically (toggle in plugin settings), and the `antigravity-delegate`
   subagent does file **writing** on Gemini, so Claude spends **no tokens generating file contents**.
+- **No slash command required** — the delegate subagent is picked up **proactively** for bulk
+  work, and a prompt-level nudge flags bulk-looking requests as delegation candidates.
+  Both are advisory: **the break-even judgment stays with Claude** (full auto-routing is a
+  measured net loss below the break-even), and the nudge is toggleable (`delegation_nudge`).
 
 ## 📊 Measured results
 
