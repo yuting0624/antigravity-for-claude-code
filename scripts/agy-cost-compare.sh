@@ -42,8 +42,13 @@ PROMPT="${*:-}"
 
 # Default prices from prices.json (env vars still override); Gemini rate by tier.
 PRICES="$HERE/../prices.json"
-if [ -f "$PRICES" ] && command -v python3 >/dev/null 2>&1; then
-  eval "$(python3 - "$PRICES" "$TIER" 2>/dev/null <<'PY'
+PYTHON_CMD=""
+if command -v python3 >/dev/null 2>&1; then PYTHON_CMD=python3;
+elif command -v python >/dev/null 2>&1; then PYTHON_CMD=python;
+fi
+
+if [ -f "$PRICES" ] && [ -n "$PYTHON_CMD" ]; then
+  eval "$("$PYTHON_CMD" - "$PRICES" "$TIER" 2>/dev/null <<'PY'
 import json,sys
 try:
     d=json.load(open(sys.argv[1])); t=sys.argv[2]

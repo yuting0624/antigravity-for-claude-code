@@ -40,7 +40,7 @@ hooks:
     - matcher: Bash
       hooks:
         - type: command
-          command: "\"${CLAUDE_PLUGIN_ROOT}/hooks/validate-delegate-bash.sh\""
+          command: "node \"${CLAUDE_PLUGIN_ROOT}/hooks/validate-delegate-bash.js\""
 model: inherit
 color: blue
 ---

@@ -11,6 +11,17 @@ ROOT="$(cd "$HERE/.." && pwd)"
 DELEGATE="$ROOT/scripts/agy-delegate.sh"
 MEASURE="$ROOT/scripts/measure-session.py"
 
+PYTHON="python3"
+if ! command -v python3 >/dev/null 2>&1 && command -v python >/dev/null 2>&1; then
+  PYTHON="python"
+fi
+
+on_windows_native() {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
+  case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
+  return 1
+}
+
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 PASS=0; FAIL=0
 
@@ -57,9 +68,25 @@ export PATH="$TMP/bin:$PATH"
 # "missing on PATH" tests stay deterministic on runners that ship gcloud in
 # /usr/bin (GitHub-hosted ubuntu does — so PATH=/usr/bin:/bin would still find it).
 mkdir -p "$TMP/min"
-for u in bash sh env dirname basename pwd sed cat mktemp grep tr cut find wc head tail sort uniq sleep python3 rm chmod; do
-  s="$(command -v "$u" 2>/dev/null)" && ln -sf "$s" "$TMP/min/$u"
+for u in bash sh env dirname basename pwd sed cat mktemp grep tr cut find wc head tail sort uniq sleep rm chmod; do
+  s="$(type -p "$u" 2>/dev/null || which "$u" 2>/dev/null || command -v "$u" 2>/dev/null)"
+  if [ -n "$s" ] && [ -f "$s" ]; then
+    ln -sf "$s" "$TMP/min/$u"
+  fi
 done
+s_py=""
+if command -v python3 >/dev/null 2>&1; then s_py="$(type -p python3 2>/dev/null || which python3 2>/dev/null || command -v python3)";
+elif command -v python >/dev/null 2>&1; then s_py="$(type -p python 2>/dev/null || which python 2>/dev/null || command -v python)";
+fi
+if [ -n "$s_py" ] && [ -f "$s_py" ]; then
+  ln -sf "$s_py" "$TMP/min/python3"
+  ln -sf "$s_py" "$TMP/min/python"
+fi
+
+MIN_PATH="$TMP/min"
+if on_windows_native; then
+  MIN_PATH="$TMP/min:/usr/bin:/bin"
+fi
 
 check() { # desc  expected_rc  actual_rc  [substr]  [actual_out]
   local desc="$1" erc="$2" arc="$3" sub="${4:-}" out="${5:-}"
@@ -241,7 +268,7 @@ out=$("$CLOUD" 2>/dev/null); rc=$?
 check "missing --service -> exit 1" 1 "$rc"
 out=$(GCLOUD_MODE=fail "$CLOUD" --service svc 2>/dev/null); rc=$?
 check "generic gcloud failure -> exit 2" 2 "$rc"
-out=$(PATH="$TMP/min" "$CLOUD" --service svc 2>&1); rc=$?
+out=$(PATH="$MIN_PATH" "$CLOUD" --service svc 2>&1); rc=$?
 check "gcloud missing on PATH -> exit 4" 4 "$rc" "gcloud" "$out"
 out=$(GCLOUD_MODE=empty "$CLOUD" --service svc 2>/dev/null); rc=$?
 check "no matching logs -> exit 0 + clear note" 0 "$rc" "no logs" "$out"
@@ -272,20 +299,29 @@ else echo "ok: no clip NOTE when under the cap"; PASS=$((PASS+1)); fi
 
 echo "== hooks =="
 HOOKS="$ROOT/hooks"
-
-python3 -c "import json; json.load(open('$HOOKS/policy-context.json'))" 2>/dev/null; rc=$?
+"$PYTHON" -c "import json; json.load(open('hooks/policy-context.json'))" 2>/dev/null; rc=$?
 check "policy-context.json is valid JSON" 0 "$rc"
 
+# Test both SH and JS implementations of hooks for maximum compatibility
 out=$("$HOOKS/inject-policy.sh" 2>/dev/null); rc=$?
 check "inject-policy default on -> emits additionalContext" 0 "$rc" "additionalContext" "$out"
 check "inject-policy is cost-aware (not 'delegate everything')" 0 "$rc" "COST-AWARE" "$out"
-# the emitted stdout is a well-formed SessionStart hook payload (not just substrings)
-printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["hookSpecificOutput"]["hookEventName"]=="SessionStart"' 2>/dev/null; rc=$?
+printf '%s' "$out" | "$PYTHON" -c 'import json,sys; d=json.load(sys.stdin); assert d["hookSpecificOutput"]["hookEventName"]=="SessionStart"' 2>/dev/null; rc=$?
 check "inject-policy emits valid SessionStart JSON" 0 "$rc"
 
 out=$(CLAUDE_PLUGIN_OPTION_CODING_POLICY=off "$HOOKS/inject-policy.sh" 2>/dev/null); rc=$?
 if [ "$rc" = 0 ] && [ -z "$out" ]; then echo "ok: inject-policy off -> exit 0 + no output"; PASS=$((PASS+1));
 else echo "FAIL: inject-policy off (rc=$rc, out='${out:0:40}')"; FAIL=$((FAIL+1)); fi
+
+out=$(node "$HOOKS/inject-policy.js" 2>/dev/null); rc=$?
+check "inject-policy.js default on -> emits additionalContext" 0 "$rc" "additionalContext" "$out"
+check "inject-policy.js is cost-aware" 0 "$rc" "COST-AWARE" "$out"
+printf '%s' "$out" | "$PYTHON" -c 'import json,sys; d=json.load(sys.stdin); assert d["hookSpecificOutput"]["hookEventName"]=="SessionStart"' 2>/dev/null; rc=$?
+check "inject-policy.js emits valid SessionStart JSON" 0 "$rc"
+
+out=$(CLAUDE_PLUGIN_OPTION_CODING_POLICY=off node "$HOOKS/inject-policy.js" 2>/dev/null); rc=$?
+if [ "$rc" = 0 ] && [ -z "$out" ]; then echo "ok: inject-policy.js off -> exit 0 + no output"; PASS=$((PASS+1));
+else echo "FAIL: inject-policy.js off (rc=$rc, out='${out:0:40}')"; FAIL=$((FAIL+1)); fi
 
 # check-agy: exits 0 whether agy is present (stub) or absent, and warns when absent
 out=$("$HOOKS/check-agy.sh" 2>/dev/null); rc=$?
@@ -293,8 +329,14 @@ check "check-agy (agy present) -> exit 0" 0 "$rc"
 err=$( { PATH="/usr/bin:/bin" "$HOOKS/check-agy.sh" >/dev/null; } 2>&1 ); rc=$?
 check "check-agy (agy absent) -> exit 0 + warns" 0 "$rc" "not on PATH" "$err"
 
-# hooks.json structural shape (all events: command hooks referencing the plugin root)
-python3 - "$HOOKS/hooks.json" <<'PY' 2>/dev/null; rc=$?
+out=$(node "$HOOKS/check-agy.js" 2>/dev/null); rc=$?
+check "check-agy.js (agy present) -> exit 0" 0 "$rc"
+NODE_BIN="$(type -p node 2>/dev/null || which node 2>/dev/null || command -v node 2>/dev/null)"
+NODE_DIR="$(dirname "$NODE_BIN")"
+err=$( { PATH="$NODE_DIR:/usr/bin:/bin" node "$HOOKS/check-agy.js" >/dev/null; } 2>&1 ); rc=$?
+check "check-agy.js (agy absent) -> exit 0 + warns" 0 "$rc" "not on PATH" "$err"
+
+"$PYTHON" - "$HOOKS/hooks.json" <<'PY' 2>/dev/null; rc=$?
 import json,sys
 hooks=json.load(open(sys.argv[1]))["hooks"]
 assert hooks.get("SessionStart") and hooks.get("UserPromptSubmit")
@@ -311,19 +353,46 @@ NUDGE="$HOOKS/nudge-delegation.sh"
 out=$(printf '%s' '{"prompt":"migrate every caller from APIv1 to APIv2 across the codebase"}' | "$NUDGE" 2>/dev/null); rc=$?
 check "nudge fires on bulk EN prompt" 0 "$rc" "additionalContext" "$out"
 check "nudge preserves Claude's judgment (not a mandate)" 0 "$rc" "THE JUDGMENT IS YOURS" "$out"
-printf '%s' "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['hookSpecificOutput']['hookEventName']=='UserPromptSubmit'" 2>/dev/null; rc=$?
+printf '%s' "$out" | "$PYTHON" -c "import json,sys; d=json.load(sys.stdin); assert d['hookSpecificOutput']['hookEventName']=='UserPromptSubmit'" 2>/dev/null; rc=$?
 check "nudge emits valid UserPromptSubmit JSON" 0 "$rc"
+
+NUDGE_JS="node $HOOKS/nudge-delegation.js"
+out=$(printf '%s' '{"prompt":"migrate every caller from APIv1 to APIv2 across the codebase"}' | $NUDGE_JS 2>/dev/null); rc=$?
+check "nudge-delegation.js fires on bulk EN prompt" 0 "$rc" "additionalContext" "$out"
+check "nudge-delegation.js preserves Claude's judgment" 0 "$rc" "THE JUDGMENT IS YOURS" "$out"
+printf '%s' "$out" | "$PYTHON" -c "import json,sys; d=json.load(sys.stdin); assert d['hookSpecificOutput']['hookEventName']=='UserPromptSubmit'" 2>/dev/null; rc=$?
+check "nudge-delegation.js emits valid UserPromptSubmit JSON" 0 "$rc"
+
 out=$(printf '%s' '{"prompt":"リポジトリ全体のテストを網羅的に生成して"}' | "$NUDGE" 2>/dev/null); rc=$?
 check "nudge fires on bulk JA prompt" 0 "$rc" "additionalContext" "$out"
+
+out=$(printf '%s' '{"prompt":"リポジトリ全体のテストを網羅的に生成して"}' | $NUDGE_JS 2>/dev/null); rc=$?
+check "nudge-delegation.js fires on bulk JA prompt" 0 "$rc" "additionalContext" "$out"
+
 out=$(printf '%s' '{"prompt":"fix the typo in README"}' | "$NUDGE" 2>/dev/null); rc=$?
 if [ "$rc" = 0 ] && [ -z "$out" ]; then echo "ok: nudge silent on a small prompt"; PASS=$((PASS+1));
 else echo "FAIL: nudge fired on a small prompt (rc=$rc)"; FAIL=$((FAIL+1)); fi
+
+out=$(printf '%s' '{"prompt":"fix the typo in README"}' | $NUDGE_JS 2>/dev/null)
+if [ -z "$out" ]; then echo "ok: nudge-delegation.js silent on a small prompt"; PASS=$((PASS+1));
+else echo "FAIL: nudge-delegation.js fired on a small prompt (out='$out')"; FAIL=$((FAIL+1)); fi
+
 out=$(printf '%s' '{"prompt":"/antigravity:delegate migrate everything"}' | "$NUDGE" 2>/dev/null)
 if [ -z "$out" ]; then echo "ok: nudge silent when already delegating"; PASS=$((PASS+1));
 else echo "FAIL: nudge fired on an antigravity command"; FAIL=$((FAIL+1)); fi
+
+out=$(printf '%s' '{"prompt":"/antigravity:delegate migrate everything"}' | $NUDGE_JS 2>/dev/null)
+if [ -z "$out" ]; then echo "ok: nudge-delegation.js silent when already delegating"; PASS=$((PASS+1));
+else echo "FAIL: nudge-delegation.js fired on an antigravity command (out='$out')"; FAIL=$((FAIL+1)); fi
+
 out=$(printf '%s' '{"prompt":"migrate all files"}' | CLAUDE_PLUGIN_OPTION_DELEGATION_NUDGE=off "$NUDGE" 2>/dev/null)
 if [ -z "$out" ]; then echo "ok: delegation_nudge=off suppresses the nudge"; PASS=$((PASS+1));
 else echo "FAIL: nudge fired while disabled"; FAIL=$((FAIL+1)); fi
+
+out=$(printf '%s' '{"prompt":"migrate all files"}' | CLAUDE_PLUGIN_OPTION_DELEGATION_NUDGE=off $NUDGE_JS 2>/dev/null)
+if [ -z "$out" ]; then echo "ok: nudge-delegation.js disabled via env"; PASS=$((PASS+1));
+else echo "FAIL: nudge-delegation.js fired when disabled"; FAIL=$((FAIL+1)); fi
+
 out=$(printf '%s' '{"prompt":"hello","cwd":"/home/u/migration-tool"}' | "$NUDGE" 2>/dev/null)
 if [ -z "$out" ]; then echo "ok: nudge scans only the prompt field (cwd noise ignored)"; PASS=$((PASS+1));
 else echo "FAIL: nudge matched a non-prompt field"; FAIL=$((FAIL+1)); fi
@@ -336,6 +405,15 @@ printf '%s' '{"tool_input":{"command":"agy-job.sh start --tier pro \"b\""}}' | "
 check "gate allows the job wrapper -> exit 0" 0 "$rc"
 printf '%s' '{"tool_input":{"command":"rm -rf /tmp/x ; cat > f.txt"}}' | "$GATE" >/dev/null 2>&1; rc=$?
 check "gate blocks arbitrary bash -> exit 2" 2 "$rc"
+
+GATE_JS="node $HOOKS/validate-delegate-bash.js"
+printf '%s' '{"tool_input":{"command":"X/scripts/agy-delegate.sh --tier flash \"x\""}}' | $GATE_JS >/dev/null 2>&1; rc=$?
+check "validate-delegate-bash.js allows the delegate wrapper -> exit 0" 0 "$rc"
+printf '%s' '{"tool_input":{"command":"agy-job.sh start --tier pro \"b\""}}' | $GATE_JS >/dev/null 2>&1; rc=$?
+check "validate-delegate-bash.js allows the job wrapper -> exit 0" 0 "$rc"
+printf '%s' '{"tool_input":{"command":"rm -rf /tmp/x ; cat > f.txt"}}' | $GATE_JS >/dev/null 2>&1; rc=$?
+check "validate-delegate-bash.js blocks arbitrary bash -> exit 2" 2 "$rc"
+
 # gate also accepts the bin-name entrypoints (no .sh) the subagent now calls (issue #11)
 printf '%s' '{"tool_input":{"command":"agy-delegate --tier flash \"x\""}}' | "$GATE" >/dev/null 2>&1; rc=$?
 check "gate allows bin name agy-delegate -> exit 0" 0 "$rc"
@@ -346,7 +424,7 @@ AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")
 if [ "$tl" = "tools: Bash, Read, Glob" ]; then echo "ok: delegate agent tools allowlist exact (no Write/Edit)"; PASS=$((PASS+1));
 else echo "FAIL: delegate agent tools line unexpected: '$tl'"; FAIL=$((FAIL+1)); fi
-if grep -q "PreToolUse" "$AGENT" && grep -q "validate-delegate-bash.sh" "$AGENT"; then
+if grep -q "PreToolUse" "$AGENT" && grep -q "validate-delegate-bash.js" "$AGENT"; then
   echo "ok: delegate agent wires the PreToolUse Bash gate"; PASS=$((PASS+1));
 else echo "FAIL: delegate agent missing PreToolUse gate"; FAIL=$((FAIL+1)); fi
 # proactive auto-selection, WITH the judgment kept on Claude (not "delegate everything")
@@ -359,6 +437,8 @@ BIN="$ROOT/bin"
 for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace; do
   if [ -x "$BIN/$b" ]; then echo "ok: bin/$b executable"; PASS=$((PASS+1));
   else echo "FAIL: bin/$b missing or not executable"; FAIL=$((FAIL+1)); fi
+  if [ -f "$BIN/$b.cmd" ]; then echo "ok: bin/$b.cmd exists"; PASS=$((PASS+1));
+  else echo "FAIL: bin/$b.cmd missing"; FAIL=$((FAIL+1)); fi
 done
 # the shim must forward to scripts/ without needing $CLAUDE_PLUGIN_ROOT in the env
 out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/agy-delegate" --tier pro --print-command "hi" 2>/dev/null); rc=$?
@@ -399,14 +479,14 @@ cat > "$SESS" <<'JSONL'
 {"message":{"role":"assistant","usage":{"output_tokens":10,"input_tokens":2,"cache_read_input_tokens":100},"content":[{"type":"tool_use","name":"Bash"}]}}
 {"message":{"role":"assistant","usage":{"output_tokens":5}}}
 JSONL
-out=$(python3 "$MEASURE" "$SESS" "T" 2>/dev/null); rc=$?
+out=$("$PYTHON" "$MEASURE" "$SESS" "T" 2>/dev/null); rc=$?
 # output=15 input=2 cache_read=100 -> weighted = 15*5 + 2 + 100*0.1 = 87 ; total=117 ; turns=2
 check "measure: total tokens" 0 "$rc" "TOTAL tokens   117" "$out"
 check "measure: cost-weighted" 0 "$rc" "COST-WEIGHTED  87" "$out"
 check "measure: turns" 0 "$rc" "turns          2" "$out"
 check "measure: tool count" 0 "$rc" "'Bash': 1" "$out"
 
-out=$(python3 "$MEASURE" /no/such/file 2>/dev/null); rc=$?
+out=$("$PYTHON" "$MEASURE" /no/such/file 2>/dev/null); rc=$?
 check "measure: missing file -> exit 1" 1 "$rc"
 
 echo "== agy-job.sh (background jobs) =="
@@ -448,7 +528,7 @@ if printf '%s' "$out" | grep -q "QUOTA_EXHAUSTED"; then echo "ok: job shows AGY_
 else echo "FAIL: job did not surface AGY_SIGNAL"; FAIL=$((FAIL+1)); fi
 
 echo "== plugin contract =="
-python3 - "$ROOT" <<'PY'
+"$PYTHON" - "$ROOT" <<'PY'
 import json, os, re, sys, glob
 root = sys.argv[1]
 def p(*a): return os.path.join(root, *a)
@@ -491,12 +571,15 @@ for f in glob.glob(p("commands", "*.md")) + [p("skills", "antigravity", "SKILL.m
 
 # the delegate subagent's PreToolUse gate points at a real script
 agent = open(p("agents", "antigravity-delegate.md")).read()
-m = re.search(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"']+\.sh)", agent)
+m = re.search(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"']+\.js)", agent)
 need(bool(m), "agent PreToolUse gate path not found")
 if m: need(os.path.isfile(p(m.group(1))), "agent gate references missing file: " + m.group(1))
 
 for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delegate-bash.sh", "hooks/nudge-delegation.sh"):
     need(os.access(p(s), os.X_OK), "not executable: " + s)
+
+for s in ("hooks/check-agy.js", "hooks/inject-policy.js", "hooks/validate-delegate-bash.js", "hooks/nudge-delegation.js"):
+    need(os.path.isfile(p(s)), "missing JS hook file: " + s)
 
 # bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported
 # to model-run Bash, so commands/skill must call these bare names on the PATH)

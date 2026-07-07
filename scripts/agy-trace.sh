@@ -61,7 +61,11 @@ list_recent() {
 
 pretty() { # $1 = transcript path
   echo "# $1"
-  python3 - "$1" <<'PY'
+  local py="python3"
+  if ! command -v python3 >/dev/null 2>&1 && command -v python >/dev/null 2>&1; then
+    py="python"
+  fi
+  "$py" - "$1" <<'PY'
 import json, sys
 path = sys.argv[1]
 with open(path, encoding="utf-8", errors="replace") as fh:
