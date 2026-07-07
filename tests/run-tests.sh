@@ -293,16 +293,40 @@ check "check-agy (agy present) -> exit 0" 0 "$rc"
 err=$( { PATH="/usr/bin:/bin" "$HOOKS/check-agy.sh" >/dev/null; } 2>&1 ); rc=$?
 check "check-agy (agy absent) -> exit 0 + warns" 0 "$rc" "not on PATH" "$err"
 
-# hooks.json structural shape (SessionStart command hooks referencing the plugin root)
+# hooks.json structural shape (all events: command hooks referencing the plugin root)
 python3 - "$HOOKS/hooks.json" <<'PY' 2>/dev/null; rc=$?
 import json,sys
-ss=json.load(open(sys.argv[1]))["hooks"]["SessionStart"]
-assert isinstance(ss,list) and ss
-for g in ss:
-    for h in g["hooks"]:
-        assert h["type"]=="command" and "CLAUDE_PLUGIN_ROOT" in h["command"]
+hooks=json.load(open(sys.argv[1]))["hooks"]
+assert hooks.get("SessionStart") and hooks.get("UserPromptSubmit")
+for groups in hooks.values():
+    assert isinstance(groups,list) and groups
+    for g in groups:
+        for h in g["hooks"]:
+            assert h["type"]=="command" and "CLAUDE_PLUGIN_ROOT" in h["command"]
 PY
-check "hooks.json SessionStart shape valid" 0 "$rc"
+check "hooks.json shape valid (SessionStart + UserPromptSubmit)" 0 "$rc"
+
+# nudge-delegation (UserPromptSubmit): advisory material only — never a mandate
+NUDGE="$HOOKS/nudge-delegation.sh"
+out=$(printf '%s' '{"prompt":"migrate every caller from APIv1 to APIv2 across the codebase"}' | "$NUDGE" 2>/dev/null); rc=$?
+check "nudge fires on bulk EN prompt" 0 "$rc" "additionalContext" "$out"
+check "nudge preserves Claude's judgment (not a mandate)" 0 "$rc" "THE JUDGMENT IS YOURS" "$out"
+printf '%s' "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['hookSpecificOutput']['hookEventName']=='UserPromptSubmit'" 2>/dev/null; rc=$?
+check "nudge emits valid UserPromptSubmit JSON" 0 "$rc"
+out=$(printf '%s' '{"prompt":"リポジトリ全体のテストを網羅的に生成して"}' | "$NUDGE" 2>/dev/null); rc=$?
+check "nudge fires on bulk JA prompt" 0 "$rc" "additionalContext" "$out"
+out=$(printf '%s' '{"prompt":"fix the typo in README"}' | "$NUDGE" 2>/dev/null); rc=$?
+if [ "$rc" = 0 ] && [ -z "$out" ]; then echo "ok: nudge silent on a small prompt"; PASS=$((PASS+1));
+else echo "FAIL: nudge fired on a small prompt (rc=$rc)"; FAIL=$((FAIL+1)); fi
+out=$(printf '%s' '{"prompt":"/antigravity:delegate migrate everything"}' | "$NUDGE" 2>/dev/null)
+if [ -z "$out" ]; then echo "ok: nudge silent when already delegating"; PASS=$((PASS+1));
+else echo "FAIL: nudge fired on an antigravity command"; FAIL=$((FAIL+1)); fi
+out=$(printf '%s' '{"prompt":"migrate all files"}' | CLAUDE_PLUGIN_OPTION_DELEGATION_NUDGE=off "$NUDGE" 2>/dev/null)
+if [ -z "$out" ]; then echo "ok: delegation_nudge=off suppresses the nudge"; PASS=$((PASS+1));
+else echo "FAIL: nudge fired while disabled"; FAIL=$((FAIL+1)); fi
+out=$(printf '%s' '{"prompt":"hello","cwd":"/home/u/migration-tool"}' | "$NUDGE" 2>/dev/null)
+if [ -z "$out" ]; then echo "ok: nudge scans only the prompt field (cwd noise ignored)"; PASS=$((PASS+1));
+else echo "FAIL: nudge matched a non-prompt field"; FAIL=$((FAIL+1)); fi
 
 echo "== delegate subagent guardrail =="
 GATE="$HOOKS/validate-delegate-bash.sh"
@@ -325,6 +349,10 @@ else echo "FAIL: delegate agent tools line unexpected: '$tl'"; FAIL=$((FAIL+1));
 if grep -q "PreToolUse" "$AGENT" && grep -q "validate-delegate-bash.sh" "$AGENT"; then
   echo "ok: delegate agent wires the PreToolUse Bash gate"; PASS=$((PASS+1));
 else echo "FAIL: delegate agent missing PreToolUse gate"; FAIL=$((FAIL+1)); fi
+# proactive auto-selection, WITH the judgment kept on Claude (not "delegate everything")
+if grep -q "PROACTIVELY" "$AGENT" && grep -q "break-even judgment is yours" "$AGENT"; then
+  echo "ok: delegate agent is proactive AND keeps the break-even judgment"; PASS=$((PASS+1));
+else echo "FAIL: delegate agent missing proactive-with-judgment description"; FAIL=$((FAIL+1)); fi
 
 echo "== bin/ entrypoints (issue #11: \$CLAUDE_PLUGIN_ROOT not on model-run Bash) =="
 BIN="$ROOT/bin"
@@ -445,10 +473,10 @@ plugins = mp.get("plugins", [])
 need(bool(plugins) and plugins[0].get("source") == "./", "marketplace plugins[0].source != ./")
 need(bool(plugins) and plugins[0].get("name") == pj.get("name"), "marketplace plugin name != plugin.json name")
 
-# every SessionStart hook command resolves to a real file
+# every hook command (all events) resolves to a real file
 hj = json.load(open(p("hooks", "hooks.json")))
-cmds = [h["command"] for grp in hj["hooks"].get("SessionStart", []) for h in grp["hooks"]]
-need(bool(cmds), "no SessionStart hook commands")
+cmds = [h["command"] for groups in hj["hooks"].values() for grp in groups for h in grp["hooks"]]
+need(bool(cmds), "no hook commands")
 for c in cmds:
     m = re.search(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"']+)", c)
     need(bool(m), "hook command missing CLAUDE_PLUGIN_ROOT path: " + c)
@@ -467,7 +495,7 @@ m = re.search(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"']+\.sh)", agent)
 need(bool(m), "agent PreToolUse gate path not found")
 if m: need(os.path.isfile(p(m.group(1))), "agent gate references missing file: " + m.group(1))
 
-for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delegate-bash.sh"):
+for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delegate-bash.sh", "hooks/nudge-delegation.sh"):
     need(os.access(p(s), os.X_OK), "not executable: " + s)
 
 # bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported

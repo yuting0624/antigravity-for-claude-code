@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.16.1",
+  "version": "0.17.0",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
@@ -66,6 +66,12 @@
       "title": "Digest-size warning threshold (chars)",
       "description": "agy-delegate warns on stderr when a reply exceeds this many characters — a raw dump instead of the digest the cost discipline calls for. Empty = 8000. Set 0 to disable.",
       "default": ""
+    },
+    "delegation_nudge": {
+      "type": "string",
+      "title": "Nudge delegation on bulk-looking prompts",
+      "description": "When on, a UserPromptSubmit hook adds a short advisory note to Claude's context when a prompt looks like bulk work above the delegation break-even (mass edits, migrations, exhaustive tests, fan-out search). Advisory only — Claude still makes the break-even judgment per task. Set to off/false/0/no to suppress.",
+      "default": "on"
     }
   }
 }

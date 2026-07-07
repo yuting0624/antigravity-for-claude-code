@@ -19,6 +19,13 @@
           { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/inject-policy.sh\"" }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/nudge-delegation.sh\"" }
+        ]
+      }
     ]
   }
 }

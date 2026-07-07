@@ -3,6 +3,23 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.17.0
+- **Frictionless delegation — no slash command required, judgment stays with Claude.**
+  Two additions reduce the "you must type `/antigravity:delegate` every time" friction,
+  while deliberately NOT auto-routing (full automation below the break-even is a
+  measured net loss):
+  - **Proactive subagent selection**: the `antigravity-delegate` description now tells
+    Claude to use it *proactively* for bulk work (scaffolding / exhaustive tests /
+    migrations / fan-out search) — with the explicit counterweight that the break-even
+    judgment is Claude's, every time.
+  - **Prompt-level nudge** (`hooks/nudge-delegation.sh`, UserPromptSubmit): a cheap,
+    deterministic heuristic (volume/fan-out phrases, EN + JA) adds a short advisory note
+    when a prompt looks above the break-even. Advisory material only — the note itself
+    says "THE JUDGMENT IS YOURS". Only the `prompt` field is scanned (no cwd/path false
+    positives), the user's prompt is never echoed back (no injection surface), and it
+    stays silent when the user is already delegating. Toggle via the new
+    `delegation_nudge` plugin option.
+
 ## 0.16.1
 - **Internal fan-out recipe updated for agy 1.0.16** (re-verified per the recipe's own
   "re-verify after upgrades" caveat — which became real within a day): **dynamic custom

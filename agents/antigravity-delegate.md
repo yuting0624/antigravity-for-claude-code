@@ -1,13 +1,15 @@
 ---
 name: antigravity-delegate
 description: |
-  Use this subagent to hand a well-scoped, ABOVE-break-even unit of work to the
-  Antigravity CLI (agy / Gemini) through the plugin wrapper — bulk scaffolding,
-  exhaustive test generation, migrations, long-context reads that distill to a
-  digest, or fan-out web / Vertex AI Search. Its only file-acting tool is the
-  delegation wrapper, so the file generation and bulky reading happen on Gemini
-  and do NOT spend Claude tokens. It returns agy's DIGEST for the caller to verify
-  — it does not itself ship or claim success.
+  Use this subagent PROACTIVELY — don't wait for the user to ask for delegation —
+  whenever a task contains a well-scoped, ABOVE-break-even unit of work for the
+  Antigravity CLI (agy / Gemini): bulk scaffolding, exhaustive test generation,
+  migrations, long-context reads that distill to a digest, or fan-out web /
+  Vertex AI Search. Proactive means YOU decide without being prompted — not that
+  you delegate everything: the break-even judgment is yours, every time. Its only
+  file-acting tool is the delegation wrapper, so the file generation and bulky
+  reading happen on Gemini and do NOT spend Claude tokens. It returns agy's
+  DIGEST for the caller to verify — it does not itself ship or claim success.
 
   Do NOT use it for small, self-contained, or judgement-heavy tasks: delegating a
   tiny task is a measured net loss (round-trip cost exceeds the savings) — the
