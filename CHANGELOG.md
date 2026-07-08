@@ -3,6 +3,28 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.18.0
+- **agy 1.1.0 support — `--mode accept-edits|plan` passthrough** (all behaviors below
+  verified live on 1.1.0):
+  - 1.1.0 makes **review-first** the default execution mode. Headless consequence
+    (measured): a write task **without** write permission no longer just "describes" —
+    agy writes the files to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch`)
+    and reports success, while your workspace stays untouched (the evolved #10 failure
+    mode).
+  - New wrapper flag **`--mode accept-edits`**: auto-applies FILE EDITS to the real
+    workspace *without* granting terminal/tool permissions — a **narrower grant than
+    `--yolo`**, now the recommended way to run pure write delegations. `--yolo` remains
+    for tasks that also need tools (web / Vertex AI Search / terminal); verified
+    backward-compatible on 1.1.0. `--mode plan` passes through for strategize-only runs.
+  - The write-task warning now fires only when *neither* `--mode accept-edits` nor
+    `--yolo` is set, and explains the scratch-divert behavior.
+  - Subagents re-verified on 1.1.0 (`define_subagent` → `invoke_subagent`, transcript
+    path unchanged); they are **officially documented** as of 1.1.0, with static config
+    at `<workspace>/.agents/agents/*.md` and global `~/.gemini/config/agents/` — the
+    skill's fan-out recipe now points at the official docs.
+  - `delegate` command, skill safety section, and README write guidance updated to the
+    "prefer `--mode accept-edits`, escalate to `--yolo` only for tools" split.
+
 ## 0.17.0
 - **Frictionless delegation — no slash command required, judgment stays with Claude.**
   Two additions reduce the "you must type `/antigravity:delegate` every time" friction,

@@ -27,6 +27,10 @@
 #       --sandbox                    Run agent with terminal sandbox restrictions
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
+#       --mode <accept-edits|plan>   agy execution mode (agy >= 1.1.0). accept-edits: auto-apply
+#                                    FILE EDITS to the workspace without granting terminal/tool
+#                                    permissions (the safer choice for pure write tasks — narrower
+#                                    than --yolo). plan: strategize only, touch nothing.
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
@@ -53,6 +57,7 @@ MODEL=""
 YOLO=0
 SANDBOX=0
 DIGEST=0
+MODE=""
 ADD_DIRS=()
 PROMPT=""
 CONTINUE=0
@@ -142,6 +147,10 @@ while [ $# -gt 0 ]; do
     --yolo)         YOLO=1; shift ;;
     --sandbox)      SANDBOX=1; shift ;;
     --digest)       DIGEST=1; shift ;;               # ask agy for a digest-only reply
+    --mode)         need "$#" "$1"; MODE="$2"; shift 2
+                    case "$MODE" in accept-edits|plan) ;;
+                      *) die "invalid --mode '$MODE' (use accept-edits | plan; agy >= 1.1.0)" ;;
+                    esac ;;
     -c|--continue)  CONTINUE=1; shift ;;            # resume most recent agy conversation
     --conversation) need "$#" "$1"; CONV_ID="$2"; shift 2 ;; # resume a specific conversation by ID
     -m|--model)     need "$#" "$1"; MODEL="$2"; shift 2 ;;
@@ -192,14 +201,16 @@ if on_wsl; then
   done
 fi
 
-# Heads-up: a likely write task without --yolo. Without --yolo, headless agy only
-# DESCRIBES edits and returns success without writing any files (issue #10). Best-effort
-# heuristic; warn only. --print-command (dry run) is exempt.
-if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
+# Heads-up: a likely write task without write permission. Headless agy without
+# --mode accept-edits / --yolo either only DESCRIBES edits (pre-1.1.0) or writes them
+# to its OWN scratch dir (~/.gemini/antigravity-cli/scratch, 1.1.0 review-first default)
+# — either way YOUR WORKSPACE IS UNTOUCHED while agy reports success (issue #10).
+# Best-effort heuristic; warn only. --print-command (dry run) is exempt.
+if [ "$YOLO" -eq 0 ] && [ "$MODE" != "accept-edits" ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task but --yolo is not set — without it agy only DESCRIBES edits and writes nothing (still returns success). Add --yolo (and run on a branch) to actually write files." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task but neither --mode accept-edits nor --yolo is set — headless agy will describe the edits or write them to its own scratch dir, NOT your workspace, while still reporting success (issue #10). Use --mode accept-edits for pure file writes (agy >= 1.1.0), or --yolo when the task also needs tools (web/terminal); run write tasks on a branch." >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -220,6 +231,7 @@ fi
 ARGS=(--model "$MODEL" --print-timeout "$TIMEOUT")
 for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
 [ "$YOLO" -eq 1 ]      && ARGS+=(--dangerously-skip-permissions)
+[ -n "$MODE" ]         && ARGS+=(--mode "$MODE")     # agy >= 1.1.0
 [ "$SANDBOX" -eq 1 ]   && ARGS+=(--sandbox)
 [ "$CONTINUE" -eq 1 ]  && ARGS+=(--continue)        # keep working context on the cheap (Gemini) side
 [ -n "$CONV_ID" ]      && ARGS+=(--conversation "$CONV_ID")

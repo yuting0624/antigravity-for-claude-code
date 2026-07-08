@@ -161,15 +161,28 @@ check "--print-command shows the tier model" 0 "$rc" "Pro" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
 
-# write-task without --yolo -> warn (agy would only describe, not write) (issue #10)
+# write-task without write permission -> warn (describe-only pre-1.1.0, scratch-divert on 1.1.0) (issue #10)
 out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc=$?
-check "write prompt w/o --yolo -> warns" 0 "$rc" "DESCRIBES" "$out"
+check "write prompt w/o write permission -> warns" 0 "$rc" "scratch dir" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=$?
-if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
+if printf '%s' "$out" | grep -q "scratch dir"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "implement the parser module" 2>&1); rc=$?
+if printf '%s' "$out" | grep -q "scratch dir"; then echo "FAIL: warned even with --mode accept-edits"; FAIL=$((FAIL+1));
+else echo "ok: no write-warning with --mode accept-edits"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
-if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
+if printf '%s' "$out" | grep -q "scratch dir"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
+
+# --mode passthrough (agy >= 1.1.0): accept-edits reaches agy; invalid mode errors early
+out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "hi" 2>/dev/null); rc=$?
+check "--mode accept-edits passed through to agy" 0 "$rc" "--mode accept-edits" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --mode plan "hi" 2>/dev/null); rc=$?
+check "--mode plan passed through to agy" 0 "$rc" "--mode plan" "$out"
+out=$("$DELEGATE" --mode bogus "hi" 2>&1); rc=$?
+check "--mode bogus -> exit 1 (friendly)" 1 "$rc" "invalid --mode" "$out"
+out=$("$DELEGATE" --mode accept-edits --print-command "hi" 2>/dev/null); rc=$?
+check "--print-command shows --mode" 0 "$rc" "--mode accept-edits" "$out"
 
 # --digest appends the digest-only output contract to the prompt (issue #5)
 out=$(STUB_MODE=args "$DELEGATE" --digest "hi" 2>/dev/null); rc=$?
