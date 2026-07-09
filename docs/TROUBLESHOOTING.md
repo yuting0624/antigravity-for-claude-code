@@ -57,19 +57,26 @@ wrapper and `agy-doctor` warn when they detect this.
 
 ---
 
-## agy says "done" but wrote no files
+## agy says "done" but wrote no files (or wrote them somewhere else)
 
-**Cause:** write tasks need `--yolo` (`--dangerously-skip-permissions`). Without it,
-headless agy only *describes* the edits and still returns success
+**Cause:** write tasks need write permission. Without it, headless agy either only
+*describes* the edits (pre-1.1.0) or — since agy 1.1.0's review-first default — writes
+them to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch/`), **not your
+workspace**, and still returns success
 ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). The wrapper
-warns when a write-looking prompt lacks `--yolo`.
+warns when a write-looking prompt lacks write permission.
 
 **Fix:**
-- Pass `--yolo` for write tasks, and run them on a **dedicated branch** (add `--sandbox`
-  for containment).
-- Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
-  approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
-- **Always verify files actually changed** (`git status`) — never trust the self-report.
+- **Pure file writes** (implement / scaffold / test-gen / migrate): pass
+  **`--mode accept-edits`** (agy ≥ 1.1.0) — auto-applies edits to the real workspace
+  *without* granting terminal/tool permissions (a narrower grant than `--yolo`; prefer it).
+- **Task also uses tools** (web / Vertex AI Search / terminal): pass `--yolo`
+  (`--dangerously-skip-permissions`). Claude Code may prompt for (or in auto-mode, block)
+  it — approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
+- Run write tasks on a **dedicated branch** (add `--sandbox` for containment).
+- **Always verify files actually changed in your workspace** (`git status`) — never trust
+  the self-report. If agy claims success but the repo is clean, look in
+  `~/.gemini/antigravity-cli/scratch/`.
 - Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
   background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
   `/antigravity:status` / `/antigravity:result <id>` (interactive sessions only).
