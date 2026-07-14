@@ -98,6 +98,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 11 | not authenticated | run `agy` once interactively to sign in |
 | 12 | timeout (agy's own, or the wall-clock guard) | raise `--timeout`, narrow the task; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
+| 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
 
 ---
 

@@ -55,6 +55,7 @@ rc_label() {
     11) echo 'AUTH required — run `agy` once interactively' ;;
     12) echo 'TIMEOUT — raise --timeout or narrow scope' ;;
     13) echo 'agy MISSING — install the Antigravity CLI' ;;
+    14) echo 'MODEL unavailable — check `agy models` / tier remap' ;;
     *)  echo 'error' ;;
   esac
 }

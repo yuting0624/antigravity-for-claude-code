@@ -26,6 +26,7 @@ case "${STUB_MODE:-text}" in
   quota)   echo "Error: quota exceeded for this model" >&2; exit 1 ;;     # -> wrapper exit 10
   auth)    echo "Error: request is unauthenticated; please sign in" >&2; exit 1 ;; # -> exit 11
   timeout) echo "Error: deadline exceeded (the request timed out)" >&2; exit 1 ;;  # -> exit 12
+  badmodel) echo "Error: invalid --model \"X\": model X is not recognized as a known model" >&2; exit 1 ;; # -> exit 14
   big)     printf 'x%.0s' $(seq 1 20000); echo ;;    # dump-sized reply -> digest guard warns
   *)       echo "STUB_OK" ;;
 esac
@@ -107,6 +108,9 @@ check "agy auth -> exit 11 + signal" 11 "$rc" "AUTH_REQUIRED" "$out"
 
 out=$(STUB_MODE=timeout "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
+
+out=$(STUB_MODE=badmodel "$DELEGATE" "hi" 2>&1); rc=$?
+check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
 
 # wall-clock guard: a HANGING agy (sleeps far past the timeout) must be killed and
 # mapped to TIMEOUT (exit 12), not hang the wrapper forever (issue #6). Requires a
