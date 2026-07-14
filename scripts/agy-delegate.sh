@@ -37,7 +37,8 @@
 #       --print-command              Print the resolved agy command and exit (dry run)
 #   -h, --help                       Show this help
 #
-# Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout | 13 agy missing
+# Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
+#             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -301,6 +302,13 @@ if [ $RC -ne 0 ]; then
       shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` once"; exit 11 ;;
     *"timed out"*|*"deadline exceeded"*|*"print-timeout"*)
       shopt -u nocasematch; signal TIMEOUT "agy print-timeout / deadline exceeded"; exit 12 ;;
+    *"invalid --model"*|*"is not recognized as a known model"*|*"not a known model"*)
+      # agy >= 1.1.2 hard-fails (instead of silently downgrading) when --model can't be
+      # resolved — common when a tier_* / default_model remap points at a model this plan
+      # doesn't expose. Surface it as its own actionable category.
+      shopt -u nocasematch
+      echo "agy-delegate: model '$MODEL' is not available on this plan — run \`agy models\`, then fix --model / the tier_* / default_model option." >&2
+      signal MODEL_UNAVAILABLE "model not in \`agy models\` (check --model / tier remaps)"; exit 14 ;;
   esac
   shopt -u nocasematch
   signal AGY_FAILED "agy exited $RC"
