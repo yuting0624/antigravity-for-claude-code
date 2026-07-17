@@ -39,6 +39,7 @@
 #
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
 #             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
+#             | 15 permission denied (agy >= 1.1.3 soft-denied a permissioned tool headless — pass --yolo)
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -202,16 +203,17 @@ if on_wsl; then
   done
 fi
 
-# Heads-up: a likely write task without write permission. Headless agy without
-# --mode accept-edits / --yolo either only DESCRIBES edits (pre-1.1.0) or writes them
-# to its OWN scratch dir (~/.gemini/antigravity-cli/scratch, 1.1.0 review-first default)
-# — either way YOUR WORKSPACE IS UNTOUCHED while agy reports success (issue #10).
+# Heads-up: a likely write task without write permission. Headless agy's write behavior
+# has shifted across versions (describe-only pre-1.1.0; scratch-divert 1.1.0-1.1.2;
+# soft-deny with a stderr notice on 1.1.3) — but the one durable grant is --yolo. Without
+# it, YOUR WORKSPACE IS UNTOUCHED (issue #10). (--mode accept-edits worked headless only on
+# 1.1.0-1.1.2 and is soft-denied on 1.1.3, so it no longer suppresses this warning.)
 # Best-effort heuristic; warn only. --print-command (dry run) is exempt.
-if [ "$YOLO" -eq 0 ] && [ "$MODE" != "accept-edits" ] && [ "$PRINT_CMD" -ne 1 ]; then
+if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task but neither --mode accept-edits nor --yolo is set — headless agy will describe the edits or write them to its own scratch dir, NOT your workspace, while still reporting success (issue #10). Use --mode accept-edits for pure file writes (agy >= 1.1.0), or --yolo when the task also needs tools (web/terminal); run write tasks on a branch." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -315,6 +317,20 @@ if [ $RC -ne 0 ]; then
   exit 2
 fi
 if [ -z "${OUT//[$' \t\n\r']/}" ]; then
+  # agy >= 1.1.3 soft-denies a tool needing permission in headless mode and returns
+  # rc=0 with EMPTY stdout plus an explanatory stderr notice (the evolved issue #10:
+  # earlier versions silently wrote to a scratch dir or only described the edit). Detect
+  # it so the caller gets an actionable signal instead of a bare "empty output".
+  eblob="$(cat "$ERR" 2>/dev/null)"
+  shopt -s nocasematch
+  case "$eblob" in
+    *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"dangerously-skip-permissions"*)
+      shopt -u nocasematch
+      [ -s "$ERR" ] && cat "$ERR" >&2
+      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For file writes add --yolo (run on a branch); tool use (web/Vertex/terminal) also needs --yolo. (agy >= 1.1.3)" >&2
+      signal PERMISSION_DENIED "agy soft-denied a permissioned tool in headless — pass --yolo"; exit 15 ;;
+  esac
+  shopt -u nocasematch
   echo "agy-delegate: agy returned empty output (model='$MODEL')" >&2
   exit 3
 fi

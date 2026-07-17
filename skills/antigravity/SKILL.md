@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.18.1
+version: 0.18.2
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -61,10 +61,11 @@ the cross-model verification value (Claude executing Claude loses both).
 agy-delegate [options] "the task prompt"
 ```
 Options: `--tier flash|flash-lo|pro` · `--dir <path>` (workspace, repeatable) ·
-`--timeout 10m` · `--mode accept-edits|plan` (agy ≥ 1.1.0 — `accept-edits` auto-applies
-FILE EDITS to the workspace *without* granting terminal/tools: the safer choice for pure
-write tasks; `plan` touches nothing) · `--yolo` (auto-approve ALL tools — needed for
-web/terminal use in headless mode; broader than `--mode accept-edits`) · `--sandbox` ·
+`--timeout 10m` · `--yolo` (auto-approve ALL tools — the reliable headless grant for **any
+file write or tool use**; run write tasks on a branch) · `--mode accept-edits|plan`
+(agy execution mode: `accept-edits` auto-applied file edits headless on 1.1.0–1.1.2 but is
+**soft-denied on 1.1.3** — no longer a dependable headless write grant, use `--yolo`;
+`plan` = strategize only) · `--sandbox` ·
 `--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·
@@ -81,10 +82,11 @@ wrapper; it returns a digest for you to verify). Either way, *you* still own ver
 
 **Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout · `13`
 agy-missing · `14` model-unavailable (a `--model` / `tier_*` / `default_model` name not in
-`agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) (besides `2` failed
-/ `3` empty) and prints a `AGY_SIGNAL {...}` line on stderr; `agy-job status`/`result`
-surface it, so you can react (e.g. retry quota with `--continue`, or fix the model name)
-instead of scraping prose.
+`agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
+permission-denied (agy ≥ 1.1.3 soft-denies a permissioned tool headless — pass `--yolo`)
+(besides `2` failed / `3` empty) and prints a `AGY_SIGNAL {...}` line on stderr;
+`agy-job status`/`result` surface it, so you can react (e.g. retry quota with `--continue`,
+fix the model name, or add `--yolo`) instead of scraping prose.
 
 **If Claude itself is running headless (`claude -p`, one-shot):** run delegations
 **synchronously** — let `agy-delegate` BLOCK and return before you continue. Do NOT
@@ -139,15 +141,15 @@ If wrong: retry on `--tier pro`, sharpen the spec, or do that piece yourself.
 
 Read-only work (search, review, analysis) is low-risk. **When agy writes files or runs
 commands** (`--yolo` grants write + terminal):
-- **Write tasks MUST grant write permission.** Without it, headless agy describes the
-  edits (pre-1.1.0) or writes them to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch`,
-  1.1.0 review-first default) — your workspace stays untouched while agy reports success
-  (issue #10). Prefer **`--mode accept-edits`** (agy ≥ 1.1.0, file edits only — no
-  terminal/tool grant); use **`--yolo`** only when the task also needs tools (web /
-  Vertex AI Search / terminal). Claude Code may prompt for or block
-  `--dangerously-skip-permissions` — approve it or pre-allow `Bash(agy-delegate*)`.
-  Always verify files actually changed **in the workspace** (the gate catches the
-  silent no-write / scratch divert).
+- **Write tasks MUST pass `--yolo`.** Headless agy's no-permission behavior has shifted
+  every few releases — describe-only (pre-1.1.0), scratch-divert (1.1.0–1.1.2), soft-deny
+  with a stderr notice (1.1.3) — but in every version **your workspace stays untouched
+  while the run still "succeeds"** (issue #10). The one durable write grant is `--yolo`
+  (`--dangerously-skip-permissions`). (`--mode accept-edits` only wrote headless on
+  1.1.0–1.1.2 and is soft-denied on 1.1.3 — don't rely on it for writes.) Claude Code may
+  prompt for or block `--dangerously-skip-permissions` — approve it or pre-allow
+  `Bash(agy-delegate*)`. Always verify files actually changed **in the workspace** with
+  `git status` (the wrapper maps a 1.1.3 soft-deny to exit `15` so you're not left guessing).
 - Run it on a **dedicated git branch or worktree** so changes are isolated.
 - Add `--sandbox` for execution containment.
 - **Claude reviews the diff before merging** — never auto-merge agy's writes.

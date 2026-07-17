@@ -3,6 +3,24 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.18.2
+- **agy 1.1.3: headless write model changed again — `--yolo` is now the durable grant.**
+  All verified live on 1.1.3:
+  - 1.1.3 **removes the scratch-divert**: a write/tool needing permission is now
+    **soft-denied** in headless mode with a clear stderr notice (rc=0 + empty stdout).
+    This is the upstream's intended behavior (announced), not a bug — the evolved issue #10.
+  - **`--mode accept-edits` no longer grants headless writes** (soft-denied for create AND
+    edit on 1.1.3 — it had been riding the auto-approve behavior that 1.1.3 closed). Docs,
+    the `delegate` command, and the write-task warning now point to **`--yolo`** as the
+    reliable headless write/tool grant across versions; `--mode` passthrough stays but is
+    no longer recommended for writes.
+  - **New structured failure `15` — permission denied**: the wrapper detects the soft-deny
+    stderr (rc=0 + empty) and returns exit `15` + `AGY_SIGNAL {PERMISSION_DENIED}` with an
+    actionable message ("add `--yolo`"), instead of a bare "empty output". `agy-job`
+    renders it.
+  - Note: `--output-format json` is **still not externally available**, and native Windows
+    headless (`#508`/`#6`) is **still unresolved** — WSL guidance and plain-text parsing stay.
+
 ## 0.18.1
 - **New structured failure `14` — model unavailable** (agy 1.1.2): agy now **hard-fails**
   (instead of silently downgrading to the default model) when `--model` can't be resolved.

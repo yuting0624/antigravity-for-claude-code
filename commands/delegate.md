@@ -11,19 +11,18 @@ Task: $ARGUMENTS
 Do this:
 1. Pick a tier (`flash` default; `pro` for hard reasoning). If the task needs the repo,
    add `--dir <repo-root>` so agy reads the real files (don't paste them into context).
-   **If the task WRITES files**, grant write permission — without it, headless agy
-   describes the edits or writes them to its **own scratch dir**, NOT your workspace,
-   while still reporting success (issue #10):
-   - Pure file writes (implement / scaffold / test-gen / migrate / fix): **`--mode
-     accept-edits`** (agy ≥ 1.1.0) — auto-applies edits *without* granting terminal/tool
-     permissions. Prefer this.
-   - Task also needs tools (web / Vertex AI Search / terminal): **`--yolo`**. Claude Code
-     may prompt for or block `--dangerously-skip-permissions` — approve it when asked, or
-     pre-allow it; non-interactive (`claude -p`) without that permission can't use tools via agy.
-   - Either way: run write tasks on a dedicated branch (+ `--sandbox`), and **verify files
-     actually changed in the workspace** (`git status`).
+   **If the task WRITES files or uses tools** (web / Vertex AI Search / terminal), pass
+   **`--yolo`** — the reliable headless write/tool grant across agy versions. Without it,
+   headless agy leaves your workspace untouched while still reporting success (it
+   describes / scratch-diverts / soft-denies depending on version; issue #10). `--mode
+   accept-edits` is NOT a dependable substitute — it only wrote headless on agy 1.1.0–1.1.2
+   and is soft-denied on 1.1.3. Run write tasks on a dedicated branch (+ `--sandbox`), and
+   **verify files actually changed** with `git status`. Claude Code may prompt for or block
+   `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
+   (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper
+   returns exit `15`, that's exactly this: agy soft-denied the write — add `--yolo`.)
 2. Run **synchronously** (you may be headless — do not background-and-wait):
-   `agy-delegate --tier <tier> [--dir .] [--mode accept-edits | --yolo] [--digest] "<task>"`
+   `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
    For read/analysis tasks, add `--digest` — it appends a digest-only output contract so
    agy returns compact bullets instead of raw content.
 3. Ingest only the **result/digest** — do NOT re-read the files agy already handled

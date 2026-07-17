@@ -59,24 +59,23 @@ wrapper and `agy-doctor` warn when they detect this.
 
 ## agy says "done" but wrote no files (or wrote them somewhere else)
 
-**Cause:** write tasks need write permission. Without it, headless agy either only
-*describes* the edits (pre-1.1.0) or — since agy 1.1.0's review-first default — writes
-them to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch/`), **not your
-workspace**, and still returns success
-([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). The wrapper
-warns when a write-looking prompt lacks write permission.
+**Cause:** write tasks need write permission, and headless agy's no-permission behavior
+has changed across versions — but in every case **your workspace stays untouched while the
+run still "succeeds"** ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)):
+- pre-1.1.0: only *describes* the edits
+- 1.1.0–1.1.2: writes to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch/`)
+- 1.1.3+: **soft-denies** the write and prints a stderr notice naming the allow-rule
 
 **Fix:**
-- **Pure file writes** (implement / scaffold / test-gen / migrate): pass
-  **`--mode accept-edits`** (agy ≥ 1.1.0) — auto-applies edits to the real workspace
-  *without* granting terminal/tool permissions (a narrower grant than `--yolo`; prefer it).
-- **Task also uses tools** (web / Vertex AI Search / terminal): pass `--yolo`
-  (`--dangerously-skip-permissions`). Claude Code may prompt for (or in auto-mode, block)
-  it — approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
+- **Pass `--yolo`** (`--dangerously-skip-permissions`) — the one write/tool grant that
+  works headless across all agy versions. (`--mode accept-edits` only wrote headless on
+  1.1.0–1.1.2 and is soft-denied on 1.1.3 — don't rely on it.)
+- Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
+  approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
 - Run write tasks on a **dedicated branch** (add `--sandbox` for containment).
 - **Always verify files actually changed in your workspace** (`git status`) — never trust
-  the self-report. If agy claims success but the repo is clean, look in
-  `~/.gemini/antigravity-cli/scratch/`.
+  the self-report. The wrapper maps a 1.1.3 soft-deny to **exit 15** so you get an
+  actionable message instead of a bare "empty output".
 - Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
   background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
   `/antigravity:status` / `/antigravity:result <id>` (interactive sessions only).
@@ -99,6 +98,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 12 | timeout (agy's own, or the wall-clock guard) | raise `--timeout`, narrow the task; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
 | 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
+| 15 | permission denied | agy ≥ 1.1.3 soft-denied a tool needing permission in headless mode (e.g. a file write) — pass `--yolo` and run on a branch |
 
 ---
 
