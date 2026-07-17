@@ -111,8 +111,8 @@ scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
 # bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
 scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
 
-# write task: auto-apply FILE edits without granting terminal/tools (agy >= 1.1.0)
-scripts/agy-delegate.sh --mode accept-edits --dir ./app "Implement X per SPEC.md"
+# write task: --yolo is the reliable headless write grant (run on a branch; verify git status)
+scripts/agy-delegate.sh --yolo --dir ./app "Implement X per SPEC.md"
 
 # live web / Google search (tools need --yolo in headless mode)
 scripts/agy-delegate.sh --tier pro --yolo "Web-search <X>. Give URLs + dates."
@@ -167,7 +167,7 @@ Delegation doesn't save money by itself — these do (also in the skill):
 **Known limits (agy v1.0.x)**
 - `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
 - No `--output-format json` (plain text); `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`).
-- **Writes need write permission:** without it, headless agy describes the edits or (agy ≥ 1.1.0, review-first default) writes them to its **own scratch dir** — your workspace stays untouched while agy reports success ([issue #10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Prefer **`--mode accept-edits`** (agy ≥ 1.1.0; file edits only, no terminal/tool grant); use `--yolo` when the task also needs tools (web / Vertex AI Search). Run write tasks on a branch and verify files actually changed. Long write tasks can exceed the ~2-min sync Bash limit → use a background job.
+- **Writes need `--yolo`:** headless agy's no-permission behavior keeps shifting (describe-only pre-1.1.0 · scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+), but every version leaves **your workspace untouched while the run still "succeeds"** ([issue #10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). The durable grant is **`--yolo`** (`--dangerously-skip-permissions`) — `--mode accept-edits` only wrote headless on 1.1.0–1.1.2. Run write tasks on a branch and verify with `git status`; the wrapper maps a 1.1.3 soft-deny to exit `15`. Long write tasks can exceed the ~2-min sync Bash limit → use a background job.
 - **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
 - **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
 
