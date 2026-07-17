@@ -152,6 +152,8 @@ Delegation doesn't save money by itself — these do (also in the skill):
 
 `scripts/measure-session.py <session-id>` prints the COST-WEIGHTED + est. USD breakdown for a session (Claude side; Gemini side priced separately). `scripts/agy-cost-compare.sh` shows the per-token gap for a task — **estimates from char-count, so verify `prices.json` first.**
 
+**Running a PoC in your org?** [`docs/POC-PLAYBOOK.md`](docs/POC-PLAYBOOK.md) is the step-by-step method — quality gate first, baseline, one lever at a time, break-even reporting, and org-level rollout/enforcement (incl. Windows/WSL requirements).
+
 </details>
 
 <details>
@@ -183,7 +185,7 @@ agents/           antigravity-delegate subagent (file work runs on Gemini, not C
 commands/         slash commands (delegate, review, research, cloud-run-debug, setup, status, result, cancel)
 hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
 scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · measure-session · doctor
-docs/             AB-RESULTS (measured A/B) · TROUBLESHOOTING · DEMO-KIT
+docs/             AB-RESULTS (measured A/B) · POC-PLAYBOOK · TROUBLESHOOTING · DEMO-KIT
 prices.json       Vertex rate config (verify before quoting)
 ```
 
