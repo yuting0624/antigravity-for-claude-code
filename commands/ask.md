@@ -1,9 +1,9 @@
 ---
-description: Ask a fast, lightweight question to Gemini 3.5 Flash for rapid lookups and queries.
+description: Ask a fast, lightweight question to Gemini 3.6 Flash for rapid lookups and queries.
 argument-hint: "<your question>"
 ---
 
-Quickly query Gemini 3.5 Flash (Low) for rapid coding assistance, syntax lookups, brief explanations,
+Quickly query Gemini 3.6 Flash (Low) for rapid coding assistance, syntax lookups, brief explanations,
 or sanity checks. This executes synchronously and bypasses heavier context loading to remain fast and cost-effective.
 
 Question: $ARGUMENTS
