@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.17.0
+version: 0.18.2
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -61,8 +61,12 @@ the cross-model verification value (Claude executing Claude loses both).
 agy-delegate [options] "the task prompt"
 ```
 Options: `--tier flash|flash-lo|pro` · `--dir <path>` (workspace, repeatable) ·
-`--timeout 10m` · `--yolo` (auto-approve tools — needed for any tool use in headless
-mode) · `--sandbox` · `--digest` (append a digest-only output contract — use it for any
+`--timeout 10m` · `--yolo` (auto-approve ALL tools — the reliable headless grant for **any
+file write or tool use**; run write tasks on a branch) · `--mode accept-edits|plan`
+(agy execution mode: `accept-edits` auto-applied file edits headless on 1.1.0–1.1.2 but is
+**soft-denied on 1.1.3** — no longer a dependable headless write grant, use `--yolo`;
+`plan` = strategize only) · `--sandbox` ·
+`--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·
 `--print-command` (dry run: show the resolved `agy` call, don't run it) · pipe a long
@@ -77,9 +81,12 @@ the unit to the **`antigravity-delegate` subagent** (its only file-acting tool i
 wrapper; it returns a digest for you to verify). Either way, *you* still own verification.
 
 **Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout · `13`
-agy-missing (besides `2` failed / `3` empty) and prints a `AGY_SIGNAL {...}` line on
-stderr; `agy-job status`/`result` surface it, so you can react (e.g. retry quota with
-`--continue`) instead of scraping prose.
+agy-missing · `14` model-unavailable (a `--model` / `tier_*` / `default_model` name not in
+`agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
+permission-denied (agy ≥ 1.1.3 soft-denies a permissioned tool headless — pass `--yolo`)
+(besides `2` failed / `3` empty) and prints a `AGY_SIGNAL {...}` line on stderr;
+`agy-job status`/`result` surface it, so you can react (e.g. retry quota with `--continue`,
+fix the model name, or add `--yolo`) instead of scraping prose.
 
 **If Claude itself is running headless (`claude -p`, one-shot):** run delegations
 **synchronously** — let `agy-delegate` BLOCK and return before you continue. Do NOT
@@ -134,10 +141,15 @@ If wrong: retry on `--tier pro`, sharpen the spec, or do that piece yourself.
 
 Read-only work (search, review, analysis) is low-risk. **When agy writes files or runs
 commands** (`--yolo` grants write + terminal):
-- **Write tasks MUST pass `--yolo`.** Without it, agy only *describes* the edits and returns a
-  confident "done" **without writing anything** (issue #10). Claude Code may also prompt for or
-  block `--dangerously-skip-permissions` — approve it or pre-allow `Bash(agy-delegate*)`. Always
-  verify the files actually changed (the gate catches the silent no-write).
+- **Write tasks MUST pass `--yolo`.** Headless agy's no-permission behavior has shifted
+  every few releases — describe-only (pre-1.1.0), scratch-divert (1.1.0–1.1.2), soft-deny
+  with a stderr notice (1.1.3) — but in every version **your workspace stays untouched
+  while the run still "succeeds"** (issue #10). The one durable write grant is `--yolo`
+  (`--dangerously-skip-permissions`). (`--mode accept-edits` only wrote headless on
+  1.1.0–1.1.2 and is soft-denied on 1.1.3 — don't rely on it for writes.) Claude Code may
+  prompt for or block `--dangerously-skip-permissions` — approve it or pre-allow
+  `Bash(agy-delegate*)`. Always verify files actually changed **in the workspace** with
+  `git status` (the wrapper maps a 1.1.3 soft-deny to exit `15` so you're not left guessing).
 - Run it on a **dedicated git branch or worktree** so changes are isolated.
 - Add `--sandbox` for execution containment.
 - **Claude reviews the diff before merging** — never auto-merge agy's writes.
@@ -229,9 +241,12 @@ while we tracked it), so re-verify after any agy upgrade:
 
 - **agy ≥ 1.0.16 — dynamic custom subagents (preferred):** have agy `define_subagent` a
   named specialist in-session (name / description / system_prompt), then
-  `invoke_subagent` it by that TypeName. **Verified headless on 1.0.16**: define →
-  invoke → result round-trips cleanly, real thread spawned. (1.0.13–1.0.15 shipped this
-  broken — defined agents failed to invoke, upstream #521; fixed in 1.0.16.)
+  `invoke_subagent` it by that TypeName. **Verified headless on 1.0.16 and re-verified
+  on 1.1.0**: define → invoke → result round-trips cleanly, real thread spawned.
+  (1.0.13–1.0.15 shipped this broken — defined agents failed to invoke, upstream #521;
+  fixed in 1.0.16. Subagents are officially documented as of 1.1.0 —
+  antigravity.google/docs/cli/subagents — with static config at
+  `<workspace>/.agents/agents/*.md` and global `~/.gemini/config/agents/`.)
 - **Any version — role delegation (fallback):** the sandbox pre-approves TypeNames
   **`self`** and **`research`**; an *undefined* custom TypeName is rejected with
   `CORTEX_STEP_TYPE_INVOKE_SUBAGENT: ... not found or not allowed to be invoked`

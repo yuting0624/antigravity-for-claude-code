@@ -37,6 +37,8 @@ case "${STUB_MODE:-text}" in
   quota)   echo "Error: quota exceeded for this model" >&2; exit 1 ;;     # -> wrapper exit 10
   auth)    echo "Error: request is unauthenticated; please sign in" >&2; exit 1 ;; # -> exit 11
   timeout) echo "Error: deadline exceeded (the request timed out)" >&2; exit 1 ;;  # -> exit 12
+  badmodel) echo "Error: invalid --model \"X\": model X is not recognized as a known model" >&2; exit 1 ;; # -> exit 14
+  softdeny) echo "no output produced — a tool required the \"write_file\" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow" >&2; exit 0 ;; # rc=0 + empty stdout -> exit 15
   big)     printf 'x%.0s' $(seq 1 20000); echo ;;    # dump-sized reply -> digest guard warns
   *)       echo "STUB_OK" ;;
 esac
@@ -135,6 +137,13 @@ check "agy auth -> exit 11 + signal" 11 "$rc" "AUTH_REQUIRED" "$out"
 out=$(STUB_MODE=timeout "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
 
+out=$(STUB_MODE=badmodel "$DELEGATE" "hi" 2>&1); rc=$?
+check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
+
+# agy >= 1.1.3: permissioned tool soft-denied headless -> rc=0 + empty stdout + stderr notice
+out=$(STUB_MODE=softdeny "$DELEGATE" "implement it" 2>&1); rc=$?
+check "agy soft-deny (no permission) -> exit 15 + signal" 15 "$rc" "PERMISSION_DENIED" "$out"
+
 # wall-clock guard: a HANGING agy (sleeps far past the timeout) must be killed and
 # mapped to TIMEOUT (exit 12), not hang the wrapper forever (issue #6). Requires a
 # real `timeout`/`gtimeout`; skip cleanly if neither is on PATH.
@@ -188,15 +197,30 @@ check "--print-command shows the tier model" 0 "$rc" "Pro" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
 
-# write-task without --yolo -> warn (agy would only describe, not write) (issue #10)
+# write-task without --yolo -> warn (workspace untouched; issue #10). The one durable
+# grant is --yolo; --mode accept-edits stopped granting headless writes on agy 1.1.3.
+WARN='NOT write to your workspace'
 out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc=$?
-check "write prompt w/o --yolo -> warns" 0 "$rc" "DESCRIBES" "$out"
+check "write prompt w/o --yolo -> warns" 0 "$rc" "$WARN" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=$?
-if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
+if printf '%s' "$out" | grep -qF "$WARN"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "implement the parser module" 2>&1); rc=$?
+if printf '%s' "$out" | grep -qF "$WARN"; then echo "ok: --mode accept-edits still warns (soft-denied on 1.1.3)"; PASS=$((PASS+1));
+else echo "FAIL: no warning with --mode accept-edits (should warn since 1.1.3)"; FAIL=$((FAIL+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
-if printf '%s' "$out" | grep -q "DESCRIBES"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
+if printf '%s' "$out" | grep -qF "$WARN"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
+
+# --mode passthrough (agy >= 1.1.0): accept-edits reaches agy; invalid mode errors early
+out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "hi" 2>/dev/null); rc=$?
+check "--mode accept-edits passed through to agy" 0 "$rc" "--mode accept-edits" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --mode plan "hi" 2>/dev/null); rc=$?
+check "--mode plan passed through to agy" 0 "$rc" "--mode plan" "$out"
+out=$("$DELEGATE" --mode bogus "hi" 2>&1); rc=$?
+check "--mode bogus -> exit 1 (friendly)" 1 "$rc" "invalid --mode" "$out"
+out=$("$DELEGATE" --mode accept-edits --print-command "hi" 2>/dev/null); rc=$?
+check "--print-command shows --mode" 0 "$rc" "--mode accept-edits" "$out"
 
 # --digest appends the digest-only output contract to the prompt (issue #5)
 out=$(STUB_MODE=args "$DELEGATE" --digest "hi" 2>/dev/null); rc=$?

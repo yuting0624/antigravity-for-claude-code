@@ -3,6 +3,60 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.18.2
+- **agy 1.1.3: headless write model changed again — `--yolo` is now the durable grant.**
+  All verified live on 1.1.3:
+  - 1.1.3 **removes the scratch-divert**: a write/tool needing permission is now
+    **soft-denied** in headless mode with a clear stderr notice (rc=0 + empty stdout).
+    This is the upstream's intended behavior (announced), not a bug — the evolved issue #10.
+  - **`--mode accept-edits` no longer grants headless writes** (soft-denied for create AND
+    edit on 1.1.3 — it had been riding the auto-approve behavior that 1.1.3 closed). Docs,
+    the `delegate` command, and the write-task warning now point to **`--yolo`** as the
+    reliable headless write/tool grant across versions; `--mode` passthrough stays but is
+    no longer recommended for writes.
+  - **New structured failure `15` — permission denied**: the wrapper detects the soft-deny
+    stderr (rc=0 + empty) and returns exit `15` + `AGY_SIGNAL {PERMISSION_DENIED}` with an
+    actionable message ("add `--yolo`"), instead of a bare "empty output". `agy-job`
+    renders it.
+  - Note: `--output-format json` is **still not externally available**, and native Windows
+    headless (`#508`/`#6`) is **still unresolved** — WSL guidance and plain-text parsing stay.
+
+## 0.18.1
+- **New structured failure `14` — model unavailable** (agy 1.1.2): agy now **hard-fails**
+  (instead of silently downgrading to the default model) when `--model` can't be resolved.
+  The wrapper classifies this into exit `14` + `AGY_SIGNAL {MODEL_UNAVAILABLE}` and prints
+  an actionable hint (run `agy models`; fix `--model` / `tier_*` / `default_model`) — the
+  common failure when a tier remap points at a model your plan doesn't expose. `agy-job`
+  renders the new code.
+- **Note on agy 1.1.x upstream fixes** (verified against release notes): 1.1.1 fixed
+  `agy -p` hanging inside a subprocess/script and print mode silently exiting success on a
+  server-side error; both are now non-zero + stderr, so the wrapper classifies them
+  correctly. Native Windows headless (`#508`/`#6`) is **still not resolved upstream**, and
+  `--output-format json` is **still not externally available** — the WSL guidance and
+  plain-text parsing stay.
+
+## 0.18.0
+- **agy 1.1.0 support — `--mode accept-edits|plan` passthrough** (all behaviors below
+  verified live on 1.1.0):
+  - 1.1.0 makes **review-first** the default execution mode. Headless consequence
+    (measured): a write task **without** write permission no longer just "describes" —
+    agy writes the files to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch`)
+    and reports success, while your workspace stays untouched (the evolved #10 failure
+    mode).
+  - New wrapper flag **`--mode accept-edits`**: auto-applies FILE EDITS to the real
+    workspace *without* granting terminal/tool permissions — a **narrower grant than
+    `--yolo`**, now the recommended way to run pure write delegations. `--yolo` remains
+    for tasks that also need tools (web / Vertex AI Search / terminal); verified
+    backward-compatible on 1.1.0. `--mode plan` passes through for strategize-only runs.
+  - The write-task warning now fires only when *neither* `--mode accept-edits` nor
+    `--yolo` is set, and explains the scratch-divert behavior.
+  - Subagents re-verified on 1.1.0 (`define_subagent` → `invoke_subagent`, transcript
+    path unchanged); they are **officially documented** as of 1.1.0, with static config
+    at `<workspace>/.agents/agents/*.md` and global `~/.gemini/config/agents/` — the
+    skill's fan-out recipe now points at the official docs.
+  - `delegate` command, skill safety section, and README write guidance updated to the
+    "prefer `--mode accept-edits`, escalate to `--yolo` only for tools" split.
+
 ## 0.17.0
 - **Frictionless delegation — no slash command required, judgment stays with Claude.**
   Two additions reduce the "you must type `/antigravity:delegate` every time" friction,

@@ -111,6 +111,9 @@ scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
 # bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
 scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
 
+# write task: --yolo is the reliable headless write grant (run on a branch; verify git status)
+scripts/agy-delegate.sh --yolo --dir ./app "Implement X per SPEC.md"
+
 # live web / Google search (tools need --yolo in headless mode)
 scripts/agy-delegate.sh --tier pro --yolo "Web-search <X>. Give URLs + dates."
 
@@ -149,6 +152,8 @@ Delegation doesn't save money by itself — these do (also in the skill):
 
 `scripts/measure-session.py <session-id>` prints the COST-WEIGHTED + est. USD breakdown for a session (Claude side; Gemini side priced separately). `scripts/agy-cost-compare.sh` shows the per-token gap for a task — **estimates from char-count, so verify `prices.json` first.**
 
+**Running a PoC in your org?** [`docs/POC-PLAYBOOK.md`](docs/POC-PLAYBOOK.md) is the step-by-step method — quality gate first, baseline, one lever at a time, break-even reporting, and org-level rollout/enforcement (incl. Windows/WSL requirements).
+
 </details>
 
 <details>
@@ -164,7 +169,7 @@ Delegation doesn't save money by itself — these do (also in the skill):
 **Known limits (agy v1.0.x)**
 - `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
 - No `--output-format json` (plain text); `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`).
-- **Writes need `--yolo`:** without it, headless agy only *describes* edits and returns a confident success **without writing any files** ([issue #10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Pass `--yolo` for write tasks (on a branch); Claude Code may prompt for / block `--dangerously-skip-permissions` — approve it or pre-allow it. Long write tasks can exceed the ~2-min sync Bash limit → use a background job.
+- **Writes need `--yolo`:** headless agy's no-permission behavior keeps shifting (describe-only pre-1.1.0 · scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+), but every version leaves **your workspace untouched while the run still "succeeds"** ([issue #10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). The durable grant is **`--yolo`** (`--dangerously-skip-permissions`) — `--mode accept-edits` only wrote headless on 1.1.0–1.1.2. Run write tasks on a branch and verify with `git status`; the wrapper maps a 1.1.3 soft-deny to exit `15`. Long write tasks can exceed the ~2-min sync Bash limit → use a background job.
 - **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
 - **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
 
@@ -180,7 +185,7 @@ agents/           antigravity-delegate subagent (file work runs on Gemini, not C
 commands/         slash commands (delegate, review, research, cloud-run-debug, setup, status, result, cancel)
 hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
 scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · measure-session · doctor
-docs/             AB-RESULTS (measured A/B) · TROUBLESHOOTING · DEMO-KIT
+docs/             AB-RESULTS (measured A/B) · POC-PLAYBOOK · TROUBLESHOOTING · DEMO-KIT
 prices.json       Vertex rate config (verify before quoting)
 ```
 

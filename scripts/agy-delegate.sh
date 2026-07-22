@@ -27,13 +27,19 @@
 #       --sandbox                    Run agent with terminal sandbox restrictions
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
+#       --mode <accept-edits|plan>   agy execution mode (agy >= 1.1.0). accept-edits: auto-apply
+#                                    FILE EDITS to the workspace without granting terminal/tool
+#                                    permissions (the safer choice for pure write tasks — narrower
+#                                    than --yolo). plan: strategize only, touch nothing.
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
 #       --print-command              Print the resolved agy command and exit (dry run)
 #   -h, --help                       Show this help
 #
-# Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout | 13 agy missing
+# Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
+#             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
+#             | 15 permission denied (agy >= 1.1.3 soft-denied a permissioned tool headless — pass --yolo)
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -53,6 +59,7 @@ MODEL=""
 YOLO=0
 SANDBOX=0
 DIGEST=0
+MODE=""
 ADD_DIRS=()
 PROMPT=""
 CONTINUE=0
@@ -142,6 +149,10 @@ while [ $# -gt 0 ]; do
     --yolo)         YOLO=1; shift ;;
     --sandbox)      SANDBOX=1; shift ;;
     --digest)       DIGEST=1; shift ;;               # ask agy for a digest-only reply
+    --mode)         need "$#" "$1"; MODE="$2"; shift 2
+                    case "$MODE" in accept-edits|plan) ;;
+                      *) die "invalid --mode '$MODE' (use accept-edits | plan; agy >= 1.1.0)" ;;
+                    esac ;;
     -c|--continue)  CONTINUE=1; shift ;;            # resume most recent agy conversation
     --conversation) need "$#" "$1"; CONV_ID="$2"; shift 2 ;; # resume a specific conversation by ID
     -m|--model)     need "$#" "$1"; MODEL="$2"; shift 2 ;;
@@ -192,14 +203,17 @@ if on_wsl; then
   done
 fi
 
-# Heads-up: a likely write task without --yolo. Without --yolo, headless agy only
-# DESCRIBES edits and returns success without writing any files (issue #10). Best-effort
-# heuristic; warn only. --print-command (dry run) is exempt.
+# Heads-up: a likely write task without write permission. Headless agy's write behavior
+# has shifted across versions (describe-only pre-1.1.0; scratch-divert 1.1.0-1.1.2;
+# soft-deny with a stderr notice on 1.1.3) — but the one durable grant is --yolo. Without
+# it, YOUR WORKSPACE IS UNTOUCHED (issue #10). (--mode accept-edits worked headless only on
+# 1.1.0-1.1.2 and is soft-denied on 1.1.3, so it no longer suppresses this warning.)
+# Best-effort heuristic; warn only. --print-command (dry run) is exempt.
 if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task but --yolo is not set — without it agy only DESCRIBES edits and writes nothing (still returns success). Add --yolo (and run on a branch) to actually write files." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -220,6 +234,7 @@ fi
 ARGS=(--model "$MODEL" --print-timeout "$TIMEOUT")
 for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
 [ "$YOLO" -eq 1 ]      && ARGS+=(--dangerously-skip-permissions)
+[ -n "$MODE" ]         && ARGS+=(--mode "$MODE")     # agy >= 1.1.0
 [ "$SANDBOX" -eq 1 ]   && ARGS+=(--sandbox)
 [ "$CONTINUE" -eq 1 ]  && ARGS+=(--continue)        # keep working context on the cheap (Gemini) side
 [ -n "$CONV_ID" ]      && ARGS+=(--conversation "$CONV_ID")
@@ -289,12 +304,33 @@ if [ $RC -ne 0 ]; then
       shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` once"; exit 11 ;;
     *"timed out"*|*"deadline exceeded"*|*"print-timeout"*)
       shopt -u nocasematch; signal TIMEOUT "agy print-timeout / deadline exceeded"; exit 12 ;;
+    *"invalid --model"*|*"is not recognized as a known model"*|*"not a known model"*)
+      # agy >= 1.1.2 hard-fails (instead of silently downgrading) when --model can't be
+      # resolved — common when a tier_* / default_model remap points at a model this plan
+      # doesn't expose. Surface it as its own actionable category.
+      shopt -u nocasematch
+      echo "agy-delegate: model '$MODEL' is not available on this plan — run \`agy models\`, then fix --model / the tier_* / default_model option." >&2
+      signal MODEL_UNAVAILABLE "model not in \`agy models\` (check --model / tier remaps)"; exit 14 ;;
   esac
   shopt -u nocasematch
   signal AGY_FAILED "agy exited $RC"
   exit 2
 fi
 if [ -z "${OUT//[$' \t\n\r']/}" ]; then
+  # agy >= 1.1.3 soft-denies a tool needing permission in headless mode and returns
+  # rc=0 with EMPTY stdout plus an explanatory stderr notice (the evolved issue #10:
+  # earlier versions silently wrote to a scratch dir or only described the edit). Detect
+  # it so the caller gets an actionable signal instead of a bare "empty output".
+  eblob="$(cat "$ERR" 2>/dev/null)"
+  shopt -s nocasematch
+  case "$eblob" in
+    *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"dangerously-skip-permissions"*)
+      shopt -u nocasematch
+      [ -s "$ERR" ] && cat "$ERR" >&2
+      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For file writes add --yolo (run on a branch); tool use (web/Vertex/terminal) also needs --yolo. (agy >= 1.1.3)" >&2
+      signal PERMISSION_DENIED "agy soft-denied a permissioned tool in headless — pass --yolo"; exit 15 ;;
+  esac
+  shopt -u nocasematch
   echo "agy-delegate: agy returned empty output (model='$MODEL')" >&2
   exit 3
 fi
