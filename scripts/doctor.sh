@@ -12,6 +12,26 @@ warn() { printf '  ⚠ %s\n' "$*"; }   # advisory; does NOT fail the check
 info() { printf '    %s\n' "$*"; }
 FAIL=0
 
+# Normalize a model id to lowercase alphanumerics only, so a configured display name
+# ("Gemini 3.5 Flash (High)") and an `agy models` entry survive comparison regardless of
+# format. agy 1.1.5 switched `agy models` output from display names to slugs
+# (`gemini-3.5-flash`), which broke a strict grep and made doctor falsely warn that every
+# tier model was missing (they still worked). Both forms normalize to a comparable core.
+norm_model() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]'; }
+# True if $1 (a configured tier model) matches any line in $MODELS, in either direction
+# (a slug is a substring of the display name, or vice versa).
+model_present() {
+  local want line n; want="$(norm_model "$1")"; [ -n "$want" ] || return 1
+  while IFS= read -r line; do
+    n="$(norm_model "$line")"; [ -n "$n" ] || continue
+    case "$want" in *"$n"*) return 0 ;; esac
+    case "$n" in *"$want"*) return 0 ;; esac
+  done <<EOF
+$MODELS
+EOF
+  return 1
+}
+
 # Resolve a usable `timeout` command (GNU coreutils, or macOS Homebrew gtimeout)
 # so a headless/no-TTY hang in `agy models` is bounded instead of freezing doctor.
 TO_CMD=""
@@ -80,7 +100,7 @@ if command -v agy >/dev/null 2>&1; then
     FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.5 Flash (Low)}"
     PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}"
     for m in "$FLASH" "$FLASH_LO" "$PRO"; do
-      if printf '%s' "$MODELS" | grep -qF "$m"; then
+      if model_present "$m"; then
         ok "tier model present: $m"
       else
         warn "tier model not in 'agy models': $m"

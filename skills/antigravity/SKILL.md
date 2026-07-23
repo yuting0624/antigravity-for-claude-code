@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.18.2
+version: 0.18.3
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -54,6 +54,13 @@ model `agy models` lists (Claude / GPT on plans that expose them) — via `--mod
 or persistently with the `default_model` / `tier_*` plugin options. Keep the executor a
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
+
+> **Model availability moves fast.** Verified through **agy 1.1.5**. A newer **Gemini 3.6 Flash**
+> now appears in `agy models` and works — but the `flash` default **stays on Gemini 3.5 Flash
+> (High)** for broad plan availability (newer models can lag on enterprise Vertex). Remap
+> `tier_flash` to `Gemini 3.6 Flash (High)` when your plan serves it. Note: agy 1.1.5 changed
+> `agy models` output to slugs (`gemini-3.5-flash`); both slugs and display names are accepted
+> by `--model`, and `doctor` matches either.
 
 ## How to call it
 

@@ -3,6 +3,25 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.18.3
+- **`doctor` fix — recognize tier models across `agy models` format changes.** agy 1.1.5
+  switched `agy models` output from **display names** (`Gemini 3.5 Flash (High)`) to
+  **slugs** (`gemini-3.5-flash`), which broke doctor's strict `grep` and made it **falsely
+  warn that every tier model was missing** (they still work). doctor now normalizes both
+  sides (lowercase-alphanumeric, bidirectional substring), so it survives either format.
+- **Verified against agy 1.1.4 / 1.1.5.** Default `flash` delegation, tier resolution, and
+  exit-code classification all work on 1.1.5 (1.1.4/1.1.5 were mostly interactive/UX:
+  `--effort`, stable model slugs, `/model` picker, MCP fixes).
+- **Gemini 3.6 Flash** now appears in `agy models` and **works** (verified all effort
+  variants through the wrapper). The `flash` **default stays Gemini 3.5 Flash (High)** for
+  broad plan availability (newer models can lag on enterprise Vertex) — remap `tier_flash`
+  to `Gemini 3.6 Flash (High)` if your plan serves it. (Both display names and 1.1.5 slugs
+  are accepted by `--model`.)
+- **Still unchanged upstream** (re-confirmed on 1.1.5): headless writes need `--yolo` (a
+  `permissions.allow` write-rule was still soft-denied in testing despite 1.1.4's
+  "honor settings.json headless"), `--output-format json` not externally available yet,
+  native Windows headless (`#508`/`#6`) unresolved.
+
 ## 0.18.2
 - **agy 1.1.3: headless write model changed again — `--yolo` is now the durable grant.**
   All verified live on 1.1.3:
