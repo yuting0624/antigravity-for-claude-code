@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.18.3
+version: 0.18.4
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -266,24 +266,29 @@ ONE delegation and let agy fan out internally — the coordination tokens land o
 cheap side, and you ingest a single digest.
 
 ```bash
-# Any version (fallback form). On agy >= 1.0.16, swap the instruction to:
-# "define_subagent a named specialist per unit, then invoke each by its TypeName".
-agy-delegate --dir . --digest --timeout 10m \
-  "Decompose <task> into up to 3 units. For each unit, invoke a background subagent
-   with TypeName \"self\" and a specialist Role (e.g. 'Test Writer'), each following
-   AGENTS.md. Wait for all of them, then report per-unit results, each subagent's
-   conversationId, and end with a DIGEST line."
+# Preferred form (agy >= 1.0.16). --yolo is required so the subagent tools aren't
+# soft-denied headless (see below). Verified live on agy 1.1.5.
+agy-delegate --dir . --yolo --digest --timeout 10m \
+  "ACTUALLY use your define_subagent and invoke_subagent tools (do NOT simulate).
+   Decompose <task> into up to 3 units. For each unit: define_subagent a named specialist
+   (name + system_prompt for its role, following this repo's conventions / AGENTS.md if
+   present), then invoke_subagent it by TypeName with the unit's work. Wait for ALL, then
+   report per-unit results, EACH subagent's conversationId, and end with a DIGEST line."
+# Any-version fallback: replace define/invoke with TypeName "self" + a specialist Role.
 ```
 
-Verified behaviors (1.0.12 → 1.0.16):
-- **Spawning needs no `--yolo`** — subagent invocation isn't permission-gated; file
-  writes / web tools *inside* the subagents' work still need it.
+Verified behaviors (1.0.12 → 1.1.5):
+- **Pass `--yolo`.** On 1.1.3+ the subagent tools need permission that headless mode
+  can't prompt for, so without `--yolo` the spawn is soft-denied (wrapper exit 15).
+  (On 1.0.x spawning was ungated, but `--yolo` is the durable choice; writes/web tools
+  *inside* the subagents' work always need it.)
 - Each spawn's tool result includes a `logAbsoluteUri` → a **readable step-by-step
   `transcript.jsonl`** under `~/.gemini/antigravity-cli/brain/<conversationId>/` —
   *better* trajectory visibility than a plain delegation. Location unchanged across
-  1.0.12→1.0.16, for both `define_subagent` and `self` spawns. Have the parent report
+  1.0.12→1.1.5, for both `define_subagent` and `self` spawns. Have the parent report
   each `conversationId`, then audit with `agy-trace <id>` (`agy-trace --list` finds
-  recent ones).
+  recent ones). Note: the parent may also create a coordination thread of its own, so
+  `--list` can show one more conversation than the units you asked for.
 - Spawns are real and observable (new conversation threads appear) — but still run the
   verification gates on the merged result; more autonomy = more surface for error.
 

@@ -3,6 +3,18 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.18.4
+- **`bin/measure-session` shim** — `measure-session.py` was the only script without a `bin/`
+  entrypoint, so it couldn't be run by bare name from a marketplace install (only via the
+  `scripts/` path, which doesn't resolve from a user's own repo). It now has a shim like the
+  others, so `measure-session <session-id>` works on the PATH. (`doctor` + contract tests
+  cover it.)
+- **Fan-out recipe corrected for agy 1.1.3+.** The skill's internal fan-out example now
+  leads with the preferred `define_subagent → invoke_subagent` form and **requires `--yolo`**
+  — on 1.1.3+ the subagent tools are soft-denied headless without it (the old "spawning needs
+  no `--yolo`" note was 1.0.x behavior). Re-verified live on 1.1.5 (two parallel subagents,
+  each with an auditable `transcript.jsonl` via `agy-trace`).
+
 ## 0.18.3
 - **`doctor` fix — recognize tier models across `agy models` format changes.** agy 1.1.5
   switched `agy models` output from **display names** (`Gemini 3.5 Flash (High)`) to
