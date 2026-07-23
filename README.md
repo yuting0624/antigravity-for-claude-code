@@ -186,6 +186,7 @@ skills/antigravity/SKILL.md   WHEN + HOW Claude collaborates with agy
 agents/           antigravity-delegate subagent (file work runs on Gemini, not Claude)
 commands/         slash commands (delegate, review, research, cloud-run-debug, setup, status, result, cancel)
 hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
+bin/              PATH shims (bare names): agy-delegate · agy-job · agy-cost-compare · agy-doctor · cloud-debug · agy-trace · measure-session
 scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · measure-session · doctor
 docs/             AB-RESULTS (measured A/B) · POC-PLAYBOOK · TROUBLESHOOTING · DEMO-KIT
 prices.json       Vertex rate config (verify before quoting)

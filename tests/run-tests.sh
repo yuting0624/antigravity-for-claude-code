@@ -386,7 +386,7 @@ else echo "FAIL: delegate agent missing proactive-with-judgment description"; FA
 
 echo "== bin/ entrypoints (issue #11: \$CLAUDE_PLUGIN_ROOT not on model-run Bash) =="
 BIN="$ROOT/bin"
-for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace; do
+for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session; do
   if [ -x "$BIN/$b" ]; then echo "ok: bin/$b executable"; PASS=$((PASS+1));
   else echo "FAIL: bin/$b missing or not executable"; FAIL=$((FAIL+1)); fi
 done
@@ -398,6 +398,9 @@ case "$out" in *doctor*) echo "ok: bin/agy-doctor forwards to doctor.sh"; PASS=$
   *) echo "FAIL: bin/agy-doctor did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
 out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/cloud-debug" --service svc --print-command 2>/dev/null); rc=$?
 check "bin/cloud-debug forwards to cloud-debug.sh (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "logging read" "$out"
+out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/measure-session" 2>&1 | head -1)
+case "$out" in *measure-session*) echo "ok: bin/measure-session forwards to the .py"; PASS=$((PASS+1));;
+  *) echo "FAIL: bin/measure-session did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
 
 echo "== doctor.sh tier-model check (agy 1.1.5 slug format) =="
 # The stub's `agy models` emits slugs (gemini-3.5-flash); doctor's default tier models are
@@ -541,7 +544,7 @@ for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delega
 
 # bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported
 # to model-run Bash, so commands/skill must call these bare names on the PATH)
-for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug", "agy-trace"):
+for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug", "agy-trace", "measure-session"):
     need(os.access(p("bin", b), os.X_OK), "bin entrypoint missing/not executable: bin/" + b)
 
 # regression guard: commands & skill must NOT invoke $CLAUDE_PLUGIN_ROOT/scripts/* — that

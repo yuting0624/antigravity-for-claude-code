@@ -3,6 +3,13 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.18.4
+- **`bin/measure-session` shim** — `measure-session.py` was the only script without a `bin/`
+  entrypoint, so it couldn't be run by bare name from a marketplace install (only via the
+  `scripts/` path, which doesn't resolve from a user's own repo). It now has a shim like the
+  others, so `measure-session <session-id>` works on the PATH. (`doctor` + contract tests
+  cover it.)
+
 ## 0.18.3
 - **`doctor` fix — recognize tier models across `agy models` format changes.** agy 1.1.5
   switched `agy models` output from **display names** (`Gemini 3.5 Flash (High)`) to
