@@ -25,7 +25,11 @@ IN="$(cat 2>/dev/null || true)"
 
 # Extract ONLY the prompt field (matching on the whole payload would false-positive
 # on cwd/paths). python3 is already a plugin dependency (measure-session, agy-trace).
-PROMPT="$(printf '%s' "$IN" | python3 -c 'import json,sys
+py_cmd="python3"
+if ! command -v python3 >/dev/null 2>&1 && command -v python >/dev/null 2>&1; then
+  py_cmd="python"
+fi
+PROMPT="$(printf '%s' "$IN" | "$py_cmd" -c 'import json,sys
 try: print(json.load(sys.stdin).get("prompt",""))
 except Exception: pass' 2>/dev/null || true)"
 [ -n "$PROMPT" ] || exit 0

@@ -128,8 +128,8 @@ ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh
 
 | tier | model | use for |
 |------|-------|---------|
-| `flash` (default) | Gemini 3.5 Flash (High) | most bulk work |
-| `flash-lo` | Gemini 3.5 Flash (Low) | cheapest, trivial tasks |
+| `flash` (default) | Gemini 3.6 Flash (High) | most bulk work |
+| `flash-lo` | Gemini 3.6 Flash (Low) | cheapest, trivial tasks |
 | `pro` | Gemini 3.1 Pro (High) | harder reasoning / cross-checks |
 
 **agy is multi-model.** Tiers default to Gemini, but you can use any model `agy models` lists

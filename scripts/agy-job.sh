@@ -19,6 +19,12 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 DELEGATE="${AGY_DELEGATE:-$HERE/agy-delegate.sh}"
 REG="${ANTIGRAVITY_JOBS:-$HOME/.antigravity-jobs}"
 
+on_windows_native() {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
+  case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
+  return 1
+}
+
 die() { echo "agy-job: $*" >&2; exit 1; }
 
 # resolve a (possibly abbreviated) id to a job dir
@@ -38,8 +44,21 @@ job_state() {
   if [ -f "$jd/rc" ]; then
     rc="$(cat "$jd/rc")"
     if [ "$rc" = "0" ]; then echo "done"; else echo "failed"; fi
-  elif [ -f "$jd/pid" ] && kill -0 "$(cat "$jd/pid")" 2>/dev/null; then
-    echo running
+  elif [ -f "$jd/pid" ]; then
+    local pid="$(cat "$jd/pid")"
+    local running=0
+    if on_windows_native; then
+      if [ -n "$pid" ] && ! MSYS_NO_PATHCONV=1 tasklist.exe /NH /FI "PID eq $pid" 2>/dev/null | grep -q "No tasks are running"; then
+        running=1
+      fi
+    else
+      if kill -0 "$pid" 2>/dev/null; then running=1; fi
+    fi
+    if [ "$running" = "1" ]; then
+      echo running
+    else
+      echo failed
+    fi
   else
     echo failed   # pid gone, no rc recorded = crashed/killed
   fi
@@ -70,9 +89,29 @@ case "$cmd" in
     jd="$REG/$id"; mkdir -p "$jd"
     { echo "id=$id"; echo "cwd=$PWD"; echo "started=$(date -u +%FT%TZ 2>/dev/null || date)";
       echo "task=$(printf '%s' "${!#}" | tr '\n' ' ' | cut -c1-200)"; } > "$jd/meta"
-    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; echo $? >"$jd/rc" ) >/dev/null 2>&1 &
-    echo $! > "$jd/pid"
-    disown 2>/dev/null || true
+    if on_windows_native; then
+      {
+        echo "#!/usr/bin/env bash"
+        for var in $(env | cut -d= -f1); do
+          case "$var" in
+            CLAUDE_*|STUB_*|ANTIGRAVITY_*|AGY_*)
+              printf 'export %s=%q\n' "$var" "${!var:-}"
+              ;;
+          esac
+        done
+        printf '"%s"' "$DELEGATE"
+        printf ' %q' "$@"
+        printf ' >"%s" 2>"%s"\n' "$jd/out" "$jd/err"
+        echo "echo \$? > \"$jd/rc\""
+      } > "$jd/run.sh"
+      chmod +x "$jd/run.sh"
+      pid=$(powershell.exe -NoProfile -Command "(Start-Process -WindowStyle Hidden -FilePath 'bash' -ArgumentList '$jd/run.sh' -PassThru).Id" | tr -d '\r\n')
+      echo "$pid" > "$jd/pid"
+    else
+      ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; echo $? >"$jd/rc" ) >/dev/null 2>&1 &
+      echo $! > "$jd/pid"
+      disown 2>/dev/null || true
+    fi
     echo "$id"
     ;;
   list)
@@ -109,9 +148,24 @@ case "$cmd" in
   cancel)
     jd="$(jobdir "${1:-}")"
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-      pkill -P "$pid" 2>/dev/null || true   # children (agy) first
-      kill "$pid" 2>/dev/null || true
+    local running=0
+    if [ -n "$pid" ]; then
+      if on_windows_native; then
+        if ! MSYS_NO_PATHCONV=1 tasklist.exe /NH /FI "PID eq $pid" 2>/dev/null | grep -q "No tasks are running"; then
+          running=1
+        fi
+      else
+        if kill -0 "$pid" 2>/dev/null; then running=1; fi
+      fi
+    fi
+    if [ "$running" = "1" ]; then
+      if on_windows_native; then
+        MSYS_NO_PATHCONV=1 /c/Windows/System32/taskkill.exe /F /T /PID "$pid" >/dev/null 2>&1 || MSYS_NO_PATHCONV=1 taskkill.exe /F /T /PID "$pid" >/dev/null 2>&1 || true
+        sleep 1
+      else
+        pkill -P "$pid" 2>/dev/null || true   # children (agy) first
+        kill "$pid" 2>/dev/null || true
+      fi
       echo "cancelled $(basename "$jd")"
     else
       echo "not running"

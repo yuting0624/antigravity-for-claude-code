@@ -96,8 +96,8 @@ if command -v agy >/dev/null 2>&1; then
     ok "agy authenticated — $(printf '%s' "$MODELS" | grep -c . ) models available"
     # 2b. configured tier->model names exist (respecting userConfig remaps). agy is
     # multi-model and plan-dependent, so a miss is a WARNING, not a failure.
-    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.5 Flash (High)}"
-    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.5 Flash (Low)}"
+    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.6 Flash (High)}"
+    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.6 Flash (Low)}"
     PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}"
     for m in "$FLASH" "$FLASH_LO" "$PRO"; do
       if model_present "$m"; then

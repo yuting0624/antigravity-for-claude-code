@@ -14,10 +14,15 @@ set -uo pipefail
 
 input="$(cat)"
 
-# Extract the command field. Prefer python3 (correct JSON parse); fall back to the
-# raw payload so the gate still works if python3 is unavailable.
-if command -v python3 >/dev/null 2>&1; then
-  cmd="$(printf '%s' "$input" | python3 -c \
+# Extract the command field. Prefer python3/python (correct JSON parse); fall back to the
+# raw payload so the gate still works if python is unavailable.
+py_cmd="python3"
+if ! command -v python3 >/dev/null 2>&1 && command -v python >/dev/null 2>&1; then
+  py_cmd="python"
+fi
+
+if command -v "$py_cmd" >/dev/null 2>&1; then
+  cmd="$(printf '%s' "$input" | "$py_cmd" -c \
     'import json,sys
 try:
     print(json.load(sys.stdin).get("tool_input",{}).get("command",""))
