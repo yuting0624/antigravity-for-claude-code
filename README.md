@@ -138,6 +138,8 @@ via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_l
 (env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
 conductor — that's what gives both the cost saving and the cross-model verification.
 
+> **Verified through agy 1.1.5.** A newer **Gemini 3.6 Flash** now shows up in `agy models` and works — the `flash` default stays on **Gemini 3.5 Flash (High)** for broad plan availability (newer models can lag on enterprise Vertex); remap `tier_flash` to `Gemini 3.6 Flash (High)` when your plan serves it. (agy 1.1.5 switched `agy models` to slugs like `gemini-3.5-flash`; both slugs and display names work with `--model`, and `doctor` matches either.)
+
 </details>
 
 <details>

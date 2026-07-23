@@ -19,6 +19,12 @@ mkdir -p "$TMP/bin"
 cat > "$TMP/bin/agy" <<'STUB'
 #!/usr/bin/env bash
 [ -n "${STUB_SLEEP:-}" ] && sleep "$STUB_SLEEP"
+# `agy models` emits the slug format agy 1.1.5+ uses (was display names before) so doctor's
+# tier-model check is exercised against the current format.
+if [ "$1" = "models" ]; then
+  printf '%s\n' gemini-3.6-flash-high gemini-3.5-flash gemini-3.5-flash-low gemini-3.1-pro-high
+  exit 0
+fi
 case "${STUB_MODE:-text}" in
   empty)   exit 0 ;;                  # no stdout -> wrapper should exit 3
   fail)    echo "boom" >&2; exit 7 ;; # nonzero  -> wrapper should exit 2
@@ -392,6 +398,17 @@ case "$out" in *doctor*) echo "ok: bin/agy-doctor forwards to doctor.sh"; PASS=$
   *) echo "FAIL: bin/agy-doctor did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
 out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/cloud-debug" --service svc --print-command 2>/dev/null); rc=$?
 check "bin/cloud-debug forwards to cloud-debug.sh (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "logging read" "$out"
+
+echo "== doctor.sh tier-model check (agy 1.1.5 slug format) =="
+# The stub's `agy models` emits slugs (gemini-3.5-flash); doctor's default tier models are
+# display names (Gemini 3.5 Flash (High)). Regression guard: doctor must still recognize them.
+out=$(bash "$ROOT/scripts/doctor.sh" 2>&1)
+if printf '%s' "$out" | grep -q "tier model not in"; then
+  echo "FAIL: doctor falsely warns tier model missing against slug-format agy models"; FAIL=$((FAIL+1));
+else echo "ok: doctor recognizes tier models across display-name/slug formats"; PASS=$((PASS+1)); fi
+if printf '%s' "$out" | grep -q "tier model present: Gemini 3.5 Flash (High)"; then
+  echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
+else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
 
 echo "== agy-trace.sh (subagent trajectory reader) =="
 TRACE="$ROOT/scripts/agy-trace.sh"
