@@ -3,6 +3,28 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.19.0
+- **Security: harden the delegate subagent's Bash gate against command-injection bypass**
+  ([#29](https://github.com/yuting0624/antigravity-for-claude-code/issues/29), reported by
+  **@ktseo41**). `hooks/validate-delegate-bash.sh` is the *only* restriction on what the
+  `antigravity-delegate` subagent can run via Bash; it matched the wrapper name as a
+  **substring anywhere in the command**, so payloads like `... # agy-delegate` or
+  `echo $(...) agy-job` were approved — arbitrary command execution under prompt injection.
+  The gate now:
+  - requires the **first command token** (argv[0], basename, optional `.sh`) to be exactly
+    `agy-delegate` / `agy-job` — a token check, not a substring match;
+  - allows only one pipeline shape, `<git|cat|echo|printf> | agy-delegate|agy-job -`
+    (so `git diff | agy-delegate -` keeps working);
+  - rejects **unquoted** `;` `&` `|` `<` `>` `(` `)` `#`, backticks, and `$(` (command
+    substitution) — while permitting those characters **inside a quoted prompt** (no false
+    positives on legitimate prompts; `$(...)`/backticks inside double quotes are still
+    blocked because bash would expand them);
+  - **fails closed** (block) if the JSON is unparseable or `python3` is unavailable (the
+    old fallback matched against the raw JSON, which was fail-open-ish).
+  - Regression tests cover both the bypass vectors and legitimate-usage false positives.
+- **Added `SECURITY.md`** with a private vulnerability-reporting channel (the reporter
+  noted its absence). Report via GitHub Security advisories.
+
 ## 0.18.4
 - **`bin/measure-session` shim** — `measure-session.py` was the only script without a `bin/`
   entrypoint, so it couldn't be run by bare name from a marketplace install (only via the
