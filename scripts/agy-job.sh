@@ -148,7 +148,7 @@ case "$cmd" in
   cancel)
     jd="$(jobdir "${1:-}")"
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
-    local running=0
+    running=0
     if [ -n "$pid" ]; then
       if on_windows_native; then
         if ! MSYS_NO_PATHCONV=1 tasklist.exe /NH /FI "PID eq $pid" 2>/dev/null | grep -q "No tasks are running"; then
