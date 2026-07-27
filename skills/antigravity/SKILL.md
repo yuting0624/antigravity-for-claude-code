@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.19.0
+version: 0.20.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -44,6 +44,7 @@ Route each phase to the right model. This is the core policy.
 | Cross-model verification (output + trajectory) | **both** | two model families ≠ same failure |
 | Maintenance / migration / modernization | **agy** executes, **Claude** directs | tedious, systematic |
 | Web / Vertex AI Search | **agy** → **Claude** re-checks | tools Claude lacks natively |
+| Audio / video understanding | **agy** transcribes + digests · **Claude** verifies | Gemini is natively multimodal; no local ffmpeg/speech stack |
 | Deep research (multi-source) | **agy** fans out search/fetch · **Claude** plans, verifies ≥2 sources, synthesizes | offload bulky pages to cheap Gemini; frontier model judges |
 
 Routing tier within agy: `flash` (default, bulk) · `flash-lo` (cheapest, trivial) ·
@@ -234,6 +235,15 @@ ROOT=agy-delegate
 
 # Web search → Claude re-checks
 "$ROOT" --tier pro --yolo "Use web search for <X>. Give URLs + dates."
+
+# Audio / video / image understanding (Claude can't hear or watch; Gemini can)
+# agy-media writes the full transcript to a FILE and returns a timestamped digest —
+# never ingest a whole transcript (a 1-hour recording is ~10k words of cache_read).
+agy-media ./meeting.wav "decisions and owners"     # digest -> you; transcript -> ./meeting.transcript.md
+agy-media ./demo.mp4 --timeout 20m                 # video: adds timestamped VISUALS/OCR
+agy-media ./memo.m4a --convert                     # agy mishandles m4a/aiff; converts to wav first
+# Verify before relying on it: the digest flags unclear audio + uncertain names/numbers —
+# grep that timestamp out of the transcript file rather than trusting the summary.
 
 # Vertex AI Search over internal data (discover engines, then query)
 "$ROOT" --tier pro --yolo "List Vertex AI Search engines (list_engines)."

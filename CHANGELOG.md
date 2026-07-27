@@ -3,6 +3,31 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.20.0
+- **New: multimodal delegation — `/antigravity:media` (`agy-media`).** Claude Code can't
+  hear audio or watch video, and doing it locally means an ffmpeg + speech-model stack.
+  Gemini is natively multimodal, so this delegates the perception to agy — **no local
+  transcription stack required**. Verified end to end on agy 1.1.7 (audio transcribed;
+  video analyzed with per-scene visuals + OCR + speech).
+  - **Cost discipline built in (the differentiator):** agy writes the **full timestamped
+    transcript to a file** and returns only a compact **digest** (summary · timestamped
+    outline · key points · quotes with `[mm:ss]` · action items · visuals · uncertainty
+    notes). A 1-hour recording is ~10k words — exactly the `cache_read` blow-up the plugin
+    exists to avoid, so it never lands in the conductor's context; Claude reads *slices* of
+    the transcript on demand to verify.
+  - **Format pre-flight:** agy's media handling is narrower than the Gemini API. Verified
+    working: `wav mp3 flac ogg opus | mp4 mov webm | png jpg webp`. **`.m4a` / `.aiff`
+    fail** (inconsistently — "invalid argument" or a hang) despite Gemini itself accepting
+    them — an agy-side gap. Rather than surfacing that cryptic failure, the engine checks
+    the extension first, exits `5` with the exact conversion one-liner, and `--convert`
+    does it for you (macOS `afconvert`, else `ffmpeg`).
+  - **Verification framing:** the digest must flag inaudible passages and uncertain
+    names/numbers; the command tells Claude to treat those as unverified and check the
+    transcript slice before relying on them. Warns if agy returns a digest without
+    actually writing the transcript file.
+  - Long media: default `--timeout 15m`, size heads-up over 25 MB, and guidance to split
+    (~30-min chunks) if it still times out.
+
 ## 0.19.0
 - **Security: harden the delegate subagent's Bash gate against command-injection bypass**
   ([#29](https://github.com/yuting0624/antigravity-for-claude-code/issues/29), reported by

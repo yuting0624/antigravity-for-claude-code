@@ -407,7 +407,7 @@ else echo "FAIL: delegate agent missing proactive-with-judgment description"; FA
 
 echo "== bin/ entrypoints (issue #11: \$CLAUDE_PLUGIN_ROOT not on model-run Bash) =="
 BIN="$ROOT/bin"
-for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session; do
+for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session agy-media; do
   if [ -x "$BIN/$b" ]; then echo "ok: bin/$b executable"; PASS=$((PASS+1));
   else echo "FAIL: bin/$b missing or not executable"; FAIL=$((FAIL+1)); fi
 done
@@ -433,6 +433,30 @@ else echo "ok: doctor recognizes tier models across display-name/slug formats"; 
 if printf '%s' "$out" | grep -q "tier model present: Gemini 3.5 Flash (High)"; then
   echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
+
+echo "== agy-media.sh (multimodal delegation) =="
+MEDIA="$ROOT/scripts/agy-media.sh"
+MDIR="$TMP/media"; mkdir -p "$MDIR"
+: > "$MDIR/clip.wav"; : > "$MDIR/memo.m4a"; : > "$MDIR/demo.mp4"; : > "$MDIR/notes.txt"
+# dry run resolves a delegation with --yolo (needed to read the file) and a transcript path
+out=$(AGY_DELEGATE=/nonexistent "$MEDIA" "$MDIR/clip.wav" --print-command 2>/dev/null); rc=$?
+check "media dry-run resolves a delegation" 0 "$rc" "agy-delegate" "$out"
+check "media passes --yolo (needed to read media)" 0 "$rc" "--yolo" "$out"
+check "media requests a timestamped transcript file" 0 "$rc" "clip.transcript.md" "$out"
+check "media enforces the digest contract" 0 "$rc" "ONLY a compact digest" "$out"
+out=$(AGY_DELEGATE=/nonexistent "$MEDIA" "$MDIR/demo.mp4" --print-command 2>/dev/null); rc=$?
+check "media asks for VISUALS on video" 0 "$rc" "VISUALS" "$out"
+out=$(AGY_DELEGATE=/nonexistent "$MEDIA" "$MDIR/clip.wav" "the pricing numbers" --print-command 2>/dev/null); rc=$?
+check "media threads the focus into the prompt" 0 "$rc" "the pricing numbers" "$out"
+# format pre-flight: m4a is mishandled by agy -> exit 5 with a conversion hint
+out=$("$MEDIA" "$MDIR/memo.m4a" 2>&1); rc=$?
+check "media blocks unsupported .m4a -> exit 5" 5 "$rc" "not reliably supported" "$out"
+out=$("$MEDIA" "$MDIR/notes.txt" 2>&1); rc=$?
+check "media rejects a non-media extension -> exit 5" 5 "$rc" "unrecognized media extension" "$out"
+out=$("$MEDIA" "$MDIR/nope.wav" 2>&1); rc=$?
+check "media missing file -> exit 4" 4 "$rc" "file not found" "$out"
+out=$("$MEDIA" 2>&1); rc=$?
+check "media with no args -> exit 1 (friendly)" 1 "$rc" "no media file given" "$out"
 
 echo "== agy-trace.sh (subagent trajectory reader) =="
 TRACE="$ROOT/scripts/agy-trace.sh"
@@ -565,7 +589,7 @@ for s in ("hooks/check-agy.sh", "hooks/inject-policy.sh", "hooks/validate-delega
 
 # bin/ entrypoints exist + executable (issue #11: $CLAUDE_PLUGIN_ROOT isn't exported
 # to model-run Bash, so commands/skill must call these bare names on the PATH)
-for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug", "agy-trace", "measure-session"):
+for b in ("agy-delegate", "agy-job", "agy-cost-compare", "agy-doctor", "cloud-debug", "agy-trace", "measure-session", "agy-media"):
     need(os.access(p("bin", b), os.X_OK), "bin entrypoint missing/not executable: bin/" + b)
 
 # regression guard: commands & skill must NOT invoke $CLAUDE_PLUGIN_ROOT/scripts/* — that
