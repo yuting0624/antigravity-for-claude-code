@@ -213,6 +213,8 @@ bash tests/run-tests.sh
 
 Early-stage and MIT — issues, PRs, and ⭐ all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [`good first issue`](https://github.com/yuting0624/antigravity-for-claude-code/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) list.
 
+**Automated review:** PRs get a Claude code review in CI on top of the usual tests/shellcheck. For PRs from forks it runs **only after a maintainer adds the `claude-review` label** — external code is never executed by the reviewer, it's checked out read-only into a subdirectory and only read.
+
 ---
 
 ## ⚠️ Disclaimer
