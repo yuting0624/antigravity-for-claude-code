@@ -21,6 +21,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  id-token: write   # the action mints an OIDC token even with token auth
 
 concurrency:
   group: claude-review-ext-${{ github.event.pull_request.number }}
