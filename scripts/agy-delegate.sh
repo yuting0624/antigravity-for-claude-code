@@ -239,6 +239,32 @@ for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
 [ "$CONTINUE" -eq 1 ]  && ARGS+=(--continue)        # keep working context on the cheap (Gemini) side
 [ -n "$CONV_ID" ]      && ARGS+=(--conversation "$CONV_ID")
 
+# --- structured output (agy >= 1.1.8) -----------------------------------------
+# agy gained `--output-format json`, which is strictly better for a wrapper than
+# scraping prose: it carries status/error explicitly and a real `usage` object
+# (input/output/thinking/cache_read tokens). We use it INTERNALLY and keep the
+# stdout contract unchanged — callers still get the model's text on stdout — while
+# classification gets the structured error and token usage goes to stderr as an
+# AGY_USAGE line (stderr, so it never pollutes the conductor's context).
+#
+# Gated three ways, falling back to plain text if any is unmet:
+#   * agy actually advertises --output-format (older versions don't),
+#   * python3 is available to parse (the bash-only path stays dependency-free),
+#   * the user hasn't opted out (structured_output=off).
+# NOTE: agy 1.1.8 emits a RAW newline inside the "response" string, which strict
+# JSON parsers reject — so we parse with strict=False. (Reported upstream.)
+JSON_MODE=0
+raw_so="${CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT:-on}"
+case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" in
+  off|false|0|no|disabled) ;;
+  *)
+    if [ "$PRINT_CMD" -ne 1 ] && command -v python3 >/dev/null 2>&1 \
+       && agy --help 2>&1 | grep -q -- '--output-format'; then
+      JSON_MODE=1
+      ARGS+=(--output-format json)
+    fi ;;
+esac
+
 # --- dry run: print the resolved (shell-quoted) agy invocation and exit ---
 if [ "$PRINT_CMD" -eq 1 ]; then
   { printf 'agy'; printf ' %q' "${ARGS[@]}" -p "$PROMPT"; printf '\n'; }
@@ -277,6 +303,53 @@ else
 fi
 set -e
 
+# --- unwrap the structured envelope (JSON mode) --------------------------------
+# Replaces OUT with the model's text so the stdout contract is unchanged, exposes
+# the structured error for classification, and reports token usage on stderr.
+# Any parse failure falls back to treating OUT as plain text (never fatal).
+JSON_STATUS=""; JSON_ERROR=""
+if [ "$JSON_MODE" -eq 1 ] && [ -n "${OUT//[$' \t\n\r']/}" ]; then
+  # The response can be multi-line, so it goes to a temp file; the single-line
+  # metadata comes back on stdout. (Command substitution strips NUL bytes, so a
+  # NUL-delimited stream is not an option here.)
+  RESP="$(mktemp "${TMPDIR:-/tmp}/agy-resp.XXXXXX")"
+  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" python3 - <<'PY' 2>/dev/null || true
+import json, os, sys
+raw = os.environ.get("AGY_JSON", "")
+try:
+    # strict=False: agy 1.1.8 leaves raw newlines inside "response".
+    d = json.loads(raw, strict=False)
+    if not isinstance(d, dict): raise ValueError
+except Exception:
+    sys.exit(1)
+with open(os.environ["AGY_RESP_FILE"], "w", encoding="utf-8") as fh:
+    fh.write(str(d.get("response", "") or ""))
+u = d.get("usage") or {}
+def n(k):
+    v = u.get(k)
+    return v if isinstance(v, int) else 0
+one_line = lambda s: " ".join(str(s or "").split())
+print(json.dumps({
+    "status": str(d.get("status", "")),
+    "error": one_line(d.get("error", "")),
+    "usage": {"input": n("input_tokens"), "output": n("output_tokens"),
+              "thinking": n("thinking_tokens"), "cache_read": n("cache_read_tokens"),
+              "total": n("total_tokens")},
+    "conversation_id": str(d.get("conversation_id", "") or ""),
+}))
+PY
+)"
+  if [ -n "$meta" ]; then
+    JSON_STATUS="$(printf '%s' "$meta" | sed -n 's/.*"status": *"\([^"]*\)".*/\1/p')"
+    JSON_ERROR="$(printf '%s' "$meta" | sed -n 's/.*"error": *"\([^"]*\)".*/\1/p')"
+    OUT="$(cat "$RESP" 2>/dev/null)"
+    printf 'AGY_USAGE %s\n' "$meta" >&2
+    # A structured ERROR is authoritative even if agy exited 0.
+    [ "$JSON_STATUS" = "ERROR" ] && [ "$RC" -eq 0 ] && RC=1
+  fi
+  rm -f "$RESP"
+fi
+
 # `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had to
 # kill agy. Treat that as our structured TIMEOUT (exit 12), not a generic failure.
 if [ -n "$TO_CMD" ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; }; then
@@ -291,11 +364,18 @@ fi
 if [ $RC -ne 0 ]; then
   echo "agy-delegate: agy exited $RC" >&2
   [ -s "$ERR" ] && cat "$ERR" >&2
+  # In JSON mode agy puts the diagnostic in the envelope instead of stderr — relay it
+  # so the failure is still visible to a human reading the transcript.
+  [ -n "$JSON_ERROR" ] && printf '%s\n' "$JSON_ERROR" >&2
   # Best-effort classification into a structured code (the generic 2 is the safe
-  # fallback). Scans agy's STDERR only — its diagnostics go there; model-generated
-  # stdout could contain trigger words and misclassify. Patterns are deliberately
+  # fallback). Scans agy's diagnostics only — never the model-generated response,
+  # which could contain trigger words and misclassify. In JSON mode (agy >= 1.1.8)
+  # the diagnostic lives in the envelope's `error` field and stderr is typically
+  # empty, so prefer that; otherwise fall back to stderr. Patterns are deliberately
   # specific to avoid false positives on incidental substrings.
   blob="$(cat "$ERR" 2>/dev/null)"
+  [ -n "$JSON_ERROR" ] && blob="$JSON_ERROR
+$blob"
   shopt -s nocasematch
   case "$blob" in
     *quota*|*"rate limit"*|*"resource exhausted"*)

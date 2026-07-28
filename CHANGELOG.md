@@ -3,6 +3,31 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.21.0
+- **Structured output (agy 1.1.8): reliable failure classification + real executor token
+  usage.** agy 1.1.8 shipped `--output-format json` — the thing we'd tracked as "not
+  externally available" since 0.13. The wrapper now uses it **internally**, and the
+  **stdout contract is unchanged** (callers still get the model's text):
+  - **Failures are classified from the structured `status`/`error`** instead of
+    pattern-matching prose. This matters: agy's stderr wording has shifted repeatedly
+    (the same failure surfaced as both "invalid argument" and a hang), and in JSON mode
+    stderr is empty — the diagnostic moves into the envelope. The wrapper reads the
+    envelope first and still falls back to stderr patterns.
+  - **New `AGY_USAGE {...}` line on stderr** with the executor's real token accounting —
+    `input` / `output` / `thinking` / **`cache_read`** / `total` + `conversation_id`.
+    The Gemini side of a delegation can now be **measured, not estimated** (stderr, so it
+    never pollutes the conductor's context).
+  - **Gated and reversible**: only when agy advertises `--output-format`, `python3` is
+    present, and the new `structured_output` option isn't `off` — otherwise the
+    dependency-free plain-text path runs unchanged. Tests cover both paths.
+  - Verified live on agy 1.1.8 (success, model-unavailable → exit 14, opt-out), plus
+    stubs for quota/fallback.
+- **Upstream caveat found while implementing**: agy 1.1.8 emits a **raw newline inside the
+  `response` string**, so the payload is rejected by strict JSON parsers. The wrapper
+  parses leniently; worth reporting upstream.
+- Docs corrected everywhere they claimed `--output-format json` doesn't exist (README,
+  SKILL) — that statement is no longer true as of agy 1.1.8.
+
 ## 0.20.0
 - **New: multimodal delegation — `/antigravity:media` (`agy-media`).** Claude Code can't
   hear audio or watch video, and doing it locally means an ffmpeg + speech-model stack.

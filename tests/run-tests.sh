@@ -25,6 +25,13 @@ if [ "$1" = "models" ]; then
   printf '%s\n' gemini-3.6-flash-high gemini-3.5-flash gemini-3.5-flash-low gemini-3.1-pro-high
   exit 0
 fi
+# `agy --help`: advertise --output-format only when STUB_JSON_CAPABLE=1, so tests can
+# exercise both the structured (agy >= 1.1.8) and the plain-text fallback paths.
+if [ "$1" = "--help" ]; then
+  [ "${STUB_JSON_CAPABLE:-0}" = "1" ] && echo "  --output-format  Output format for print mode (text, json, stream-json)"
+  echo "  --print-timeout  timeout"
+  exit 0
+fi
 case "${STUB_MODE:-text}" in
   empty)   exit 0 ;;                  # no stdout -> wrapper should exit 3
   fail)    echo "boom" >&2; exit 7 ;; # nonzero  -> wrapper should exit 2
@@ -35,6 +42,11 @@ case "${STUB_MODE:-text}" in
   badmodel) echo "Error: invalid --model \"X\": model X is not recognized as a known model" >&2; exit 1 ;; # -> exit 14
   softdeny) echo "no output produced — a tool required the \"write_file\" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow" >&2; exit 0 ;; # rc=0 + empty stdout -> exit 15
   big)     printf 'x%.0s' $(seq 1 20000); echo ;;    # dump-sized reply -> digest guard warns
+  # agy >= 1.1.8 structured envelope. Note the RAW newline inside "response" — agy really
+  # emits that, and it makes the payload invalid for strict JSON parsers.
+  json_ok)  printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":1,"cache_read_tokens":3,"total_tokens":16}}'; exit 0 ;;
+  json_err) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model X is not recognized as a known model","usage":{}}'; exit 1 ;;
+  json_quota) printf '{"conversation_id":"","status":"ERROR","response":"","error":"quota exceeded for this model","usage":{}}'; exit 1 ;;
   *)       echo "STUB_OK" ;;
 esac
 STUB
@@ -118,6 +130,28 @@ check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
 
 out=$(STUB_MODE=badmodel "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
+
+# agy >= 1.1.8 structured output: used internally, stdout contract unchanged
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "json mode: stdout carries the response text (not the envelope)" 0 "$rc" "JSONBODY" "$out"
+if printf '%s' "$out" | grep -q 'conversation_id'; then
+  echo "FAIL: json envelope leaked to stdout"; FAIL=$((FAIL+1));
+else echo "ok: json envelope does not leak to stdout"; PASS=$((PASS+1)); fi
+err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
+check "json mode: token usage reported as AGY_USAGE on stderr" 0 "$rc" "AGY_USAGE" "$err"
+check "json mode: usage includes cache_read" 0 "$rc" '"cache_read": 3' "$err"
+# classification now comes from the structured error (stderr is empty in json mode)
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_err "$DELEGATE" "hi" 2>&1); rc=$?
+check "json mode: structured error -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_quota "$DELEGATE" "hi" 2>&1); rc=$?
+check "json mode: structured quota error -> exit 10" 10 "$rc" "QUOTA_EXHAUSTED" "$out"
+# opt-out and capability fallback both take the plain-text path (no AGY_USAGE)
+err=$(STUB_JSON_CAPABLE=1 STUB_MODE=text CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT=off "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$err" | grep -q "AGY_USAGE"; then echo "FAIL: structured_output=off still used json"; FAIL=$((FAIL+1));
+else echo "ok: structured_output=off falls back to plain text"; PASS=$((PASS+1)); fi
+err=$(STUB_JSON_CAPABLE=0 STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$err" | grep -q "AGY_USAGE"; then echo "FAIL: used json against an agy that lacks the flag"; FAIL=$((FAIL+1));
+else echo "ok: falls back when agy has no --output-format (pre-1.1.8)"; PASS=$((PASS+1)); fi
 
 # agy >= 1.1.3: permissioned tool soft-denied headless -> rc=0 + empty stdout + stderr notice
 out=$(STUB_MODE=softdeny "$DELEGATE" "implement it" 2>&1); rc=$?
