@@ -258,10 +258,17 @@ raw_so="${CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT:-on}"
 case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" in
   off|false|0|no|disabled) ;;
   *)
-    if [ "$PRINT_CMD" -ne 1 ] && command -v python3 >/dev/null 2>&1 \
-       && agy --help 2>&1 | grep -q -- '--output-format'; then
-      JSON_MODE=1
-      ARGS+=(--output-format json)
+    if [ "$PRINT_CMD" -ne 1 ] && command -v python3 >/dev/null 2>&1; then
+      # Capability probe. Deliberately NOT `agy --help | grep -q`: `grep -q` exits at
+      # the first match and closes the pipe, so `agy --help` can die of SIGPIPE (141)
+      # and, under `set -o pipefail`, the whole pipeline reads as "failed" — silently
+      # disabling JSON mode. That race actually bit a benchmark run (~75% of calls on a
+      # loaded container), and it is indistinguishable from "no delegation happened",
+      # which is the worst kind of failure. Capture once, match with a shell glob.
+      agy_help="$(agy --help 2>&1 || true)"
+      case "$agy_help" in
+        *--output-format*) JSON_MODE=1; ARGS+=(--output-format json) ;;
+      esac
     fi ;;
 esac
 

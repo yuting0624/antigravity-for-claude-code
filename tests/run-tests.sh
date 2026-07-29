@@ -134,6 +134,24 @@ check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
 # agy >= 1.1.8 structured output: used internally, stdout contract unchanged
 out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "json mode: stdout carries the response text (not the envelope)" 0 "$rc" "JSONBODY" "$out"
+# Regression: the capability probe must not pipe into `grep -q`. That closes the pipe on
+# the first match, `agy --help` can die of SIGPIPE, and under `set -o pipefail` the probe
+# silently reads as "unsupported" -> JSON mode off with no AGY_USAGE, indistinguishable
+# from "no delegation happened". Observed at ~75% failure on a loaded container.
+if sed 's/#.*//' "$DELEGATE" | grep -qE 'agy --help[^|]*\| *grep'; then
+  echo "FAIL: capability probe pipes agy --help into grep (SIGPIPE race under pipefail)"; FAIL=$((FAIL+1));
+else echo "ok: capability probe avoids the grep pipe (no SIGPIPE race)"; PASS=$((PASS+1)); fi
+# Under load the probe must still be deterministic: run the real gate shape 20x.
+probe_off=0
+for _ in $(seq 1 20); do
+  STUB_JSON_CAPABLE=1 bash -c '
+    set -euo pipefail
+    h="$(agy --help 2>&1 || true)"
+    case "$h" in *--output-format*) exit 0 ;; esac
+    exit 1' >/dev/null 2>&1 || probe_off=$((probe_off+1))
+done
+if [ "$probe_off" -eq 0 ]; then echo "ok: capability probe stable over 20 runs"; PASS=$((PASS+1));
+else echo "FAIL: capability probe flaked $probe_off/20 times"; FAIL=$((FAIL+1)); fi
 if printf '%s' "$out" | grep -q 'conversation_id'; then
   echo "FAIL: json envelope leaked to stdout"; FAIL=$((FAIL+1));
 else echo "ok: json envelope does not leak to stdout"; PASS=$((PASS+1)); fi

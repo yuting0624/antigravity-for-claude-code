@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.21.0
+version: 0.21.1
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -88,6 +88,15 @@ token usage (input / output / thinking / **cache_read**) is reported as an `AGY_
 {...}` line on stderr — so the Gemini side of a delegation can finally be *measured*, not
 estimated. Older agy (or no `python3`) transparently falls back to the plain-text path;
 force it with the `structured_output` option.
+
+> **Accounting semantics for `AGY_USAGE` (verified — get this wrong and your cost math
+> is wrong).** `total = input + output` (and `thinking` is *inside* `output`).
+> **`cache_read` is a separate counter: it is NOT part of `total`, and it is not a subset
+> of `input`** — in an agentic delegation it routinely *exceeds* `input` (measured:
+> `cache_read` 1,356,694 vs `input` 243,117 in one delegation). So price the Gemini side
+> as `input×in_rate + output×out_rate + cache_read×cached_rate`, three separate terms.
+> This differs from the Claude/Harbor side, where cache-read tokens *are* an inner subset
+> of the reported input total — don't carry one convention over to the other.
 
 **Two ways to delegate.** Call the wrapper directly (above), or — when you want file
 generation to happen entirely on Gemini with **zero Claude tokens spent writing** — hand

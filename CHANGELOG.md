@@ -3,6 +3,27 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.21.1
+- **Fix: the JSON-mode capability probe could silently disable structured output
+  (SIGPIPE race).** `agy-delegate.sh` probed support with
+  `agy --help 2>&1 | grep -q -- '--output-format'`. `grep -q` exits at the first match and
+  closes the pipe, so `agy --help` can die of **SIGPIPE (141)**; under `set -o pipefail`
+  the whole pipeline reads as *failed*, JSON mode stays off, and **no `AGY_USAGE` line is
+  emitted** — which is indistinguishable from "no delegation happened". Measured on a
+  loaded container during a benchmark run: **~75% of calls** lost their usage line
+  (2/25 locally under no load). The probe now captures `agy --help` once into a variable
+  and matches with a shell glob — no pipe, no `grep`, no race. Regression tests assert
+  both the absence of the pipe and 20 stable probes.
+  *(Found by @yuting0624's benchmark harness — exactly the "silent success" failure class
+  this plugin exists to catch elsewhere.)*
+- **Docs: corrected the `AGY_USAGE` accounting semantics.** `total = input + output`
+  (`thinking` is inside `output`), and **`cache_read` is a separate counter — not part of
+  `total`, and not a subset of `input`**: in an agentic delegation it can far exceed
+  `input` (measured 1,356,694 vs 243,117). Price the Gemini side as three separate terms.
+  This is the opposite convention from the Claude/Harbor side, where cache-read tokens
+  *are* an inner subset of the input total. An earlier note in 0.21.0 stated the subset
+  reading; that was over-concluded from a sample where `cache_read < input`.
+
 ## 0.21.0
 - **Structured output (agy 1.1.8): reliable failure classification + real executor token
   usage.** agy 1.1.8 shipped `--output-format json` — the thing we'd tracked as "not
