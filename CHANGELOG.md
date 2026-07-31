@@ -4,7 +4,7 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
 ## 0.22.0
-- **Docs: the number of delegations is the lever — reuse the session.** Benchmarking this
+- **Docs: the number of delegations is the lever — batch them.** Benchmarking this
   plugin (Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8 · n=3/arm, cold
   cache) confirmed the per-delegation economics and located what actually breaks them.
   Offloading a large corpus worked as designed — the conductor's `cache_read` fell **61%**,
@@ -22,8 +22,7 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   units into one fully-specified delegation (rule 4). Also recorded: delegation **moves** work
   rather than removing it (~2.8× the normalized token volume for the same result), and
   agy's own prompt cache covers only ~2/3 of its context re-reads — both push toward
-  fewer, larger, session-reusing delegations. Stated as direction from one configuration,
-  not as constants.
+  fewer, larger delegations. Stated as direction from one configuration, not as constants.
 - **`AGY_USAGE_LOG` — a side channel the conductor's own habits can't truncate.**
   `AGY_USAGE`/`AGY_SIGNAL` go to stderr, but this skill tells the conductor to keep its
   context lean, so it writes `agy-delegate ... 2>&1 | tail -N`; stdout (the digest) is

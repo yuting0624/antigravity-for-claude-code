@@ -254,10 +254,10 @@ hybrid costs more; above it, lean-context routing cuts frontier-model spend by a
 *measured* margin. Quote the measured number and the break-even, never a headline ratio.
 Use `agy-cost-compare` for the per-token gap (estimate; set real Vertex rates first).
 
-### The number of delegations is the lever — reuse the session (measured)
+### The number of delegations is the lever — batch them (measured)
 
-Rules 4 and 6 above ("batch, don't chatter", "hold state on the cheap side") are the
-two that actually move the needle, and here is why, from a benchmark of this plugin
+Rule 4 above ("batch, don't chatter") is the one that actually moves the needle, and
+here is why, from a benchmark of this plugin
 (Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8 · n=3/arm, cold cache):
 
 **Per delegation the economics are fine. Repeated ingestion is what breaks them.**
