@@ -46,6 +46,10 @@ case "${STUB_MODE:-text}" in
   # emits that, and it makes the payload invalid for strict JSON parsers.
   json_ok)  printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":1,"cache_read_tokens":3,"total_tokens":16}}'; exit 0 ;;
   json_err) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model X is not recognized as a known model","usage":{}}'; exit 1 ;;
+  # Same failure, but with agy's REAL wording — it quotes the offending value. The
+  # diagnostic text sits AFTER the embedded quotes, so any field extraction that stops
+  # at the first `"` loses it and the failure misclassifies. This is what shipped.
+  json_err_quoted) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection (--model \\"X\\" --effort \\"\\"): model X is not recognized as a known model or custom model in settings","usage":{}}'; exit 1 ;;
   json_quota) printf '{"conversation_id":"","status":"ERROR","response":"","error":"quota exceeded for this model","usage":{}}'; exit 1 ;;
   *)       echo "STUB_OK" ;;
 esac
@@ -161,6 +165,14 @@ check "json mode: usage includes cache_read" 0 "$rc" '"cache_read": 3' "$err"
 # classification now comes from the structured error (stderr is empty in json mode)
 out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_err "$DELEGATE" "hi" 2>&1); rc=$?
 check "json mode: structured error -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
+# Regression: agy quotes the offending value in its error, and the diagnostic phrase
+# comes AFTER those quotes. Extracting the field with sed truncated at the first
+# escaped quote, so the classifier never saw it and a bad --model/tier remap reported a
+# generic "agy failed" (exit 2) instead of MODEL_UNAVAILABLE. The old stub had no
+# embedded quotes, which is exactly why the tests stayed green while this shipped.
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_err_quoted "$DELEGATE" "hi" 2>&1); rc=$?
+check "json mode: error containing quotes still classifies (exit 14)" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
+check "json mode: quoted error yields the actionable hint" 14 "$rc" "not available on this plan" "$out"
 out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_quota "$DELEGATE" "hi" 2>&1); rc=$?
 check "json mode: structured quota error -> exit 10" 10 "$rc" "QUOTA_EXHAUSTED" "$out"
 # opt-out and capability fallback both take the plain-text path (no AGY_USAGE)

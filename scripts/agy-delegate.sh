@@ -345,7 +345,14 @@ if [ "$JSON_MODE" -eq 1 ] && [ -n "${OUT//[$' \t\n\r']/}" ]; then
   # metadata comes back on stdout. (Command substitution strips NUL bytes, so a
   # NUL-delimited stream is not an option here.)
   RESP="$(mktemp "${TMPDIR:-/tmp}/agy-resp.XXXXXX")"
-  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" python3 - <<'PY' 2>/dev/null || true
+  # The error text goes to its OWN file, not back out through `meta`. agy's error
+  # strings quote the offending value (`--model \"foo\"`), and pulling the field out
+  # of `meta` with sed truncates at that first escaped quote — which silently hid the
+  # diagnostic from the classifier, so a bad --model/tier remap reported a generic
+  # "agy failed" (exit 2) instead of MODEL_UNAVAILABLE (14). Let python, which already
+  # has the parsed object, write the raw value out.
+  JERR="$(mktemp "${TMPDIR:-/tmp}/agy-err.XXXXXX")"
+  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" python3 - <<'PY' 2>/dev/null || true
 import json, os, sys
 raw = os.environ.get("AGY_JSON", "")
 try:
@@ -356,6 +363,8 @@ except Exception:
     sys.exit(1)
 with open(os.environ["AGY_RESP_FILE"], "w", encoding="utf-8") as fh:
     fh.write(str(d.get("response", "") or ""))
+with open(os.environ["AGY_ERR_FILE"], "w", encoding="utf-8") as fh:
+    fh.write(" ".join(str(d.get("error", "") or "").split()))
 u = d.get("usage") or {}
 def n(k):
     v = u.get(k)
@@ -372,15 +381,16 @@ print(json.dumps({
 PY
 )"
   if [ -n "$meta" ]; then
+    # `status` is a bare enum with no quotes inside it, so sed is safe there.
     JSON_STATUS="$(printf '%s' "$meta" | sed -n 's/.*"status": *"\([^"]*\)".*/\1/p')"
-    JSON_ERROR="$(printf '%s' "$meta" | sed -n 's/.*"error": *"\([^"]*\)".*/\1/p')"
+    JSON_ERROR="$(cat "$JERR" 2>/dev/null)"
     OUT="$(cat "$RESP" 2>/dev/null)"
     printf 'AGY_USAGE %s\n' "$meta" >&2
     tee_usage "AGY_USAGE $meta"
     # A structured ERROR is authoritative even if agy exited 0.
     [ "$JSON_STATUS" = "ERROR" ] && [ "$RC" -eq 0 ] && RC=1
   fi
-  rm -f "$RESP"
+  rm -f "$RESP" "$JERR"
 fi
 
 # `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had to

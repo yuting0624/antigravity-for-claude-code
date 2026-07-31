@@ -41,6 +41,17 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   failed**. Documented limit: the command **strings** are recorded nowhere (not in
   `transcript.jsonl`, `transcript_full.jsonl`, or `cli-*.log`) — you get that a command
   ran, its exit code and its output; to attribute a filesystem change, diff the tree.
+- **Fix: structured-error classification broke on any error containing quotes.** agy
+  quotes the offending value in its message (`invalid model selection (--model \"X\" ...):
+  model X is not recognized as a known model`), and the wrapper pulled the `error` field out
+  with `sed 's/.*"error": *"\([^"]*\)".*/\1/'` — which stops at that first escaped quote,
+  discarding the diagnostic phrase that follows it. The classifier therefore never saw it:
+  a bad `--model` or `tier_*` remap reported a generic **"agy failed" (exit 2)** instead of
+  **MODEL_UNAVAILABLE (exit 14)** with the "run `agy models`" hint. Present since 0.21.0,
+  i.e. the structured-output release existed to stop exactly this kind of misclassification.
+  python now writes the raw error to its own file instead of it being re-parsed with sed.
+  The old stub's error string had **no embedded quotes**, which is why the suite stayed
+  green while this shipped — the new stub uses agy's real wording.
 - **Fix: `prices.json` overstated Gemini output by 20%.** `gemini_flash.out` was 9.00
   (Gemini 3.5 Flash); **Gemini 3.6 Flash is 7.50**, input and cached-input unchanged.
   `measure-session.py` reads this file. Also added `cached_in` (Gemini prices cached input
