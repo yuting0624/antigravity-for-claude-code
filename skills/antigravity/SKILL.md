@@ -63,7 +63,9 @@ the cross-model verification value (Claude executing Claude loses both).
 > `gemini-3.6-flash-high`; 18 benchmark trials ran on it without an availability problem):
 > **−23% input tokens** for the same task (n=2, order-reversed) and **output priced at
 > $7.50/M vs 3.5's $9.00/M**; input and cached-input rates are unchanged. It does *not*
-> reduce `cache_read` (+6%) and is ~29% slower.
+> reduce `cache_read` (+6%) and is ~29% slower. If you do remap, price it with
+> `prices.json`'s `gemini_flash_36` — `gemini_flash` tracks the shipped 3.5 default,
+> and `agy-cost-compare` picks that key by tier name, not by model.
 > **`flash-medium` is not a general win:** −31% input and −21% wall, but `cache_read` +43%
 > (n=3, reproduced) — on cache_read-dominated agentic work it loses to `high`. Pick by the
 > task's input:cache_read ratio.

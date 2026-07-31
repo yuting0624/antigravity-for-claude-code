@@ -214,6 +214,14 @@ else echo "FAIL: AGY_USAGE_LOG truncated a previous entry"; FAIL=$((FAIL+1)); fi
 # Measurement must never break the work: an unwritable path is non-fatal.
 out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok AGY_USAGE_LOG=/nonexistent-dir/x.log "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "unwritable AGY_USAGE_LOG is non-fatal" 0 "$rc" "" "$out"
+# ...and non-fatal is not enough: it must also be SILENT. Redirections apply left to
+# right, so `>>"$f" 2>/dev/null` attempts the append while stderr is still real stderr
+# and leaks a bash redirection error on every call. Asserting only on the exit code
+# misses that entirely — check stderr itself.
+err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok AGY_USAGE_LOG=/nonexistent-dir/x.log "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$err" | grep -qiE 'No such file or directory|Permission denied'; then
+  echo "FAIL: unwritable AGY_USAGE_LOG leaks a redirection error to stderr"; FAIL=$((FAIL+1));
+else echo "ok: unwritable AGY_USAGE_LOG is silent, not just non-fatal"; PASS=$((PASS+1)); fi
 # Off by default: no file is created when the option is unset.
 rm -f "$ULOG"
 STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" >/dev/null 2>&1
@@ -655,6 +663,33 @@ PY
 if [ "$out" = "IN-SYNC" ]; then
   echo "ok: agy-cost-compare fallback rates match prices.json"; PASS=$((PASS+1));
 else echo "FAIL: rate drift — $out"; FAIL=$((FAIL+1)); fi
+
+# agy-cost-compare picks the `gemini_flash` key by TIER NAME, not by model, so that key
+# must price whatever `model_for_tier()`'s flash default actually resolves to. Repricing
+# it for a newer model that is NOT the default silently understates the Gemini side out
+# of the box — which is exactly what happened when 3.6's cheaper output landed here while
+# the flash tier still pointed at 3.5.
+out=$(ROOT="$ROOT" python3 - <<'PY' 2>&1
+import json, os, re
+root = os.environ["ROOT"]
+pj = json.load(open(os.path.join(root, "prices.json")))
+src = open(os.path.join(root, "scripts", "agy-delegate.sh")).read()
+m = re.search(r'flash\)\s*echo "\$\{CLAUDE_PLUGIN_OPTION_TIER_FLASH:-([^}]*)\}"', src)
+if not m:
+    print("flash tier default not found (model_for_tier pattern changed?)"); raise SystemExit
+default = m.group(1)
+flash, f36 = pj["gemini_flash"], pj.get("gemini_flash_36", {})
+if "3.6" in default:
+    print("OK" if flash == f36 else f"flash tier is {default!r} but gemini_flash {flash} != gemini_flash_36 {f36}")
+elif "3.5" in default:
+    print("OK" if flash.get("out") == 9.00 else f"flash tier is {default!r} (out 9.00) but gemini_flash.out = {flash.get('out')}")
+else:
+    print(f"flash tier default {default!r} is neither 3.5 nor 3.6 — reconcile prices.json by hand")
+PY
+)
+if [ "$out" = "OK" ]; then
+  echo "ok: prices.json gemini_flash matches the shipped flash tier"; PASS=$((PASS+1));
+else echo "FAIL: $out"; FAIL=$((FAIL+1)); fi
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"

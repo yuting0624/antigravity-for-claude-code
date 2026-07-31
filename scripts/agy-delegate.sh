@@ -91,7 +91,10 @@ need() { [ "$1" -ge 2 ] || die "option '$2' needs a value"; }
 USAGE_LOG="${AGY_USAGE_LOG:-${CLAUDE_PLUGIN_OPTION_USAGE_LOG:-}}"
 tee_usage() { # $1 = the full line, already formatted
   [ -n "$USAGE_LOG" ] || return 0
-  printf '%s\n' "$1" >>"$USAGE_LOG" 2>/dev/null || true
+  # `2>/dev/null` FIRST: redirections apply left to right, so with `>>"$f" 2>/dev/null`
+  # the append is attempted while stderr is still the real stderr — an unwritable path
+  # then leaks a bash redirection error on every single call. Order matters here.
+  printf '%s\n' "$1" 2>/dev/null >>"$USAGE_LOG" || true
 }
 
 # Emit a one-line machine-readable failure signal to stderr. $1=status $2=reason.

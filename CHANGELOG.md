@@ -52,17 +52,23 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   python now writes the raw error to its own file instead of it being re-parsed with sed.
   The old stub's error string had **no embedded quotes**, which is why the suite stayed
   green while this shipped — the new stub uses agy's real wording.
-- **Fix: `prices.json` overstated Gemini output by 20%.** `gemini_flash.out` was 9.00
-  (Gemini 3.5 Flash); **Gemini 3.6 Flash is 7.50**, input and cached-input unchanged.
-  `measure-session.py` reads this file. Also added `cached_in` (Gemini prices cached input
-  at a flat 0.15/M — it is *not* `cache_read_mult × in`, which applies to the Claude deck
-  only) and a note that Gemini context-cache **storage** is billed by time and is not
-  reported by agy, so any Gemini-side figure computed here is a **lower bound**.
-  `agy-cost-compare.sh`'s hardcoded last-resort fallback (used when `prices.json` or
-  `python3` is missing) had gone stale at 9.00 the same way — now 7.50, and a test asserts
-  the two stay in step, since a stale fallback quotes a wrong rate in exactly the situation
-  where nobody can see where the number came from. Note `cached_in` currently has no
-  consumer: `measure-session.py` prices the orchestrator deck only.
+- **`prices.json`: recorded Gemini 3.6 Flash's rates without repricing the shipped
+  default.** The VM confirmed 3.6 Flash output at **7.50/M** (vs 3.5's 9.00; in and
+  cached-in unchanged) — but `agy-cost-compare.sh` picks the `gemini_flash` key by **tier
+  name**, and `model_for_tier()`'s `flash` tier still resolves to **Gemini 3.5 Flash
+  (High)**. So `gemini_flash` stays at 9.00, which is correct for what ships, and 3.6's
+  rates live in a new `gemini_flash_36` for anyone who remaps `tier_flash`.
+  *(An earlier commit in this branch changed `gemini_flash.out` to 7.50 and asserted 3.6
+  was the default — contradicting this same PR's SKILL.md text, and understating Gemini
+  output by 17% out of the box. Caught in review.)*
+  Also added `cached_in` (Gemini prices cached input at a flat rate — *not*
+  `cache_read_mult × in`, which is Claude-deck only) and a note that Gemini's
+  context-cache **storage** is time-billed and unreported by agy, so figures computed
+  here are a **lower bound**. `cached_in` has no consumer yet: `measure-session.py`
+  prices the orchestrator deck only.
+  Two tests now hold this together: every hardcoded fallback in `agy-cost-compare.sh`
+  must match `prices.json`, and `gemini_flash` must match whatever the `flash` tier
+  actually resolves to.
 - **Docs: Gemini 3.6 Flash High measured against 3.5.** −23% input tokens for the same
   task (n=2, order-reversed) and output at $7.50/M vs $9.00/M — but it does **not** reduce
   `cache_read` (+6%) and is ~29% slower. `flash-medium` is −31% input / −21% wall but
