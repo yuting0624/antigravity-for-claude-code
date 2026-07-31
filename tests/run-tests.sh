@@ -625,6 +625,37 @@ if grep -q 'EVERY agy run leaves' "$ROOT/scripts/agy-trace.sh"; then
   echo "ok: agy-trace documents that all delegations leave a transcript"; PASS=$((PASS+1));
 else echo "FAIL: agy-trace still scoped to subagents only"; FAIL=$((FAIL+1)); fi
 
+echo "== prices.json / hardcoded-rate drift =="
+# agy-cost-compare.sh reads prices.json, but falls back to hardcoded rates when
+# prices.json or python3 is missing. Those fallbacks silently went stale when the
+# Gemini output rate changed (9.00 -> 7.50), so the script would have quoted the old
+# number in exactly the situation where nobody can see where it came from. Assert the
+# two stay in step rather than relying on whoever edits prices.json to remember.
+out=$(ROOT="$ROOT" python3 - <<'PY' 2>&1
+import json, os, re, sys
+root = os.environ["ROOT"]
+pj = json.load(open(os.path.join(root, "prices.json")))
+src = open(os.path.join(root, "scripts", "agy-cost-compare.sh")).read()
+want = {
+    "CLAUDE_IN_PER_M":  pj["claude_opus"]["in"],
+    "CLAUDE_OUT_PER_M": pj["claude_opus"]["out"],
+    "GEMINI_IN_PER_M":  pj["gemini_flash"]["in"],
+    "GEMINI_OUT_PER_M": pj["gemini_flash"]["out"],
+}
+bad = []
+for var, expected in want.items():
+    m = re.search(re.escape(var) + r'="\$\{' + var + r':-\$\{_[A-Z]+:-([0-9.]+)\}\}"', src)
+    if not m:
+        bad.append(f"{var}: fallback not found (pattern changed?)")
+    elif float(m.group(1)) != float(expected):
+        bad.append(f"{var}: fallback {m.group(1)} != prices.json {expected}")
+print("; ".join(bad) if bad else "IN-SYNC")
+PY
+)
+if [ "$out" = "IN-SYNC" ]; then
+  echo "ok: agy-cost-compare fallback rates match prices.json"; PASS=$((PASS+1));
+else echo "FAIL: rate drift — $out"; FAIL=$((FAIL+1)); fi
+
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"
 cat > "$SESS" <<'JSONL'

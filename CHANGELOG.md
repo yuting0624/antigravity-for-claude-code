@@ -58,6 +58,11 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   at a flat 0.15/M — it is *not* `cache_read_mult × in`, which applies to the Claude deck
   only) and a note that Gemini context-cache **storage** is billed by time and is not
   reported by agy, so any Gemini-side figure computed here is a **lower bound**.
+  `agy-cost-compare.sh`'s hardcoded last-resort fallback (used when `prices.json` or
+  `python3` is missing) had gone stale at 9.00 the same way — now 7.50, and a test asserts
+  the two stay in step, since a stale fallback quotes a wrong rate in exactly the situation
+  where nobody can see where the number came from. Note `cached_in` currently has no
+  consumer: `measure-session.py` prices the orchestrator deck only.
 - **Docs: Gemini 3.6 Flash High measured against 3.5.** −23% input tokens for the same
   task (n=2, order-reversed) and output at $7.50/M vs $9.00/M — but it does **not** reduce
   `cache_read` (+6%) and is ~29% slower. `flash-medium` is −31% input / −21% wall but

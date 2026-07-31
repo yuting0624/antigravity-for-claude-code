@@ -53,10 +53,13 @@ except Exception: pass
 PY
 )"
 fi
+# Last-resort fallbacks, used only when prices.json or python3 is unavailable. Keep them
+# in step with prices.json — a stale hardcoded rate here quotes a wrong number in exactly
+# the situation where nobody can see where it came from.
 CLAUDE_IN_PER_M="${CLAUDE_IN_PER_M:-${_CIN:-5}}"
 CLAUDE_OUT_PER_M="${CLAUDE_OUT_PER_M:-${_COUT:-25}}"
 GEMINI_IN_PER_M="${GEMINI_IN_PER_M:-${_GIN:-1.50}}"
-GEMINI_OUT_PER_M="${GEMINI_OUT_PER_M:-${_GOUT:-9.00}}"
+GEMINI_OUT_PER_M="${GEMINI_OUT_PER_M:-${_GOUT:-7.50}}"
 CPT="${CHARS_PER_TOKEN:-4}"
 case "$CPT" in ''|*[!0-9]*) CPT=4 ;; esac   # must be a positive integer (avoid awk div-by-zero)
 [ "$CPT" -gt 0 ] || CPT=4
