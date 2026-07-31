@@ -12,9 +12,14 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   `agy-delegate` call is an independent session sharing no cache with the last**, so a
   conductor that delegated 7.3× against the same corpus paid to ingest it 7.3×.
   **Two-thirds of the executor's cost was re-reading material it had already read**;
-  break-even was ~5.7 delegations. `SKILL.md` now says plainly: pass `--continue` /
-  `--conversation <id>` after the first delegation over the same material, fold related
-  units together, and scope `--dir` tightly. Also recorded: delegation **moves** work
+  break-even was ~5.7 delegations.
+  **Correction to shipped guidance:** rule 6 told you to keep an agy session alive with
+  `--continue` so the working context "lives on the cheap side". Measured, that is
+  backwards — resuming carries the whole prior conversation forward *and* agy re-reads the
+  material anyway, so the continued call cost **+82% / +277%** vs a fresh one (n=2), with
+  `cache_read` 3–14× higher. `--continue` is for resuming after a quota/timeout failure,
+  not a cost lever. The only lever that actually removes a re-ingestion is folding related
+  units into one fully-specified delegation (rule 4). Also recorded: delegation **moves** work
   rather than removing it (~2.8× the normalized token volume for the same result), and
   agy's own prompt cache covers only ~2/3 of its context re-reads — both push toward
   fewer, larger, session-reusing delegations. Stated as direction from one configuration,

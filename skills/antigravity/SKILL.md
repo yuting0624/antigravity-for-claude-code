@@ -227,9 +227,14 @@ Claude's context lean and the round-trips few. Apply these as hard rules:
    round-trips (each round-trip re-reads context = `cache_read` tax).
 5. **Review the diff, not the whole tree.** `git diff` is compact; reading every file is
    not.
-6. **Hold state on the cheap side.** For multi-step jobs, keep an agy session with
-   `--continue` / `--conversation <id>` so the working context lives in Gemini, and Claude
-   passes deltas instead of re-supplying everything.
+6. **Do not hold state on the executor to save money — measured, it costs more.** It is
+   tempting to keep one agy session alive with `--continue` / `--conversation <id>` so the
+   working context "lives on the cheap side". It does not work: resuming carries the whole
+   prior conversation forward *and* agy re-reads the material anyway, and agy's prompt
+   cache covers only ~2/3 of its context re-reads. Measured on a repeated-corpus digest,
+   the continued call cost **+82% / +277%** vs a fresh one (n=2). Use `--continue` for what
+   it is good at — **resuming after a quota or timeout failure** — and get multi-step
+   savings from rule 4 instead (one large delegation, not many small ones).
 7. **Asymmetric effort.** The conductor doesn't need max reasoning effort to coordinate +
    verify; run Claude at a moderate effort and let the cheap workers do the volume.
 8. **Don't fight the prompt-cache TTL on small tasks (measured trap).** The 5-min cache
@@ -266,12 +271,16 @@ in cheaper than solo Claude, the ones at 9 did not.
 
 So when several delegations work over the same material:
 
-- **Pass `--continue` (or `--conversation <id>`) after the first one.** A fresh session
-  re-ingests from scratch; a continued one does not. This is the single highest-value
-  habit in this section and nothing enforces it — it is on you.
-- **Fold related units into one delegation** rather than issuing them one by one.
-- If you cannot avoid many calls, expect the executor's read cost — not its writing — to
-  dominate, and scope `--dir` to the smallest subtree that contains the work.
+- **Fold related units into ONE fully-specified delegation.** This is the only lever that
+  actually removes a re-ingestion. Two questions about one corpus = one delegation asking
+  for both, not two delegations.
+- Scope `--dir` to the smallest subtree that contains the work, and expect the executor's
+  **read** cost — not its writing — to dominate.
+- **Do NOT reach for `--continue` to avoid re-ingestion — measured, it makes things
+  worse.** Resuming a session carries the whole prior conversation forward *and* agy
+  re-reads the material anyway, so you pay both: on a repeated-corpus digest the continued
+  second call cost **+82% and +277%** vs a fresh one (n=2), with `cache_read` 3–14× higher.
+  `--continue` is for *resuming after a failure* (quota, timeout) — not a cost lever.
 
 Two supporting facts, both measured: **delegation moves work rather than removing it**
 (the hybrid ran ~2.8× the normalized token volume for the same result — it stays
