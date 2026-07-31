@@ -21,21 +21,7 @@ you can put in front of decision-makers. It distills what we learned producing
 3. **Honest break-even.** Below a certain task size the hybrid costs MORE (we measured
    it: a small app was ~1.4M hybrid vs ~1.0M solo). Find your break-even and report it —
    it makes the rest of your numbers credible.
-4. **Establish the customer's BILLING MODE before you measure anything.** This decides
-   the answer more than any lever in this playbook, and the same runs give **opposite**
-   results depending on it:
-   - **Both sides metered** (pay-as-you-go on Claude *and* Gemini) → count both. Measured:
-     forced delegation on a 3-service Go repo was **+37.9%**, i.e. delegation *lost*.
-   - **Executor covered** (Gemini Enterprise / committed-use, so marginal Gemini tokens
-     are already paid for) → the conductor's reduction **is** the saving. Same runs:
-     **−22.7%**, and −49.7% on a larger service.
-
-   Neither accounting is wrong. Quoting one without naming it is. Two things to nail down
-   with the customer's account team **before** the PoC: does their Antigravity CLI usage
-   actually draw on that entitlement (rather than billing separately), and what happens
-   when they exceed the commitment. Note `scripts/measure-session.py` prices the **Claude
-   side only** — exactly right for the covered case, an understatement for the metered one.
-5. **Keep the conductor model FIXED across arms.** Baseline and delegation arms run on
+4. **Keep the conductor model FIXED across arms.** Baseline and delegation arms run on
    the **same conductor** (e.g. Opus in both): the "−X% from delegation" claim is only
    attributable — and only immune to *"you just switched to a cheaper model"* — if
    delegation is the sole difference. (Our published A/B kept Opus across all three
@@ -79,7 +65,7 @@ scripts/measure-session.py <session-id>
 | 5 | Tier down (`flash` where quality holds) | cheaper executor tokens |
 
 (All levers act on the *executor* side or on what the conductor reads — the conductor
-model itself stays fixed, per principle 5.)
+model itself stays fixed, per principle 4.)
 
 After each lever: rerun the task → rerun the gate → keep only if quality held.
 
@@ -135,18 +121,16 @@ come from delegation. In enforcement-strength order:
 
 ## 7. Report template
 
-> **Billing mode: {both sides metered | executor covered by a committed Gemini contract}.**
 > On {task types}, the hybrid cut Claude-side cost **−X%** (COST-WEIGHTED, est. $Y)
 > at an **equal quality gate** ({gate}, n={runs}/arm). Break-even: tasks under
 > {size} are cheaper solo. Gemini-side cost accounted separately at ${Z}
-> — {included in / excluded from, and why} the headline.
 > Conductor {model}, executor {model}, agy {version}, measured {date};
 > rates verified against Vertex pricing on {date}.
 
-Always include: **the billing mode**, the break-even statement, what is *not* counted, the
-model/version triple, and the rate-verification date. The honest caveats are what make the
-headline number survive scrutiny — and the mode and the version triple are what stop the
-number being quoted, a year later, as if it were a property of the plugin.
+Always include: the break-even statement, what is *not* counted, the model/version
+triple, and the rate-verification date. The honest caveats are what make the
+headline number survive scrutiny — and the version triple is what stops the number being
+quoted, a year later, as if it were a property of the plugin.
 
 ---
 

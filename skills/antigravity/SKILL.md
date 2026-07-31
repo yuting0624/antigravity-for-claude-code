@@ -249,58 +249,40 @@ hybrid costs more; above it, lean-context routing cuts frontier-model spend by a
 *measured* margin. Quote the measured number and the break-even, never a headline ratio.
 Use `agy-cost-compare` for the per-token gap (estimate; set real Vertex rates first).
 
-### Which side you pay for decides the answer — state the mode with every number
+### The number of delegations is the lever — reuse the session (measured)
 
-There are two legitimate accountings, and they give **opposite** results on the same run.
-Neither is wrong; quoting one without naming it is.
+Rules 4 and 6 above ("batch, don't chatter", "hold state on the cheap side") are the
+two that actually move the needle, and here is why, from a benchmark of this plugin
+(Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8 · n=3/arm, cold cache):
 
-| Billing mode | What counts | Measured (see below) |
-|---|---|---|
-| **Both sides metered** (pay-as-you-go on Claude *and* Gemini) | Claude + Gemini | forced delegation on a 3-service Go repo: **+37.9%** |
-| **Executor covered** (Gemini Enterprise / committed-use, marginal token cost ≈ 0) | Claude only | same run: **−22.7%**; a larger Python service: **−49.7%** |
+**Per delegation the economics are fine. Repeated ingestion is what breaks them.**
+Offloading a large corpus works exactly as designed — the conductor's `cache_read` fell
+**61%**, it never opened the corpus itself, and each digest came back at ~4k tokens. But
+**each `agy-delegate` call is an independent session that shares no cache with the last
+one**, so a conductor that delegated 7.3 times against the same corpus paid to ingest it
+7.3 times. **Two-thirds of the executor's cost was re-reading material it had already
+read.** Break-even on that task was ~5.7 delegations; the one trial that stayed at 5 came
+in cheaper than solo Claude, the ones at 9 did not.
 
-The second row is the common enterprise deployment and it is **not** a rounding trick:
-if the Gemini spend is already committed, the conductor's reduction *is* the saving.
-Two caveats: confirm the customer's Antigravity CLI usage actually draws on that
-entitlement rather than billing separately, and say "Claude-side only" out loud.
-`scripts/measure-session.py` prices the **Claude side only** — correct for row 2,
-an understatement of cost for row 1.
+So when several delegations work over the same material:
 
-### Measured, 2026-07 (Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8)
+- **Pass `--continue` (or `--conversation <id>`) after the first one.** A fresh session
+  re-ingests from scratch; a continued one does not. This is the single highest-value
+  habit in this section and nothing enforces it — it is on you.
+- **Fold related units into one delegation** rather than issuing them one by one.
+- If you cannot avoid many calls, expect the executor's read cost — not its writing — to
+  dominate, and scope `--dir` to the smallest subtree that contains the work.
 
-Harbor benchmark, n=3/arm, all trials cold-cache, both sides metered:
+Two supporting facts, both measured: **delegation moves work rather than removing it**
+(the hybrid ran ~2.8× the normalized token volume for the same result — it stays
+affordable because the executor is cheaper per token, not because it does less), and
+**agy's own prompt cache covers only ~2/3 of its context re-reads**, so the executor is
+worse than Claude at carrying context. Both push the same way: fewer, larger, session-
+reusing delegations.
 
-- **Forced delegation, 3-service Go repo: +37.9%** (ranges non-overlapping — the one
-  result here strong enough to state at n=3). Conductor −22.7%, executor +$2.46/trial.
-- **A one-line fix: all arms indistinguishable.** An earlier "+46% penalty below the
-  break-even" was a prompt-cache artifact and does **not** replicate under cold cache.
-- **Normalized token volume: the hybrid does 2.79× the work.** It stays within +37.9%
-  on price only because the executor is cheaper per token. Delegation *moves* work,
-  it does not remove it — so the economics ride entirely on the price gap.
-- **Ingestion delegation wins outright**: 62k-token corpus → digest cost $0.42
-  delegated vs $0.50 solo, and — the real lever — Claude then carries 4.4k tokens
-  instead of 62k, i.e. **$0.002 vs $0.031 per subsequent turn**. Over 50 turns that
-  is $0.53 vs $2.05.
-
-**What decides it is how much Claude actually sheds**, not the task's label. Material
-that would enter Claude's context and *stay* there (long logs, large corpora, audio /
-video, fan-out research) sheds fully — delegate it. Work on a repo Claude must keep in
-context anyway to verify sheds much less, because the executor re-pays for comprehension
-the conductor already has. That is a magnitude guide, **not** a rule against delegating
-execution.
-
-Two of the three inputs to the both-sides-metered result are moving:
-
-- **Executor caching is an implementation gap, not a law.** Measured: agy's prompt cache
-  covers only ~2/3 of its context re-reads; the uncached third bills at full input rate,
-  making its blended re-read ≈ **$0.59/M vs Opus's cached $0.50/M**. If agy caches fully
-  that becomes $0.15/M and the Go result narrows from +37.9% to ≈ +15%.
-- **Generation over generation the gap shrinks** (3.6 Flash: −23% input tokens and
-  −16.7% output price vs 3.5), while the conductor side was measured at its strongest
-  (newest Claude Code + Opus 5).
-
-So treat the both-sides-metered result as **a dated snapshot of one condition**, not a
-verdict. Re-measure when agy, the executor model, or the contract changes.
+These are single-configuration measurements from 2026-07 on two task families, not
+constants. Treat them as direction, and re-measure on your own workload before quoting
+any figure.
 
 ## SDLC recipes
 

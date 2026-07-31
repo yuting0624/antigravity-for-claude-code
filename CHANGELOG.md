@@ -4,24 +4,21 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
 ## 0.22.0
-- **Docs: which side you pay for decides the cost answer — the plugin never said so.**
-  A 3-arm, 18-trial Harbor benchmark (Opus 5 conductor · Gemini 3.6 Flash High executor ·
-  agy 1.1.8 · n=3 · cold cache) produced **opposite** results from the same runs depending
-  on the accounting: **both sides metered → forced delegation on a 3-service Go repo costs
-  +37.9%**; **executor covered by a committed/Enterprise Gemini contract → −22.7%** (and
-  −49.7% on a larger Python service), because then the conductor's reduction *is* the
-  saving. Both are legitimate; quoting either without naming the mode is not. `SKILL.md`
-  now carries the table, the measured numbers with their conditions, and the note that
-  `scripts/measure-session.py` prices the **Claude side only** — correct for the covered
-  case, an understatement for pay-as-you-go.
-  Also recorded: the hybrid does **2.79× the normalized token work** (it *moves* work, it
-  doesn't remove it — the economics ride entirely on the price gap); **ingestion
-  delegation wins outright** (62k-token corpus → digest: Claude then carries 4.4k instead
-  of 62k tokens, $0.002 vs $0.031 per subsequent turn); and an earlier "+46% penalty below
-  the break-even" was a **prompt-cache artifact that does not replicate under cold cache**.
-  Framed as a dated snapshot, not a verdict: agy's cache covers only ~2/3 of its context
-  re-reads (blended $0.59/M vs Opus's cached $0.50/M) — an implementation gap, and closing
-  it narrows the Go result to ≈ +15%.
+- **Docs: the number of delegations is the lever — reuse the session.** Benchmarking this
+  plugin (Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8 · n=3/arm, cold
+  cache) confirmed the per-delegation economics and located what actually breaks them.
+  Offloading a large corpus worked as designed — the conductor's `cache_read` fell **61%**,
+  it never opened the corpus itself, each digest came back at ~4k tokens — but **each
+  `agy-delegate` call is an independent session sharing no cache with the last**, so a
+  conductor that delegated 7.3× against the same corpus paid to ingest it 7.3×.
+  **Two-thirds of the executor's cost was re-reading material it had already read**;
+  break-even was ~5.7 delegations. `SKILL.md` now says plainly: pass `--continue` /
+  `--conversation <id>` after the first delegation over the same material, fold related
+  units together, and scope `--dir` tightly. Also recorded: delegation **moves** work
+  rather than removing it (~2.8× the normalized token volume for the same result), and
+  agy's own prompt cache covers only ~2/3 of its context re-reads — both push toward
+  fewer, larger, session-reusing delegations. Stated as direction from one configuration,
+  not as constants.
 - **`AGY_USAGE_LOG` — a side channel the conductor's own habits can't truncate.**
   `AGY_USAGE`/`AGY_SIGNAL` go to stderr, but this skill tells the conductor to keep its
   context lean, so it writes `agy-delegate ... 2>&1 | tail -N`; stdout (the digest) is
