@@ -274,6 +274,9 @@ So when several delegations work over the same material:
 - **Fold related units into ONE fully-specified delegation.** This is the only lever that
   actually removes a re-ingestion. Two questions about one corpus = one delegation asking
   for both, not two delegations.
+  **Only fold units that genuinely belong together.** If combining them muddies the spec,
+  don't — a vague mega-prompt returns worse work, and re-running it costs far more than
+  the re-ingestion you saved. Quality of the spec beats the token arithmetic every time.
 - Scope `--dir` to the smallest subtree that contains the work, and expect the executor's
   **read** cost — not its writing — to dominate.
 - **Do NOT reach for `--continue` to avoid re-ingestion — measured, it makes things
