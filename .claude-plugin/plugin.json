@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.21.1",
+  "version": "0.22.0",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
@@ -78,6 +78,12 @@
       "title": "Nudge delegation on bulk-looking prompts",
       "description": "When on, a UserPromptSubmit hook adds a short advisory note to Claude's context when a prompt looks like bulk work above the delegation break-even (mass edits, migrations, exhaustive tests, fan-out search). Advisory only — Claude still makes the break-even judgment per task. Set to off/false/0/no to suppress.",
       "default": "on"
+    },
+    "usage_log": {
+      "type": "string",
+      "title": "Cost-measurement log file (AGY_USAGE / AGY_SIGNAL)",
+      "description": "Absolute path. When set, every delegation appends its AGY_USAGE (token counts) and AGY_SIGNAL (failure) line to this file in addition to stderr. Use this whenever you are MEASURING cost: stderr is easily lost — piping the wrapper through `2>&1 | tail -N` to keep Claude's context lean keeps the digest and silently drops the usage line, which makes the Gemini side look cheaper than it is. Env AGY_USAGE_LOG overrides this. Empty = off.",
+      "default": ""
     }
   }
 }

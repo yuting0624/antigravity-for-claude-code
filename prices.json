@@ -1,9 +1,11 @@
 {
-  "_comment": "Per-1M-token USD on Vertex AI, ~2026-06. VERIFY against current Google Cloud / Anthropic pricing before quoting. Global endpoints; regional/multi-region carry a ~10% premium.",
+  "_comment": "Per-1M-token USD on Vertex AI, ~2026-07. VERIFY against current Google Cloud / Anthropic pricing before quoting. Global endpoints; regional/multi-region carry a ~10% premium.",
   "_sources": ["cloud.google.com/vertex-ai/generative-ai/pricing", "platform.claude.com/docs/en/about-claude/pricing"],
+  "_gemini_flash_note": "gemini_flash tracks Gemini 3.6 Flash (the default `flash` tier as of 2026-07): out dropped 9.00 -> 7.50 vs 3.5 Flash; in and cached-in unchanged. Gemini cached input is a FLAT 0.15/M, not cache_read_mult x in — see _cache_note.",
+  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only. Gemini prices cached input at a flat rate (0.15/M for 3.6 Flash) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
   "claude_opus":   { "in": 5.00, "out": 25.00 },
   "claude_sonnet": { "in": 3.00, "out": 15.00 },
-  "gemini_flash":  { "in": 1.50, "out": 9.00 },
+  "gemini_flash":  { "in": 1.50, "out": 7.50, "cached_in": 0.15 },
   "gemini_pro":    { "in": 2.00, "out": 12.00 },
   "cache_write_mult": 1.25,
   "cache_read_mult": 0.10,

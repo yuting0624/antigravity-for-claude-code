@@ -3,6 +3,56 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.22.0
+- **Docs: which side you pay for decides the cost answer — the plugin never said so.**
+  A 3-arm, 18-trial Harbor benchmark (Opus 5 conductor · Gemini 3.6 Flash High executor ·
+  agy 1.1.8 · n=3 · cold cache) produced **opposite** results from the same runs depending
+  on the accounting: **both sides metered → forced delegation on a 3-service Go repo costs
+  +37.9%**; **executor covered by a committed/Enterprise Gemini contract → −22.7%** (and
+  −49.7% on a larger Python service), because then the conductor's reduction *is* the
+  saving. Both are legitimate; quoting either without naming the mode is not. `SKILL.md`
+  now carries the table, the measured numbers with their conditions, and the note that
+  `scripts/measure-session.py` prices the **Claude side only** — correct for the covered
+  case, an understatement for pay-as-you-go.
+  Also recorded: the hybrid does **2.79× the normalized token work** (it *moves* work, it
+  doesn't remove it — the economics ride entirely on the price gap); **ingestion
+  delegation wins outright** (62k-token corpus → digest: Claude then carries 4.4k instead
+  of 62k tokens, $0.002 vs $0.031 per subsequent turn); and an earlier "+46% penalty below
+  the break-even" was a **prompt-cache artifact that does not replicate under cold cache**.
+  Framed as a dated snapshot, not a verdict: agy's cache covers only ~2/3 of its context
+  re-reads (blended $0.59/M vs Opus's cached $0.50/M) — an implementation gap, and closing
+  it narrows the Go result to ≈ +15%.
+- **`AGY_USAGE_LOG` — a side channel the conductor's own habits can't truncate.**
+  `AGY_USAGE`/`AGY_SIGNAL` go to stderr, but this skill tells the conductor to keep its
+  context lean, so it writes `agy-delegate ... 2>&1 | tail -N`; stdout (the digest) is
+  emitted *after* the usage line, so `tail` keeps the digest and drops the usage. Measured
+  in the wild: a benchmark harness lost most of its Gemini-side cost data this way, making
+  the hybrid look cheaper than it was. Set `AGY_USAGE_LOG=/path` (or the `usage_log`
+  option) and both line types are appended to that file as well. Appends (never
+  truncates), off by default, and an unwritable path is non-fatal — measurement must not
+  break the work.
+- **`agy-trace` now covers plain delegations, not just internal-fan-out subagents.**
+  Every agy run leaves a readable `transcript.jsonl`, and `agy-delegate` prints the
+  `conversationId` in `AGY_USAGE`, so cost and trajectory join 1:1 (verified 10/10 in the
+  benchmark). New **`--audit`** (step-type counts + every non-zero exit) and **`--last`**.
+  This makes the skill's non-negotiable "never trust agy's self-reported GREEN" rule
+  actually checkable: measured, a delegation reported SUCCESS while **6 commands inside it
+  failed**. Documented limit: the command **strings** are recorded nowhere (not in
+  `transcript.jsonl`, `transcript_full.jsonl`, or `cli-*.log`) — you get that a command
+  ran, its exit code and its output; to attribute a filesystem change, diff the tree.
+- **Fix: `prices.json` overstated Gemini output by 20%.** `gemini_flash.out` was 9.00
+  (Gemini 3.5 Flash); **Gemini 3.6 Flash is 7.50**, input and cached-input unchanged.
+  `measure-session.py` reads this file. Also added `cached_in` (Gemini prices cached input
+  at a flat 0.15/M — it is *not* `cache_read_mult × in`, which applies to the Claude deck
+  only) and a note that Gemini context-cache **storage** is billed by time and is not
+  reported by agy, so any Gemini-side figure computed here is a **lower bound**.
+- **Docs: Gemini 3.6 Flash High measured against 3.5.** −23% input tokens for the same
+  task (n=2, order-reversed) and output at $7.50/M vs $9.00/M — but it does **not** reduce
+  `cache_read` (+6%) and is ~29% slower. `flash-medium` is −31% input / −21% wall but
+  **`cache_read` +43%** (n=3, reproduced), so it loses on cache_read-dominated agentic
+  work. The `flash` default stays on 3.5 for plan availability; remap `tier_flash` to
+  `gemini-3.6-flash-high` when your plan serves it.
+
 ## 0.21.1
 - **Fix: the JSON-mode capability probe could silently disable structured output
   (SIGPIPE race).** `agy-delegate.sh` probed support with

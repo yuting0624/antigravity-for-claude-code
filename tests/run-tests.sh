@@ -171,6 +171,50 @@ err=$(STUB_JSON_CAPABLE=0 STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
 if printf '%s' "$err" | grep -q "AGY_USAGE"; then echo "FAIL: used json against an agy that lacks the flag"; FAIL=$((FAIL+1));
 else echo "ok: falls back when agy has no --output-format (pre-1.1.8)"; PASS=$((PASS+1)); fi
 
+# --- AGY_USAGE_LOG side channel ---------------------------------------------
+# Regression guard for a measurement loss seen in the wild: stderr carries the
+# usage line, but a conductor keeping its context lean writes `2>&1 | tail -N`,
+# stdout (the digest) is emitted after it, and `tail` drops the usage line. The
+# named file must survive that exact pipeline.
+ULOG="$TMP/usage.log"
+rm -f "$ULOG"
+STUB_JSON_CAPABLE=1 STUB_MODE=json_ok AGY_USAGE_LOG="$ULOG" "$DELEGATE" "hi" >/dev/null 2>&1
+if [ -s "$ULOG" ] && grep -q '^AGY_USAGE ' "$ULOG"; then
+  echo "ok: AGY_USAGE_LOG captures the usage line"; PASS=$((PASS+1));
+else echo "FAIL: AGY_USAGE_LOG did not capture AGY_USAGE"; FAIL=$((FAIL+1)); fi
+rm -f "$ULOG"
+STUB_JSON_CAPABLE=1 STUB_MODE=json_ok AGY_USAGE_LOG="$ULOG" \
+  bash -c '"$1" hi 2>&1 | tail -1 >/dev/null' _ "$DELEGATE" || true
+if grep -q '^AGY_USAGE ' "$ULOG" 2>/dev/null; then
+  echo "ok: AGY_USAGE_LOG survives '2>&1 | tail -N' (the measured loss)"; PASS=$((PASS+1));
+else echo "FAIL: AGY_USAGE_LOG lost the usage line through a tail pipeline"; FAIL=$((FAIL+1)); fi
+# AGY_SIGNAL must land in the same file, so failures are attributable to a cost.
+rm -f "$ULOG"
+STUB_MODE=quota AGY_USAGE_LOG="$ULOG" "$DELEGATE" "hi" >/dev/null 2>&1 || true
+if grep -q '^AGY_SIGNAL ' "$ULOG" 2>/dev/null; then
+  echo "ok: AGY_USAGE_LOG also captures AGY_SIGNAL"; PASS=$((PASS+1));
+else echo "FAIL: AGY_SIGNAL not written to AGY_USAGE_LOG"; FAIL=$((FAIL+1)); fi
+# Appends across delegations rather than truncating (a session has many).
+STUB_MODE=quota AGY_USAGE_LOG="$ULOG" "$DELEGATE" "hi" >/dev/null 2>&1 || true
+if [ "$(grep -c '^AGY_SIGNAL ' "$ULOG")" -eq 2 ]; then
+  echo "ok: AGY_USAGE_LOG appends, does not truncate"; PASS=$((PASS+1));
+else echo "FAIL: AGY_USAGE_LOG truncated a previous entry"; FAIL=$((FAIL+1)); fi
+# Measurement must never break the work: an unwritable path is non-fatal.
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok AGY_USAGE_LOG=/nonexistent-dir/x.log "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "unwritable AGY_USAGE_LOG is non-fatal" 0 "$rc" "" "$out"
+# Off by default: no file is created when the option is unset.
+rm -f "$ULOG"
+STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" >/dev/null 2>&1
+if [ ! -e "$ULOG" ]; then echo "ok: usage log off by default"; PASS=$((PASS+1));
+else echo "FAIL: usage log written without being configured"; FAIL=$((FAIL+1)); fi
+# Plugin option is the documented equivalent of the env var.
+rm -f "$ULOG"
+STUB_JSON_CAPABLE=1 STUB_MODE=json_ok CLAUDE_PLUGIN_OPTION_USAGE_LOG="$ULOG" "$DELEGATE" "hi" >/dev/null 2>&1
+if grep -q '^AGY_USAGE ' "$ULOG" 2>/dev/null; then
+  echo "ok: CLAUDE_PLUGIN_OPTION_USAGE_LOG works like AGY_USAGE_LOG"; PASS=$((PASS+1));
+else echo "FAIL: plugin option usage_log had no effect"; FAIL=$((FAIL+1)); fi
+rm -f "$ULOG"
+
 # agy >= 1.1.3: permissioned tool soft-denied headless -> rc=0 + empty stdout + stderr notice
 out=$(STUB_MODE=softdeny "$DELEGATE" "implement it" 2>&1); rc=$?
 check "agy soft-deny (no permission) -> exit 15 + signal" 15 "$rc" "PERMISSION_DENIED" "$out"
@@ -510,9 +554,9 @@ check "media missing file -> exit 4" 4 "$rc" "file not found" "$out"
 out=$("$MEDIA" 2>&1); rc=$?
 check "media with no args -> exit 1 (friendly)" 1 "$rc" "no media file given" "$out"
 
-echo "== agy-trace.sh (subagent trajectory reader) =="
+echo "== agy-trace.sh (delegation trajectory reader) =="
 TRACE="$ROOT/scripts/agy-trace.sh"
-# fixture: a brain dir with one subagent transcript (shape matches agy 1.0.12)
+# fixture: a brain dir with one transcript (shape matches agy 1.0.12 / 1.1.8)
 FIXBRAIN="$TMP/brain"
 mkdir -p "$FIXBRAIN/conv-123/.system_generated/logs"
 cat > "$FIXBRAIN/conv-123/.system_generated/logs/transcript.jsonl" <<'JSONL'
@@ -532,6 +576,42 @@ out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" no-such-conv 2>&1); rc=$?
 check "unknown conversationId -> exit 2" 2 "$rc" "no transcript" "$out"
 out=$(env -u CLAUDE_PLUGIN_ROOT AGY_BRAIN_DIR="$FIXBRAIN" "$BIN/agy-trace" conv-123 2>&1); rc=$?
 check "bin/agy-trace forwards (no CLAUDE_PLUGIN_ROOT)" 0 "$rc" "USER_INPUT" "$out"
+
+# --- --audit / --last: verifying what a PLAIN delegation actually did ---------
+# agy writes a transcript for every run, not just invoke_subagent spawns, and the
+# conversationId is in agy-delegate's AGY_USAGE line — so cost and trajectory join
+# 1:1. A delegation can report SUCCESS while individual commands inside it failed
+# (observed: 6 non-zero exits under an overall-SUCCESS run), which is exactly what
+# the skill's "never trust agy's self-reported GREEN" rule needs surfaced.
+mkdir -p "$FIXBRAIN/conv-cmd/.system_generated/logs"
+cat > "$FIXBRAIN/conv-cmd/.system_generated/logs/transcript.jsonl" <<'JSONL'
+{"step_index":0,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","content":"<USER_REQUEST>build it</USER_REQUEST>"}
+{"step_index":1,"source":"MODEL","type":"RUN_COMMAND","status":"DONE","exit_code":0,"content":"The command exited with code 0. Output: ok"}
+{"step_index":2,"source":"MODEL","type":"RUN_COMMAND","status":"DONE","exit_code":127,"content":"The command exited with code 127. Output: command not found: pytest"}
+{"step_index":3,"source":"MODEL","type":"CODE_ACTION","status":"DONE","content":"wrote app/main.py"}
+JSONL
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --audit conv-cmd 2>&1); rc=$?
+check "--audit counts step types" 0 "$rc" "RUN_COMMAND            2" "$out"
+check "--audit surfaces a failing command inside a 'successful' run" 0 "$rc" "exit=127" "$out"
+check "--audit states that command strings are unavailable" 0 "$rc" "command strings are not recorded" "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --audit conv-123 2>&1); rc=$?
+check "--audit on a clean run reports no failures" 0 "$rc" "no non-zero exit codes" "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --audit no-such-conv 2>&1); rc=$?
+check "--audit unknown conversationId -> exit 2" 2 "$rc" "no transcript" "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --audit 2>&1); rc=$?
+check "--audit with no argument -> usage error" 1 "$rc" "needs a conversationId" "$out"
+# --last resolves the newest transcript; touch to make the ordering deterministic.
+touch "$FIXBRAIN/conv-cmd/.system_generated/logs/transcript.jsonl"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --last 2>&1); rc=$?
+check "--last pretty-prints the newest run" 0 "$rc" "CODE_ACTION" "$out"
+out=$(AGY_BRAIN_DIR="$FIXBRAIN" "$TRACE" --audit --last 2>&1); rc=$?
+check "--audit --last audits the newest run" 0 "$rc" "exit=127" "$out"
+out=$(AGY_BRAIN_DIR="$TMP/empty-brain" "$TRACE" --last 2>&1); rc=$?
+check "--last with no transcripts -> exit 2" 2 "$rc" "no transcripts" "$out"
+# The header must not claim these are subagent-only (it did, incorrectly, until 0.22.0).
+if grep -q 'EVERY agy run leaves' "$ROOT/scripts/agy-trace.sh"; then
+  echo "ok: agy-trace documents that all delegations leave a transcript"; PASS=$((PASS+1));
+else echo "FAIL: agy-trace still scoped to subagents only"; FAIL=$((FAIL+1)); fi
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"

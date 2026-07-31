@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.21.1
+version: 0.22.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -56,12 +56,19 @@ or persistently with the `default_model` / `tier_*` plugin options. Keep the exe
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
 
-> **Model availability moves fast.** Verified through **agy 1.1.5**. A newer **Gemini 3.6 Flash**
-> now appears in `agy models` and works — but the `flash` default **stays on Gemini 3.5 Flash
-> (High)** for broad plan availability (newer models can lag on enterprise Vertex). Remap
-> `tier_flash` to `Gemini 3.6 Flash (High)` when your plan serves it. Note: agy 1.1.5 changed
-> `agy models` output to slugs (`gemini-3.5-flash`); both slugs and display names are accepted
-> by `--model`, and `doctor` matches either.
+> **Model availability moves fast.** Verified through **agy 1.1.8**. The `flash` default
+> **stays on Gemini 3.5 Flash (High)** for broad plan availability (newer models can lag on
+> enterprise Vertex) — but **Gemini 3.6 Flash High is measurably better on both axes** and
+> is worth remapping to when your plan serves it (`tier_flash` →
+> `gemini-3.6-flash-high`; 18 benchmark trials ran on it without an availability problem):
+> **−23% input tokens** for the same task (n=2, order-reversed) and **output priced at
+> $7.50/M vs 3.5's $9.00/M**; input and cached-input rates are unchanged. It does *not*
+> reduce `cache_read` (+6%) and is ~29% slower.
+> **`flash-medium` is not a general win:** −31% input and −21% wall, but `cache_read` +43%
+> (n=3, reproduced) — on cache_read-dominated agentic work it loses to `high`. Pick by the
+> task's input:cache_read ratio.
+> Note: agy 1.1.5 changed `agy models` output to slugs (`gemini-3.5-flash`); both slugs and
+> display names are accepted by `--model`, and `doctor` matches either.
 
 ## How to call it
 
@@ -97,6 +104,14 @@ force it with the `structured_output` option.
 > as `input×in_rate + output×out_rate + cache_read×cached_rate`, three separate terms.
 > This differs from the Claude/Harbor side, where cache-read tokens *are* an inner subset
 > of the reported input total — don't carry one convention over to the other.
+>
+> **If you are measuring, set `AGY_USAGE_LOG=/path/to/log`** (or the `usage_log` option).
+> `AGY_USAGE` and `AGY_SIGNAL` go to stderr, and the advice two paragraphs down — keep
+> Claude's context lean — makes `agy-delegate ... 2>&1 | tail -N` the natural thing to
+> write. stdout (the digest) is emitted *after* the usage line, so `tail` keeps the digest
+> and silently drops the usage. Measured in the wild: a benchmark harness lost most of its
+> Gemini-side data exactly this way, which made the hybrid look cheaper than it was. A
+> named file cannot be truncated by a pipe.
 
 **Two ways to delegate.** Call the wrapper directly (above), or — when you want file
 generation to happen entirely on Gemini with **zero Claude tokens spent writing** — hand
@@ -147,10 +162,18 @@ Claude owns correctness. For anything that ships:
    are **SQLite `.db` files with opaque blob columns, not human-readable** — don't rely
    on reading them. Instead, have agy **summarize its own steps** as part of its output,
    or keep a session with `--continue`/`--conversation` and ask it to recap.
-   **Exception — internal fan-out:** each spawned subagent leaves a READABLE
-   step-by-step `transcript.jsonl` under `~/.gemini/antigravity-cli/brain/<conversationId>/`;
-   audit it with `agy-trace <conversationId>` (or `agy-trace --list`). See the
-   Internal fan-out recipe below.)
+   **But every run leaves a readable trajectory:** `transcript.jsonl` under
+   `~/.gemini/antigravity-cli/brain/<conversationId>/` — for plain delegations too, not
+   just internal-fan-out subagents. `agy-delegate` prints the `conversationId` in its
+   `AGY_USAGE` line, so cost and trajectory join 1:1. Audit with
+   **`agy-trace --audit <conversationId>`** (or `--audit --last`): step-type counts plus
+   every non-zero exit. A delegation can report SUCCESS while commands inside it failed —
+   measured: 6 failed commands inside one overall-"SUCCESS" run. `agy-trace <id>` prints
+   the full steps; `--list` finds recent ones.
+   **What is NOT recorded: the command strings.** Not in `transcript.jsonl`, not in
+   `transcript_full.jsonl`, not in `~/.gemini/antigravity-cli/log/cli-*.log`. You get
+   *that* a command ran, its exit code and its output. To attribute a filesystem change,
+   diff the tree — the trajectory cannot tell you.)
 4. **Review every shipping line** — be skeptical of clever code; check imports are real
    packages (hallucinated deps), error handling, edge cases, and that the contract
    itself is internally consistent (examples/placeholders match the verified behavior).
@@ -225,6 +248,59 @@ Honest framing for any cost claim: there is **no flat 8×/46%**. Below the break
 hybrid costs more; above it, lean-context routing cuts frontier-model spend by a
 *measured* margin. Quote the measured number and the break-even, never a headline ratio.
 Use `agy-cost-compare` for the per-token gap (estimate; set real Vertex rates first).
+
+### Which side you pay for decides the answer — state the mode with every number
+
+There are two legitimate accountings, and they give **opposite** results on the same run.
+Neither is wrong; quoting one without naming it is.
+
+| Billing mode | What counts | Measured (see below) |
+|---|---|---|
+| **Both sides metered** (pay-as-you-go on Claude *and* Gemini) | Claude + Gemini | forced delegation on a 3-service Go repo: **+37.9%** |
+| **Executor covered** (Gemini Enterprise / committed-use, marginal token cost ≈ 0) | Claude only | same run: **−22.7%**; a larger Python service: **−49.7%** |
+
+The second row is the common enterprise deployment and it is **not** a rounding trick:
+if the Gemini spend is already committed, the conductor's reduction *is* the saving.
+Two caveats: confirm the customer's Antigravity CLI usage actually draws on that
+entitlement rather than billing separately, and say "Claude-side only" out loud.
+`scripts/measure-session.py` prices the **Claude side only** — correct for row 2,
+an understatement of cost for row 1.
+
+### Measured, 2026-07 (Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8)
+
+Harbor benchmark, n=3/arm, all trials cold-cache, both sides metered:
+
+- **Forced delegation, 3-service Go repo: +37.9%** (ranges non-overlapping — the one
+  result here strong enough to state at n=3). Conductor −22.7%, executor +$2.46/trial.
+- **A one-line fix: all arms indistinguishable.** An earlier "+46% penalty below the
+  break-even" was a prompt-cache artifact and does **not** replicate under cold cache.
+- **Normalized token volume: the hybrid does 2.79× the work.** It stays within +37.9%
+  on price only because the executor is cheaper per token. Delegation *moves* work,
+  it does not remove it — so the economics ride entirely on the price gap.
+- **Ingestion delegation wins outright**: 62k-token corpus → digest cost $0.42
+  delegated vs $0.50 solo, and — the real lever — Claude then carries 4.4k tokens
+  instead of 62k, i.e. **$0.002 vs $0.031 per subsequent turn**. Over 50 turns that
+  is $0.53 vs $2.05.
+
+**What decides it is how much Claude actually sheds**, not the task's label. Material
+that would enter Claude's context and *stay* there (long logs, large corpora, audio /
+video, fan-out research) sheds fully — delegate it. Work on a repo Claude must keep in
+context anyway to verify sheds much less, because the executor re-pays for comprehension
+the conductor already has. That is a magnitude guide, **not** a rule against delegating
+execution.
+
+Two of the three inputs to the both-sides-metered result are moving:
+
+- **Executor caching is an implementation gap, not a law.** Measured: agy's prompt cache
+  covers only ~2/3 of its context re-reads; the uncached third bills at full input rate,
+  making its blended re-read ≈ **$0.59/M vs Opus's cached $0.50/M**. If agy caches fully
+  that becomes $0.15/M and the Go result narrows from +37.9% to ≈ +15%.
+- **Generation over generation the gap shrinks** (3.6 Flash: −23% input tokens and
+  −16.7% output price vs 3.5), while the conductor side was measured at its strongest
+  (newest Claude Code + Opus 5).
+
+So treat the both-sides-metered result as **a dated snapshot of one condition**, not a
+verdict. Re-measure when agy, the executor model, or the contract changes.
 
 ## SDLC recipes
 

@@ -45,10 +45,15 @@
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
 #   AGY_SIGNAL {"status":"QUOTA_EXHAUSTED","reason":"...","model":"...","retry":"--continue"}
 #
+# AGY_USAGE / AGY_SIGNAL go to stderr. If you are MEASURING cost, also set
+# AGY_USAGE_LOG=/path/to/log: stderr is easily lost (`2>&1 | tail -N` keeps the
+# digest and drops the usage line — see tee_usage below), a named file is not.
+#
 # agy is multi-model: tiers map to Gemini by default, but you can point delegation at any
 # model `agy models` lists (e.g. Claude/GPT on plans that expose them). Defaults via plugin
 # userConfig (env): CLAUDE_PLUGIN_OPTION_DEFAULT_TIER, _TIMEOUT, _DEFAULT_MODEL (exact name),
-# and per-tier remaps _TIER_FLASH / _TIER_FLASH_LO / _TIER_PRO. Explicit --model/--tier win.
+# _USAGE_LOG, and per-tier remaps _TIER_FLASH / _TIER_FLASH_LO / _TIER_PRO.
+# Explicit --model/--tier win; AGY_USAGE_LOG wins over _USAGE_LOG.
 #
 set -euo pipefail
 
@@ -71,15 +76,35 @@ die() { echo "agy-delegate: $*" >&2; exit 1; }
 # (avoids `shift 2` aborting under `set -e` with a cryptic "shift count" error).
 need() { [ "$1" -ge 2 ] || die "option '$2' needs a value"; }
 
+# Optional side channel for AGY_USAGE / AGY_SIGNAL.
+#
+# WHY this exists: these lines go to stderr so they never pollute the conductor's
+# context — but this skill also tells the conductor to keep its context lean, and
+# the natural way to do that is `agy-delegate ... 2>&1 | tail -N`. stdout (the
+# digest) is written after the usage line, so `tail` keeps the digest and throws
+# the usage line away. Measured in the wild: a benchmark harness lost most of its
+# Gemini-side cost data exactly this way, which made the hybrid look cheaper than
+# it was. A file the caller names cannot be truncated by a pipe.
+#
+# Set AGY_USAGE_LOG=/path/to/log (or the plugin option `usage_log`). Appended to,
+# never truncated; failure to write is non-fatal (measurement must not break work).
+USAGE_LOG="${AGY_USAGE_LOG:-${CLAUDE_PLUGIN_OPTION_USAGE_LOG:-}}"
+tee_usage() { # $1 = the full line, already formatted
+  [ -n "$USAGE_LOG" ] || return 0
+  printf '%s\n' "$1" >>"$USAGE_LOG" 2>/dev/null || true
+}
+
 # Emit a one-line machine-readable failure signal to stderr. $1=status $2=reason.
 # QUOTA failures advertise `--continue` so a caller knows how to resume the session.
 signal() {
-  local status="$1" reason="$2" retry=""
+  local status="$1" reason="$2" retry="" line
   [ "$status" = "QUOTA_EXHAUSTED" ] && retry="--continue"
   # sanitize reason so the JSON stays single-line and valid (no quotes/backslashes/newlines)
   reason="$(printf '%s' "$reason" | tr '\n\r\t' '   ' | tr -d '"\\' | cut -c1-200)"
-  printf 'AGY_SIGNAL {"status":"%s","reason":"%s","model":"%s","retry":"%s"}\n' \
-    "$status" "$reason" "${MODEL:-}" "$retry" >&2
+  line="$(printf 'AGY_SIGNAL {"status":"%s","reason":"%s","model":"%s","retry":"%s"}' \
+    "$status" "$reason" "${MODEL:-}" "$retry")"
+  printf '%s\n' "$line" >&2
+  tee_usage "$line"
 }
 
 # Print the header comment between "# Usage:" and "# Exit codes:" (anchored to
@@ -351,6 +376,7 @@ PY
     JSON_ERROR="$(printf '%s' "$meta" | sed -n 's/.*"error": *"\([^"]*\)".*/\1/p')"
     OUT="$(cat "$RESP" 2>/dev/null)"
     printf 'AGY_USAGE %s\n' "$meta" >&2
+    tee_usage "AGY_USAGE $meta"
     # A structured ERROR is authoritative even if agy exited 0.
     [ "$JSON_STATUS" = "ERROR" ] && [ "$RC" -eq 0 ] && RC=1
   fi
