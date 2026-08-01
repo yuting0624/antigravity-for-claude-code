@@ -85,6 +85,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Reading a pull request needs this. Omitting it does not merely skip the
+      # check — the job 403s, `review` requires `needs.not-a-fork.result !=
+      # 'failure'`, and the review becomes permanently unreachable on the two
+      # triggers this guard exists to protect. Local verification could not have
+      # caught it: a developer's `gh` session carries far more scope than
+      # GITHUB_TOKEN does here.
+      pull-requests: read
     steps:
       - env:
           GH_TOKEN: ${{ github.token }}
