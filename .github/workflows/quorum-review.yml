@@ -70,64 +70,8 @@ permissions:
   actions: read          # codeql-action needs this to read the run
 
 jobs:
-  # `github.event.pull_request` exists on `pull_request` and
-  # `pull_request_review_comment` and NOWHERE ELSE. On `issue_comment` and on
-  # `workflow_dispatch` the expression guard below coerces `null != true` to
-  # TRUE, so a fork sails straight through it — and both are ordinary things for
-  # a maintainer to do: typing `@quorum /review` on someone else's PR, or
-  # dispatching against a PR number by hand. Either would check the fork's merge
-  # commit out at the workspace root with live Google Cloud and write-scoped App
-  # credentials, which is exactly what the comment above claims cannot happen.
-  #
-  # So resolve it against the API on both, rather than trusting the payload
-  # shape. `workflow_dispatch` already needs write access to fire, which makes
-  # it a smaller exposure than the comment path — but "smaller" is not a reason
-  # to guard one and not the other.
-  #
-  # (The issue_comment half was caught independently by both reviewers on this
-  # PR; the dispatch half by the review of the fix. The upstream example
-  # workflow has both.)
-  not-a-fork:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request != null &&
-       github.event.comment.user.type != 'Bot' &&
-       contains(github.event.comment.body, '@quorum'))
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # Reading a pull request needs this. Omitting it does not merely skip the
-      # check — the job 403s, `review` requires `needs.not-a-fork.result !=
-      # 'failure'`, and the review becomes permanently unreachable on the two
-      # triggers this guard exists to protect. Local verification could not have
-      # caught it: a developer's `gh` session carries far more scope than
-      # GITHUB_TOKEN does here.
-      pull-requests: read
-    steps:
-      - env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          NUM: ${{ github.event.issue.number || github.event.inputs.pr }}
-        run: |
-          set -euo pipefail
-          case "${NUM:-}" in
-            ''|*[!0-9]*) echo "::error::no usable pull request number (got '${NUM:-}')"; exit 1 ;;
-          esac
-          head="$(gh api "repos/$REPO/pulls/$NUM" --jq '.head.repo.full_name')"
-          echo "PR #$NUM head repo: $head"
-          if [ "$head" != "$REPO" ]; then
-            echo "::error::#$NUM is from a fork ($head). Fork review is label-gated in claude-review-external.yml, which isolates the untrusted tree; this workflow does not."
-            exit 1
-          fi
-
   review:
-    # `not-a-fork` only runs on `issue_comment`; on the other triggers it is
-    # skipped, and `always()` keeps this job reachable while still failing if
-    # the guard actually ran and rejected.
-    needs: [not-a-fork]
     if: >-
-      always() && needs.not-a-fork.result != 'failure' &&
       github.event.pull_request.head.repo.fork != true &&
       (github.event_name == 'pull_request' ||
        github.event_name == 'workflow_dispatch' ||
@@ -153,6 +97,45 @@ jobs:
     # example gives for pinning applies to every step that runs beside it, not
     # just to quorum-review itself. Dependabot bumps them.
     steps:
+      # `if:` above cannot exclude a fork on every trigger, and reads as though
+      # it does: `github.event.pull_request` exists on `pull_request` and
+      # `pull_request_review_comment` and nowhere else, so on `issue_comment`
+      # and `workflow_dispatch` the field is null and `null != true` passes.
+      #
+      # This runs BEFORE the checkout and before any credential is minted, so a
+      # fork never reaches the runner. Adopted from upstream's example rather
+      # than kept as the separate gating job we had: `needs.<job>.result !=
+      # 'failure'` also passes for `cancelled`, and a step has no such state to
+      # get wrong. The action re-resolves fork-ness itself as a backstop.
+      #
+      # `pull-requests: read` is required and is covered by the `write` this job
+      # already holds. In a job scoped to `contents: read` it would 403 — and a
+      # local `gh` session will not reproduce that, which is how we shipped
+      # exactly that bug once already.
+      #
+      # Reviewing a fork on purpose is claude-review-external.yml's trust model
+      # (pull_request_target + a label whose applier is checked), not this one.
+      - name: Refuse a fork
+        if: >-
+          github.event_name == 'issue_comment' ||
+          github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number || github.event.inputs.pr }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${NUMBER:-}" in
+            ''|*[!0-9]*) echo "::error::no usable pull request number (got '${NUMBER:-}')"; exit 1 ;;
+          esac
+          head="$(gh api "repos/$REPO/pulls/$NUMBER" --jq '.head.repo.full_name')"
+          echo "PR #$NUMBER head repo: $head"
+          if [ "$head" != "$REPO" ]; then
+            echo "::error title=Not reviewed::#$NUMBER comes from $head. Reviewing a fork needs the label-gated claude-review-external.yml, which isolates the untrusted tree; this workflow does not."
+            exit 1
+          fi
+
       # The checkout is what the models read beyond the diff. `fetch-depth: 2`
       # keeps the head commit in the clone, which is how the reviewer confirms
       # at run time that it is reading the right tree; without it the tools are
@@ -203,7 +186,7 @@ jobs:
           project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
 
       - name: Review
-        uses: yuting0624/quorum-review@a289f4829122c4ffea174cc0b5e949dd87f49f2f  # v1.6.2
+        uses: yuting0624/quorum-review@9d3edce31cd14696f5d27c1413b4503bc62878e3  # v1.7.0
         with:
           mode: vertex
           google-cloud-project: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
