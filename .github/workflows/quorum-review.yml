@@ -58,15 +58,45 @@ permissions:
   actions: read          # codeql-action needs this to read the run
 
 jobs:
-  review:
-    # Forks are excluded: they get no secrets, so this could only fail on them,
-    # noisily, on every outside contribution. Fork review is label-gated in
-    # claude-review-external.yml and is a different trust model.
-    #
-    # The Bot check prevents a loop — without it the comments this action posts
-    # re-trigger the workflow. `author_association` is a cheap pre-filter, not
-    # the authorisation boundary; the action re-checks real write access itself.
+  # `github.event.pull_request` does NOT exist on `issue_comment`, so the
+  # expression guard below coerces `null != true` to TRUE and lets a fork
+  # through — on the one trigger where a maintainer typing `@quorum /review` on
+  # someone else's PR is an ordinary thing to do. That would check the fork's
+  # merge commit out at the workspace root with live Google Cloud and
+  # write-scoped GitHub credentials, which is exactly what the comment above
+  # claims cannot happen. Resolve it against the API instead of trusting the
+  # payload shape. (Both reviewers on this PR caught this independently; the
+  # upstream example workflow has the same hole.)
+  not-a-fork:
     if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@quorum')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          head="$(gh api "repos/$REPO/pulls/$NUM" --jq '.head.repo.full_name')"
+          echo "PR #$NUM head repo: $head"
+          if [ "$head" != "$REPO" ]; then
+            echo "::error::#$NUM is from a fork ($head). Fork review is label-gated in claude-review-external.yml, which isolates the untrusted tree; this workflow does not."
+            exit 1
+          fi
+
+  review:
+    # `not-a-fork` only runs on `issue_comment`; on the other triggers it is
+    # skipped, and `always()` keeps this job reachable while still failing if
+    # the guard actually ran and rejected.
+    needs: [not-a-fork]
+    if: >-
+      always() && needs.not-a-fork.result != 'failure' &&
       github.event.pull_request.head.repo.fork != true &&
       (github.event_name == 'pull_request' ||
        github.event_name == 'workflow_dispatch' ||
