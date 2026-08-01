@@ -100,6 +100,22 @@ In Claude Code:
 
 ---
 
+## 🗳️ The same two models, arranged differently
+
+This plugin is one shape of Claude and Gemini working together: **conductor and executor** — judgement on one side, throughput on the other, one workflow.
+
+[**quorum-review**](https://github.com/yuting0624/quorum-review) is the other shape: the two as **peers**. Both read the same pull request independently, neither sees the other's output, and where they agree independently *that is the result* — only the disagreements are worth a second opinion. Both run on **one** Google Cloud credential, so no vendor API keys live in the repository. Same author as this plugin.
+
+**This repo is its client zero.** It runs on every pull request opened here, alongside a Claude review — including the ones that change this plugin. Keeping the habit of not quoting numbers we haven't measured, here is what that has actually been worth:
+
+- On a fixture holding three known bugs it found **two, with no false positives**, and reached the correct root cause on one that the single-model review took two rounds to get right.
+- Reviewing this repo's own CI, both of its models **independently** caught a fork-guard hole in the review workflow itself — one that would have put an outside contributor's code on the runner next to live credentials.
+- It has also produced a confident **false positive that both models agreed on** — the code disproving it lived outside the checkout either model could read.
+
+That last one is the useful lesson, and it cuts against the obvious pitch: two independent scans insure you against *one model's* blind spot. They do not insure you against a gap in what you handed **both** of them.
+
+---
+
 <details>
 <summary><b>🛠️ Direct script usage &amp; tiers</b></summary>
 
@@ -214,7 +230,9 @@ bash tests/run-tests.sh
 
 Early-stage and MIT — issues, PRs, and ⭐ all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [`good first issue`](https://github.com/yuting0624/antigravity-for-claude-code/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) list.
 
-**Automated review:** PRs get a Claude code review in CI on top of the usual tests/shellcheck. For PRs from forks it runs **only after a maintainer adds the `claude-review` label** — external code is never executed by the reviewer, it's checked out read-only into a subdirectory and only read.
+**Automated review:** PRs get two reviews in CI on top of the usual tests/shellcheck — a Claude review carrying this repo's own contracts, and [quorum-review](https://github.com/yuting0624/quorum-review) — see the section above.
+
+**From a fork:** quorum doesn't run at all. The Claude review runs only once a maintainer **with write access** applies the `claude-review` label — the label alone isn't authorisation, since triage collaborators can apply labels too — and it re-runs on every later push, so an approved review can't go stale behind new commits. Your code is never executed by the reviewer: it's checked out read-only into a subdirectory and only read.
 
 ---
 
