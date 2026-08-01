@@ -241,7 +241,7 @@ if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status. (If ~/.gemini/antigravity-cli/settings.json has a matching write_file(<dir>) rule under permissions.allow, writes to that dir already work without --yolo and you can ignore this.)" >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -293,7 +293,11 @@ case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
       # disabling JSON mode. That race actually bit a benchmark run (~75% of calls on a
       # loaded container), and it is indistinguishable from "no delegation happened",
       # which is the worst kind of failure. Capture once, match with a shell glob.
-      agy_help="$(agy --help 2>&1 || true)"
+      # Same pipe hazard as the main call (issue #37): route via a temp file so
+      # inherited MCP children can never hold the capture pipe open.
+      HELPF="$(mktemp "${TMPDIR:-/tmp}/agy-help.XXXXXX")"
+      agy --help >"$HELPF" 2>&1 || true
+      agy_help="$(cat "$HELPF" 2>/dev/null)"; rm -f "$HELPF"
       case "$agy_help" in
         *--output-format*) JSON_MODE=1; ARGS+=(--output-format json) ;;
       esac
@@ -310,7 +314,12 @@ fi
 # Per-invocation temp file for stderr (mktemp avoids the race + symlink risk of a
 # fixed /tmp path when multiple delegations run concurrently). Cleaned up on exit.
 ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
-trap 'rm -f "$ERR"' EXIT
+# stdout goes to a file too, never a command-substitution pipe: agy's stdio MCP
+# children inherit our stdout and can outlive agy, so `$(agy ...)` blocks forever
+# waiting for EOF even after `timeout` kills agy itself (issue #37). A regular
+# file is inherited harmlessly.
+OUTF="$(mktemp "${TMPDIR:-/tmp}/agy-out.XXXXXX")"
+trap 'rm -f "$ERR" "$OUTF"' EXIT
 
 # Wall-clock guard: on a non-TTY caller (the whole point of this wrapper), agy can
 # hard-hang before its own --print-timeout engages (notably native Windows without
@@ -330,12 +339,13 @@ fi
 set +e
 if [ -n "$TO_CMD" ]; then
   # --kill-after sends SIGKILL if agy ignores the initial SIGTERM (defensive).
-  OUT="$("$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" -p "$PROMPT" < /dev/null 2>"$ERR")"
+  "$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
   RC=$?
 else
-  OUT="$(agy "${ARGS[@]}" -p "$PROMPT" < /dev/null 2>"$ERR")"
+  agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
   RC=$?
 fi
+OUT="$(cat "$OUTF" 2>/dev/null)"
 set -e
 
 # --- unwrap the structured envelope (JSON mode) --------------------------------

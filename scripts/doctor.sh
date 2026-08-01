@@ -43,12 +43,40 @@ fi
 # caller inspects the RETURN CODE (not a global) because this runs inside a
 # command-substitution subshell, where a global assignment would NOT propagate.
 agy_guard() { # usage: agy_guard <secs> <agy-args...>
+  # Redirect agy's stdout to a file and `cat` it at the end. Callers capture this with
+  # $(...), and agy's stdio MCP children inherit whatever stdout they are handed — if
+  # that is the capture pipe they can hold it open forever and the substitution never
+  # returns, even after `timeout` kills agy (issue #37). `cat` always exits.
   local secs="$1"; shift
+  local f rc
+  f="$(mktemp "${TMPDIR:-/tmp}/agy-guard.XXXXXX")"
   if [ -n "$TO_CMD" ]; then
-    "$TO_CMD" --kill-after=5 "$secs" agy "$@"
-    return $?
+    "$TO_CMD" --kill-after=5 "$secs" agy "$@" >"$f" 2>/dev/null; rc=$?
+  else
+    agy "$@" >"$f" 2>/dev/null; rc=$?
   fi
-  agy "$@"
+  cat "$f"; rm -f "$f"
+  return $rc
+}
+
+# stdio MCP servers are the precondition for the issue-37 hang and are invisible from
+# the plugin's side, so surface them: a hang there is a config symptom, not bad auth.
+# Prints the count and returns 0 when at least one is configured.
+has_stdio_mcp() {
+  local cfg="${HOME}/.gemini/config/mcp_config.json"
+  [ -r "$cfg" ] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 -c '
+import json, sys
+try:
+    servers = (json.load(open(sys.argv[1])) or {}).get("mcpServers") or {}
+except Exception:
+    sys.exit(1)
+# stdio servers are launched as a local process ("command"), unlike url/httpUrl ones.
+n = sum(1 for v in servers.values() if isinstance(v, dict) and v.get("command"))
+print(n)
+sys.exit(0 if n else 1)
+' "$cfg" 2>/dev/null
 }
 
 # True on native Windows (Git Bash/MSYS/Cygwin), NOT WSL — where headless agy hangs.
@@ -83,6 +111,11 @@ if command -v agy >/dev/null 2>&1; then
   { [ "$AGY_RC" -eq 124 ] || [ "$AGY_RC" -eq 137 ]; } && AGY_TIMED_OUT=1
   if [ "$AGY_TIMED_OUT" -eq 1 ]; then
     bad "\`agy models\` hung and was killed after 20s — this is NOT an auth problem"
+    if MCP_N="$(has_stdio_mcp)"; then
+      info "you have $MCP_N stdio MCP server(s) configured in ~/.gemini/config/mcp_config.json."
+      info "those children inherit agy's stdout and can outlive it, holding a capture pipe open (issue #37)."
+      info "if this persists on a current plugin build, disable them temporarily to confirm the cause."
+    fi
     info "agy hangs when run headless with no TTY/console (0-byte log, no output)."
     if on_windows_native; then
       info "native Windows: agy needs a real console (ConPTY). Run delegation from WSL/macOS/Linux."
