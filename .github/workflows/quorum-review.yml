@@ -191,7 +191,7 @@ jobs:
           project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
 
       - name: Review
-        uses: yuting0624/quorum-review@c87fe722861222693f8bed06f3025f20f4a59038  # v1.6.2
+        uses: yuting0624/quorum-review@a289f4829122c4ffea174cc0b5e949dd87f49f2f  # v1.6.2
         with:
           mode: vertex
           google-cloud-project: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
