@@ -47,6 +47,43 @@ hang" instead of the misleading "not authenticated".
 
 ---
 
+## Everything hangs forever, and `/antigravity:setup` says the CLI is broken
+
+**Symptom:** `agy models` and every delegation never return. `agy-doctor` reports a hung or
+unauthenticated CLI — but typing `agy models` yourself works fine. macOS and Linux, not just
+Windows.
+
+**Cause:** you have **stdio MCP servers configured** and a plugin build older than 0.22.1
+([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)). agy's stdio MCP
+children **inherit its stdout and outlive agy**. A shell command substitution only returns
+once *every* holder of the pipe's write end closes it, so `OUT="$(agy ...)"` waits forever on
+children that are still alive. The wall-clock guard cannot rescue this: `timeout` kills
+`agy`, not the grandchildren.
+
+The one-line test, from the original report — same machine, only the config changed:
+
+```bash
+# stdout to a FILE — returns in ~6s
+timeout 60 agy -p "Reply with exactly: PONG" > /tmp/out.txt 2>/dev/null </dev/null
+
+# stdout to a PIPE (what the wrappers used to do) — hangs
+timeout 90 bash -c 'O="$(timeout 60 agy -p "Reply with exactly: PONG" 2>/dev/null)"' </dev/null
+```
+
+**Fix: update to 0.22.1 or later.** agy's stdout now goes to a temp file, which children
+inherit harmlessly. Check with `agy-doctor` (it prints the plugin version).
+
+### It still hangs on 0.22.1+
+
+Then it is a **different mechanism**, and one the plugin cannot fix: agy waits on its MCP
+servers at startup, so a server that never finishes connecting blocks `agy` itself — this
+reproduces even with stdout on a file. `agy-doctor` now tells you how many stdio MCP servers
+you have when `agy models` times out.
+
+To confirm, check agy's log (`~/.gemini/antigravity-cli/log/cli-*.log`) for a server that
+never reports ready, or move `~/.gemini/config/mcp_config.json` aside temporarily. Note agy
+loads MCP servers from **two** places — that file and `~/.gemini/config/plugins/*/mcp_config.json`.
+
 ## WSL: delegation works but is absurdly slow (20s+ for trivial calls)
 
 **Cause:** your repo lives on a Windows mount (`/mnt/c/...`). agy reads `--dir` workspaces

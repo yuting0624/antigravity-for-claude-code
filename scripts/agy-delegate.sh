@@ -288,6 +288,13 @@ for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
 # an unguarded call is an unguarded call.
 TO_CMD="$(timeout_cmd || true)"
 
+# One trap for every temp file this script makes, installed before the first one
+# exists. Declaring them empty up front means the probe's file is covered too —
+# it used to be cleaned by a trailing `rm -f`, which a SIGINT during the probe
+# skips. `rm -f ""` is a silent no-op, so the unset ones cost nothing.
+HELPF=""; ERR=""; OUTF=""
+trap 'rm -f "$HELPF" "$ERR" "$OUTF" 2>/dev/null' EXIT
+
 JSON_MODE=0
 raw_so="${CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT:-on}"
 case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" in
@@ -333,7 +340,6 @@ ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
 # waiting for EOF even after `timeout` kills agy itself (issue #37). A regular
 # file is inherited harmlessly.
 OUTF="$(mktemp "${TMPDIR:-/tmp}/agy-out.XXXXXX")"
-trap 'rm -f "$ERR" "$OUTF"' EXIT
 
 # Wall-clock guard: on a non-TTY caller (the whole point of this wrapper), agy can
 # hard-hang before its own --print-timeout engages (notably native Windows without
