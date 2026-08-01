@@ -65,9 +65,19 @@ jobs:
           # Most recent `labeled` event for THIS label — a label can be removed
           # and re-added by a different person, and the last one is the one that
           # matters.
-          actor="$(gh api "repos/$REPO/issues/$NUM/timeline" --paginate \
-                     --jq '[.[] | select(.event=="labeled" and .label.name=="claude-review")] | last | .actor.login' \
-                   2>/dev/null || true)"
+          #
+          # NOT `--paginate --jq`: that applies the filter to each page
+          # SEPARATELY, so `| last` yields a last-per-page and the result is
+          # multi-valued. Measured on a real pull request with per_page=3, the
+          # --jq form returns "\n\nyuting0624" — two empty pages then the actor —
+          # so every comparison below fails and the gate locks out exactly the
+          # long, multi-round pull requests `synchronize` exists to keep
+          # reviewing. `--slurp` cannot rescue it: gh refuses it together with
+          # `--jq`. So: no `--jq`, and `jq -s` joins the pages instead.
+          actor="$(gh api "repos/$REPO/issues/$NUM/timeline?per_page=100" --paginate 2>/dev/null \
+            | jq -r -s 'add
+                        | map(select(.event == "labeled" and .label.name == "claude-review"))
+                        | last | .actor.login // empty' 2>/dev/null || true)"
           if [ -z "$actor" ] || [ "$actor" = "null" ]; then
             echo "::error::could not determine who applied the 'claude-review' label. Refusing rather than assuming."
             exit 1
