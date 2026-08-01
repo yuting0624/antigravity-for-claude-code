@@ -116,12 +116,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
+    # Every action here is pinned to a commit rather than a tag. A tag can be
+    # moved to point at new code, and this job holds an App installation token
+    # and live Google Cloud credentials — the reason quorum-review's own fork
+    # example gives for pinning applies to every step that runs beside it, not
+    # just to quorum-review itself. Dependabot bumps them.
     steps:
       # The checkout is what the models read beyond the diff. `fetch-depth: 2`
       # keeps the head commit in the clone, which is how the reviewer confirms
       # at run time that it is reading the right tree; without it the tools are
       # withdrawn and the review silently degrades to diff-only.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         id: merge-ref
         continue-on-error: true
         with:
@@ -130,10 +135,11 @@ jobs:
               || github.event.issue.number
               || github.event.inputs.pr }}/merge
           fetch-depth: 2
+          persist-credentials: false
 
       # `/merge` does not exist for a conflicted or closed pull request; `/head`
       # does, and reviewing a conflicted branch is still worth doing.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         if: steps.merge-ref.outcome == 'failure'
         with:
           ref: >-
@@ -143,16 +149,29 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # Comments arrive as the "Quorum Code Review" App rather than
+      # github-actions[bot]. The token is minted per run and expires with it;
+      # the App holds metadata:read, contents:read, pull_requests:write and no
+      # webhook, so there is no listener and nothing that can push a commit.
+      #
+      # NOTE: `permissions:` above governs GITHUB_TOKEN only. Everything the
+      # reviewer does against the API uses this token instead, so its ceiling is
+      # the App installation's permissions, not the block above. Checkout and the
+      # SARIF upload still use GITHUB_TOKEN.
+      - name: Mint an App installation token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349  # v2
+        with:
+          app-id: ${{ vars.QUORUM_APP_ID }}
+          private-key: ${{ secrets.QUORUM_APP_PRIVATE_KEY }}
+
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed  # v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
 
       - name: Review
-        # Pinned to a commit, not a tag: a tag can be moved to point at new
-        # code, and this job holds a write-scoped token. quorum-review's own
-        # fork example says exactly this; it applies here for the same reason.
         uses: yuting0624/quorum-review@c87fe722861222693f8bed06f3025f20f4a59038  # v1.6.2
         with:
           mode: vertex
@@ -171,6 +190,7 @@ jobs:
           vertex-region: global
           claude-vertex-region: global
           gemini-location: global
+          github-token: ${{ steps.app-token.outputs.token }}
           pr-number: ${{ github.event.inputs.pr }}
           sarif-file: quorum.sarif
           # Advisory while on trial. Make it a required check (`fail-on: critical`)
@@ -182,7 +202,7 @@ jobs:
       - name: Upload to code scanning
         if: always() && hashFiles('quorum.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@a2983b8bed1923f44751c5c43237f479442827b3  # v3
         with:
           sarif_file: quorum.sarif
           category: quorum-review
