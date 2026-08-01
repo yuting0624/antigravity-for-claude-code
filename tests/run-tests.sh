@@ -156,6 +156,37 @@ for _ in $(seq 1 20); do
 done
 if [ "$probe_off" -eq 0 ]; then echo "ok: capability probe stable over 20 runs"; PASS=$((PASS+1));
 else echo "FAIL: capability probe flaked $probe_off/20 times"; FAIL=$((FAIL+1)); fi
+
+# --- issue #37: never capture agy through a pipe ------------------------------
+# agy's stdio MCP children INHERIT its stdout and outlive it, so they hold the
+# write end of a command-substitution pipe open and `$(agy ...)` never sees EOF.
+# The `timeout` guard cannot save this: it kills agy, not the grandchildren. The
+# only fix is to not use a pipe, so guard the shape rather than the symptom —
+# a hang cannot be asserted on cheaply, and the next refactor is where it comes
+# back. Both the main call and the --help probe were affected.
+if sed 's/#.*//' "$DELEGATE" | grep -qE '=[[:space:]]*"?\$\((\$?[A-Za-z_"]*TO_CMD"?[^)]*)?[[:space:]]*agy[[:space:]]'; then
+  echo "FAIL: agy captured through a command substitution (issue #37 pipe hang)"; FAIL=$((FAIL+1));
+else echo "ok: agy output is never captured through a pipe (issue #37)"; PASS=$((PASS+1)); fi
+if sed 's/#.*//' "$ROOT/scripts/doctor.sh" | grep -qE '^[[:space:]]*(agy|"\$TO_CMD")[^>|]*$' \
+   && ! grep -q 'cat "\$f"' "$ROOT/scripts/doctor.sh"; then
+  echo "FAIL: doctor's agy_guard writes to the caller's pipe (issue #37)"; FAIL=$((FAIL+1));
+else echo "ok: doctor's agy_guard redirects to a file, cat is the only pipe writer"; PASS=$((PASS+1)); fi
+# The mechanism itself, against a stub that behaves like agy+MCP: spawn a child
+# that inherits stdout and outlives the parent. Pipe form must hang; file form
+# must return. Bounded so a regression costs 5s, not the whole suite.
+MCPBIN="$TMP/mcpstub"; mkdir -p "$MCPBIN"
+cat > "$MCPBIN/agy" <<'STUB'
+#!/usr/bin/env bash
+sleep 30 &        # the "MCP server": inherits our stdout, outlives us
+echo "PONG"
+exit 0
+STUB
+chmod +x "$MCPBIN/agy"
+if PATH="$MCPBIN:$PATH" timeout 5 bash -c 'O="$(agy -p x </dev/null 2>/dev/null)"' >/dev/null 2>&1; then
+  echo "FAIL: stub did not reproduce the pipe hang — the test no longer proves anything"; FAIL=$((FAIL+1));
+else echo "ok: stub reproduces the inherited-stdout pipe hang"; PASS=$((PASS+1)); fi
+out=$(PATH="$MCPBIN:$PATH" timeout 5 bash -c 'f="$(mktemp)"; agy -p x </dev/null >"$f" 2>/dev/null; cat "$f"; rm -f "$f"' 2>/dev/null)
+check "the file form returns against the same stub" 0 "$?" "PONG" "$out"
 if printf '%s' "$out" | grep -q 'conversation_id'; then
   echo "FAIL: json envelope leaked to stdout"; FAIL=$((FAIL+1));
 else echo "ok: json envelope does not leak to stdout"; PASS=$((PASS+1)); fi

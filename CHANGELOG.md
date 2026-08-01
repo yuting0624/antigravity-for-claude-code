@@ -3,6 +3,40 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.22.1
+- **Fix: every wrapper hung forever when stdio MCP servers were configured.** Reported by
+  @rickberguer (#37) on macOS with a healthy, authenticated agy. `agy`'s stdio MCP children
+  **inherit its stdout and outlive it**, so they hold the write end of a command-substitution
+  pipe open and `OUT="$(agy ...)"` never sees EOF. **The wall-clock guard cannot help**: it
+  kills `agy`, not the grandchildren — which is why this presented as an unbounded hang
+  despite the timeout that exists for exactly this class of problem. Isolated cleanly by the
+  reporter: same machine, only `mcp_config.json` changed — 16 servers hung on a pipe and
+  returned in 6.5s to a file; 0 servers returned in 5.6s either way.
+  Blast radius was everything. `doctor` hung inside `agy_guard`, so `/antigravity:setup`
+  reported a broken or unauthenticated CLI while auth was fine, and `agy-delegate` hung on
+  every call, taking `agy-job`, `delegate`, `review`, `research` and the delegate subagent
+  with it.
+  `agy` stdout now goes to a temp file, which children inherit harmlessly — the main call,
+  and the `agy --help` capability probe, which had the same hazard and was not in the report
+  (that line has now been wrong twice, for two unrelated reasons; see 0.21.1). Cleanup is
+  folded into the existing `EXIT` trap, so it also happens on the timeout path where a
+  trailing `rm -f` never runs. `doctor`'s `agy_guard` redirects internally and `cat`s at the
+  end, so `cat` is the only writer to the caller's pipe and it always exits. `agy-job.sh`
+  already redirected to files and needed no change.
+  Guarded by shape, not symptom — a hang cannot be asserted on cheaply and the next refactor
+  is where it returns: tests reject any command-substitution capture of `agy` in either
+  script, plus a stub that reproduces the inherited-stdout hang and shows the file form
+  returning. All verified to fail against the unfixed code.
+- **`doctor` now names stdio MCP servers when `agy models` times out.** The precondition is
+  invisible from the plugin's side and currently reads as an auth failure, which sends people
+  off re-authenticating for nothing. Counts **both** sources agy documents — the global
+  `~/.gemini/config/mcp_config.json` *and* `plugins/<name>/mcp_config.json` — because a
+  diagnostic that undercounts fails silently, for exactly the person it exists for. Remote
+  servers are identified by `serverUrl` on agy 1.1.9, not the `url`/`httpUrl` other MCP
+  clients use. The hint describes agy **blocking internally on a server that never finishes
+  connecting** — which reproduces with stdout on a file and is what can still hang here —
+  not the pipe mechanism this release removes.
+
 ## 0.22.0
 - **Docs: the number of delegations is the lever — batch them.** Benchmarking this
   plugin (Opus 5 conductor · Gemini 3.6 Flash High executor · agy 1.1.8 · n=3/arm, cold

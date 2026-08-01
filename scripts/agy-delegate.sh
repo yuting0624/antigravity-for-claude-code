@@ -241,7 +241,7 @@ if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status. (If ~/.gemini/antigravity-cli/settings.json has a matching write_file(<dir>) rule under permissions.allow, writes to that dir already work without --yolo and you can ignore this.)" >&2 ;;
+      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
