@@ -43,11 +43,23 @@ on:
 
 # One review at a time per pull request — two runs racing to edit the same
 # summary comment can lose the ledger the other just wrote.
+#
+# The `-bot` suffix is load-bearing. Posting the summary comment fires
+# `issue_comment`, which lands in this same group, and `cancel-in-progress`
+# then kills the run that posted it. The `review` job's Bot guard does stop the
+# re-review — but concurrency is evaluated BEFORE any job condition, so the
+# cancellation happens regardless. Observed: the backtest run on #40 finished
+# its work and was then marked `cancelled` by its own comment two seconds later.
+# Harmless there because both jobs had already succeeded; not harmless for a
+# trailing step, and a red run for a review that worked is its own problem.
+# Parking bot-triggered runs in a separate group lets them be cancelled freely
+# without touching a real review. (Upstream's example workflow has this too.)
 concurrency:
   group: >-
     quorum-review-${{ github.event.pull_request.number
       || github.event.issue.number
-      || github.event.inputs.pr }}
+      || github.event.inputs.pr
+    }}${{ github.event.comment.user.type == 'Bot' && '-bot' || '' }}
   cancel-in-progress: true
 
 permissions:
