@@ -1,0 +1,158 @@
+# Second reviewer: Gemini and Claude read the diff independently, on ONE Google
+# Cloud credential (https://github.com/yuting0624/quorum-review).
+#
+# WHY a second one, next to claude-review.yml. That workflow is a single Opus
+# scan with a prompt full of this repository's own contracts (exit codes,
+# AGY_SIGNAL/AGY_USAGE, version sync, the delegate bash gate). It is good at
+# drift and at things only this repo cares about. What it cannot do is exceed
+# one model's recall: a second opinion only ever sees findings that were already
+# reported, so a bug the scan walked past is never put in front of it. Two
+# independent scans is the only arrangement that raises the ceiling. They are
+# meant to be complementary — if this one starts repeating claude-review, narrow
+# that one's prompt rather than deleting this.
+#
+# NO LONG-LIVED SECRET. The GitHub OIDC token is exchanged for short-lived Google
+# Cloud credentials via Direct Workload Identity Federation, and both Gemini and
+# Claude authenticate off those same ADC. `WIF_PROVIDER` and
+# `GOOGLE_CLOUD_PROJECT` name an identity; they are not credentials.
+#
+# Setup: docs/setup-vertex.md in the quorum-review repository. The step people
+# skip is enabling Claude in Vertex AI Model Garden — miss it and every Claude
+# call returns 404 while the Gemini half keeps working.
+
+name: quorum-review
+
+on:
+  # Deliberately NOT `synchronize` yet. This is on trial as a second reviewer;
+  # reviewing every push doubles the spend before we know it earns it. Add
+  # `synchronize` once it has: `incremental: on` (the default) then reads only
+  # the range since the last review, so a push costs roughly its own size.
+  pull_request:
+    types: [opened, reopened]
+  # `@quorum /review` on a pull request runs it on demand in the meantime.
+  issue_comment:
+    types: [created]
+  # Replying "@quorum wontfix" to a review comment retires that finding.
+  pull_request_review_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to review
+        required: true
+
+# One review at a time per pull request — two runs racing to edit the same
+# summary comment can lose the ledger the other just wrote.
+concurrency:
+  group: >-
+    quorum-review-${{ github.event.pull_request.number
+      || github.event.issue.number
+      || github.event.inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write        # mints the OIDC token; federation fails without it
+  pull-requests: write
+  security-events: write # SARIF upload only
+  actions: read          # codeql-action needs this to read the run
+
+jobs:
+  review:
+    # Forks are excluded: they get no secrets, so this could only fail on them,
+    # noisily, on every outside contribution. Fork review is label-gated in
+    # claude-review-external.yml and is a different trust model.
+    #
+    # The Bot check prevents a loop — without it the comments this action posts
+    # re-trigger the workflow. `author_association` is a cheap pre-filter, not
+    # the authorisation boundary; the action re-checks real write access itself.
+    if: >-
+      github.event.pull_request.head.repo.fork != true &&
+      (github.event_name == 'pull_request' ||
+       github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'pull_request_review_comment' &&
+        github.event.comment.user.type != 'Bot' &&
+        contains(github.event.comment.body, '@quorum') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+                 github.event.comment.author_association)) ||
+       (github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null &&
+        (contains(github.event.comment.body, '@quorum /criteria') ||
+         (contains(github.event.comment.body, '@quorum /review') &&
+          github.event.issue.state == 'open')) &&
+        github.event.comment.user.type != 'Bot' &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+                 github.event.comment.author_association)))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      # The checkout is what the models read beyond the diff. `fetch-depth: 2`
+      # keeps the head commit in the clone, which is how the reviewer confirms
+      # at run time that it is reading the right tree; without it the tools are
+      # withdrawn and the review silently degrades to diff-only.
+      - uses: actions/checkout@v4
+        id: merge-ref
+        continue-on-error: true
+        with:
+          ref: >-
+            refs/pull/${{ github.event.pull_request.number
+              || github.event.issue.number
+              || github.event.inputs.pr }}/merge
+          fetch-depth: 2
+
+      # `/merge` does not exist for a conflicted or closed pull request; `/head`
+      # does, and reviewing a conflicted branch is still worth doing.
+      - uses: actions/checkout@v4
+        if: steps.merge-ref.outcome == 'failure'
+        with:
+          ref: >-
+            refs/pull/${{ github.event.pull_request.number
+              || github.event.issue.number
+              || github.event.inputs.pr }}/head
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+
+      - name: Review
+        # Pinned to a commit, not a tag: a tag can be moved to point at new
+        # code, and this job holds a write-scoped token. quorum-review's own
+        # fork example says exactly this; it applies here for the same reason.
+        uses: yuting0624/quorum-review@c87fe722861222693f8bed06f3025f20f4a59038  # v1.6.2
+        with:
+          mode: vertex
+          google-cloud-project: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          # A built-in skill, unmodified, on purpose. This is on trial against a
+          # known answer key, and a skill written to match that key would find
+          # it by construction and tell us nothing. If recall turns out to be
+          # poor on shell — the built-ins are tuned for application code, and
+          # this repository is bash — the fix is a repo skill at
+          # `.github/quorum/<name>.md`, measured as a separate arm.
+          skill: code-quality-review
+          # MEASURED, not copied from the docs: `claude-sonnet-5` is served in
+          # `global` and returns FAILED_PRECONDITION ("not servable in region")
+          # in us-central1 for this project. Both models are pinned to the same
+          # region so the code does not fan out across jurisdictions.
+          vertex-region: global
+          claude-vertex-region: global
+          gemini-location: global
+          pr-number: ${{ github.event.inputs.pr }}
+          sarif-file: quorum.sarif
+          # Advisory while on trial. Make it a required check (`fail-on: critical`)
+          # only after its precision on this repository is known.
+
+      # Public repository, so code scanning is free. `continue-on-error` because
+      # a red check for a repository feature nobody bought gets the whole
+      # workflow deleted; the findings are on the PR and in the job summary too.
+      - name: Upload to code scanning
+        if: always() && hashFiles('quorum.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: quorum.sarif
+          category: quorum-review
