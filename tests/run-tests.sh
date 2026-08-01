@@ -185,8 +185,17 @@ chmod +x "$MCPBIN/agy"
 if PATH="$MCPBIN:$PATH" timeout 5 bash -c 'O="$(agy -p x </dev/null 2>/dev/null)"' >/dev/null 2>&1; then
   echo "FAIL: stub did not reproduce the pipe hang — the test no longer proves anything"; FAIL=$((FAIL+1));
 else echo "ok: stub reproduces the inherited-stdout pipe hang"; PASS=$((PASS+1)); fi
-out=$(PATH="$MCPBIN:$PATH" timeout 5 bash -c 'f="$(mktemp)"; agy -p x </dev/null >"$f" 2>/dev/null; cat "$f"; rm -f "$f"' 2>/dev/null)
-check "the file form returns against the same stub" 0 "$?" "PONG" "$out"
+# NOT `out`: the pre-existing json-envelope check below reads that variable, and
+# clobbering it here made that assertion pass unconditionally — silently, with PASS
+# still incrementing. A test that passes for the wrong reason is worse than no test.
+mcp_out=$(PATH="$MCPBIN:$PATH" timeout 5 bash -c 'f="$(mktemp)"; agy -p x </dev/null >"$f" 2>/dev/null; cat "$f"; rm -f "$f"' 2>/dev/null)
+check "the file form returns against the same stub" 0 "$?" "PONG" "$mcp_out"
+# Liveness first: a negative assertion on an empty variable passes for free, and
+# this one sat 50 lines from where `out` is set — far enough that an insertion in
+# between silently emptied it once already.
+if [ -z "$out" ]; then
+  echo "FAIL: \$out is empty at the envelope check — the assertion below proves nothing"; FAIL=$((FAIL+1));
+else echo "ok: \$out still holds the json_ok reply at the envelope check"; PASS=$((PASS+1)); fi
 if printf '%s' "$out" | grep -q 'conversation_id'; then
   echo "FAIL: json envelope leaked to stdout"; FAIL=$((FAIL+1));
 else echo "ok: json envelope does not leak to stdout"; PASS=$((PASS+1)); fi

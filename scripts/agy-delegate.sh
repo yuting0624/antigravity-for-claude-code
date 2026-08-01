@@ -297,7 +297,8 @@ case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
       # inherited MCP children can never hold the capture pipe open.
       HELPF="$(mktemp "${TMPDIR:-/tmp}/agy-help.XXXXXX")"
       agy --help >"$HELPF" 2>&1 || true
-      agy_help="$(cat "$HELPF" 2>/dev/null)"; rm -f "$HELPF"
+      # `|| true` so the assignment cannot fail under `set -e` and skip the rm.
+      agy_help="$(cat "$HELPF" 2>/dev/null || true)"; rm -f "$HELPF"
       case "$agy_help" in
         *--output-format*) JSON_MODE=1; ARGS+=(--output-format json) ;;
       esac
