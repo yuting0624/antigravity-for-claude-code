@@ -281,6 +281,13 @@ for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
 #   * the user hasn't opted out (structured_output=off).
 # NOTE: agy 1.1.8 emits a RAW newline inside the "response" string, which strict
 # JSON parsers reject — so we parse with strict=False. (Reported upstream.)
+# Resolved BEFORE the capability probe below, not just before the main call: the
+# probe was the one unbounded `agy` invocation left in this script. Measured, it
+# returns in ~0.08s — but doctor's own hint documents a hang this release does NOT
+# fix (agy blocking internally while an MCP server never finishes connecting), and
+# an unguarded call is an unguarded call.
+TO_CMD="$(timeout_cmd || true)"
+
 JSON_MODE=0
 raw_so="${CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT:-on}"
 case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" in
@@ -296,7 +303,13 @@ case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
       # Same pipe hazard as the main call (issue #37): route via a temp file so
       # inherited MCP children can never hold the capture pipe open.
       HELPF="$(mktemp "${TMPDIR:-/tmp}/agy-help.XXXXXX")"
-      agy --help >"$HELPF" 2>&1 || true
+      # 15s is ~180x the measured time; it fires only on a real hang, and losing
+      # JSON mode is the right failure — the plain-text path still works.
+      if [ -n "$TO_CMD" ]; then
+        "$TO_CMD" --kill-after=5 15 agy --help >"$HELPF" 2>&1 || true
+      else
+        agy --help >"$HELPF" 2>&1 || true
+      fi
       # `|| true` so the assignment cannot fail under `set -e` and skip the rm.
       agy_help="$(cat "$HELPF" 2>/dev/null || true)"; rm -f "$HELPF"
       case "$agy_help" in
@@ -327,7 +340,6 @@ trap 'rm -f "$ERR" "$OUTF"' EXIT
 # a ConPTY — see issue #6). Wrap in GNU `timeout`/`gtimeout` when available so we
 # always return instead of hanging forever. `timeout` exits 124 on kill -> map to
 # our TIMEOUT (12) and emit the structured signal, so orchestrators react cleanly.
-TO_CMD="$(timeout_cmd || true)"
 TO_SECS="$(outer_timeout_secs "$TIMEOUT")"
 
 if on_windows_native && [ -z "$TO_CMD" ]; then

@@ -157,6 +157,18 @@ done
 if [ "$probe_off" -eq 0 ]; then echo "ok: capability probe stable over 20 runs"; PASS=$((PASS+1));
 else echo "FAIL: capability probe flaked $probe_off/20 times"; FAIL=$((FAIL+1)); fi
 
+# The --help probe must be wall-clock bounded like the main call. It was the one
+# unguarded `agy` invocation left: the timeout resolver used to be initialised
+# after it. A hang here is not hypothetical — doctor's own MCP hint documents a
+# blocking mode that survives the issue-37 fix.
+if sed 's/#.*//' "$DELEGATE" | grep -qE '"\$TO_CMD"[^|]*agy --help'; then
+  echo "ok: the --help capability probe is wall-clock bounded"; PASS=$((PASS+1));
+else echo "FAIL: --help probe runs unguarded (no timeout)"; FAIL=$((FAIL+1)); fi
+if [ "$(sed 's/#.*//' "$DELEGATE" | grep -n 'TO_CMD="\$(timeout_cmd' | cut -d: -f1)" \
+   -lt "$(sed 's/#.*//' "$DELEGATE" | grep -n 'agy --help' | head -1 | cut -d: -f1)" ]; then
+  echo "ok: the timeout resolver is initialised before the probe uses it"; PASS=$((PASS+1));
+else echo "FAIL: TO_CMD resolved after the --help probe — the guard is a no-op"; FAIL=$((FAIL+1)); fi
+
 # --- issue #37: never capture agy through a pipe ------------------------------
 # agy's stdio MCP children INHERIT its stdout and outlive it, so they hold the
 # write end of a command-substitution pipe open and `$(agy ...)` never sees EOF.
