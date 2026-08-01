@@ -58,21 +58,30 @@ permissions:
   actions: read          # codeql-action needs this to read the run
 
 jobs:
-  # `github.event.pull_request` does NOT exist on `issue_comment`, so the
-  # expression guard below coerces `null != true` to TRUE and lets a fork
-  # through — on the one trigger where a maintainer typing `@quorum /review` on
-  # someone else's PR is an ordinary thing to do. That would check the fork's
-  # merge commit out at the workspace root with live Google Cloud and
-  # write-scoped GitHub credentials, which is exactly what the comment above
-  # claims cannot happen. Resolve it against the API instead of trusting the
-  # payload shape. (Both reviewers on this PR caught this independently; the
-  # upstream example workflow has the same hole.)
+  # `github.event.pull_request` exists on `pull_request` and
+  # `pull_request_review_comment` and NOWHERE ELSE. On `issue_comment` and on
+  # `workflow_dispatch` the expression guard below coerces `null != true` to
+  # TRUE, so a fork sails straight through it — and both are ordinary things for
+  # a maintainer to do: typing `@quorum /review` on someone else's PR, or
+  # dispatching against a PR number by hand. Either would check the fork's merge
+  # commit out at the workspace root with live Google Cloud and write-scoped App
+  # credentials, which is exactly what the comment above claims cannot happen.
+  #
+  # So resolve it against the API on both, rather than trusting the payload
+  # shape. `workflow_dispatch` already needs write access to fire, which makes
+  # it a smaller exposure than the comment path — but "smaller" is not a reason
+  # to guard one and not the other.
+  #
+  # (The issue_comment half was caught independently by both reviewers on this
+  # PR; the dispatch half by the review of the fix. The upstream example
+  # workflow has both.)
   not-a-fork:
     if: >-
-      github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request != null &&
-      github.event.comment.user.type != 'Bot' &&
-      contains(github.event.comment.body, '@quorum')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       github.event.comment.user.type != 'Bot' &&
+       contains(github.event.comment.body, '@quorum'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -80,9 +89,12 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          NUM: ${{ github.event.issue.number }}
+          NUM: ${{ github.event.issue.number || github.event.inputs.pr }}
         run: |
           set -euo pipefail
+          case "${NUM:-}" in
+            ''|*[!0-9]*) echo "::error::no usable pull request number (got '${NUM:-}')"; exit 1 ;;
+          esac
           head="$(gh api "repos/$REPO/pulls/$NUM" --jq '.head.repo.full_name')"
           echo "PR #$NUM head repo: $head"
           if [ "$head" != "$REPO" ]; then
