@@ -44,34 +44,52 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read          # narrower than the workflow default; this job needs nothing else
+      issues: read             # the timeline below lives under the issues API
     steps:
       - name: Require write access from whoever applied the label
-        # Only meaningful on `labeled` — on `synchronize` the sender is the
-        # contributor, and authorisation came from the label already being present.
-        if: github.event.action == 'labeled'
+        # ONE path, deliberately. An earlier version checked
+        # `github.event.sender` only on `labeled` and skipped the step on
+        # `synchronize` — which meant a triage collaborator's rejected label
+        # STAYED on the pull request, and every subsequent push then found the
+        # label present, skipped the check, and ran the secrets-bearing job.
+        # One mislabel primed the PR permanently. Branching on event shape is
+        # what did it, so this asks the same question every time: who put this
+        # label here, and do they have write access?
         env:
           GH_TOKEN: ${{ github.token }}
-          ACTOR: ${{ github.event.sender.login }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.repository }}
+          NUM: ${{ github.event.pull_request.number }}
         run: |
           set -uo pipefail
-          # The owner path needs no API call. That matters: the collaborators
-          # permission endpoint is documented as needing push access itself, and
-          # GITHUB_TOKEN here deliberately has only `contents: read` — so an API
-          # probe could fail for reasons that have nothing to do with $ACTOR.
-          if [ "$ACTOR" = "$OWNER" ]; then
-            echo "$ACTOR is the repository owner — authorised."; exit 0
+          # Most recent `labeled` event for THIS label — a label can be removed
+          # and re-added by a different person, and the last one is the one that
+          # matters.
+          actor="$(gh api "repos/$REPO/issues/$NUM/timeline" --paginate \
+                     --jq '[.[] | select(.event=="labeled" and .label.name=="claude-review")] | last | .actor.login' \
+                   2>/dev/null || true)"
+          if [ -z "$actor" ] || [ "$actor" = "null" ]; then
+            echo "::error::could not determine who applied the 'claude-review' label. Refusing rather than assuming."
+            exit 1
           fi
-          if ! resp="$(gh api "repos/$REPO/collaborators/$ACTOR/permission" 2>&1)"; then
-            echo "::error::could not verify '$ACTOR' (the token may lack the scope for this endpoint). Refusing rather than assuming. Response: ${resp}"
+          echo "'claude-review' was applied by: $actor"
+
+          # The owner path needs no further API call. That matters: the
+          # collaborators permission endpoint is documented as needing push
+          # access itself, and GITHUB_TOKEN here is deliberately narrow — so a
+          # probe could fail for reasons that have nothing to do with $actor.
+          if [ "$actor" = "$OWNER" ]; then
+            echo "$actor is the repository owner — authorised."; exit 0
+          fi
+          if ! resp="$(gh api "repos/$REPO/collaborators/$actor/permission" 2>&1)"; then
+            echo "::error::could not verify '$actor' (the token may lack the scope for this endpoint). Refusing rather than assuming. Response: ${resp}"
             exit 1
           fi
           perm="$(printf '%s' "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("permission","none"))' 2>/dev/null || echo none)"
-          echo "$ACTOR has '$perm' on $REPO"
+          echo "$actor has '$perm' on $REPO"
           case "$perm" in
             admin|write|maintain) echo "authorised." ;;
-            *) echo "::error::'$ACTOR' lacks write access — labelling is available to triage collaborators, so the label alone is not authorisation."; exit 1 ;;
+            *) echo "::error::'$actor' lacks write access — labelling is available to triage collaborators, so the label alone is not authorisation. Remove the label; leaving it on would re-arm this gate on the next push."; exit 1 ;;
           esac
 
   review:
