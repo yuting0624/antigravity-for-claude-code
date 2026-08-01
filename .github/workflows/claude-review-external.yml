@@ -13,10 +13,17 @@ name: Claude review (external, gated)
 #   * tools are restricted to reading + posting comments (no Write/Edit, no
 #     arbitrary Bash, no build/test execution of the contributor's code).
 #
-# Adding the label is the human approval step. Remove and re-add it to re-run.
+# Adding the label is the human approval step — but the label ALONE is not
+# authorisation, and it is not durable:
+#
+#   * Labelling is available to triage collaborators, so `authorise` below re-checks
+#     that whoever applied it actually has write access.
+#   * `synchronize` is included so a push to an already-labelled branch is re-reviewed.
+#     Without it a contributor gets one clean review and can then push anything: the
+#     review stays on the PR looking current while describing an older head.
 on:
   pull_request_target:
-    types: [labeled]
+    types: [labeled, synchronize]
 
 permissions:
   contents: read
@@ -28,8 +35,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Cheap gate, separate job: nothing with secrets runs until this passes.
+  authorise:
+    # Run when the label is applied, or on any push to a PR that already carries it.
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'claude-review') &&
+      (github.event.action == 'synchronize' || github.event.label.name == 'claude-review')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read          # narrower than the workflow default; this job needs nothing else
+    steps:
+      - name: Require write access from whoever applied the label
+        # Only meaningful on `labeled` — on `synchronize` the sender is the
+        # contributor, and authorisation came from the label already being present.
+        if: github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.event.sender.login }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          # The owner path needs no API call. That matters: the collaborators
+          # permission endpoint is documented as needing push access itself, and
+          # GITHUB_TOKEN here deliberately has only `contents: read` — so an API
+          # probe could fail for reasons that have nothing to do with $ACTOR.
+          if [ "$ACTOR" = "$OWNER" ]; then
+            echo "$ACTOR is the repository owner — authorised."; exit 0
+          fi
+          if ! resp="$(gh api "repos/$REPO/collaborators/$ACTOR/permission" 2>&1)"; then
+            echo "::error::could not verify '$ACTOR' (the token may lack the scope for this endpoint). Refusing rather than assuming. Response: ${resp}"
+            exit 1
+          fi
+          perm="$(printf '%s' "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("permission","none"))' 2>/dev/null || echo none)"
+          echo "$ACTOR has '$perm' on $REPO"
+          case "$perm" in
+            admin|write|maintain) echo "authorised." ;;
+            *) echo "::error::'$ACTOR' lacks write access — labelling is available to triage collaborators, so the label alone is not authorisation."; exit 1 ;;
+          esac
+
   review:
-    if: github.event.label.name == 'claude-review'
+    needs: authorise
     runs-on: ubuntu-latest
     steps:
       # Trusted: the base repo, at the workspace root (the action expects a git repo here).
