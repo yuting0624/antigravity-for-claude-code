@@ -550,6 +550,35 @@ if printf '%s' "$out" | grep -q "tier model present: Gemini 3.5 Flash (High)"; t
   echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
 
+echo "== doctor.sh stdio-MCP detection (issue #37 diagnostic) =="
+# The hint is diagnostic-only, so getting it wrong fails SILENTLY — it just never
+# helps the person it exists for. Pin the two things measured against agy 1.1.9:
+# stdio servers carry "command", remote ones carry "serverUrl" (not the
+# "url"/"httpUrl" spelling other MCP clients use), and plugin-scoped configs
+# count too — agy's own docs list global AND plugins/<name>/mcp_config.json.
+mcp_count() { # $1 = config root; echoes "<rc> <count>"
+  local n rc
+  n="$(AGY_CONFIG_DIR="$1" bash -c '
+    source_fn() { sed -n "/^has_stdio_mcp() {/,/^}/p" "$1"; }
+    eval "$(source_fn "'"$ROOT"'/scripts/doctor.sh")"
+    has_stdio_mcp' 2>/dev/null)"; rc=$?
+  printf '%s %s' "$rc" "${n:-0}"
+}
+MCPDIR="$TMP/mcp"; mkdir -p "$MCPDIR/plugins/p1"
+cat > "$MCPDIR/mcp_config.json" <<'JSON'
+{"mcpServers":{"a":{"command":"node","args":[]},"b":{"command":"npx"},
+               "remote":{"serverUrl":"https://x","authProviderType":"oauth"}}}
+JSON
+check "stdio counted, serverUrl remotes excluded" "0 2" "$(mcp_count "$MCPDIR")" "" ""
+cat > "$MCPDIR/plugins/p1/mcp_config.json" <<'JSON'
+{"mcpServers":{"c":{"command":"node"},"d":{"serverUrl":"https://y"}}}
+JSON
+check "plugin-scoped configs are counted too" "0 3" "$(mcp_count "$MCPDIR")" "" ""
+rm -f "$MCPDIR/mcp_config.json" "$MCPDIR/plugins/p1/mcp_config.json"
+check "no config at all -> rc 1, no false hint" "1 0" "$(mcp_count "$MCPDIR")" "" ""
+printf 'not json' > "$MCPDIR/mcp_config.json"
+check "malformed config is skipped, not fatal" "1 0" "$(mcp_count "$MCPDIR")" "" ""
+
 echo "== agy-media.sh (multimodal delegation) =="
 MEDIA="$ROOT/scripts/agy-media.sh"
 MDIR="$TMP/media"; mkdir -p "$MDIR"
