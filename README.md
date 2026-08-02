@@ -251,7 +251,7 @@ Early-stage and MIT — issues, PRs, and ⭐ all welcome. See [CONTRIBUTING.md](
 
 **Automated review:** PRs get two reviews in CI on top of the usual tests/shellcheck — a Claude review carrying this repo's own contracts, and [quorum-review](https://github.com/yuting0624/quorum-review) — see the section above.
 
-**From a fork:** quorum doesn't run at all. The Claude review runs only once a maintainer **with write access** applies the `claude-review` label — the label alone isn't authorisation, since triage collaborators can apply labels too — and it re-runs on every later push, so an approved review can't go stale behind new commits. Your code is never executed by the reviewer: it's checked out read-only into a subdirectory and only read.
+**From a fork:** quorum doesn't run at all. The Claude review runs only once a maintainer **with write access** applies the `claude-review` label — the label alone isn't authorisation, since triage collaborators can apply labels too — and it re-runs on every later push, so an approved review can't go stale behind new commits. Your code never reaches the runner at all — the reviewer sees it as a diff (`gh pr diff`), with this repository's base checkout for context. Nothing of yours is fetched or executed.
 
 ---
 
