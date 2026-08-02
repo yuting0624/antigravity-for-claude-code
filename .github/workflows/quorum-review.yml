@@ -23,12 +23,13 @@
 name: quorum-review
 
 on:
-  # Deliberately NOT `synchronize` yet. This is on trial as a second reviewer;
-  # reviewing every push doubles the spend before we know it earns it. Add
-  # `synchronize` once it has: `incremental: on` (the default) then reads only
-  # the range since the last review, so a push costs roughly its own size.
+  # `synchronize` is on now. Without it this only ever saw the FIRST push, which
+  # made it look worse than it is: on #39 it reviewed fb18145 and every later
+  # commit — including the fixes it might have had something to say about — went
+  # only to the other reviewer. `incremental: on` (the default) means a re-review
+  # reads the range since the last one, so a push costs roughly its own size.
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
   # `@quorum /review` on a pull request runs it on demand in the meantime.
   issue_comment:
     types: [created]
@@ -189,13 +190,19 @@ jobs:
         with:
           mode: vertex
           google-cloud-project: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
-          # A built-in skill, unmodified, on purpose. This is on trial against a
-          # known answer key, and a skill written to match that key would find
-          # it by construction and tell us nothing. If recall turns out to be
-          # poor on shell — the built-ins are tuned for application code, and
-          # this repository is bash — the fix is a repo skill at
-          # `.github/quorum/<name>.md`, measured as a separate arm.
-          skill: code-quality-review
+          # Was a built-in, unmodified, while this ran against a known answer key
+          # (#40) — a skill written to match that key would have found it by
+          # construction. That measurement is done, and keeping the generic skill
+          # now just means running a worse reviewer on real pull requests: the
+          # built-ins are tuned for application code and this repository is bash
+          # and markdown.
+          #
+          # Written from the contracts this repo already documents, NOT from what
+          # this reviewer previously missed — fitting it to past misses would make
+          # any later recall number meaningless. Deliberately not a copy of
+          # claude-review.yml's prompt either: two reviewers reading the same
+          # words are not two independent reads.
+          skill: .github/quorum/plugin-review.md
           # MEASURED, not copied from the docs: `claude-sonnet-5` is served in
           # `global` and returns FAILED_PRECONDITION ("not servable in region")
           # in us-central1 for this project. Both models are pinned to the same

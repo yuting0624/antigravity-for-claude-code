@@ -50,6 +50,10 @@ shellcheck scripts/*.sh tests/*.sh   # CI gates on --severity=error
 
 - Small, focused PRs. Describe *what changed and why*; link the issue.
 - Match the surrounding style — POSIX-ish bash, `set -euo pipefail`, quote expansions.
+- **Target bash 3.2.** macOS still ships `/bin/bash` 3.2.57 (GPLv3 is why), and macOS is a
+  supported platform, so `declare -A`, `readarray`/`mapfile`, `${var^^}` and friends are out.
+  Same for GNU-only flags on `sed`, `date` and `grep` — BSD userland is the floor. Testing on
+  Linux only will not catch these.
 - New scripts get a `usage()` and a test in `tests/run-tests.sh`.
 
 ## Reporting bugs / ideas
