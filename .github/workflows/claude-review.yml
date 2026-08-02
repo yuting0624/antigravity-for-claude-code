@@ -58,6 +58,30 @@ jobs:
             - **Cost discipline**: changes that would put bulky output into the
               conductor's context (dumps instead of digests) are a regression.
 
+            Failure classes this repo has actually shipped — check for them by name,
+            they keep recurring and generic review does not look for them:
+
+            - **A test that passes for the wrong reason.** A new assignment upstream of
+              an existing assertion that voids it; a negative assertion (`grep -q ... &&
+              FAIL`) on a variable that is empty or clobbered, which passes for free
+              while `PASS` still increments. If a test would pass against the unfixed
+              code, it is not a regression test.
+            - **A guard that is a silent no-op.** A workflow job declaring narrower
+              `permissions:` than the API it calls needs (it 403s, and if a later job
+              `needs:` it, that job becomes unreachable); an `if:` reading a payload
+              field the triggering event does not carry, where `null != true` coerces
+              to true. Note that local verification with a developer's `gh` session
+              cannot surface either — say so rather than assuming it was tested.
+            - **Doc drift across more than the file in the diff.** A behavioural claim
+              lives in `README.md`, `SKILL.md`, `docs/POC-PLAYBOOK.md`,
+              `docs/TROUBLESHOOTING.md`, `commands/*.md`, `agents/*.md` *and* in runtime
+              strings in `scripts/*.sh`. Changing one is usually wrong. Grep for the
+              claim, not for the file.
+            - **A claim the diff does not back.** Statements in the PR description or in
+              comments that the code no longer does, and any assertion about `agy`
+              behaviour that was not measured — this repo's convention is to say what
+              was verified, on which version, and what was not.
+
             Be concise and specific. Prefer a few high-confidence findings over a long
             list. If the PR looks good, say so briefly rather than inventing nits.
 
