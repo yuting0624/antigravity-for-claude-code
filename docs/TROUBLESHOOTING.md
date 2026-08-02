@@ -104,8 +104,15 @@ run still "succeeds"** ([#10](https://github.com/yuting0624/antigravity-for-clau
 - 1.1.3+: **soft-denies** the write and prints a stderr notice naming the allow-rule
 
 **Fix:**
-- **Pass `--yolo`** (`--dangerously-skip-permissions`) — the one write/tool grant that
-  works headless across all agy versions. (`--mode accept-edits` only wrote headless on
+- **For a file write, add an allow-rule — the narrower fix.** In
+  `~/.gemini/antigravity-cli/settings.json`, under `permissions.allow`, add
+  `write_file(<dir>)`. It matches **recursively beneath `<dir>`** and needs no flag.
+  This is the rule agy's own soft-deny message is naming. Confirmed on agy 1.1.9 by a
+  controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37));
+  a glob form (`write_file(/path/**)`) was reported *not* to match.
+- **Or pass `--yolo`** (`--dangerously-skip-permissions`) — works across all agy versions,
+  but auto-approves **all** tools, not just the write. Required anyway for web / Vertex AI
+  Search / terminal when no rule covers them. (`--mode accept-edits` only wrote headless on
   1.1.0–1.1.2 and is soft-denied on 1.1.3 — don't rely on it.)
 - Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
   approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
@@ -135,7 +142,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 12 | timeout (agy's own, or the wall-clock guard) | raise `--timeout`, narrow the task; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
 | 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
-| 15 | permission denied | agy ≥ 1.1.3 soft-denied a tool needing permission in headless mode (e.g. a file write) — pass `--yolo` and run on a branch |
+| 15 | permission denied | agy ≥ 1.1.3 soft-denied a tool needing permission in headless mode (e.g. a file write) — add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
 
 ---
 

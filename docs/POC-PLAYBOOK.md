@@ -71,13 +71,26 @@ After each lever: rerun the task → rerun the gate → keep only if quality hel
 
 ## 4. Write-task hygiene (the traps, pre-paid)
 
-- **Writes / tool use need `--yolo`.** Headless agy's no-permission behavior has changed
-  every few releases (describe-only → scratch-divert → soft-deny on 1.1.3), but in every
-  version **the workspace is left untouched while the run still "succeeds."** The one
-  durable grant is `--yolo` (`--dangerously-skip-permissions`), on a dedicated branch, with
-  `--sandbox`. (`--mode accept-edits` only wrote headless on agy 1.1.0–1.1.2 and is
-  soft-denied on 1.1.3 — don't rely on it.) **Always verify with `git status`.** If the
-  wrapper returns exit `15`, that's a soft-denied write — add `--yolo`.
+- **Two write grants, and the narrow one is not `--yolo`.** Headless agy's
+  no-permission behavior has shifted every few releases (describe-only pre-1.1.0 ·
+  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+), and in every version an ungranted write
+  leaves **your workspace untouched while the run still "succeeds"**
+  ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Two things
+  grant it:
+  
+  - **`permissions.allow` in `~/.gemini/antigravity-cli/settings.json`** — a
+    `write_file(<dir>)` entry allows writes **recursively beneath `<dir>`** and needs no
+    flag. This is the narrower grant and usually the right one.
+  - **`--yolo`** (`--dangerously-skip-permissions`) — auto-approves **all** tools, not just
+    writes. Needed when no rule covers the target, and for web / Vertex AI Search / terminal
+    tools.
+  
+  Confirmed on **agy 1.1.9** by a controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)):
+  a covered target wrote with no flag; an uncovered one came back `PERMISSION_DENIED` with
+  the rule as the only variable. agy's own denial text names the rule and offers `--yolo` as
+  the alternative. Not verified on other versions, and a glob form (`write_file(/path/**)`)
+  was reported *not* to match. Either way: run write tasks on a branch and verify with
+  `git status`; the wrapper maps a soft-deny to exit `15`.
 - **One shared [`AGENTS.md`](https://github.com/yuting0624/antigravity-for-claude-code#-what-it-does)
   at the repo root** — the biggest first-pass-success factor, which means fewer retries,
   which means fewer conductor turns.

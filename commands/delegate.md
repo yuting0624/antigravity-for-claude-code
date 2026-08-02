@@ -11,8 +11,11 @@ Task: $ARGUMENTS
 Do this:
 1. Pick a tier (`flash` default; `pro` for hard reasoning). If the task needs the repo,
    add `--dir <repo-root>` so agy reads the real files (don't paste them into context).
-   **If the task WRITES files or uses tools** (web / Vertex AI Search / terminal), pass
-   **`--yolo`** — the reliable headless write/tool grant across agy versions. Without it,
+   **If the task WRITES files or uses tools** (web / Vertex AI Search / terminal), it needs
+   a grant. For a plain file write the narrower one is a `write_file(<dir>)` entry under
+   `permissions.allow` in `~/.gemini/antigravity-cli/settings.json` (recursive beneath
+   `<dir>`, no flag needed). Otherwise pass **`--yolo`**, which auto-approves all tools and
+   is what web / Vertex AI Search / terminal need. Without a grant,
    headless agy leaves your workspace untouched while still reporting success (it
    describes / scratch-diverts / soft-denies depending on version; issue #10). `--mode
    accept-edits` is NOT a dependable substitute — it only wrote headless on agy 1.1.0–1.1.2

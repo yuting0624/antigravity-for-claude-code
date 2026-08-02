@@ -83,9 +83,13 @@ Options: `--tier flash|flash-lo|pro` · `--dir <repo-root>` (so agy reads
 
 ## Modes
 
-- **Write / build** (scaffold, implement, generate tests, migrate): agentic mode,
-  pass `--yolo`; for write tasks tell the caller it should run on a dedicated
-  branch/worktree and review the diff before merging.
+- **Write / build** (scaffold, implement, generate tests, migrate): agentic mode, and the
+  write needs a grant. Pass `--yolo` unless the user has a `permissions.allow`
+  `write_file(<dir>)` rule covering the target in `~/.gemini/antigravity-cli/settings.json`
+  — that grants the write recursively beneath `<dir>` with no flag, and is narrower than
+  `--yolo`, which approves every tool. You cannot see that file, so `--yolo` stays the
+  default; if a run comes back exit `15`, the allow-rule is the smaller fix. Either way tell
+  the caller to run on a dedicated branch/worktree and review the diff before merging.
 - **Read-only** (analysis, first-pass review, search): no `--yolo` needed unless
   the task uses tools (web / Vertex AI Search need `--yolo`). Ask agy to return
   findings + `file:line` only.

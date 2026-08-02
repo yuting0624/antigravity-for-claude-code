@@ -344,9 +344,11 @@ check "--print-command shows the tier model" 0 "$rc" "Pro" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
 
-# write-task without --yolo -> warn (workspace untouched; issue #10). The one durable
-# grant is --yolo; --mode accept-edits stopped granting headless writes on agy 1.1.3.
-WARN='NOT write to your workspace'
+# write-task without --yolo -> warn (workspace untouched; issue #10).
+# --mode accept-edits stopped granting headless writes on agy 1.1.3, so it still warns.
+# Match the stable part of the sentence, not the whole thing: this string has been
+# reworded twice now, and an exact-phrase assertion just breaks on prose edits.
+WARN='write grant'
 out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc=$?
 check "write prompt w/o --yolo -> warns" 0 "$rc" "$WARN" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=$?
@@ -358,6 +360,17 @@ else echo "FAIL: no warning with --mode accept-edits (should warn since 1.1.3)";
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
 if printf '%s' "$out" | grep -qF "$WARN"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
+# The warning must NOT claim --yolo is the only way in. Confirmed on agy 1.1.9 by a
+# controlled A/B (#37): a permissions.allow write_file(<dir>) rule grants headless writes
+# with no flag, and this warning fired immediately before one that succeeded.
+out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1)
+check "write warning names the permissions.allow route" 0 0 "permissions.allow" "$out"
+if printf '%s' "$out" | grep -q 'NOT write to your workspace without it'; then
+  echo "FAIL: warning still asserts --yolo is required for a write"; FAIL=$((FAIL+1));
+else echo "ok: warning no longer claims --yolo is the only write grant"; PASS=$((PASS+1)); fi
+# Same correction on the exit-15 path — where someone lands after being denied.
+out=$(STUB_MODE=softdeny "$DELEGATE" "implement it" 2>&1); rc=$?
+check "exit-15 message offers the narrower grant first" 15 "$rc" "permissions.allow" "$out"
 
 # --mode passthrough (agy >= 1.1.0): accept-edits reaches agy; invalid mode errors early
 out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "hi" 2>/dev/null); rc=$?

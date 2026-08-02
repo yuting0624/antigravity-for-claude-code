@@ -3,6 +3,38 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.22.2
+- **Correction: `--yolo` is not the only way to grant a headless write, and we said it was
+  in eight places.** A `write_file(<dir>)` entry under `permissions.allow` in
+  `~/.gemini/antigravity-cli/settings.json` grants writes **recursively beneath `<dir>`**
+  with no flag at all. Confirmed on **agy 1.1.9** by @rickberguer with a controlled A/B
+  ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)): a covered
+  target wrote, an uncovered one returned `PERMISSION_DENIED`, the rule the only variable.
+  agy's own soft-deny message names the rule and offers `--yolo` as the *alternative* — the
+  CLI had been saying this for a while and we had not.
+  This matters beyond accuracy: we were recommending `--dangerously-skip-permissions`, which
+  approves **every** tool, where a grant scoped to one directory subtree would do. `--yolo`
+  is still what you need when no rule covers the target, and for web / Vertex AI Search /
+  terminal / `define_subagent` — a `write_file` rule covers writes only.
+  **The eighth place was the wrapper itself.** The write-task nudge fired immediately before
+  a write that then succeeded, telling the user headless agy "will NOT write to your
+  workspace without it". Corrected, along with the exit-15 message — which is exactly where
+  someone lands after a denial and so is the best place to name the narrower fix. Also
+  README, SKILL.md, POC-PLAYBOOK.md, TROUBLESHOOTING.md (both the fix list and the exit-code
+  table), `commands/delegate.md` and the delegate subagent's own instructions.
+  Scoped to what was actually measured: not verified below agy 1.1.9, and a glob form
+  (`write_file(/path/**)`) was reported *not* to match. The wrapper cannot see
+  `settings.json`, so the nudge stays a warning rather than a check — it just no longer
+  asserts something false.
+- Tests assert the wrapper offers the `permissions.allow` route on both the warning and the
+  exit-15 path, and that it no longer claims `--yolo` is required. The warning assertion now
+  matches a stable substring — that string has been reworded twice and an exact-phrase test
+  breaks on prose edits rather than on behaviour.
+- **Confirmed: the #37 hang fix clears the reporting environment.** 16 MCP servers (9 stdio,
+  7 remote): `agy-doctor` 3.5s all-pass and a delegation round-trip in 6.7s, both previously
+  hanging. The remote servers are spelled `serverUrl`, matching what 0.22.1's detector
+  assumes.
+
 ## 0.22.1
 - **Fix: every wrapper hung forever when stdio MCP servers were configured.** Reported by
   @rickberguer (#37) on macOS with a healthy, authenticated agy. `agy`'s stdio MCP children

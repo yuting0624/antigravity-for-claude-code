@@ -129,7 +129,7 @@ scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
 # bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
 scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
 
-# write task: --yolo is the reliable headless write grant (run on a branch; verify git status)
+# write task: needs a grant — a permissions.allow write_file(<dir>) rule, or --yolo (run on a branch)
 scripts/agy-delegate.sh --yolo --dir ./app "Implement X per SPEC.md"
 
 # live web / Google search (tools need --yolo in headless mode)
@@ -190,7 +190,26 @@ Delegation doesn't save money by itself — these do (also in the skill):
 - `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
 - `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`). **Structured output arrived in agy 1.1.8** (`--output-format json`): the wrapper now uses it internally on ≥1.1.8 to classify failures from the structured error and to report the executor's real token usage (incl. `cache_read`) as an `AGY_USAGE` line on stderr — stdout is unchanged. Older agy falls back to plain text (toggle with the `structured_output` option). **If you're measuring, set `AGY_USAGE_LOG=/path`** (or the `usage_log` option): stderr is easily lost — `2>&1 | tail -N`, the natural way to keep Claude's context lean, keeps the digest and drops the usage line.
 - **The executor's trajectory is auditable.** Every agy run writes a step-by-step `transcript.jsonl`, and the `conversationId` in `AGY_USAGE` joins it to the cost 1:1. `agy-trace --audit <id>` (or `--audit --last`) shows step-type counts and every non-zero exit — a delegation can report SUCCESS while commands inside it failed. The command **strings** are recorded nowhere, so to attribute a filesystem change you must diff the tree.
-- **Writes need `--yolo`:** headless agy's no-permission behavior keeps shifting (describe-only pre-1.1.0 · scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+), but every version leaves **your workspace untouched while the run still "succeeds"** ([issue #10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). The durable grant is **`--yolo`** (`--dangerously-skip-permissions`) — `--mode accept-edits` only wrote headless on 1.1.0–1.1.2. Run write tasks on a branch and verify with `git status`; the wrapper maps a 1.1.3 soft-deny to exit `15`. Long write tasks can exceed the ~2-min sync Bash limit → use a background job.
+- **Two write grants, and the narrow one is not `--yolo`.** Headless agy's
+  no-permission behavior has shifted every few releases (describe-only pre-1.1.0 ·
+  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+), and in every version an ungranted write
+  leaves **your workspace untouched while the run still "succeeds"**
+  ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Two things
+  grant it:
+  
+  - **`permissions.allow` in `~/.gemini/antigravity-cli/settings.json`** — a
+    `write_file(<dir>)` entry allows writes **recursively beneath `<dir>`** and needs no
+    flag. This is the narrower grant and usually the right one.
+  - **`--yolo`** (`--dangerously-skip-permissions`) — auto-approves **all** tools, not just
+    writes. Needed when no rule covers the target, and for web / Vertex AI Search / terminal
+    tools.
+  
+  Confirmed on **agy 1.1.9** by a controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)):
+  a covered target wrote with no flag; an uncovered one came back `PERMISSION_DENIED` with
+  the rule as the only variable. agy's own denial text names the rule and offers `--yolo` as
+  the alternative. Not verified on other versions, and a glob form (`write_file(/path/**)`)
+  was reported *not* to match. Either way: run write tasks on a branch and verify with
+  `git status`; the wrapper maps a soft-deny to exit `15`.
 - **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
 - **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
 

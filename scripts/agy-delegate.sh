@@ -231,17 +231,29 @@ if on_wsl; then
   done
 fi
 
-# Heads-up: a likely write task without write permission. Headless agy's write behavior
-# has shifted across versions (describe-only pre-1.1.0; scratch-divert 1.1.0-1.1.2;
-# soft-deny with a stderr notice on 1.1.3) — but the one durable grant is --yolo. Without
-# it, YOUR WORKSPACE IS UNTOUCHED (issue #10). (--mode accept-edits worked headless only on
-# 1.1.0-1.1.2 and is soft-denied on 1.1.3, so it no longer suppresses this warning.)
+# Heads-up: a likely write task with no visible write grant. Headless agy's write
+# behavior has shifted across versions (describe-only pre-1.1.0; scratch-divert
+# 1.1.0-1.1.2; soft-deny with a stderr notice on 1.1.3), and without a grant YOUR
+# WORKSPACE IS UNTOUCHED while the run still "succeeds" (issue #10).
+#
+# There are TWO grants, and this used to claim there was one. A `write_file(<dir>)`
+# rule under `permissions.allow` in ~/.gemini/antigravity-cli/settings.json grants
+# headless writes beneath that path with no --yolo at all — confirmed on agy 1.1.9 by
+# a controlled A/B (#37): covered target wrote, uncovered target came back
+# PERMISSION_DENIED with the rule as the only variable. The match is a RECURSIVE
+# PREFIX, not one directory. agy's own denial text names the rule and offers --yolo as
+# the alternative, so the CLI has been saying this for a while and we were not.
+#
+# We cannot see settings.json from here (it is not ours, and --dir is not where it
+# lives), so this stays a warning rather than a check — but it must not assert that
+# --yolo is required. It fired immediately before a write that then succeeded.
+# (--mode accept-edits worked headless only on 1.1.0-1.1.2 and is soft-denied on 1.1.3.)
 # Best-effort heuristic; warn only. --print-command (dry run) is exempt.
 if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless agy will NOT write to your workspace without it (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Add --yolo and run on a dedicated branch, then verify with git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -482,8 +494,8 @@ if [ -z "${OUT//[$' \t\n\r']/}" ]; then
     *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"dangerously-skip-permissions"*)
       shopt -u nocasematch
       [ -s "$ERR" ] && cat "$ERR" >&2
-      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For file writes add --yolo (run on a branch); tool use (web/Vertex/terminal) also needs --yolo. (agy >= 1.1.3)" >&2
-      signal PERMISSION_DENIED "agy soft-denied a permissioned tool in headless — pass --yolo"; exit 15 ;;
+      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. agy's own message above names the specific permission it wanted. (agy >= 1.1.3)" >&2
+      signal PERMISSION_DENIED "agy soft-denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"; exit 15 ;;
   esac
   shopt -u nocasematch
   echo "agy-delegate: agy returned empty output (model='$MODEL')" >&2
