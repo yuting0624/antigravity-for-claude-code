@@ -14,14 +14,37 @@ you can put in front of decision-makers. It distills what we learned producing
 
 ## 0. Principles (read first)
 
-1. **Quality gate first.** A cost number without a fixed quality bar is meaningless —
+1. **Pick the regime before you measure anything.** One question decides whether a cost
+   PoC is worth running at all:
+
+   > **Does the conductor have to keep the raw material in its context to be accountable
+   > for the result?**
+
+   If **yes** — editing a repo, fixing a bug, anything where Claude must verify the code
+   it is responsible for — **expect parity at best, and do not build a cost story on it.**
+   Delegation cannot remove work the conductor has to re-derive, and it will not: measured,
+   Claude re-reads handed-over context rather than trusting it, which is the same rule that
+   makes the hybrid safe ([§4](#4-write-task-hygiene-the-traps-pre-paid) — agy has been
+   observed patching its own environment to force a green test). You cannot have "the
+   conductor doesn't re-read" and "the conductor owns correctness" at once.
+
+   If **no** — the digest *is* the deliverable: research, log analysis, multi-source lookup,
+   audio/video — the material never has to come back, and this is where the saving lives.
+   Measured: a 62k-token corpus offloaded to a digest leaves the conductor carrying **4.4k
+   instead of 62k**, i.e. **$0.002 vs $0.031 per subsequent turn** — $0.53 vs $2.05 across
+   50 turns.
+
+   Two independent efforts (ours on Harbor, a colleague's on SWE-bench and SWE-bench Pro)
+   spent days on the first regime and landed within ~10% of solo. Ask the question first.
+
+2. **Quality gate first.** A cost number without a fixed quality bar is meaningless —
    and it invites the (correct) criticism that you saved money by verifying less.
-2. **One lever at a time.** Apply a lever → remeasure → keep or revert. Every delta must
+3. **One lever at a time.** Apply a lever → remeasure → keep or revert. Every delta must
    be attributable.
-3. **Honest break-even.** Below a certain task size the hybrid costs MORE (we measured
+4. **Honest break-even.** Below a certain task size the hybrid costs MORE (we measured
    it: a small app was ~1.4M hybrid vs ~1.0M solo). Find your break-even and report it —
    it makes the rest of your numbers credible.
-4. **Keep the conductor model FIXED across arms.** Baseline and delegation arms run on
+5. **Keep the conductor model FIXED across arms.** Baseline and delegation arms run on
    the **same conductor** (e.g. Opus in both): the "−X% from delegation" claim is only
    attributable — and only immune to *"you just switched to a cheaper model"* — if
    delegation is the sole difference. (Our published A/B kept Opus across all three
@@ -65,7 +88,7 @@ scripts/measure-session.py <session-id>
 | 5 | Tier down (`flash` where quality holds) | cheaper executor tokens |
 
 (All levers act on the *executor* side or on what the conductor reads — the conductor
-model itself stays fixed, per principle 4.)
+model itself stays fixed, per principle 5.)
 
 After each lever: rerun the task → rerun the gate → keep only if quality held.
 
@@ -99,16 +122,55 @@ After each lever: rerun the task → rerun the gate → keep only if quality hel
 
 ## 5. Record per run
 
+### Conditions — requirements, not advice
+
+Every one of these cost us a rerun. Getting any of them wrong does not add noise; it
+produces a **confident wrong number**.
+
+| condition | why |
+|---|---|
+| **every trial cold** — 1 trial = 1 job, ≥5 min between | the prompt cache TTL is 5 min. On short tasks the *cache draw* is bigger than the arm difference: our "+46%" headline became "indistinguishable" once we forced cold, because one arm had happened to draw 2 warm starts and the other 1 |
+| **identical wall-clock and budget caps on both arms** | a cap on one arm is a second variable |
+| **executor usage to a file, not stderr** | set `AGY_USAGE_LOG=/path` (plugin ≥ 0.22.0). A conductor keeping its context lean writes `2>&1 \| tail -N`, and the usage line is precisely what `tail` drops — we lost most of a run's executor data that way |
+| **delegation count per trial** | a trial with **0 delegations is the baseline arm wearing a hat**. Measured: the plugin merely installed delegated 0 times in 122 turns, and 0 times in 6 trials even with break-even guidance injected every turn. Verify it happened before believing any delta |
+| **n ≥ 3 per arm, and report ranges** | we were called out — fairly — for n=1. Report per-trial ranges, not just means: ours spanned 1.7–3.1× within an arm, which swallows most differences you would want to claim |
+
+### Metric: cost per *correct* result, not cost per trial
+
+Use **cost-of-pass** — total spend ÷ number of trials that passed the gate.
+
+Cost per trial is gameable by failing cheaply, and it got us: our cheapest hybrid trial was
+the one that hit the wall-clock cap and failed. Including it made the arm look 14.7% worse
+than baseline; excluding it, 42.1%. Neither number is wrong — the *metric* was.
+
+### Fields
+
 | field | note |
 |---|---|
 | task type / arm / lever set | one lever difference between arms |
-| turns · output · `cache_read` | `cache_read` is the leading indicator |
-| COST-WEIGHTED · est. USD (Claude side) | from `measure-session.py` |
-| Gemini side | **priced separately** — cheap, not free; never merge into the Claude figure |
-| gate result | must be equal across arms for the cost claim to stand |
+| gate result (pass/fail) | the denominator of cost-of-pass; must be machine-checkable |
+| delegations this trial | 0 means you measured the baseline twice |
+| turns · output · `cache_read` | conductor `cache_read` is the leading indicator — it *is* the carry |
+| Claude-side USD | `measure-session.py` (**Claude side only** — see below) |
+| agy-side USD | priced **separately**; cheap is not free |
+| wall-clock | delegation costs latency even when it saves tokens |
 
-- **n ≥ 3 per arm** for any headline number (we got called out — fairly — for n=1).
+### The two accounting systems are not the same shape
+
+Merging them is the easiest way to be badly wrong, in either direction:
+
+| | Claude / Harbor | agy / Gemini |
+|---|---|---|
+| total | `n_input = input + cache_creation + cache_read` | `total = input + output` (`thinking` is inside `output`) |
+| cached reads | `n_cache_tokens = cache_read`, an **inner subset** of the input total | `cache_read` is a **separate counter** — not in `total`, not a subset of `input` |
+
+Price the agy side as three separate terms (`input×in + output×out + cache_read×cached`).
+Assert `input + output == total` every run and stop if it breaks rather than reinterpreting
+it — we got this backwards once and mispriced the whole executor side.
+
 - Deliverable: your org's **break-even curve** (task size vs. saving), not a single ratio.
+  Ours came out at roughly **5.7 delegations** against one corpus — past that, each `agy`
+  call is an independent session that re-ingests from scratch and the saving inverts.
 
 ## 6. Rollout & enforcement (organization level)
 
@@ -134,9 +196,10 @@ come from delegation. In enforcement-strength order:
 
 ## 7. Report template
 
-> On {task types}, the hybrid cut Claude-side cost **−X%** (COST-WEIGHTED, est. $Y)
-> at an **equal quality gate** ({gate}, n={runs}/arm). Break-even: tasks under
-> {size} are cheaper solo. Gemini-side cost accounted separately at ${Z}
+> On {task types}, the hybrid cut cost-of-pass **−X%** ({$/passing trial}, n={runs}/arm,
+> {delegations}/trial) at an **equal quality gate** ({gate}). Break-even: tasks under
+> {size}, or more than {N} delegations against the same material, are cheaper solo.
+> Claude side ${A}, agy side ${B}, accounted separately.
 > Conductor {model}, executor {model}, agy {version}, measured {date};
 > rates verified against Vertex pricing on {date}.
 
@@ -144,6 +207,32 @@ Always include: the break-even statement, what is *not* counted, the model/versi
 triple, and the rate-verification date. The honest caveats are what make the
 headline number survive scrutiny — and the version triple is what stops the number being
 quoted, a year later, as if it were a property of the plugin.
+
+## 8. When the answer is parity
+
+**This is the likely outcome on coding tasks, and it is a result, not a failed PoC.** Two
+independent efforts landed within ~10% of solo before either of them asked the regime
+question in §0. Report it and move the conversation, rather than re-running until a number
+appears — a stakeholder can reproduce parity in an afternoon, and a claim they can break is
+worse than no claim.
+
+What to present instead, in descending order of how hard it is to argue with:
+
+1. **Work the frontier model cannot do at all.** Audio and video understanding
+   (`/antigravity:media`), Vertex AI Search over internal data, grounded search. There is no
+   cost comparison because there is no baseline — the task either happens or it doesn't.
+2. **The context ceiling.** On material that would otherwise exceed the conductor's window,
+   offloading is the difference between finishing and not. That is not a percentage, and it
+   is the thing that actually blocks people.
+3. **Recall, via two independent scans.** A second model *reviewing* the first cannot raise
+   recall — it only ever sees what was already reported. Two models *scanning* independently
+   can, and the union beats either alone in both directions. If you want a quality story
+   rather than a cost story, this is the one with a mechanism behind it.
+4. **Wall-clock**, if you fan out. Note it moves the *opposite* way for a single delegation:
+   ours added roughly 1.3–1.9× latency.
+
+And say plainly what you measured and did not find. The parity result is what makes the
+other four credible.
 
 ---
 
