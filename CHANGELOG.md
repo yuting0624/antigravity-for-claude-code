@@ -3,6 +3,30 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.22.4
+- **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
+  `--model` and `--effort` being *ignored in headless `-p`* — the flag was applied after
+  model configuration had initialised, so the run silently fell back to the persisted
+  default. This wrapper resolves every `--tier` (and every `tier_*` remap) to `--model` and
+  always runs `-p`, so on an older agy **the entire routing story was inert while looking
+  like it worked**: the call succeeds, returns sensible text, reports usage. Only a
+  bogus model surfaced anything, because validation still ran — which is why
+  `--model no-such-model` correctly returned exit 14 all along and hid the rest.
+  `doctor` now warns on agy < 1.1.10, with the version compare done properly: a string
+  compare puts 1.1.10 *below* 1.1.9, and the boundary is the whole point of the check.
+- **Retracted: the 3.5 / 3.6 / `flash-medium` token comparisons** from 0.22.0. Two
+  independent reasons, either sufficient. Those runs were made on agy **1.1.8–1.1.9**, so
+  `--model` was being ignored and every arm may have executed the same persisted default.
+  And the numbers did not survive their own ranges: 3.5-high spanned **[421k, 509k]** input
+  against 3.6-high's **[305k, 412k]** at n=2 — separated by 2% — while `flash-medium`
+  **overlapped `high` outright**, and "−31% input" was a mean-vs-mean claim across those
+  overlapping ranges. `docs/POC-PLAYBOOK.md` tells you to report ranges rather than means
+  for exactly this reason; this repo published the mean anyway.
+  What stands: Gemini 3.6 Flash's **output rate ($7.50/M vs 3.5's $9.00/M)**, which came
+  from checking two pricing sources, not from those runs. The `flash` default is unchanged.
+- Version-gate tests cover 1.1.9 (warns), **1.1.10 (must not warn — the boundary)**, a later
+  minor, and an unparseable version, which is left alone rather than warned about.
+
 ## 0.22.3
 - **The bash gate now says *why* it blocked** ([#51](https://github.com/yuting0624/antigravity-for-claude-code/issues/51),
   reported by @potch8228 with a six-case repro table that reproduced exactly).
@@ -177,7 +201,9 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   Two tests now hold this together: every hardcoded fallback in `agy-cost-compare.sh`
   must match `prices.json`, and `gemini_flash` must match whatever the `flash` tier
   actually resolves to.
-- **Docs: Gemini 3.6 Flash High measured against 3.5.** −23% input tokens for the same
+- **Docs: Gemini 3.6 Flash High measured against 3.5.** ⚠️ **Retracted in 0.22.4** — these
+  runs were on agy 1.1.8–1.1.9, where `--model` was ignored in headless `-p`, and the
+  ranges overlapped. −23% input tokens for the same
   task (n=2, order-reversed) and output at $7.50/M vs $9.00/M — but it does **not** reduce
   `cache_read` (+6%) and is ~29% slower. `flash-medium` is −31% input / −21% wall but
   **`cache_read` +43%** (n=3, reproduced), so it loses on cache_read-dominated agentic

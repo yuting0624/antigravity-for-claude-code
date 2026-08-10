@@ -105,7 +105,26 @@ echo "Antigravity for Claude Code — doctor"
 if command -v agy >/dev/null 2>&1; then
   # version probe is guarded too: `command -v` already proved agy exists, and on a
   # headless hang even `agy --version` shouldn't be able to freeze doctor (issue #6).
-  ok "agy found: $(command -v agy)  ($(agy_guard 10 --version 2>/dev/null | head -1))"
+  AGY_VER="$(agy_guard 10 --version 2>/dev/null | head -1 | tr -d '[:space:]')"
+  ok "agy found: $(command -v agy)  (${AGY_VER:-version unknown})"
+
+  # `--tier` resolves to `--model`, and agy IGNORED --model/--effort in headless `-p`
+  # until 1.1.10 — the flag was applied after model configuration had initialised, so
+  # the run silently fell back to the persisted default. Nothing surfaces that: the
+  # call succeeds, returns sensible text, and reports usage. So on an older agy the
+  # plugin's whole routing story is inert and looks like it is working, which is worth
+  # a warning rather than a footnote.
+  case "$AGY_VER" in
+    ''|*[!0-9.]*) : ;;               # unparseable (dev build, wrapper, hang) — say nothing
+    *)
+      if [ "$(printf '%s\n1.1.10\n' "$AGY_VER" | sort -V | head -1)" = "$AGY_VER" ] \
+         && [ "$AGY_VER" != "1.1.10" ]; then
+        warn "agy $AGY_VER ignores --model/--effort in headless \`-p\` (fixed in 1.1.10)"
+        info "so --tier / tier_* remaps do NOT take effect — every delegation silently runs"
+        info "your persisted default model instead, and nothing in the output says so."
+        info "fix: \`agy update\` to 1.1.10 or newer."
+      fi ;;
+  esac
 else
   bad "agy NOT on PATH"
   info "fix: install the Antigravity CLI, then ensure its bin dir is on PATH"

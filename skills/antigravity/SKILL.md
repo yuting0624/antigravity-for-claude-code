@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.22.3
+version: 0.22.4
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -56,19 +56,29 @@ or persistently with the `default_model` / `tier_*` plugin options. Keep the exe
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
 
-> **Model availability moves fast.** Verified through **agy 1.1.8**. The `flash` default
-> **stays on Gemini 3.5 Flash (High)** for broad plan availability (newer models can lag on
-> enterprise Vertex) — but **Gemini 3.6 Flash High is measurably better on both axes** and
-> is worth remapping to when your plan serves it (`tier_flash` →
-> `gemini-3.6-flash-high`; 18 benchmark trials ran on it without an availability problem):
-> **−23% input tokens** for the same task (n=2, order-reversed) and **output priced at
-> $7.50/M vs 3.5's $9.00/M**; input and cached-input rates are unchanged. It does *not*
-> reduce `cache_read` (+6%) and is ~29% slower. If you do remap, price it with
-> `prices.json`'s `gemini_flash_36` — `gemini_flash` tracks the shipped 3.5 default,
-> and `agy-cost-compare` picks that key by tier name, not by model.
-> **`flash-medium` is not a general win:** −31% input and −21% wall, but `cache_read` +43%
-> (n=3, reproduced) — on cache_read-dominated agentic work it loses to `high`. Pick by the
-> task's input:cache_read ratio.
+> **Model availability moves fast, and `--tier` needs agy ≥ 1.1.10.** Until 1.1.10, agy
+> **ignored `--model` and `--effort` in headless `-p`** — the flag was applied after model
+> configuration had initialised, so the run silently fell back to the persisted default.
+> This wrapper resolves every `--tier` to `--model` and always runs `-p`, so on an older
+> agy **tier selection does nothing and looks like it works**: the call succeeds, returns
+> sensible text, reports usage. `doctor` warns when it sees one.
+>
+> The `flash` default is **Gemini 3.5 Flash (High)**, for broad plan availability — newer
+> models can lag on enterprise Vertex. Gemini 3.6 Flash is available and its **output is
+> cheaper ($7.50/M vs $9.00/M; input and cached-input unchanged — confirmed against two
+> pricing sources)**, so remapping `tier_flash` to `gemini-3.6-flash-high` is reasonable
+> when your plan serves it. Price it with `prices.json`'s `gemini_flash_36`;
+> `agy-cost-compare` picks the `gemini_flash` key by tier name, not by model.
+>
+> **Retracted:** earlier versions of this note quoted token-level comparisons between
+> 3.5 / 3.6 / `flash-medium` (−23% input, `cache_read` +43%, and so on). Those runs were
+> made on agy 1.1.8–1.1.9, where `--model` was ignored — so every arm may have executed
+> the same persisted default. Independently, the numbers did not survive their own ranges:
+> 3.5-high spanned [421k, 509k] input against 3.6-high's [305k, 412k] at n=2, and
+> `flash-medium` overlapped `high` outright. A mean-vs-mean claim over overlapping ranges
+> is exactly what this repo's own playbook tells you not to report. Pick a tier by what
+> your plan serves and by the published rates until this is re-measured on 1.1.10+.
+>
 > Note: agy 1.1.5 changed `agy models` output to slugs (`gemini-3.5-flash`); both slugs and
 > display names are accepted by `--model`, and `doctor` matches either.
 
