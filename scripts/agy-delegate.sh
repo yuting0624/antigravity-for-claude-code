@@ -494,7 +494,7 @@ if [ -z "${OUT//[$' \t\n\r']/}" ]; then
     *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"dangerously-skip-permissions"*)
       shopt -u nocasematch
       [ -s "$ERR" ] && cat "$ERR" >&2
-      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. agy's own message above names the specific permission it wanted. (agy >= 1.1.3)" >&2
+      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. agy's own message above names the specific permission it wanted. If a rule is ALREADY in that file and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing (and before agy 1.1.11 granted everything). (agy >= 1.1.3)" >&2
       signal PERMISSION_DENIED "agy soft-denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"; exit 15 ;;
   esac
   shopt -u nocasematch

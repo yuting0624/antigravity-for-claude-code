@@ -85,7 +85,19 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   where merely defining it is a silent no-op — a guard that reads as protection and
   provides none, which is the defect this whole entry is about. The static check works on
   any shell and was verified by putting the original bug back: it names the call site and
-  the definition line.
+  the definition line. Its first regex missed `elif`, a call inside a `case` branch, and a
+  brace group — all three confirmed against the old pattern — so it now splits the line
+  into command segments and compares each segment's first word, with no list of contexts
+  to keep complete. The checker has its own tests, including a no-false-positive case,
+  because a guard that misses a shape is the defect it exists to prevent. It also flagged
+  its own test data, which is fair: a fixture written across real lines is not
+  distinguishable from code, so the fixtures are single-line now.
+- **The exit-15 message now points at the rule itself.** It is the one place someone
+  actually lands when a write is soft-denied, and it recommended `permissions.allow`
+  without allowing that the rule *is* the problem: "if a rule is ALREADY in that file and
+  you are still reading this, suspect the rule: run `agy-doctor`". Same caveat added to
+  `agents/antigravity-delegate.md` and `commands/delegate.md`, the two operational files
+  consulted while building a delegation call.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed

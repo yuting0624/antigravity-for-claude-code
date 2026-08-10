@@ -14,7 +14,8 @@ Do this:
    **If the task WRITES files or uses tools** (web / Vertex AI Search / terminal), it needs
    a grant. For a plain file write the narrower one is a `write_file(<dir>)` entry under
    `permissions.allow` in `~/.gemini/antigravity-cli/settings.json` (recursive beneath
-   `<dir>`, no flag needed). Otherwise pass **`--yolo`**, which auto-approves all tools and
+   `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
+   there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
    is what web / Vertex AI Search / terminal need. Without a grant,
    headless agy leaves your workspace untouched while still reporting success (it
    describes / scratch-diverts / soft-denies depending on version; issue #10). `--mode

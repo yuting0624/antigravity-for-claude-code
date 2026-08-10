@@ -28,6 +28,24 @@ if ! python3 "$HERE/check-helper-order.py" "$0"; then
   echo "FAIL: a helper is used above its definition (bash does not hoist)"; FAIL=$((FAIL+1));
 else echo "ok: every helper is defined before its first use"; PASS=$((PASS+1)); fi
 
+# The checker is itself a guard, so a shape it misses is a silent false negative — the
+# defect it exists to prevent. Review found three the first regex walked past. Pin them.
+order_case() { # $1 = label, $2 = expected rc, $3 = script body ('\n' for newlines)
+  # printf '%b' so the fixture stays on ONE line here. Written across real lines, the
+  # `has() { :; }` inside it is indistinguishable from a definition to a checker that
+  # reads the file as shell — and it was: the checker flagged its own test data.
+  local f="$TMP/order-$1.sh"; printf '%b\n' "$3" > "$f"
+  python3 "$HERE/check-helper-order.py" "$f" >/dev/null 2>&1; local rc=$?
+  if [ "$rc" -eq "$2" ]; then echo "ok: helper-order checker — $1"; PASS=$((PASS+1));
+  else echo "FAIL: helper-order checker — $1 (rc=$rc, want $2)"; FAIL=$((FAIL+1)); fi
+}
+order_case elif           1 'if x; then :; elif hlp a b; then :; fi\nhlp() { :; }'
+order_case case-branch    1 'case $x in\n  foo) hlp a b ;;\nesac\nhlp() { :; }'
+order_case brace-group    1 '{ hlp a b; }\nhlp() { :; }'
+order_case defined-first  0 'hlp() { :; }\nif hlp a b; then :; fi'
+# A false positive is not harmless either: it fails a suite over a mention in a string.
+order_case quoted-mention 0 'echo "hlp to be defined"\nhlp() { :; }'
+
 has() { case "$2" in *"$1"*) return 0 ;; *) return 1 ;; esac; }
 
 
