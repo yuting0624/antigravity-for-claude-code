@@ -29,10 +29,17 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   sitting visibly in the file; **before 1.1.11** an entry that tokenized to zero command
   words matched **every** command and silently auto-approved anything the agent ran —
   broader than the `--yolo` it was chosen instead of. `doctor` flags the entry, names the
-  reason, and reports the consequence that applies to *your* agy rather than both.
+  reason, and scopes the consequence **twice**: to your agy version, and to the reason.
+  Every class means the grant is absent; only a `command(...)` rule naming no command also
+  carries the match-everything history, so that sentence is printed only when such an entry
+  is actually present. A mistyped `write_file()` never had it, and putting a security claim
+  in front of someone holding one would be worse than saying less. (Both reviewers caught
+  the first cut attaching it to every finding.)
   The zero-command-word test follows upstream's own examples (`command(time)` — a shell
   reserved word that prefixes a command without being one — a comment-only entry, and an
-  empty compound `()`), plus the unsubstituted `<...>` placeholder, which is ours. Rules it
+  empty compound `()`), plus the unsubstituted `<...>` placeholder, which is ours — matched
+  as that *shape*, not as a bare angle bracket, so a rule carrying a literal redirect
+  (`command(echo hi > /tmp/f)`) is not misread as a template nobody filled in. Rules it
   cannot judge are left alone: unbalanced quotes are agy's parser's business, and
   `write_file(...)` is a different matcher from `command(...)`. A false positive here sends
   someone to edit a rule that was always fine, so the well-formed case is pinned as hard as

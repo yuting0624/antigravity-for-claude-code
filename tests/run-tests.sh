@@ -828,6 +828,23 @@ allow_out="$(allow_doctor 1.1.11 '"command(time)"')"
 if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
   echo "FAIL: doctor reports the pre-1.1.11 consequence on 1.1.11"; FAIL=$((FAIL+1));
 else echo "ok: on 1.1.11 doctor reports the grant as absent, not as over-broad"; PASS=$((PASS+1)); fi
+# ...and the consequence belongs to the REASON, not to "something was flagged". Only a
+# command(...) rule naming no command has the match-everything history; a mistyped
+# write_file() never did. Both reviewers on #56 caught doctor attaching the security
+# claim to every finding, which put it in front of people it does not describe.
+allow_out="$(allow_doctor 1.1.10 '"write_file(<dir>)"')"
+if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
+  echo "FAIL: doctor claims a write_file placeholder auto-approves every command"; FAIL=$((FAIL+1));
+else echo "ok: the match-everything consequence is confined to zero-command-word rules"; PASS=$((PASS+1)); fi
+if printf '%s' "$allow_out" | grep -q 'grants nothing'; then
+  echo "ok: an unusable rule is still reported as granting nothing"; PASS=$((PASS+1));
+else echo "FAIL: doctor flagged a rule without saying the grant is absent"; FAIL=$((FAIL+1)); fi
+# The placeholder test is the <...> SHAPE. Matching a bare angle bracket anywhere would
+# misread a literal redirect as a template nobody filled in.
+allow_out="$(allow_doctor 1.1.11 '"command(echo hi > /tmp/f)"')"
+if printf '%s' "$allow_out" | grep -q 'unsubstituted placeholder'; then
+  echo "FAIL: a literal redirect is misread as an unsubstituted placeholder"; FAIL=$((FAIL+1));
+else echo "ok: a literal > in a rule is not treated as a placeholder"; PASS=$((PASS+1)); fi
 
 echo "== doctor.sh stdio-MCP detection (issue #37 diagnostic) =="
 # The hint is diagnostic-only, so getting it wrong fails SILENTLY — it just never

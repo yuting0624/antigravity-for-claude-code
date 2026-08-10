@@ -93,7 +93,14 @@ sys.exit(0 if n else 1)
 }
 
 # Report `permissions.allow` entries agy cannot use as written. Prints one
-# TAB-separated `<entry>\t<reason>` line each and returns 0 when any were found.
+# TAB-separated `<entry>\t<reason>\t<class>` line each and returns 0 when any were found.
+#
+# The class matters because the CONSEQUENCE is not shared. `zerowords` is the specific
+# thing agy 1.1.11 fixed — a `command(...)` rule naming no command, which used to match
+# every command — and only that class carries the auto-approve-everything history.
+# `unparseable` is everything else: agy cannot use the entry, so the grant is not in
+# effect, and nothing beyond that is known. Reporting the first consequence for the
+# second would put a security claim in front of someone it does not apply to.
 #
 # WHY doctor owns this. The plugin recommends a `permissions.allow` rule in eight
 # places as the NARROW alternative to `--yolo`, and that recommendation carries a
@@ -106,7 +113,7 @@ sys.exit(0 if n else 1)
 bad_allow_rules() {
   command -v python3 >/dev/null 2>&1 || return 1
   python3 -c '
-import json, shlex, sys
+import json, re, shlex, sys
 
 try:
     perm = (json.load(open(sys.argv[1])) or {}).get("permissions") or {}
@@ -123,21 +130,31 @@ PREFIX = {"time", "!", "{", "}", "[[", "]]", "if", "then", "elif", "else", "fi",
           "case", "esac", "for", "select", "while", "until", "do", "done", "in",
           "function", "coproc"}
 
+# A placeholder is the <...> SHAPE, not a bare angle bracket. Matching either character
+# anywhere would misread a rule carrying a literal redirect or comparison —
+# command(echo hi > /tmp/f) — as a template someone forgot to fill in.
+PLACEHOLDER = re.compile(r"<[^<>]*>")
+
 bad = []
 for e in allow:
     if not isinstance(e, str):
-        bad.append((repr(e), "not a string")); continue
+        bad.append((repr(e), "not a string", "unparseable")); continue
     t = e.strip()
     if not t:
-        bad.append(("(empty string)", "empty entry")); continue
-    if "<" in t or ">" in t:
-        bad.append((t, "unsubstituted placeholder — replace <...> with a real value")); continue
+        bad.append(("(empty string)", "empty entry", "unparseable")); continue
+    if PLACEHOLDER.search(t):
+        bad.append((t, "unsubstituted placeholder — replace <...> with a real value",
+                    "unparseable")); continue
     i = t.find("(")
     if i < 0 or not t.endswith(")"):
         continue                      # not the NAME(...) shape; not ours to judge
     name, inner = t[:i].strip(), t[i + 1:-1]
     if not inner.strip():
-        bad.append((t, "empty rule body")); continue
+        # Bare `()` is one of the zero-command-word examples upstream gives, and so is
+        # command(). An empty body on any OTHER matcher, e.g. write_file(), is merely
+        # unusable and carries none of that history.
+        bad.append((t, "empty rule body",
+                    "zerowords" if name in ("", "command") else "unparseable")); continue
     if name != "command":
         continue                      # write_file(...) etc. are a different matcher
     try:
@@ -147,10 +164,10 @@ for e in allow:
     while words and words[0] in PREFIX:
         words.pop(0)
     if not words:
-        bad.append((t, "tokenizes to zero command words"))
+        bad.append((t, "tokenizes to zero command words", "zerowords"))
 
-for t, why in bad:
-    print("%s\t%s" % (t, why))
+for t, why, cls in bad:
+    print("%s\t%s\t%s" % (t, why, cls))
 sys.exit(0 if bad else 1)
 ' "$1" 2>/dev/null
 }
@@ -311,24 +328,33 @@ if [ -f "$SETTINGS" ]; then
   # 3b. permissions.allow entries agy cannot use as written.
   if BAD_RULES="$(bad_allow_rules "$SETTINGS")"; then
     warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
-    printf '%s\n' "$BAD_RULES" | while IFS="$(printf '\t')" read -r rule why; do
+    ZEROWORDS=0
+    while IFS="$(printf '\t')" read -r rule why cls; do
+      [ -n "$rule" ] || continue
       info "$rule — $why"
-    done
-    # Same broken entry, opposite consequence, depending on which side of the fix
-    # you are on. Say which one applies rather than describing both.
-    case "${AGY_VER:-}" in
-      ''|*[!0-9.]*)
-        info "consequence depends on the agy version (see the 1.1.11 changelog entry on zero-word allow rules)." ;;
-      *)
-        if ver_lt "$AGY_VER" 1.1.11; then
-          info "on agy $AGY_VER such an entry matches EVERY command and silently auto-approves"
-          info "anything the agent runs — broader than the --yolo it was chosen instead of."
-          info "fix: correct the entry, or \`agy update\` to 1.1.11+ where it matches nothing."
-        else
-          info "agy $AGY_VER ignores it, so this grant is NOT in effect and the tool it was"
-          info "meant to cover is still soft-denied (exit 15) with nothing naming the rule."
-        fi ;;
-    esac
+      [ "$cls" = zerowords ] && ZEROWORDS=1
+    done <<EOF
+$BAD_RULES
+EOF
+    # Every class above means the grant is not in effect. Only the zero-command-word
+    # class ALSO has the pre-1.1.11 history of matching everything, so that sentence is
+    # printed only when such an entry is actually present — putting a security claim in
+    # front of someone holding a mistyped write_file() would be worse than saying less.
+    info "an entry agy cannot use grants nothing, so the tool it was meant to cover is"
+    info "still soft-denied (exit 15) with nothing in the message naming the rule."
+    if [ "$ZEROWORDS" -eq 1 ]; then
+      case "${AGY_VER:-}" in
+        ''|*[!0-9.]*)
+          info "a rule naming no command is also version-sensitive: before agy 1.1.11 it"
+          info "matched EVERY command. Check your version." ;;
+        *)
+          if ver_lt "$AGY_VER" 1.1.11; then
+            info "worse on agy $AGY_VER: a rule naming no command matches EVERY command there"
+            info "and silently auto-approves anything the agent runs — broader than the --yolo"
+            info "it was chosen instead of. Fix the entry, or \`agy update\` to 1.1.11+."
+          fi ;;
+      esac
+    fi
   fi
 else
   info "no agy settings.json yet (${SETTINGS/#$HOME/~})"
