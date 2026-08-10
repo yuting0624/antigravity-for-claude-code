@@ -117,6 +117,28 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   The first pass at this shipped a regex that truncated a grep pattern at a `)` inside it,
   producing valid shell that searched for the wrong string and hung a polling loop. Caught
   because the suite stopped completing, not because anything reported it.
+- **A quote in a *comment* disabled the whole allow-rule validator, and only the positive
+  tests noticed.** A single quote inside `python3 -c '...'` closes the shell string; bash
+  parses the rest as arguments and redirections, which stays valid shell, so `bash -n` and
+  shellcheck both pass, python runs a truncated program, and — with stderr on `/dev/null`
+  as these blocks have — the caller reads "nothing to report". Every *negative* allow-rule
+  test still passed. `tests/check-embedded-python.py` now runs over `scripts/` and `hooks/`
+  and fails the suite on either signature of a truncation: a body ending on a comment line
+  (where an apostrophe in prose lands) or one that no longer compiles (where an apostrophe
+  in code lands). Both verified by mutation. The first attempt looked for the closing quote
+  at the start of a line and false-positived on `hooks/nudge-delegation.sh`, where it sits
+  at the end of one — the shell string ends at the FIRST quote, and that is the only part
+  of this that is unambiguous.
+- **Three claims in this entry now have tests behind them.** `command()`, a bare `()` and a
+  comment-only rule were named as the zero-command-word examples and exercised by nothing;
+  `write_file()` was described as *not* carrying that history and likewise untested. All
+  four are pinned now, along with a partly-substituted path (`write_file(/repos/<name>)`,
+  flagged) and an angle-bracketed literal inside a command rule (`command(grep -F <TAG>
+  file.txt)`, left alone). That last one narrowed the placeholder test: shape alone is not
+  enough, so it is applied only outside `command(...)`, where shell syntax lives and where
+  the placeholder is never recommended. The cost is a placeholder inside a command rule
+  going unflagged — a miss, which this file prefers to a false positive that sends someone
+  to edit a working rule.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
