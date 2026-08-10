@@ -219,11 +219,12 @@ commands** (`--yolo` grants write + terminal):
   denial text names the rule and offers `--yolo` as the *alternative*. `--yolo` auto-approves
   **all** tools and is what you need when no rule covers the target, or for web / Vertex AI
   Search / terminal. Not verified below 1.1.9; a glob form (`write_file(/path/**)`) was
-  reported not to match. `<dir>` is a placeholder: a rule agy cannot parse is silent both
-  ways — from 1.1.11 it matches nothing (the grant is absent, exit 15 with the rule
-  visibly present in the file), and before 1.1.11 an entry tokenizing to zero command
-  words (`command(time)`, comment-only, `()`) matched EVERY command. If a user reports a
-  rule that "should" work, have them run `agy-doctor` before changing anything else.
+  reported not to match. `<dir>` is a placeholder: left as written the rule grants nothing
+  on any version — exit 15 with the rule visibly present in the file. Separately, and only
+  for `command(...)`, an entry naming no command (`command(time)`, comment-only, `()`)
+  matched EVERY command before 1.1.11; do not attach that history to a mistyped
+  `write_file()`. If a user reports a rule that "should" work, have them run `agy-doctor`
+  before changing anything else.
   Run write tasks on a branch and verify with `git status`.
   prompt for or block `--dangerously-skip-permissions` — approve it or pre-allow
   `Bash(agy-delegate*)`. Always verify files actually changed **in the workspace** with

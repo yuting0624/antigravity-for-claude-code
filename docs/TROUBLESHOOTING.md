@@ -112,12 +112,12 @@ run still "succeeds"** ([#10](https://github.com/yuting0624/antigravity-for-clau
   a glob form (`write_file(/path/**)`) was reported *not* to match.
   **Substitute a real path for `<dir>`** — and if the rule is in place and the write is
   *still* soft-denied, suspect the rule before suspecting agy. An entry agy cannot parse
-  is silent both ways: from **1.1.11** it matches nothing (so you get exactly this
-  exit 15, with the rule sitting right there in the file), and **before 1.1.11** an entry
-  that tokenized to zero command words — `command(time)`, a comment-only entry, `()` —
-  matched **every** command and silently auto-approved anything the agent ran. Run
-  `agy-doctor`: it validates each entry and tells you which of the two applies to your
-  version.
+  grants nothing on any version, which is exactly this exit 15 with the rule sitting
+  right there in the file. Only one shape of mistake is version-sensitive, and it is not
+  this one: a `command(...)` rule naming no command — `command(time)`, a comment-only
+  entry, `()` — matched **every** command before **1.1.11** and silently auto-approved
+  anything the agent ran. Run `agy-doctor`: it validates each entry and reports the
+  consequence that actually applies to yours.
 - **Or pass `--yolo`** (`--dangerously-skip-permissions`) — works across all agy versions,
   but auto-approves **all** tools, not just the write. Required anyway for web / Vertex AI
   Search / terminal when no rule covers them. (`--mode accept-edits` only wrote headless on

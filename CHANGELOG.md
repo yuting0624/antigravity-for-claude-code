@@ -97,6 +97,13 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   you are still reading this, suspect the rule: run `agy-doctor`". Same caveat added to
   `agents/antigravity-delegate.md` and `commands/delegate.md`, the two operational files
   consulted while building a delegation call. The pre-run write nudge got the short half only — `<dir>` is a placeholder, `agy-doctor` will say whether yours parses — because that one fires on every write-looking task, while the diagnosis belongs where the failure is.
+  **And the same overclaim the code fix removed was still sitting in the prose it was
+  copied from.** Five documents put the placeholder caveat next to the pre-1.1.11
+  match-everything history, which reads as though a mistyped `write_file(<dir>)` carried
+  it — the exact conflation `bad_allow_rules` classifies apart (`unparseable`, not
+  `zerowords`). Fixing the output and leaving the sentence that produced it just relocates
+  the error, so all five now say the placeholder grants nothing on any version and name
+  `command(...)` explicitly for the part that is version-sensitive.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
