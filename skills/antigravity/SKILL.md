@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.22.4
+version: 0.22.5
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -61,7 +61,11 @@ the cross-model verification value (Claude executing Claude loses both).
 > configuration had initialised, so the run silently fell back to the persisted default.
 > This wrapper resolves every `--tier` to `--model` and always runs `-p`, so on an older
 > agy **tier selection does nothing and looks like it works**: the call succeeds, returns
-> sensible text, reports usage. `doctor` warns when it sees one.
+> sensible text, reports usage. `doctor` warns when it sees one — and on agy ≥ 1.1.11 it
+> stops inferring and **asks**: it requests a tier model via `-p /model` (a read-only slash
+> command that costs no tokens and starts no agent turn) and reports which model agy says
+> it would actually run. Below 1.1.11 it does not probe, because there the slash command
+> falls through as prompt text and the model answers as though it had run.
 >
 > The `flash` default is **Gemini 3.5 Flash (High)**, for broad plan availability — newer
 > models can lag on enterprise Vertex. Gemini 3.6 Flash is available and its **output is
@@ -215,7 +219,12 @@ commands** (`--yolo` grants write + terminal):
   denial text names the rule and offers `--yolo` as the *alternative*. `--yolo` auto-approves
   **all** tools and is what you need when no rule covers the target, or for web / Vertex AI
   Search / terminal. Not verified below 1.1.9; a glob form (`write_file(/path/**)`) was
-  reported not to match. Run write tasks on a branch and verify with `git status`.
+  reported not to match. `<dir>` is a placeholder: a rule agy cannot parse is silent both
+  ways — from 1.1.11 it matches nothing (the grant is absent, exit 15 with the rule
+  visibly present in the file), and before 1.1.11 an entry tokenizing to zero command
+  words (`command(time)`, comment-only, `()`) matched EVERY command. If a user reports a
+  rule that "should" work, have them run `agy-doctor` before changing anything else.
+  Run write tasks on a branch and verify with `git status`.
   prompt for or block `--dangerously-skip-permissions` — approve it or pre-allow
   `Bash(agy-delegate*)`. Always verify files actually changed **in the workspace** with
   `git status` (the wrapper maps a 1.1.3 soft-deny to exit `15` so you're not left guessing).

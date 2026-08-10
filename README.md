@@ -202,6 +202,13 @@ Delegation doesn't save money by itself — these do (also in the skill):
   - **`permissions.allow` in `~/.gemini/antigravity-cli/settings.json`** — a
     `write_file(<dir>)` entry allows writes **recursively beneath `<dir>`** and needs no
     flag. This is the narrower grant and usually the right one.
+    **`<dir>` is a placeholder — substitute a real path.** A rule agy cannot parse says
+    nothing in either direction: from **agy 1.1.11** it matches nothing, so the grant you
+    think you have is absent and the write is soft-denied for no visible reason; **before
+    1.1.11** an entry that tokenized to zero command words (upstream's examples:
+    `command(time)`, a comment-only entry, `()`) matched **every** command and silently
+    auto-approved anything the agent ran — broader than the `--yolo` it was chosen instead
+    of. `agy-doctor` checks your entries and names which failure applies to your version.
   - **`--yolo`** (`--dangerously-skip-permissions`) — auto-approves **all** tools, not just
     writes. Needed when no rule covers the target, and for web / Vertex AI Search / terminal
     tools.

@@ -735,6 +735,100 @@ if printf '%s' "$nosort_out" | grep -q 'ignores --model'; then
   echo "ok: the warning still fires with sort unusable"; PASS=$((PASS+1));
 else echo "FAIL: a broken sort silences the version gate"; FAIL=$((FAIL+1)); fi
 
+echo "== doctor.sh --model probe (ask agy instead of inferring from a version) =="
+# The version gate above can only INFER that --model works. agy 1.1.11 answers the
+# read-only slash commands in print mode without starting an agent turn, so doctor asks
+# outright: request a tier model, see which one comes back. The stub logs whether the
+# probe ran, so "never runs below 1.1.11" is checked as a fact and not as prose.
+probe_doctor() { # $1 = version the stub reports, $2 = what `-p /model` answers ('' = nothing)
+  local d="$TMP/agyprobe"; rm -rf "$d"; mkdir -p "$d"
+  { echo '#!/usr/bin/env bash'
+    echo "[ \"\$1\" = --version ] && { echo '$1'; exit 0; }"
+    echo '[ "$1" = models ] && { printf "%s\n" "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; exit 0; }'
+    # Log every /model invocation, whatever position the flag lands in.
+    echo "for a in \"\$@\"; do [ \"\$a\" = /model ] && { echo \"\$*\" >> '$d/probed'; printf '%s\n' '$2'; exit 0; }; done"
+    echo 'exit 0'; } > "$d/agy"
+  chmod +x "$d/agy"
+  HOME="$TMP/probehome" PATH="$d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1
+}
+# Below 1.1.11 the probe must not run AT ALL. There `-p /model` is not a command, it
+# falls through as literal prompt text and the model answers as though it had run — so
+# probing would spend a real turn and then believe the answer it invented.
+probe_doctor 1.1.10 "gemini-3.5-flash-high" >/dev/null
+if [ -f "$TMP/agyprobe/probed" ]; then
+  echo "FAIL: doctor probes -p /model on agy 1.1.10, where it costs a real agent turn"; FAIL=$((FAIL+1));
+else echo "ok: no -p /model probe below agy 1.1.11"; PASS=$((PASS+1)); fi
+probe_out="$(probe_doctor 1.1.11 "gemini-3.5-flash-high	Gemini 3.5 Flash (High)")"
+if [ -f "$TMP/agyprobe/probed" ]; then
+  echo "ok: doctor probes -p /model on agy 1.1.11"; PASS=$((PASS+1));
+else echo "FAIL: doctor never asked agy which model it would use"; FAIL=$((FAIL+1)); fi
+# The reply is a tab-separated record; doctor must read the slug and match it against a
+# tier configured as a DISPLAY NAME, which is the comparison that made 2b necessary.
+if printf '%s' "$probe_out" | grep -q 'model takes effect'; then
+  echo "ok: probe confirms --model took effect across slug/display-name forms"; PASS=$((PASS+1));
+else echo "FAIL: probe did not confirm a model agy echoed back verbatim"; FAIL=$((FAIL+1)); fi
+# The case the probe exists for: agy answers with something else entirely.
+probe_out="$(probe_doctor 1.1.11 "gemini-3.6-flash-low	Gemini 3.6 Flash (Low)")"
+if printf '%s' "$probe_out" | grep -q 'does NOT take effect'; then
+  echo "ok: probe catches agy running a different model than asked for"; PASS=$((PASS+1));
+else echo "FAIL: doctor accepted a model it did not ask for"; FAIL=$((FAIL+1)); fi
+# No answer is not evidence of breakage — an older build than the version claims, a
+# hang, a plan that refuses. Inventing a failure here would send people to fix nothing.
+probe_out="$(probe_doctor 1.1.11 "")"
+# Match on `effect` alone, not on either verdict's wording: the two branches read
+# "takes effect" and "does NOT take effect", so a pattern copied from one of them
+# silently stops guarding the other. Verified by mutation — `take effect` passed this
+# test with the empty-answer branch removed and the confirmation firing on nothing.
+if printf '%s' "$probe_out" | grep -q 'effect'; then
+  echo "FAIL: doctor draws a conclusion from an empty probe answer"; FAIL=$((FAIL+1));
+else echo "ok: an empty probe answer produces no verdict either way"; PASS=$((PASS+1)); fi
+
+echo "== doctor.sh permissions.allow validation (agy 1.1.11 zero-word rules) =="
+# The plugin recommends a permissions.allow rule in eight places as the NARROW
+# alternative to --yolo, and the recommendation ships a placeholder. A rule agy cannot
+# parse is silent in both directions: before 1.1.11 it matched EVERY command and
+# auto-approved anything the agent ran — broader than the --yolo it replaced — and from
+# 1.1.11 it matches nothing, so the grant is simply absent. HOME is redirected so this
+# never reads, and can never be confused by, the developer's own settings.json.
+allow_doctor() { # $1 = agy version, $2 = contents of the "allow" array
+  local h="$TMP/allowhome"; rm -rf "$h"; mkdir -p "$h/.gemini/antigravity-cli"
+  printf '{"permissions":{"allow":[%s]}}' "$2" > "$h/.gemini/antigravity-cli/settings.json"
+  local d="$TMP/agyallow"; rm -rf "$d"; mkdir -p "$d"
+  { echo '#!/usr/bin/env bash'
+    echo "[ \"\$1\" = --version ] && { echo '$1'; exit 0; }"
+    echo '[ "$1" = models ] && { printf "%s\n" "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; exit 0; }'
+    echo 'exit 0'; } > "$d/agy"
+  chmod +x "$d/agy"
+  HOME="$h" PATH="$d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1
+}
+# upstream's own example of a rule that tokenizes to zero command words: `time` is a
+# shell reserved word that prefixes a command without being one.
+allow_out="$(allow_doctor 1.1.11 '"command(time)"')"
+if printf '%s' "$allow_out" | grep -q 'command(time)'; then
+  echo "ok: doctor names command(time) as unusable"; PASS=$((PASS+1));
+else echo "FAIL: doctor passed a zero-command-word allow rule"; FAIL=$((FAIL+1)); fi
+# The placeholder is ours: docs and the exit-15 message both say write_file(<dir>).
+allow_out="$(allow_doctor 1.1.11 '"write_file(<dir>)"')"
+if printf '%s' "$allow_out" | grep -q 'unsubstituted placeholder'; then
+  echo "ok: doctor catches the write_file(<dir>) placeholder left as written"; PASS=$((PASS+1));
+else echo "FAIL: doctor passed the literal placeholder from its own documentation"; FAIL=$((FAIL+1)); fi
+# A false positive here sends someone to edit a rule that was always fine, so the
+# well-formed case is pinned as hard as the broken ones.
+allow_out="$(allow_doctor 1.1.11 '"command(agy)","command(npm view)","write_file(/tmp/x)"')"
+if printf '%s' "$allow_out" | grep -q 'permissions.allow:'; then
+  echo "FAIL: doctor warns about well-formed allow rules"; FAIL=$((FAIL+1));
+else echo "ok: well-formed allow rules produce no warning"; PASS=$((PASS+1)); fi
+# Same broken entry, opposite consequence either side of the fix. Reporting the wrong
+# one is worse than reporting none: "matches nothing" reads as harmless.
+allow_out="$(allow_doctor 1.1.10 '"command(time)"')"
+if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
+  echo "ok: below 1.1.11 doctor reports the auto-approve-everything consequence"; PASS=$((PASS+1));
+else echo "FAIL: doctor did not report that the rule auto-approves everything on 1.1.10"; FAIL=$((FAIL+1)); fi
+allow_out="$(allow_doctor 1.1.11 '"command(time)"')"
+if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
+  echo "FAIL: doctor reports the pre-1.1.11 consequence on 1.1.11"; FAIL=$((FAIL+1));
+else echo "ok: on 1.1.11 doctor reports the grant as absent, not as over-broad"; PASS=$((PASS+1)); fi
+
 echo "== doctor.sh stdio-MCP detection (issue #37 diagnostic) =="
 # The hint is diagnostic-only, so getting it wrong fails SILENTLY — it just never
 # helps the person it exists for. Pin the two things measured against agy 1.1.9:

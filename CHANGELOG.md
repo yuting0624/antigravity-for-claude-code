@@ -3,6 +3,52 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.22.5
+- **`doctor` now asks agy which model it will run, instead of inferring it from a version
+  string.** 0.22.4 added a warning for agy below 1.1.10, where `--model` was ignored in
+  headless `-p`. That warning is the best a version comparison can do, and a version
+  comparison is a proxy: it is right about the releases we know about and silent about
+  every other way the flag can fail to land. agy 1.1.11 answers the read-only slash
+  commands in print mode without starting an agent turn, so `doctor` requests a tier model
+  with `-p /model` and reports which one comes back — `usage.total_tokens: 0`, no quota
+  spent, no conversation left behind. It reads the tab-separated reply's slug and matches
+  it against a tier configured as a display name, the same either-direction comparison
+  `agy models` needed in 0.20.x.
+  **Gated at 1.1.11 and tested as a fact, not as prose.** Below that version the slash
+  command is not recognised, falls through as literal prompt text, and the model answers as
+  though it had run — so probing there would spend a real turn *and* then trust the answer
+  it invented. The stub agy in the suite logs every invocation, so "never probes below
+  1.1.11" is asserted against the log. An empty answer draws no conclusion in either
+  direction: an older build than the version claims, a hang, or a plan that refuses the
+  probe is not evidence that routing is broken.
+- **`doctor` validates `permissions.allow` entries.** The plugin recommends such a rule in
+  eight places as the *narrow* alternative to `--yolo`, and the recommendation ships a
+  placeholder — `write_file(<dir>)`. A rule agy cannot parse announces itself in neither
+  direction, and which way it fails depends on the version: from **1.1.11** it matches
+  nothing, so the grant is absent and the write is soft-denied (exit 15) with the rule
+  sitting visibly in the file; **before 1.1.11** an entry that tokenized to zero command
+  words matched **every** command and silently auto-approved anything the agent ran —
+  broader than the `--yolo` it was chosen instead of. `doctor` flags the entry, names the
+  reason, and reports the consequence that applies to *your* agy rather than both.
+  The zero-command-word test follows upstream's own examples (`command(time)` — a shell
+  reserved word that prefixes a command without being one — a comment-only entry, and an
+  empty compound `()`), plus the unsubstituted `<...>` placeholder, which is ours. Rules it
+  cannot judge are left alone: unbalanced quotes are agy's parser's business, and
+  `write_file(...)` is a different matcher from `command(...)`. A false positive here sends
+  someone to edit a rule that was always fine, so the well-formed case is pinned as hard as
+  the broken ones.
+- **Verified against agy 1.1.11, no change needed:** all three tiers still resolve
+  (`flash` → `gemini-3.5-flash-high`, `flash-lo` → `-low`, `pro` → `gemini-3.1-pro-high`);
+  the exit-14 classifier still fires on an unknown model; and 1.1.11's reworded
+  model-loading errors do not disturb the exit-15 path, whose message still contains
+  `auto-denied` and `permissions.allow` verbatim — two independent anchors the classifier
+  already matches.
+  **`/usage` and `/quota` were considered for `doctor` and rejected on evidence:** they
+  return zero bytes here, which is not a bug but this account type — 1.1.11's own notes say
+  credits do not apply to accounts signed in through a Google Cloud project or ADC.
+  `/model`, `/effort` and `/skills` all return data on the same setup, which is what made
+  the probe above possible.
+
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
   `--model` and `--effort` being *ignored in headless `-p`* — the flag was applied after

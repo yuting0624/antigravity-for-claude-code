@@ -92,6 +92,69 @@ sys.exit(0 if n else 1)
 ' "${files[@]}" 2>/dev/null
 }
 
+# Report `permissions.allow` entries agy cannot use as written. Prints one
+# TAB-separated `<entry>\t<reason>` line each and returns 0 when any were found.
+#
+# WHY doctor owns this. The plugin recommends a `permissions.allow` rule in eight
+# places as the NARROW alternative to `--yolo`, and that recommendation carries a
+# placeholder — `write_file(<dir>)`. A rule that agy cannot parse does not announce
+# itself in either direction: before 1.1.11 an entry that tokenizes to zero command
+# words matched EVERY command and silently auto-approved anything the agent ran, which
+# is broader than the `--yolo` it was chosen over; from 1.1.11 it matches nothing, so
+# the grant simply is not there and the write is soft-denied for no visible reason.
+# Same typo, opposite failures, no message either time.
+bad_allow_rules() {
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 -c '
+import json, shlex, sys
+
+try:
+    perm = (json.load(open(sys.argv[1])) or {}).get("permissions") or {}
+    allow = perm.get("allow")
+except Exception:
+    sys.exit(1)
+if not isinstance(allow, list):
+    sys.exit(1)
+
+# Shell reserved words that may PREFIX a command without being one, so a rule made
+# only of them names no command. agy 1.1.11 describes the class it fixed as an entry
+# that "tokenizes to zero command words" and gives command(time) as its own example.
+PREFIX = {"time", "!", "{", "}", "[[", "]]", "if", "then", "elif", "else", "fi",
+          "case", "esac", "for", "select", "while", "until", "do", "done", "in",
+          "function", "coproc"}
+
+bad = []
+for e in allow:
+    if not isinstance(e, str):
+        bad.append((repr(e), "not a string")); continue
+    t = e.strip()
+    if not t:
+        bad.append(("(empty string)", "empty entry")); continue
+    if "<" in t or ">" in t:
+        bad.append((t, "unsubstituted placeholder — replace <...> with a real value")); continue
+    i = t.find("(")
+    if i < 0 or not t.endswith(")"):
+        continue                      # not the NAME(...) shape; not ours to judge
+    name, inner = t[:i].strip(), t[i + 1:-1]
+    if not inner.strip():
+        bad.append((t, "empty rule body")); continue
+    if name != "command":
+        continue                      # write_file(...) etc. are a different matcher
+    try:
+        words = shlex.split(inner, comments=True)
+    except ValueError:
+        continue                      # unbalanced quotes: agy parses these, not us
+    while words and words[0] in PREFIX:
+        words.pop(0)
+    if not words:
+        bad.append((t, "tokenizes to zero command words"))
+
+for t, why in bad:
+    print("%s\t%s" % (t, why))
+sys.exit(0 if bad else 1)
+' "$1" 2>/dev/null
+}
+
 # True when version $1 is strictly older than $2. Pure shell on purpose: `sort -V` is
 # not universal, and when it is missing the command substitution comes back EMPTY, the
 # comparison quietly fails, and the check it guards never fires — a version gate that
@@ -193,6 +256,42 @@ if command -v agy >/dev/null 2>&1; then
         info "agy is multi-model/plan-dependent — remap tiers via CLAUDE_PLUGIN_OPTION_TIER_* (or set _DEFAULT_MODEL), or pass --model <name from \`agy models\`)"
       fi
     done
+
+    # 2c. Does --model actually TAKE EFFECT? Being listed in `agy models` and being
+    # honoured are different questions, and for three releases the answer to the second
+    # one was no (see the 1.1.10 warning above) while everything here still read green.
+    #
+    # The check above can only infer that from a version string. 1.1.11 answers the
+    # read-only slash commands in print mode without starting an agent turn, so doctor
+    # can stop inferring and ASK: request a tier model, see which one comes back. Costs
+    # no tokens, no quota, and leaves no conversation behind (`usage.total_tokens: 0`).
+    #
+    # Gated at 1.1.11 on purpose. Below it the command is not recognised, falls through
+    # as literal prompt text, and the model answers as though it had run — so the probe
+    # would spend a real turn AND return a made-up answer. Verified on 1.1.11: display
+    # names and slugs both work, and all three tiers come back as themselves.
+    case "${AGY_VER:-}" in
+      ''|*[!0-9.]*) : ;;
+      *)
+        if ! ver_lt "$AGY_VER" 1.1.11; then
+          # cut -f1: the reply is one tab-separated record, `<slug>\t<display name>`.
+          EFF="$(agy_guard 20 --model "$FLASH" -p /model 2>/dev/null | head -1 | cut -f1)"
+          EFF_N="$(norm_model "$EFF")"; WANT_N="$(norm_model "$FLASH")"
+          if [ -z "$EFF_N" ]; then
+            # No answer at all: a hang, an older build than the version claims, or a
+            # plan that refuses the probe. Not evidence of breakage — stay quiet rather
+            # than report a failure doctor cannot actually substantiate.
+            :
+          elif case "$WANT_N" in *"$EFF_N"*) true ;; *) case "$EFF_N" in *"$WANT_N"*) true ;; *) false ;; esac ;; esac; then
+            ok "--model takes effect (asked for '$FLASH', agy reports '$EFF')"
+          else
+            warn "--model does NOT take effect: asked for '$FLASH', agy reports '$EFF'"
+            info "every delegation runs '$EFF' instead, and nothing in the output says so."
+            info "--tier / tier_* remaps are therefore inert. Check for a persisted default"
+            info "or a profile overriding it, then re-run doctor."
+          fi
+        fi ;;
+    esac
   elif [ "$AGY_TIMED_OUT" -eq 0 ]; then
     # Empty WITHOUT a timeout kill: genuinely no models -> auth/network is the likely cause.
     bad "agy could not list models (not authenticated, or no network)"
@@ -208,6 +307,29 @@ if [ -f "$SETTINGS" ]; then
   LOC="$(sed -n 's/.*"location"[: ]*"\([^"]*\)".*/\1/p' "$SETTINGS" | head -1)"
   ok "agy settings: ${SETTINGS/#$HOME/~}"
   [ -n "$PROJ" ] && info "GCP project: $PROJ   location: ${LOC:-?}"
+
+  # 3b. permissions.allow entries agy cannot use as written.
+  if BAD_RULES="$(bad_allow_rules "$SETTINGS")"; then
+    warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
+    printf '%s\n' "$BAD_RULES" | while IFS="$(printf '\t')" read -r rule why; do
+      info "$rule — $why"
+    done
+    # Same broken entry, opposite consequence, depending on which side of the fix
+    # you are on. Say which one applies rather than describing both.
+    case "${AGY_VER:-}" in
+      ''|*[!0-9.]*)
+        info "consequence depends on the agy version (see the 1.1.11 changelog entry on zero-word allow rules)." ;;
+      *)
+        if ver_lt "$AGY_VER" 1.1.11; then
+          info "on agy $AGY_VER such an entry matches EVERY command and silently auto-approves"
+          info "anything the agent runs — broader than the --yolo it was chosen instead of."
+          info "fix: correct the entry, or \`agy update\` to 1.1.11+ where it matches nothing."
+        else
+          info "agy $AGY_VER ignores it, so this grant is NOT in effect and the tool it was"
+          info "meant to cover is still soft-denied (exit 15) with nothing naming the rule."
+        fi ;;
+    esac
+  fi
 else
   info "no agy settings.json yet (${SETTINGS/#$HOME/~})"
 fi
