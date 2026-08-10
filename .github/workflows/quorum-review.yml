@@ -45,22 +45,36 @@ on:
 # One review at a time per pull request — two runs racing to edit the same
 # summary comment can lose the ledger the other just wrote.
 #
-# `cancel-in-progress` has to be an EXPRESSION, not `true`. Concurrency is
-# evaluated before any job condition, so a run that will be skipped still enters
-# the group and still cancels whatever is running — and posting the summary
-# comment fires `issue_comment`, so the review cancelled itself seconds after
-# finishing. The Bot check in `if:` stops the loop; it cannot stop the
-# cancellation.
+# `cancel-in-progress` has to be an EXPRESSION, not `true`. Concurrency is evaluated
+# BEFORE any job condition, so a run that will be skipped still enters the group and
+# still cancels whatever is running. Two ways that bites, both observed here:
 #
-# This is upstream's shape, adopted in place of the `-bot` group suffix we had.
-# Theirs is better: the bot run stays in the same group, so a real run can still
-# cancel it — a separate group meant a stale bot run just sat there instead.
+#   1. posting the summary fires `issue_comment` as the App -> the review cancelled
+#      itself seconds after finishing. Fixed by the Bot check (#42/#46).
+#   2. ANY human comment fires `issue_comment` too — including "thanks, fixed that"
+#      on a review thread — and killed the review of the push it was replying to.
+#      Seen repeatedly on #52. The Bot check does not cover it.
+#
+# So: cancel only when this run is actually a superseding review. A push or a manual
+# dispatch always is. A comment only is when it asks for one.
+#
+#   pull_request / workflow_dispatch  -> cancel
+#   comment by the App                -> no
+#   comment by a human, no @quorum    -> no   <- the case #46 still got wrong
+#   comment by a human with @quorum   -> cancel
+#
+# The job's own `if:` still decides whether the run does anything; this only decides
+# whether it is allowed to kill a running one.
 concurrency:
   group: >-
     quorum-review-${{ github.event.pull_request.number
       || github.event.issue.number
       || github.event.inputs.pr }}
-  cancel-in-progress: ${{ github.event.comment.user.type != 'Bot' }}
+  cancel-in-progress: >-
+    ${{ (github.event_name != 'issue_comment'
+         && github.event_name != 'pull_request_review_comment')
+        || (github.event.comment.user.type != 'Bot'
+            && contains(github.event.comment.body, '@quorum')) }}
 
 permissions:
   contents: read
