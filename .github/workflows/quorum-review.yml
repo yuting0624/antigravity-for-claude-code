@@ -58,10 +58,16 @@ on:
 # So: cancel only when this run is actually a superseding review. A push or a manual
 # dispatch always is. A comment only is when it asks for one.
 #
-#   pull_request / workflow_dispatch  -> cancel
-#   comment by the App                -> no
-#   comment by a human, no @quorum    -> no   <- the case #46 still got wrong
-#   comment by a human with @quorum   -> cancel
+#   pull_request / workflow_dispatch        -> cancel
+#   comment by the App                      -> no
+#   human comment, no @quorum               -> no   <- what #46 got wrong
+#   human comment mentioning @quorum only   -> no   <- "let's ask @quorum about this"
+#   human "@quorum /review" or "/criteria"  -> cancel
+#   human "@quorum wontfix" on a review     -> cancel
+#
+# The last three mirror what the job's `if:` actually acts on. It is not a copy of that
+# condition and should not become one — this only needs to be no BROADER than it, so an
+# event that will be skipped never kills a running review.
 #
 # The job's own `if:` still decides whether the run does anything; this only decides
 # whether it is allowed to kill a running one.
@@ -74,7 +80,10 @@ concurrency:
     ${{ (github.event_name != 'issue_comment'
          && github.event_name != 'pull_request_review_comment')
         || (github.event.comment.user.type != 'Bot'
-            && contains(github.event.comment.body, '@quorum')) }}
+            && contains(github.event.comment.body, '@quorum')
+            && (github.event_name == 'pull_request_review_comment'
+                || contains(github.event.comment.body, '/review')
+                || contains(github.event.comment.body, '/criteria'))) }}
 
 permissions:
   contents: read

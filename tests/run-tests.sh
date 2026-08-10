@@ -918,11 +918,25 @@ QW="$ROOT/.github/workflows/quorum-review.yml"
 if grep -q "cancel-in-progress: *true" "$QW"; then
   echo "FAIL: quorum cancel-in-progress is bare true — the review will cancel itself"; FAIL=$((FAIL+1));
 else echo "ok: quorum cancel-in-progress is an expression"; PASS=$((PASS+1)); fi
-if grep -q "comment.user.type != 'Bot'" "$QW" \
-   && grep -q "contains(github.event.comment.body, '@quorum')" "$QW" \
-   && sed -n '/^concurrency:/,/^permissions:/p' "$QW" | grep -q "github.event_name != 'issue_comment'"; then
-  echo "ok: cancel-in-progress guards both the bot loop and ordinary human comments"; PASS=$((PASS+1));
-else echo "FAIL: cancel-in-progress is missing a guard (bot loop, or @quorum-less comments)"; FAIL=$((FAIL+1)); fi
+# SCOPED to the concurrency block. The first version of this test grepped the whole
+# file — and `comment.user.type != 'Bot'` also appears twice in the job's `if:`, so it
+# passed whether or not the concurrency expression still had it. A test that cannot
+# observe the thing it names is the failure mode this repo keeps producing; caught by
+# both reviewers on #53.
+CONC="$(sed -n '/^concurrency:/,/^permissions:/p' "$QW")"
+miss=""
+printf '%s' "$CONC" | grep -q "comment.user.type != 'Bot'" || miss="$miss bot-loop"
+printf '%s' "$CONC" | grep -q "github.event_name != 'issue_comment'" || miss="$miss non-comment-events"
+printf '%s' "$CONC" | grep -q "contains(github.event.comment.body, '/review')" || miss="$miss command-form"
+if [ -z "$miss" ]; then
+  echo "ok: cancel-in-progress guards the bot loop, plain comments, and bare @quorum mentions"; PASS=$((PASS+1));
+else echo "FAIL: cancel-in-progress missing guard(s):$miss"; FAIL=$((FAIL+1)); fi
+# It must stay no BROADER than the job's `if:` — a run that gets skipped must never be
+# able to cancel a real review. Both key on the same command forms.
+if printf '%s' "$CONC" | grep -q "'/criteria'" \
+   && sed -n '/^  review:/,/runs-on:/p' "$QW" | grep -q "@quorum /criteria"; then
+  echo "ok: concurrency and the job condition key on the same commands"; PASS=$((PASS+1));
+else echo "FAIL: concurrency and the job condition have drifted apart"; FAIL=$((FAIL+1)); fi
 # The fork guard runs before anything is cloned or any credential is minted.
 if [ "$(grep -n 'Refuse a fork' "$QW" | cut -d: -f1)" \
      -lt "$(grep -n 'actions/checkout@' "$QW" | head -1 | cut -d: -f1)" ]; then
