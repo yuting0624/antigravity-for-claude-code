@@ -55,7 +55,6 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   credits do not apply to accounts signed in through a Google Cloud project or ADC.
   `/model`, `/effort` and `/skills` all return data on the same setup, which is what made
   the probe above possible.
-
 - **The suite had a false-negative construct in 25 assertions, and this release woke it
   up.** `printf '%s' "$x" | grep -q PAT` is the shape fixed in 0.21.1 and explained in a
   comment in this very file: `grep -q` exits at the first match and closes the pipe, the
