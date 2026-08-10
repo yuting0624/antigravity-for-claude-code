@@ -938,11 +938,12 @@ allow_out="$(allow_doctor 1.1.10 '"command(#\ta)"')"
 if has 'matches EVERY command' "$allow_out"; then
   echo "ok: a tab inside a rule does not lose its class"; PASS=$((PASS+1));
 else echo "FAIL: a tab in the rule text dropped the zero-command-word consequence"; FAIL=$((FAIL+1)); fi
-# A newline splits one finding across two lines. The reader drops the orphan, so nothing
-# looks wrong on the findings themselves — but the COUNT is taken from the line count, so
-# the header promises more entries than it goes on to name. Assert the two agree; the
-# earlier version of this test asserted an empty reason instead, and mutation showed that
-# can no longer happen (the reader guards it), so it was pinning nothing.
+# A newline splits one finding across two lines, and the two orderings fail differently:
+# with the entry LAST the orphan has no rule text and the reader drops it, leaving a count
+# that promises more entries than it names; with the entry FIRST the orphan keeps rule text
+# and prints as a finding with no reason at all. One assertion cannot see both, which is
+# what the reviewers caught — an earlier pass here dropped the empty-reason check after
+# mutating only the escaping, and a full revert of the ordering then went unnoticed.
 allow_out="$(allow_doctor 1.1.11 '"write_file(<dir>)\nwrite_file(/x)"')"
 claimed="$(printf '%s' "$allow_out" | sed -n 's/.*permissions.allow: \([0-9]*\) entry.*/\1/p')"
 # Scope to the findings block: doctor's own prose uses em dashes all over the output.
@@ -950,6 +951,9 @@ listed="$(printf '%s' "$allow_out" | sed -n '/permissions.allow: /,/an entry agy
 if [ "${claimed:-0}" = "$listed" ]; then
   echo "ok: a newline inside a rule does not inflate the reported count"; PASS=$((PASS+1));
 else echo "FAIL: header claims $claimed entries but names $listed"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$allow_out" | grep -qE '^ +[^ ]+ — *$'; then
+  echo "FAIL: a newline in a rule produced a finding with no reason"; FAIL=$((FAIL+1));
+else echo "ok: a newline inside a rule leaves no reasonless finding"; PASS=$((PASS+1)); fi
 
 # The three shapes upstream names, all claimed in the CHANGELOG and none previously
 # exercised here — the "claim not backed by a test" gap this release keeps closing.

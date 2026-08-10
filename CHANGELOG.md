@@ -144,8 +144,13 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   decides whether the security consequence prints at all. A newline was worse: it split one
   finding across two lines, and the reader dropped the orphan while the count still counted
   it, so the header promised more entries than it named. Class goes first now and the entry
-  is escaped. Both pinned by tests; the first attempt at the newline test asserted an empty
-  reason, which mutation showed the reader already guards against — it was pinning nothing.
+  is escaped. The two orderings fail *differently*, and one assertion cannot see both: with
+  the entry last the orphan line has no rule text, the reader drops it, and only the count
+  is wrong; with the entry first the orphan keeps rule text and prints as a finding with no
+  reason. An earlier pass here dropped the empty-reason check after mutating only the
+  escaping and concluding it pinned nothing — reverting the *ordering* then went unnoticed,
+  which both reviewers caught. Both assertions are in, each verified against the mutation
+  the other misses.
 - **And the exit-15 message, a `.sh`, was missed by the sweep that fixed the same overclaim
   in five `.md` files.** It told anyone who reached it that "an entry agy cannot parse
   grants nothing (and before agy 1.1.11 granted everything)" — handing the command-rule

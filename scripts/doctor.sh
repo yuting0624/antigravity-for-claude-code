@@ -93,7 +93,7 @@ sys.exit(0 if n else 1)
 }
 
 # Report `permissions.allow` entries agy cannot use as written. Prints one
-# TAB-separated `<entry>\t<reason>\t<class>` line each and returns 0 when any were found.
+# TAB-separated `<class>\t<reason>\t<entry>` line each and returns 0 when any were found.
 #
 # The class matters because the CONSEQUENCE is not shared. `zerowords` is the specific
 # thing agy 1.1.11 fixed — a `command(...)` rule naming no command, which used to match
