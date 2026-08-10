@@ -38,9 +38,12 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   risk class on the one file that is the only restriction on what the delegate subagent may
   run, and change one already tells the caller how to fix it.
 - Verified the block set did not move: 22 representative payloads produce identical verdicts
-  before and after, and only the three intended whitespace cases flip. 19 new tests, all
-  confirmed to fail against the previous gate (11 of them) or to pin behaviour that must not
-  regress.
+  before and after, and only the three intended whitespace cases flip. **23 new tests**
+  (191 → 214): 11 fail against the gate as it was, 5 fail against this change's own first
+  attempt, and the rest pin behaviour that must not regress — an internal newline, a newline
+  after an unquoted pipe, an unbalanced quote, and an escaped backslash followed by a bare
+  newline (which is *not* a line continuation, and which the first version of that test got
+  wrong).
 
 ## 0.22.2
 - **Correction: `--yolo` is not the only way to grant a headless write, and we said it was
