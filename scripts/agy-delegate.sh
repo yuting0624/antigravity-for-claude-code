@@ -253,7 +253,7 @@ if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this — but <dir> is a placeholder, and agy-doctor will tell you whether yours actually parses. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi

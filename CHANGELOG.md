@@ -96,7 +96,7 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   without allowing that the rule *is* the problem: "if a rule is ALREADY in that file and
   you are still reading this, suspect the rule: run `agy-doctor`". Same caveat added to
   `agents/antigravity-delegate.md` and `commands/delegate.md`, the two operational files
-  consulted while building a delegation call.
+  consulted while building a delegation call. The pre-run write nudge got the short half only — `<dir>` is a placeholder, `agy-doctor` will say whether yours parses — because that one fires on every write-looking task, while the diagnosis belongs where the failure is.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
