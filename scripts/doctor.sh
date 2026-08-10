@@ -130,10 +130,12 @@ PREFIX = {"time", "!", "{", "}", "[[", "]]", "if", "then", "elif", "else", "fi",
           "case", "esac", "for", "select", "while", "until", "do", "done", "in",
           "function", "coproc"}
 
-# A placeholder is the <...> SHAPE, not a bare angle bracket. Matching either character
-# anywhere would misread a rule carrying a literal redirect or comparison —
-# command(echo hi > /tmp/f) — as a template someone forgot to fill in.
-PLACEHOLDER = re.compile(r"<[^<>]*>")
+# A placeholder is the <...> shape AND placeholder-shaped content: one unbroken token,
+# no whitespace. A bare angle bracket is a literal redirect — command(echo hi > /tmp/f) —
+# and so is a PAIR of them, command(sort < in > out), where everything between the two
+# brackets is a filename rather than a template. Requiring an unbroken token separates
+# <dir> and <path/to/repo> from both.
+PLACEHOLDER = re.compile(r"<[A-Za-z0-9_./\-]+>")
 
 bad = []
 for e in allow:

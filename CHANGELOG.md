@@ -56,6 +56,25 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   `/model`, `/effort` and `/skills` all return data on the same setup, which is what made
   the probe above possible.
 
+- **The suite had a false-negative construct in 25 assertions, and this release woke it
+  up.** `printf '%s' "$x" | grep -q PAT` is the shape fixed in 0.21.1 and explained in a
+  comment in this very file: `grep -q` exits at the first match and closes the pipe, the
+  writer dies of SIGPIPE (141), and `set -o pipefail` marks the whole pipeline failed — so
+  the assertion reads "not found" while the text is right there. The window is whatever the
+  writer still has to emit *after* the matched line, which is why it survives review and
+  why adding output below a match can revive it: the 1.1.9 version-gate assertion started
+  failing 1–4 times in 8 concurrent runs on this branch and never on master.
+  Diagnosed rather than guessed. Instrumenting the *test* made it vanish (it changes the
+  timing), so the trace went inside `doctor` instead: `mktemp` never failed and `AGY_VER`
+  was never empty, which left only the assertion misreading output that had in fact been
+  printed. All 25 now use a `case`-based `has()` — same test, no second process, no pipe —
+  and the five `sed … | grep -q` source scans give `grep` a process substitution instead,
+  so `sed`'s death is no longer `pipefail`'s business. Those five failed **silently**: a
+  false negative there reads as "the property holds", and among them are the guards for
+  the delegate wrapper's `--help` probe, `agy_guard`'s pipe rule, and the `sort -V`
+  dependency. 24 consecutive clean runs at the concurrency that reproduced it; each
+  converted scan re-checked by mutation.
+
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
   `--model` and `--effort` being *ignored in headless `-p`* — the flag was applied after

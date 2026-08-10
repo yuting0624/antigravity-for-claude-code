@@ -142,7 +142,7 @@ check "json mode: stdout carries the response text (not the envelope)" 0 "$rc" "
 # the first match, `agy --help` can die of SIGPIPE, and under `set -o pipefail` the probe
 # silently reads as "unsupported" -> JSON mode off with no AGY_USAGE, indistinguishable
 # from "no delegation happened". Observed at ~75% failure on a loaded container.
-if sed 's/#.*//' "$DELEGATE" | grep -qE 'agy --help[^|]*\| *grep'; then
+if grep -qE 'agy --help[^|]*\| *grep' <(sed 's/#.*//' "$DELEGATE"); then
   echo "FAIL: capability probe pipes agy --help into grep (SIGPIPE race under pipefail)"; FAIL=$((FAIL+1));
 else echo "ok: capability probe avoids the grep pipe (no SIGPIPE race)"; PASS=$((PASS+1)); fi
 # Under load the probe must still be deterministic: run the real gate shape 20x.
@@ -161,7 +161,7 @@ else echo "FAIL: capability probe flaked $probe_off/20 times"; FAIL=$((FAIL+1));
 # unguarded `agy` invocation left: the timeout resolver used to be initialised
 # after it. A hang here is not hypothetical — doctor's own MCP hint documents a
 # blocking mode that survives the issue-37 fix.
-if sed 's/#.*//' "$DELEGATE" | grep -qE '"\$TO_CMD"[^|]*agy --help'; then
+if grep -qE '"\$TO_CMD"[^|]*agy --help' <(sed 's/#.*//' "$DELEGATE"); then
   echo "ok: the --help capability probe is wall-clock bounded"; PASS=$((PASS+1));
 else echo "FAIL: --help probe runs unguarded (no timeout)"; FAIL=$((FAIL+1)); fi
 if [ "$(sed 's/#.*//' "$DELEGATE" | grep -n 'TO_CMD="\$(timeout_cmd' | cut -d: -f1)" \
@@ -176,10 +176,10 @@ else echo "FAIL: TO_CMD resolved after the --help probe — the guard is a no-op
 # only fix is to not use a pipe, so guard the shape rather than the symptom —
 # a hang cannot be asserted on cheaply, and the next refactor is where it comes
 # back. Both the main call and the --help probe were affected.
-if sed 's/#.*//' "$DELEGATE" | grep -qE '=[[:space:]]*"?\$\((\$?[A-Za-z_"]*TO_CMD"?[^)]*)?[[:space:]]*agy[[:space:]]'; then
+if grep -qE '=[[:space:]]*"?\$\((\$?[A-Za-z_"]*TO_CMD"?[^)]*)?[[:space:]]*agy[[:space:]]' <(sed 's/#.*//' "$DELEGATE"); then
   echo "FAIL: agy captured through a command substitution (issue #37 pipe hang)"; FAIL=$((FAIL+1));
 else echo "ok: agy output is never captured through a pipe (issue #37)"; PASS=$((PASS+1)); fi
-if sed 's/#.*//' "$ROOT/scripts/doctor.sh" | grep -qE '^[[:space:]]*(agy|"\$TO_CMD")[^>|]*$' \
+if grep -qE '^[[:space:]]*(agy|"\$TO_CMD")[^>|]*$' <(sed 's/#.*//' "$ROOT/scripts/doctor.sh") \
    && ! grep -q 'cat "\$f"' "$ROOT/scripts/doctor.sh"; then
   echo "FAIL: doctor's agy_guard writes to the caller's pipe (issue #37)"; FAIL=$((FAIL+1));
 else echo "ok: doctor's agy_guard redirects to a file, cat is the only pipe writer"; PASS=$((PASS+1)); fi
@@ -208,7 +208,7 @@ check "the file form returns against the same stub" 0 "$?" "PONG" "$mcp_out"
 if [ -z "$out" ]; then
   echo "FAIL: \$out is empty at the envelope check — the assertion below proves nothing"; FAIL=$((FAIL+1));
 else echo "ok: \$out still holds the json_ok reply at the envelope check"; PASS=$((PASS+1)); fi
-if printf '%s' "$out" | grep -q 'conversation_id'; then
+if has 'conversation_id' "$out"; then
   echo "FAIL: json envelope leaked to stdout"; FAIL=$((FAIL+1));
 else echo "ok: json envelope does not leak to stdout"; PASS=$((PASS+1)); fi
 err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
@@ -365,7 +365,7 @@ else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
 # with no flag, and this warning fired immediately before one that succeeded.
 out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1)
 check "write warning names the permissions.allow route" 0 0 "permissions.allow" "$out"
-if printf '%s' "$out" | grep -q 'NOT write to your workspace without it'; then
+if has 'NOT write to your workspace without it' "$out"; then
   echo "FAIL: warning still asserts --yolo is required for a write"; FAIL=$((FAIL+1));
 else echo "ok: warning no longer claims --yolo is the only write grant"; PASS=$((PASS+1)); fi
 # Same correction on the exit-15 path — where someone lands after being denied.
@@ -680,6 +680,17 @@ if printf '%s' "$out" | grep -q "tier model present: Gemini 3.5 Flash (High)"; t
   echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
 
+# Substring assertion with NO pipeline. `printf '%s' "$x" | grep -q PAT` is the shape
+# that has now bitten this suite three times: grep -q exits at the first match and closes
+# the pipe, the writer dies of SIGPIPE (141), and `set -o pipefail` (line 8) marks the
+# whole pipeline failed — so the assertion reads "not found" while the text is right
+# there. It is load- and length-sensitive, which is why it survives review: the window is
+# whatever the writer still has to emit AFTER the matched line, so appending output
+# anywhere below the match can wake it up. That is exactly how 0.22.5 revived it here
+# (3 failures in 8 concurrent runs; a trace inside doctor proved the warning WAS printed).
+# `case` does the same test with no second process and no pipe.
+has() { case "$2" in *"$1"*) return 0 ;; *) return 1 ;; esac; }
+
 echo "== doctor.sh agy-version gate (--tier is inert below 1.1.10) =="
 # agy ignored --model/--effort in headless `-p` until 1.1.10: the flag was applied after
 # model configuration had initialised, so the run silently fell back to the persisted
@@ -695,19 +706,19 @@ ver_doctor() { # $1 = version the stub reports; echoes doctor's output
   chmod +x "$d/agy"
   PATH="$d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1
 }
-if printf '%s' "$(ver_doctor 1.1.9)" | grep -q 'ignores --model'; then
+if has 'ignores --model' "$(ver_doctor 1.1.9)"; then
   echo "ok: doctor warns that --tier is inert on agy 1.1.9"; PASS=$((PASS+1));
 else echo "FAIL: no warning on agy 1.1.9 — tier selection is silently doing nothing"; FAIL=$((FAIL+1)); fi
 # 1.1.10 is the fix, and a naive string compare puts it BELOW 1.1.9 — the boundary is
 # the whole point of the check.
-if printf '%s' "$(ver_doctor 1.1.10)" | grep -q 'ignores --model'; then
+if has 'ignores --model' "$(ver_doctor 1.1.10)"; then
   echo "FAIL: doctor warns on 1.1.10, which is the version that fixed it"; FAIL=$((FAIL+1));
 else echo "ok: no warning on agy 1.1.10 (string compare would have got this wrong)"; PASS=$((PASS+1)); fi
-if printf '%s' "$(ver_doctor 1.2.0)" | grep -q 'ignores --model'; then
+if has 'ignores --model' "$(ver_doctor 1.2.0)"; then
   echo "FAIL: doctor warns on 1.2.0"; FAIL=$((FAIL+1));
 else echo "ok: no warning on a later minor (1.2.0)"; PASS=$((PASS+1)); fi
 # An unparseable version must not produce a scary warning on a build we cannot judge.
-if printf '%s' "$(ver_doctor dev-local)" | grep -q 'ignores --model'; then
+if has 'ignores --model' "$(ver_doctor dev-local)"; then
   echo "FAIL: doctor warns on an unparseable version"; FAIL=$((FAIL+1));
 else echo "ok: unparseable version is left alone"; PASS=$((PASS+1)); fi
 # The gate must not depend on `sort -V`. Where that is missing the command substitution
@@ -716,7 +727,7 @@ else echo "ok: unparseable version is left alone"; PASS=$((PASS+1)); fi
 # flagged the dependency; this pins the property rather than the implementation.
 # Strip comments first: the replacement explains WHY it avoids `sort -V`, and an
 # unstripped grep matches that sentence and reports the dependency it removed.
-if sed 's/#.*//' "$ROOT/scripts/doctor.sh" | grep -q 'sort -V'; then
+if grep -q 'sort -V' <(sed 's/#.*//' "$ROOT/scripts/doctor.sh"); then
   echo "FAIL: doctor's version gate depends on sort -V (absent on some shells)"; FAIL=$((FAIL+1));
 else echo "ok: version gate does not depend on sort -V"; PASS=$((PASS+1)); fi
 brk="$TMP/nosort"; mkdir -p "$brk"; printf '#!/bin/sh\nexit 127\n' > "$brk/sort"; chmod +x "$brk/sort"
@@ -731,7 +742,7 @@ chmod +x "$d/agy"
 # failed — so the assertion reads as "no warning" while the warning is right there. This
 # is the 0.21.1 bug, in the file whose tests guard against it.
 nosort_out="$(PATH="$brk:$d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1)"
-if printf '%s' "$nosort_out" | grep -q 'ignores --model'; then
+if has 'ignores --model' "$nosort_out"; then
   echo "ok: the warning still fires with sort unusable"; PASS=$((PASS+1));
 else echo "FAIL: a broken sort silences the version gate"; FAIL=$((FAIL+1)); fi
 
@@ -764,12 +775,12 @@ if [ -f "$TMP/agyprobe/probed" ]; then
 else echo "FAIL: doctor never asked agy which model it would use"; FAIL=$((FAIL+1)); fi
 # The reply is a tab-separated record; doctor must read the slug and match it against a
 # tier configured as a DISPLAY NAME, which is the comparison that made 2b necessary.
-if printf '%s' "$probe_out" | grep -q 'model takes effect'; then
+if has 'model takes effect' "$probe_out"; then
   echo "ok: probe confirms --model took effect across slug/display-name forms"; PASS=$((PASS+1));
 else echo "FAIL: probe did not confirm a model agy echoed back verbatim"; FAIL=$((FAIL+1)); fi
 # The case the probe exists for: agy answers with something else entirely.
 probe_out="$(probe_doctor 1.1.11 "gemini-3.6-flash-low	Gemini 3.6 Flash (Low)")"
-if printf '%s' "$probe_out" | grep -q 'does NOT take effect'; then
+if has 'does NOT take effect' "$probe_out"; then
   echo "ok: probe catches agy running a different model than asked for"; PASS=$((PASS+1));
 else echo "FAIL: doctor accepted a model it did not ask for"; FAIL=$((FAIL+1)); fi
 # No answer is not evidence of breakage — an older build than the version claims, a
@@ -779,7 +790,7 @@ probe_out="$(probe_doctor 1.1.11 "")"
 # "takes effect" and "does NOT take effect", so a pattern copied from one of them
 # silently stops guarding the other. Verified by mutation — `take effect` passed this
 # test with the empty-answer branch removed and the confirmation firing on nothing.
-if printf '%s' "$probe_out" | grep -q 'effect'; then
+if has 'effect' "$probe_out"; then
   echo "FAIL: doctor draws a conclusion from an empty probe answer"; FAIL=$((FAIL+1));
 else echo "ok: an empty probe answer produces no verdict either way"; PASS=$((PASS+1)); fi
 
@@ -804,28 +815,28 @@ allow_doctor() { # $1 = agy version, $2 = contents of the "allow" array
 # upstream's own example of a rule that tokenizes to zero command words: `time` is a
 # shell reserved word that prefixes a command without being one.
 allow_out="$(allow_doctor 1.1.11 '"command(time)"')"
-if printf '%s' "$allow_out" | grep -q 'command(time)'; then
+if has 'command(time)' "$allow_out"; then
   echo "ok: doctor names command(time) as unusable"; PASS=$((PASS+1));
 else echo "FAIL: doctor passed a zero-command-word allow rule"; FAIL=$((FAIL+1)); fi
 # The placeholder is ours: docs and the exit-15 message both say write_file(<dir>).
 allow_out="$(allow_doctor 1.1.11 '"write_file(<dir>)"')"
-if printf '%s' "$allow_out" | grep -q 'unsubstituted placeholder'; then
+if has 'unsubstituted placeholder' "$allow_out"; then
   echo "ok: doctor catches the write_file(<dir>) placeholder left as written"; PASS=$((PASS+1));
 else echo "FAIL: doctor passed the literal placeholder from its own documentation"; FAIL=$((FAIL+1)); fi
 # A false positive here sends someone to edit a rule that was always fine, so the
 # well-formed case is pinned as hard as the broken ones.
 allow_out="$(allow_doctor 1.1.11 '"command(agy)","command(npm view)","write_file(/tmp/x)"')"
-if printf '%s' "$allow_out" | grep -q 'permissions.allow:'; then
+if has 'permissions.allow:' "$allow_out"; then
   echo "FAIL: doctor warns about well-formed allow rules"; FAIL=$((FAIL+1));
 else echo "ok: well-formed allow rules produce no warning"; PASS=$((PASS+1)); fi
 # Same broken entry, opposite consequence either side of the fix. Reporting the wrong
 # one is worse than reporting none: "matches nothing" reads as harmless.
 allow_out="$(allow_doctor 1.1.10 '"command(time)"')"
-if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
+if has 'matches EVERY command' "$allow_out"; then
   echo "ok: below 1.1.11 doctor reports the auto-approve-everything consequence"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not report that the rule auto-approves everything on 1.1.10"; FAIL=$((FAIL+1)); fi
 allow_out="$(allow_doctor 1.1.11 '"command(time)"')"
-if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
+if has 'matches EVERY command' "$allow_out"; then
   echo "FAIL: doctor reports the pre-1.1.11 consequence on 1.1.11"; FAIL=$((FAIL+1));
 else echo "ok: on 1.1.11 doctor reports the grant as absent, not as over-broad"; PASS=$((PASS+1)); fi
 # ...and the consequence belongs to the REASON, not to "something was flagged". Only a
@@ -833,18 +844,29 @@ else echo "ok: on 1.1.11 doctor reports the grant as absent, not as over-broad";
 # write_file() never did. Both reviewers on #56 caught doctor attaching the security
 # claim to every finding, which put it in front of people it does not describe.
 allow_out="$(allow_doctor 1.1.10 '"write_file(<dir>)"')"
-if printf '%s' "$allow_out" | grep -q 'matches EVERY command'; then
+if has 'matches EVERY command' "$allow_out"; then
   echo "FAIL: doctor claims a write_file placeholder auto-approves every command"; FAIL=$((FAIL+1));
 else echo "ok: the match-everything consequence is confined to zero-command-word rules"; PASS=$((PASS+1)); fi
-if printf '%s' "$allow_out" | grep -q 'grants nothing'; then
+if has 'grants nothing' "$allow_out"; then
   echo "ok: an unusable rule is still reported as granting nothing"; PASS=$((PASS+1));
 else echo "FAIL: doctor flagged a rule without saying the grant is absent"; FAIL=$((FAIL+1)); fi
 # The placeholder test is the <...> SHAPE. Matching a bare angle bracket anywhere would
 # misread a literal redirect as a template nobody filled in.
 allow_out="$(allow_doctor 1.1.11 '"command(echo hi > /tmp/f)"')"
-if printf '%s' "$allow_out" | grep -q 'unsubstituted placeholder'; then
+if has 'unsubstituted placeholder' "$allow_out"; then
   echo "FAIL: a literal redirect is misread as an unsubstituted placeholder"; FAIL=$((FAIL+1));
 else echo "ok: a literal > in a rule is not treated as a placeholder"; PASS=$((PASS+1)); fi
+# TWO literal redirects put a < before a >, so "the <...> shape" is not enough on its own
+# — everything between them is a filename. Caught on #56 after the first narrowing.
+allow_out="$(allow_doctor 1.1.11 '"command(sort < in > out)"')"
+if has 'unsubstituted placeholder' "$allow_out"; then
+  echo "FAIL: a pair of literal redirects reads as a placeholder"; FAIL=$((FAIL+1));
+else echo "ok: < ... > spanning a redirect pair is not a placeholder"; PASS=$((PASS+1)); fi
+# ...while the shapes the docs actually ship still have to be caught.
+allow_out="$(allow_doctor 1.1.11 '"write_file(<path/to/repo>)"')"
+if has 'unsubstituted placeholder' "$allow_out"; then
+  echo "ok: a path-shaped placeholder is still caught"; PASS=$((PASS+1));
+else echo "FAIL: narrowing the placeholder test lost <path/to/repo>"; FAIL=$((FAIL+1)); fi
 
 echo "== doctor.sh stdio-MCP detection (issue #37 diagnostic) =="
 # The hint is diagnostic-only, so getting it wrong fails SILENTLY — it just never
