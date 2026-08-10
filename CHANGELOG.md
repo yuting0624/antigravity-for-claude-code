@@ -104,6 +104,19 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   `zerowords`). Fixing the output and leaving the sentence that produced it just relocates
   the error, so all five now say the placeholder grants nothing on any version and name
   `command(...)` explicitly for the part that is version-sensitive.
+- **The remaining 24 piped assertions are converted too, because the direction that was
+  left is the dangerous one.** Review flagged them as a follow-up on the grounds that they
+  are positive matches, where a SIGPIPE produces a noisy false FAIL. A scan says the
+  opposite: 17 of them are *negative* assertions, and SIGPIPE is only possible when
+  `grep -q` finds a match and exits early — which for a negative assertion is exactly the
+  moment it is supposed to fail. They cannot flake in CI, because they only break when
+  they have a real bug to report. Each becomes `grep … <<<"$x"`: a here-string has no
+  writer process to kill and the pipeline is one command, so `pipefail` has nothing to
+  poison, and `-F` / `-i` / `-E` / BRE semantics survive untouched — unlike a rewrite to
+  `case`. Verified by mutation on both the plain and the `-qE` alternation forms.
+  The first pass at this shipped a regex that truncated a grep pattern at a `)` inside it,
+  producing valid shell that searched for the wrong string and hung a polling loop. Caught
+  because the suite stopped completing, not because anything reported it.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed

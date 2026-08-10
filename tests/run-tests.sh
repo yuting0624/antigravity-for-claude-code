@@ -123,7 +123,7 @@ done
 check() { # desc  expected_rc  actual_rc  [substr]  [actual_out]
   local desc="$1" erc="$2" arc="$3" sub="${4:-}" out="${5:-}"
   if [ "$arc" != "$erc" ]; then echo "FAIL: $desc (rc want $erc got $arc)"; FAIL=$((FAIL+1)); return; fi
-  if [ -n "$sub" ] && ! printf '%s' "$out" | grep -qF -- "$sub"; then
+  if [ -n "$sub" ] && ! grep -qF -- "$sub" <<<"$out"; then
     echo "FAIL: $desc (missing '$sub' in output)"; FAIL=$((FAIL+1)); return; fi
   echo "ok: $desc"; PASS=$((PASS+1))
 }
@@ -264,10 +264,10 @@ out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_quota "$DELEGATE" "hi" 2>&1); rc=$?
 check "json mode: structured quota error -> exit 10" 10 "$rc" "QUOTA_EXHAUSTED" "$out"
 # opt-out and capability fallback both take the plain-text path (no AGY_USAGE)
 err=$(STUB_JSON_CAPABLE=1 STUB_MODE=text CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT=off "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$err" | grep -q "AGY_USAGE"; then echo "FAIL: structured_output=off still used json"; FAIL=$((FAIL+1));
+if grep -q "AGY_USAGE" <<<"$err"; then echo "FAIL: structured_output=off still used json"; FAIL=$((FAIL+1));
 else echo "ok: structured_output=off falls back to plain text"; PASS=$((PASS+1)); fi
 err=$(STUB_JSON_CAPABLE=0 STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$err" | grep -q "AGY_USAGE"; then echo "FAIL: used json against an agy that lacks the flag"; FAIL=$((FAIL+1));
+if grep -q "AGY_USAGE" <<<"$err"; then echo "FAIL: used json against an agy that lacks the flag"; FAIL=$((FAIL+1));
 else echo "ok: falls back when agy has no --output-format (pre-1.1.8)"; PASS=$((PASS+1)); fi
 
 # --- AGY_USAGE_LOG side channel ---------------------------------------------
@@ -306,7 +306,7 @@ check "unwritable AGY_USAGE_LOG is non-fatal" 0 "$rc" "" "$out"
 # and leaks a bash redirection error on every call. Asserting only on the exit code
 # misses that entirely — check stderr itself.
 err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok AGY_USAGE_LOG=/nonexistent-dir/x.log "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$err" | grep -qiE 'No such file or directory|Permission denied'; then
+if grep -qiE 'No such file or directory|Permission denied' <<<"$err"; then
   echo "FAIL: unwritable AGY_USAGE_LOG leaks a redirection error to stderr"; FAIL=$((FAIL+1));
 else echo "ok: unwritable AGY_USAGE_LOG is silent, not just non-fatal"; PASS=$((PASS+1)); fi
 # Off by default: no file is created when the option is unset.
@@ -387,13 +387,13 @@ WARN='write grant'
 out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc=$?
 check "write prompt w/o --yolo -> warns" 0 "$rc" "$WARN" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=$?
-if printf '%s' "$out" | grep -qF "$WARN"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
+if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "implement the parser module" 2>&1); rc=$?
-if printf '%s' "$out" | grep -qF "$WARN"; then echo "ok: --mode accept-edits still warns (soft-denied on 1.1.3)"; PASS=$((PASS+1));
+if grep -qF "$WARN" <<<"$out"; then echo "ok: --mode accept-edits still warns (soft-denied on 1.1.3)"; PASS=$((PASS+1));
 else echo "FAIL: no warning with --mode accept-edits (should warn since 1.1.3)"; FAIL=$((FAIL+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
-if printf '%s' "$out" | grep -qF "$WARN"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
+if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
 # The warning must NOT claim --yolo is the only way in. Confirmed on agy 1.1.9 by a
 # controlled A/B (#37): a permissions.allow write_file(<dir>) rule grants headless writes
@@ -427,10 +427,10 @@ check "usage documents --digest" 0 "$rc" "--digest" "$out"
 out=$(STUB_MODE=big "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
 check "dump-sized output -> raw-dump note on stderr" 0 "$rc" "raw dump" "$out"
 out=$(STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired on a small reply"; FAIL=$((FAIL+1));
+if grep -q "raw dump" <<<"$out"; then echo "FAIL: digest guard fired on a small reply"; FAIL=$((FAIL+1));
 else echo "ok: digest guard silent on a small reply"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=big CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS=0 "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired with digest_warn_chars=0"; FAIL=$((FAIL+1));
+if grep -q "raw dump" <<<"$out"; then echo "FAIL: digest guard fired with digest_warn_chars=0"; FAIL=$((FAIL+1));
 else echo "ok: digest_warn_chars=0 disables the guard"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=text CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS=5 "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
 check "custom digest_warn_chars threshold respected" 0 "$rc" "raw dump" "$out"
@@ -439,7 +439,7 @@ check "custom digest_warn_chars threshold respected" 0 "$rc" "raw dump" "$out"
 out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /mnt/c/proj --print-command "hi" 2>&1); rc=$?
 check "WSL + /mnt --dir -> slow-mount note" 0 "$rc" "9p bridge" "$out"
 out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /home/u/proj --print-command "hi" 2>&1); rc=$?
-if printf '%s' "$out" | grep -q "9p bridge"; then echo "FAIL: slow-mount note fired for a Linux-FS --dir"; FAIL=$((FAIL+1));
+if grep -q "9p bridge" <<<"$out"; then echo "FAIL: slow-mount note fired for a Linux-FS --dir"; FAIL=$((FAIL+1));
 else echo "ok: no slow-mount note for a Linux-FS --dir"; PASS=$((PASS+1)); fi
 
 echo "== cloud-debug.sh (Cloud Run log digest engine) =="
@@ -501,18 +501,18 @@ check "agy digest failure -> exit 5" 5 "$rc"
 out=$(GCLOUD_MODE=big STUB_MODE=args CLOUD_DEBUG_MAX_BYTES=50 "$CLOUD" --service svc 2>/dev/null); rc=$?
 check "byte cap -> clip NOTE handed to agy" 0 "$rc" "clipped to 50 bytes" "$out"
 check "byte cap NOTE warns the JSON is now invalid" 0 "$rc" "no longer valid JSON" "$out"
-if printf '%s' "$out" | grep -q "TAIL_SENTINEL"; then
+if grep -q "TAIL_SENTINEL" <<<"$out"; then
   echo "FAIL: payload tail not clipped (sentinel survived the cap)"; FAIL=$((FAIL+1));
 else echo "ok: payload clipped to the cap (tail dropped before agy)"; PASS=$((PASS+1)); fi
 # the cap is BYTE-based, so a multibyte (3-byte/char) payload is clipped too
 out=$(GCLOUD_MODE=bigjp STUB_MODE=args CLOUD_DEBUG_MAX_BYTES=50 "$CLOUD" --service svc 2>/dev/null); rc=$?
 check "byte cap clips a multibyte payload too" 0 "$rc" "clipped to 50 bytes" "$out"
-if printf '%s' "$out" | grep -q "TAIL_SENTINEL"; then
+if grep -q "TAIL_SENTINEL" <<<"$out"; then
   echo "FAIL: multibyte payload tail not clipped (cap counting chars, not bytes?)"; FAIL=$((FAIL+1));
 else echo "ok: multibyte payload clipped (byte-accurate cap)"; PASS=$((PASS+1)); fi
 # under the cap -> no clip NOTE (no false positives on a normal payload)
 out=$(GCLOUD_MODE=logs STUB_MODE=args "$CLOUD" --service svc 2>/dev/null); rc=$?
-if printf '%s' "$out" | grep -q "clipped to"; then
+if grep -q "clipped to" <<<"$out"; then
   echo "FAIL: clip NOTE on a payload under the cap"; FAIL=$((FAIL+1));
 else echo "ok: no clip NOTE when under the cap"; PASS=$((PASS+1)); fi
 
@@ -662,7 +662,7 @@ check "reason names the bad producer"   0 0 "left side of the pipe"   "$(gate_wh
 # does not help either — an API key is name-shaped, which is why nothing is echoed at all.
 leak_free() { # $1 = label, $2 = json command, $3 = marker that must not appear
   local why; why="$(gate_why "$2")"
-  if printf '%s' "$why" | grep -qF "$3"; then
+  if grep -qF "$3" <<<"$why"; then
     echo "FAIL: block reason leaks command text ($1)"; FAIL=$((FAIL+1));
   elif [ -z "$why" ]; then
     echo "FAIL: no reason emitted at all ($1) — the assertion below would pass for free"; FAIL=$((FAIL+1));
@@ -708,10 +708,10 @@ echo "== doctor.sh tier-model check (agy 1.1.5 slug format) =="
 # The stub's `agy models` emits slugs (gemini-3.5-flash); doctor's default tier models are
 # display names (Gemini 3.5 Flash (High)). Regression guard: doctor must still recognize them.
 out=$(bash "$ROOT/scripts/doctor.sh" 2>&1)
-if printf '%s' "$out" | grep -q "tier model not in"; then
+if grep -q "tier model not in" <<<"$out"; then
   echo "FAIL: doctor falsely warns tier model missing against slug-format agy models"; FAIL=$((FAIL+1));
 else echo "ok: doctor recognizes tier models across display-name/slug formats"; PASS=$((PASS+1)); fi
-if printf '%s' "$out" | grep -q "tier model present: Gemini 3.5 Flash (High)"; then
+if grep -q "tier model present: Gemini 3.5 Flash (High)" <<<"$out"; then
   echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
 
@@ -1091,7 +1091,7 @@ out=$("$JOB" status "$id" 2>/dev/null); rc=$?
 check "job status shows running" 0 "$rc" "running" "$out"
 
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
-  printf '%s' "$("$JOB" status "$id" 2>/dev/null)" | grep -q "state=done" && break
+  grep -q "state=done" <<<"$("$JOB" status "$id" 2>/dev/null)" && break
   sleep 0.5
 done
 out=$("$JOB" result "$id" 2>/dev/null); rc=$?
@@ -1100,21 +1100,21 @@ check "job result -> output when done" 0 "$rc" "STUB_OK" "$out"
 cid=$(STUB_MODE=text STUB_SLEEP=10 "$JOB" start --tier flash "long task" 2>/dev/null)
 sleep 0.5; "$JOB" cancel "$cid" >/dev/null 2>&1; sleep 0.5
 out=$("$JOB" status "$cid" 2>/dev/null)
-if printf '%s' "$out" | grep -q "state=running"; then
+if grep -q "state=running" <<<"$out"; then
   echo "FAIL: job cancel (still running)"; FAIL=$((FAIL+1))
 else echo "ok: job cancel stops it"; PASS=$((PASS+1)); fi
 
 # structured exit code surfaces through the job layer (quota -> rc 10 + label + signal)
 qid=$(STUB_MODE=quota "$JOB" start --tier flash "quota task" 2>/dev/null)
 for _ in 1 2 3 4 5 6 7 8; do
-  "$JOB" status "$qid" 2>/dev/null | grep -q "rc=10" && break
+  js="$("$JOB" status "$qid" 2>/dev/null)"; grep -q "rc=10" <<<"$js" && break
   sleep 0.5
 done
 out=$("$JOB" status "$qid" 2>/dev/null)
 # require the rendered rc LABEL (guards the rc-from-file fix), not just the signal line
-if printf '%s' "$out" | grep -q "rc=10: QUOTA"; then echo "ok: job renders rc=10 label"; PASS=$((PASS+1));
+if grep -q "rc=10: QUOTA" <<<"$out"; then echo "ok: job renders rc=10 label"; PASS=$((PASS+1));
 else echo "FAIL: job did not render 'rc=10: QUOTA' label (got: $out)"; FAIL=$((FAIL+1)); fi
-if printf '%s' "$out" | grep -q "QUOTA_EXHAUSTED"; then echo "ok: job shows AGY_SIGNAL"; PASS=$((PASS+1));
+if grep -q "QUOTA_EXHAUSTED" <<<"$out"; then echo "ok: job shows AGY_SIGNAL"; PASS=$((PASS+1));
 else echo "FAIL: job did not surface AGY_SIGNAL"; FAIL=$((FAIL+1)); fi
 
 echo "== CI workflow invariants =="
@@ -1128,20 +1128,20 @@ echo "== CI workflow invariants =="
 # ANY human comment kill an in-flight review (#52). It needs both guards.
 QW="$ROOT/.github/workflows/quorum-review.yml"
 CONC="$(sed -n '/^concurrency:/,/^permissions:/p' "$QW")"
-if printf '%s' "$CONC" | grep -q "cancel-in-progress: *true"; then
+if grep -q "cancel-in-progress: *true" <<<"$CONC"; then
   echo "FAIL: quorum cancel-in-progress is bare true — the review will cancel itself"; FAIL=$((FAIL+1));
 else echo "ok: quorum cancel-in-progress is an expression"; PASS=$((PASS+1)); fi
 # Cancel ONLY on a push. `cancel-in-progress: false` queues the new run rather than
 # discarding it, so nothing else ever needs to cancel — a comment or a dispatch waits its
 # turn. This is what makes the expression safe without replicating the job's `if:`.
-if printf '%s' "$CONC" | grep -q "github.event_name == 'pull_request'"; then
+if grep -q "github.event_name == 'pull_request'" <<<"$CONC"; then
   echo "ok: cancel-in-progress cancels only on a push"; PASS=$((PASS+1));
 else echo "FAIL: cancel-in-progress no longer keys on pull_request alone"; FAIL=$((FAIL+1)); fi
 # The design decision, asserted directly: the moment this expression starts reasoning
 # about WHO commented or WHAT they said, it is predicting whether the job will run — and
 # it was broader than the job's `if:` on both previous attempts (#42, #53), which is how
 # a run that gets skipped ends up cancelling a live review.
-if printf '%s' "$CONC" | grep -qE 'comment\.(body|user|author_association)'; then
+if grep -qE 'comment\.(body|user|author_association)' <<<"$CONC"; then
   echo "FAIL: concurrency inspects the comment again — it must not predict the job condition"; FAIL=$((FAIL+1));
 else echo "ok: concurrency does not try to predict whether the job will run"; PASS=$((PASS+1)); fi
 
