@@ -92,6 +92,23 @@ sys.exit(0 if n else 1)
 ' "${files[@]}" 2>/dev/null
 }
 
+# True when version $1 is strictly older than $2. Pure shell on purpose: `sort -V` is
+# not universal, and when it is missing the command substitution comes back EMPTY, the
+# comparison quietly fails, and the check it guards never fires — a version gate that
+# silently does nothing is worse than none, because it reads as a clean bill of health.
+# (macOS's own sort does support -V; BusyBox and minimal images are the risk.)
+ver_lt() {
+  local a="$1" b="$2" i x y
+  for i in 1 2 3; do
+    x="$(printf '%s' "$a" | cut -d. -f"$i")"; y="$(printf '%s' "$b" | cut -d. -f"$i")"
+    case "$x" in ''|*[!0-9]*) x=0 ;; esac
+    case "$y" in ''|*[!0-9]*) y=0 ;; esac
+    [ "$x" -lt "$y" ] && return 0
+    [ "$x" -gt "$y" ] && return 1
+  done
+  return 1                            # equal is not older
+}
+
 # True on native Windows (Git Bash/MSYS/Cygwin), NOT WSL — where headless agy hangs.
 on_windows_native() {
   case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
@@ -117,8 +134,7 @@ if command -v agy >/dev/null 2>&1; then
   case "$AGY_VER" in
     ''|*[!0-9.]*) : ;;               # unparseable (dev build, wrapper, hang) — say nothing
     *)
-      if [ "$(printf '%s\n1.1.10\n' "$AGY_VER" | sort -V | head -1)" = "$AGY_VER" ] \
-         && [ "$AGY_VER" != "1.1.10" ]; then
+      if ver_lt "$AGY_VER" 1.1.10; then
         warn "agy $AGY_VER ignores --model/--effort in headless \`-p\` (fixed in 1.1.10)"
         info "so --tier / tier_* remaps do NOT take effect — every delegation silently runs"
         info "your persisted default model instead, and nothing in the output says so."
