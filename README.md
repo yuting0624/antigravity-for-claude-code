@@ -102,9 +102,11 @@ In Claude Code:
 
 ## 🗳️ The same two models, arranged differently
 
-This plugin is one shape of Claude and Gemini working together: **conductor and executor** — judgement on one side, throughput on the other, one workflow.
+This plugin is one shape of Claude and Gemini working together: **conductor and executor** — judgement on one side, throughput on the other, one workflow. It is also the shape for people who live in a terminal.
 
-[**quorum-review**](https://github.com/yuting0624/quorum-review) is the other shape: the two as **peers**. Both read the same pull request independently, neither sees the other's output, and where they agree independently *that is the result* — only the disagreements are worth a second opinion. Both run on **one** Google Cloud credential, so no vendor API keys live in the repository. Same author as this plugin.
+[**gemini-studio-mcp**](https://github.com/yuting0624/gemini-studio-mcp) is the same thesis on the other surface: **Claude Desktop**, for the colleagues who will never open one. An MCP server rather than a CLI delegation, and the verb flips from *execute* to *ingest* — Gemini reads the recording, the PDF corpus, the internal search index, and only the digest reaches Claude. The split is not cosmetic: you can hand a developer a `--tier` flag and an `AGENTS.md`, but a business user drags a PDF into a chat window, so the routing that is explicit here is automatic there, and the cost discipline that is a documented practice here is a number printed on every response there. They also fail differently — delegated *writing* can silently not happen and has to be checked against the filesystem; delegated *reading* can quietly summarise away the one paragraph that mattered and has to be checked against citations. Same author as this plugin.
+
+[**quorum-review**](https://github.com/yuting0624/quorum-review) is the third shape: the two as **peers**. Both read the same pull request independently, neither sees the other's output, and where they agree independently *that is the result* — only the disagreements are worth a second opinion. Both run on **one** Google Cloud credential, so no vendor API keys live in the repository. Same author as this plugin.
 
 **This repo is its client zero.** It runs on every pull request opened here, alongside a Claude review — including the ones that change this plugin. Keeping the habit of not quoting numbers we haven't measured, here is what that has actually been worth:
 
