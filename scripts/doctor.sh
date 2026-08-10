@@ -180,8 +180,18 @@ for e in allow:
     if not words:
         bad.append((t, "tokenizes to zero command words", "zerowords"))
 
+# CLASS first, and the entry last with its control characters escaped. The reader splits
+# on tabs, so a rule containing one would shift every field after it — and the field that
+# would move is the class, which decides whether a security consequence gets printed. A
+# newline would be worse: it would split one finding into two lines, the second of them
+# classless. Neither is hypothetical enough to leave to chance in a file that reads
+# user-supplied JSON.
+def esc(x):
+    return (x.replace(chr(92), chr(92) * 2).replace(chr(9), chr(92) + "t")
+             .replace(chr(10), chr(92) + "n").replace(chr(13), chr(92) + "r"))
+
 for t, why, cls in bad:
-    print("%s\t%s\t%s" % (t, why, cls))
+    print("%s\t%s\t%s" % (cls, why, esc(t)))
 sys.exit(0 if bad else 1)
 ' "$1" 2>/dev/null
 }
@@ -343,7 +353,7 @@ if [ -f "$SETTINGS" ]; then
   if BAD_RULES="$(bad_allow_rules "$SETTINGS")"; then
     warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
     ZEROWORDS=0
-    while IFS="$(printf '\t')" read -r rule why cls; do
+    while IFS="$(printf '\t')" read -r cls why rule; do
       [ -n "$rule" ] || continue
       info "$rule — $why"
       [ "$cls" = zerowords ] && ZEROWORDS=1

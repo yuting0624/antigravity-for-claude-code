@@ -406,6 +406,14 @@ else echo "ok: warning no longer claims --yolo is the only write grant"; PASS=$(
 # Same correction on the exit-15 path — where someone lands after being denied.
 out=$(STUB_MODE=softdeny "$DELEGATE" "implement it" 2>&1); rc=$?
 check "exit-15 message offers the narrower grant first" 15 "$rc" "permissions.allow" "$out"
+# The message must not hand the pre-1.1.11 match-everything history to the placeholder it
+# names two sentences earlier. That history belongs to a command(...) rule naming no
+# command; a mistyped write_file() never had it, which is the distinction bad_allow_rules
+# classifies and every document now states. This file was swept for it and missed — it is
+# a .sh, and the sweep looked at documents.
+if has 'grants nothing (and before agy 1.1.11 granted everything)' "$out"; then
+  echo "FAIL: exit-15 gives an unparseable rule the command-rule history"; FAIL=$((FAIL+1));
+else echo "ok: exit-15 scopes the match-everything history to command(...)"; PASS=$((PASS+1)); fi
 
 # --mode passthrough (agy >= 1.1.0): accept-edits reaches agy; invalid mode errors early
 out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "hi" 2>/dev/null); rc=$?
@@ -920,6 +928,28 @@ allow_out="$(allow_doctor 1.1.11 '"command(grep -F <TAG> file.txt)"')"
 if has 'unsubstituted placeholder' "$allow_out"; then
   echo "FAIL: an angle-bracketed literal in a command rule reads as a placeholder"; FAIL=$((FAIL+1));
 else echo "ok: <...> inside a command rule is left alone"; PASS=$((PASS+1)); fi
+
+# A rule may contain a tab or a newline — it is user-supplied JSON. The report is
+# tab-separated, so an entry carrying one used to shift every field after it, and the
+# field that moves is the CLASS: a zero-command-word rule would be read as something else
+# and the security consequence would silently not print. Class goes first now and the
+# entry is escaped.
+allow_out="$(allow_doctor 1.1.10 '"command(#\ta)"')"
+if has 'matches EVERY command' "$allow_out"; then
+  echo "ok: a tab inside a rule does not lose its class"; PASS=$((PASS+1));
+else echo "FAIL: a tab in the rule text dropped the zero-command-word consequence"; FAIL=$((FAIL+1)); fi
+# A newline splits one finding across two lines. The reader drops the orphan, so nothing
+# looks wrong on the findings themselves — but the COUNT is taken from the line count, so
+# the header promises more entries than it goes on to name. Assert the two agree; the
+# earlier version of this test asserted an empty reason instead, and mutation showed that
+# can no longer happen (the reader guards it), so it was pinning nothing.
+allow_out="$(allow_doctor 1.1.11 '"write_file(<dir>)\nwrite_file(/x)"')"
+claimed="$(printf '%s' "$allow_out" | sed -n 's/.*permissions.allow: \([0-9]*\) entry.*/\1/p')"
+# Scope to the findings block: doctor's own prose uses em dashes all over the output.
+listed="$(printf '%s' "$allow_out" | sed -n '/permissions.allow: /,/an entry agy cannot use grants/p' | grep -c ' — ')"
+if [ "${claimed:-0}" = "$listed" ]; then
+  echo "ok: a newline inside a rule does not inflate the reported count"; PASS=$((PASS+1));
+else echo "FAIL: header claims $claimed entries but names $listed"; FAIL=$((FAIL+1)); fi
 
 # The three shapes upstream names, all claimed in the CHANGELOG and none previously
 # exercised here — the "claim not backed by a test" gap this release keeps closing.

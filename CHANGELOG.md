@@ -139,6 +139,18 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   the placeholder is never recommended. The cost is a placeholder inside a command rule
   going unflagged — a miss, which this file prefers to a false positive that sends someone
   to edit a working rule.
+- **The report is tab-separated and a rule is user-supplied JSON**, so an entry containing
+  a tab shifted every field after it — and the field that moves is the *class*, which
+  decides whether the security consequence prints at all. A newline was worse: it split one
+  finding across two lines, and the reader dropped the orphan while the count still counted
+  it, so the header promised more entries than it named. Class goes first now and the entry
+  is escaped. Both pinned by tests; the first attempt at the newline test asserted an empty
+  reason, which mutation showed the reader already guards against — it was pinning nothing.
+- **And the exit-15 message, a `.sh`, was missed by the sweep that fixed the same overclaim
+  in five `.md` files.** It told anyone who reached it that "an entry agy cannot parse
+  grants nothing (and before agy 1.1.11 granted everything)" — handing the command-rule
+  history to the `write_file(<dir>)` placeholder it had named two sentences earlier. Now
+  scoped, and pinned by a test, which is what the five documents still lack.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
