@@ -770,6 +770,24 @@ if has 'ignores --model' "$nosort_out"; then
   echo "ok: the warning still fires with sort unusable"; PASS=$((PASS+1));
 else echo "FAIL: a broken sort silences the version gate"; FAIL=$((FAIL+1)); fi
 
+echo "== embedded python is not cut short by a quote =="
+# A single quote inside `python3 -c '...'` closes the shell string. What follows is parsed
+# by bash as arguments and redirections — valid shell, so `bash -n` and shellcheck both
+# pass. The interpreter runs a TRUNCATED program, stderr goes to /dev/null as designed,
+# and the caller reads "nothing to report". A check that silently reports all-clear is the
+# failure mode this release exists to remove, and it happened here: an apostrophe in a
+# COMMENT inside bad_allow_rules disabled the validator while every negative case stayed
+# green. Only the positive cases caught it.
+#
+# The shell string ends at the FIRST quote — that part is unambiguous. What tells a real
+# end from a truncation is what the body ends WITH: a program cut off inside a comment
+# ends on a comment line, and one cut off elsewhere stops compiling. Looking for the
+# closer at the start of a line instead, as the first attempt did, false-positives on
+# hooks/nudge-delegation.sh, where it is at the end of one.
+if python3 "$HERE/check-embedded-python.py" "$ROOT"/scripts/*.sh "$ROOT"/hooks/*.sh; then
+  echo "ok: no embedded python is truncated by a stray quote"; PASS=$((PASS+1));
+else echo "FAIL: an embedded python block is cut short (it runs a partial program)"; FAIL=$((FAIL+1)); fi
+
 echo "== doctor.sh --model probe (ask agy instead of inferring from a version) =="
 # The version gate above can only INFER that --model works. agy 1.1.11 answers the
 # read-only slash commands in print mode without starting an agent turn, so doctor asks
@@ -891,6 +909,37 @@ allow_out="$(allow_doctor 1.1.11 '"write_file(<path/to/repo>)"')"
 if has 'unsubstituted placeholder' "$allow_out"; then
   echo "ok: a path-shaped placeholder is still caught"; PASS=$((PASS+1));
 else echo "FAIL: narrowing the placeholder test lost <path/to/repo>"; FAIL=$((FAIL+1)); fi
+# Partly substituted counts: the mistake is the same and so is the consequence.
+allow_out="$(allow_doctor 1.1.11 '"write_file(/repos/<name>)"')"
+if has 'unsubstituted placeholder' "$allow_out"; then
+  echo "ok: a placeholder inside an otherwise real path is caught"; PASS=$((PASS+1));
+else echo "FAIL: a partly substituted path passed"; FAIL=$((FAIL+1)); fi
+# Shape alone is not enough. A command rule can legitimately hold an angle-bracketed
+# literal, and this file would rather miss one than send someone to edit a working rule.
+allow_out="$(allow_doctor 1.1.11 '"command(grep -F <TAG> file.txt)"')"
+if has 'unsubstituted placeholder' "$allow_out"; then
+  echo "FAIL: an angle-bracketed literal in a command rule reads as a placeholder"; FAIL=$((FAIL+1));
+else echo "ok: <...> inside a command rule is left alone"; PASS=$((PASS+1)); fi
+
+# The three shapes upstream names, all claimed in the CHANGELOG and none previously
+# exercised here — the "claim not backed by a test" gap this release keeps closing.
+allow_out="$(allow_doctor 1.1.10 '"command()"')"
+if has 'matches EVERY command' "$allow_out"; then
+  echo "ok: command() is classed with the zero-command-word rules"; PASS=$((PASS+1));
+else echo "FAIL: command() did not get the zero-command-word consequence"; FAIL=$((FAIL+1)); fi
+allow_out="$(allow_doctor 1.1.10 '"()"')"
+if has 'matches EVERY command' "$allow_out"; then
+  echo "ok: a bare () is classed with the zero-command-word rules"; PASS=$((PASS+1));
+else echo "FAIL: () did not get the zero-command-word consequence"; FAIL=$((FAIL+1)); fi
+allow_out="$(allow_doctor 1.1.10 '"command(# just a note)"')"
+if has 'matches EVERY command' "$allow_out"; then
+  echo "ok: a comment-only rule is classed with the zero-command-word rules"; PASS=$((PASS+1));
+else echo "FAIL: a comment-only rule did not get the consequence"; FAIL=$((FAIL+1)); fi
+# An empty body on a NAMED matcher is unusable but never matched everything.
+allow_out="$(allow_doctor 1.1.10 '"write_file()"')"
+if has 'matches EVERY command' "$allow_out"; then
+  echo "FAIL: write_file() was given the command-rule history"; FAIL=$((FAIL+1));
+else echo "ok: write_file() is unusable without the match-everything claim"; PASS=$((PASS+1)); fi
 
 echo "== doctor.sh stdio-MCP detection (issue #37 diagnostic) =="
 # The hint is diagnostic-only, so getting it wrong fails SILENTLY — it just never

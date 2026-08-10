@@ -130,12 +130,19 @@ PREFIX = {"time", "!", "{", "}", "[[", "]]", "if", "then", "elif", "else", "fi",
           "case", "esac", "for", "select", "while", "until", "do", "done", "in",
           "function", "coproc"}
 
-# A placeholder is the <...> shape AND placeholder-shaped content: one unbroken token,
-# no whitespace. A bare angle bracket is a literal redirect — command(echo hi > /tmp/f) —
-# and so is a PAIR of them, command(sort < in > out), where everything between the two
-# brackets is a filename rather than a template. Requiring an unbroken token separates
-# <dir> and <path/to/repo> from both.
+# A placeholder is the <...> shape with placeholder-shaped content: one unbroken token,
+# no whitespace, which already separates <dir> and <path/to/repo> from a literal redirect
+# (command(echo hi > /tmp/f)) and from a PAIR of them (command(sort < in > out)), where
+# what sits between the brackets is a filename.
+#
+# Shape is not enough on its own, though: command(grep -F <TAG> file.txt) is a real rule
+# holding a real angle-bracketed literal. So the test is applied only OUTSIDE
+# `command(...)`. Angle brackets are shell syntax, and shell is what a command rule
+# contains; the placeholder we ship appears in `write_file(<dir>)` and nowhere else. The
+# cost of that choice is a placeholder inside a command rule going unflagged — a miss,
+# which this file prefers to a false positive that sends someone to edit a working rule.
 PLACEHOLDER = re.compile(r"<[A-Za-z0-9_./\-]+>")
+PLACEHOLDER_REASON = "unsubstituted placeholder — replace <...> with a real value"
 
 bad = []
 for e in allow:
@@ -144,12 +151,13 @@ for e in allow:
     t = e.strip()
     if not t:
         bad.append(("(empty string)", "empty entry", "unparseable")); continue
-    if PLACEHOLDER.search(t):
-        bad.append((t, "unsubstituted placeholder — replace <...> with a real value",
-                    "unparseable")); continue
     i = t.find("(")
     if i < 0 or not t.endswith(")"):
-        continue                      # not the NAME(...) shape; not ours to judge
+        # Not the NAME(...) shape, so not ours to judge — except an entry that is nothing
+        # but a placeholder, which cannot be anything else.
+        if PLACEHOLDER.fullmatch(t):
+            bad.append((t, PLACEHOLDER_REASON, "unparseable"))
+        continue
     name, inner = t[:i].strip(), t[i + 1:-1]
     if not inner.strip():
         # Bare `()` is one of the zero-command-word examples upstream gives, and so is
@@ -158,7 +166,11 @@ for e in allow:
         bad.append((t, "empty rule body",
                     "zerowords" if name in ("", "command") else "unparseable")); continue
     if name != "command":
-        continue                      # write_file(...) etc. are a different matcher
+        # write_file(...) etc. are a different matcher, and the only place our placeholder
+        # is ever recommended.
+        if PLACEHOLDER.search(inner):
+            bad.append((t, PLACEHOLDER_REASON, "unparseable"))
+        continue
     try:
         words = shlex.split(inner, comments=True)
     except ValueError:
