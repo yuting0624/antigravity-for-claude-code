@@ -14,6 +14,23 @@ MEASURE="$ROOT/scripts/measure-session.py"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 PASS=0; FAIL=0
 
+# bash does not hoist: a function called above its definition is `command not found`,
+# exit 127, and every `if` around it silently takes the else branch. That is how two
+# assertions here went dead while the suite still reported all green — the has() below
+# was first added beside the doctor tests, above which two call sites already sat, and
+# both reviewers caught it.
+#
+# bash 4's `command_not_found_handle` would turn that into a visible failure. It was
+# tried and removed: macOS ships bash 3.2, where DEFINING it is a silent no-op — a guard
+# that reads as protection and provides none, which is the exact class of defect this
+# release is about. So the check is static, runs first, and works on any shell.
+if ! python3 "$HERE/check-helper-order.py" "$0"; then
+  echo "FAIL: a helper is used above its definition (bash does not hoist)"; FAIL=$((FAIL+1));
+else echo "ok: every helper is defined before its first use"; PASS=$((PASS+1)); fi
+
+has() { case "$2" in *"$1"*) return 0 ;; *) return 1 ;; esac; }
+
+
 # --- stub `agy` on PATH; behavior controlled by $STUB_MODE -------------------
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/agy" <<'STUB'
@@ -679,17 +696,6 @@ else echo "ok: doctor recognizes tier models across display-name/slug formats"; 
 if printf '%s' "$out" | grep -q "tier model present: Gemini 3.5 Flash (High)"; then
   echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
-
-# Substring assertion with NO pipeline. `printf '%s' "$x" | grep -q PAT` is the shape
-# that has now bitten this suite three times: grep -q exits at the first match and closes
-# the pipe, the writer dies of SIGPIPE (141), and `set -o pipefail` (line 8) marks the
-# whole pipeline failed — so the assertion reads "not found" while the text is right
-# there. It is load- and length-sensitive, which is why it survives review: the window is
-# whatever the writer still has to emit AFTER the matched line, so appending output
-# anywhere below the match can wake it up. That is exactly how 0.22.5 revived it here
-# (3 failures in 8 concurrent runs; a trace inside doctor proved the warning WAS printed).
-# `case` does the same test with no second process and no pipe.
-has() { case "$2" in *"$1"*) return 0 ;; *) return 1 ;; esac; }
 
 echo "== doctor.sh agy-version gate (--tier is inert below 1.1.10) =="
 # agy ignored --model/--effort in headless `-p` until 1.1.10: the flag was applied after

@@ -74,6 +74,18 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   the delegate wrapper's `--help` probe, `agy_guard`'s pipe rule, and the `sort -V`
   dependency. 24 consecutive clean runs at the concurrency that reproduced it; each
   converted scan re-checked by mutation.
+  **That fix then shipped the same defect in a new shape, and both reviewers caught it.**
+  `has()` was defined beside the doctor tests, above which two call sites already sat —
+  and bash does not hoist, so those two were `command not found`, exit 127, `else` taken
+  unconditionally, `ok` printed regardless. One of them was the "json envelope leaked to
+  stdout" assertion, which had already been voided once before by a different accident.
+  Helpers now live at the top of the file, and `tests/check-helper-order.py` runs first
+  and fails the suite if any function is called above its definition. bash 4's
+  `command_not_found_handle` was tried for this and **removed**: macOS ships bash 3.2,
+  where merely defining it is a silent no-op — a guard that reads as protection and
+  provides none, which is the defect this whole entry is about. The static check works on
+  any shell and was verified by putting the original bug back: it names the call site and
+  the definition line.
 
 ## 0.22.4
 - **`--tier` did nothing on agy below 1.1.10, and nothing said so.** agy 1.1.10 fixed
