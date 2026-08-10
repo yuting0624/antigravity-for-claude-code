@@ -42,48 +42,34 @@ on:
         description: Pull request number to review
         required: true
 
-# One review at a time per pull request — two runs racing to edit the same
-# summary comment can lose the ledger the other just wrote.
+# One review at a time per pull request — two runs racing to edit the same summary
+# comment can lose the ledger the other just wrote.
 #
-# `cancel-in-progress` has to be an EXPRESSION, not `true`. Concurrency is evaluated
-# BEFORE any job condition, so a run that will be skipped still enters the group and
-# still cancels whatever is running. Two ways that bites, both observed here:
+# `cancel-in-progress` is evaluated BEFORE any job condition, so a run that will be
+# skipped still enters the group. Bare `true` therefore made the review cancel ITSELF
+# when it posted its summary (#42), and every ordinary human comment cancel the review
+# of the push it was replying to (#53).
 #
-#   1. posting the summary fires `issue_comment` as the App -> the review cancelled
-#      itself seconds after finishing. Fixed by the Bot check (#42/#46).
-#   2. ANY human comment fires `issue_comment` too — including "thanks, fixed that"
-#      on a review thread — and killed the review of the push it was replying to.
-#      Seen repeatedly on #52. The Bot check does not cover it.
+# Two attempts at fixing that tried to predict, in this expression, whether the job
+# would actually run — first excluding bots, then excluding comments without a command.
+# Both stayed BROADER than the job's `if:` (no author_association, no issue-vs-PR check,
+# `@quorum` and `/review` matched separately rather than adjacent), so a run that gets
+# skipped could still kill a live one. Chasing that means duplicating the job condition
+# here and keeping two copies in sync.
 #
-# So: cancel only when this run is actually a superseding review. A push or a manual
-# dispatch always is. A comment only is when it asks for one.
+# It does not need predicting. `cancel-in-progress: false` does not DISCARD the new run,
+# it queues it as pending and starts it when the current one finishes. So the only case
+# where cancelling is right is the one where the running review is genuinely obsolete:
+# a new push. Everything else — comments, manual dispatch — can simply wait its turn,
+# and a run that turns out to be skippable costs a few seconds of a queue slot.
 #
-#   pull_request / workflow_dispatch        -> cancel
-#   comment by the App                      -> no
-#   human comment, no @quorum               -> no   <- what #46 got wrong
-#   human comment mentioning @quorum only   -> no   <- "let's ask @quorum about this"
-#   human "@quorum /review" or "/criteria"  -> cancel
-#   human "@quorum wontfix" on a review     -> cancel
-#
-# The last three mirror what the job's `if:` actually acts on. It is not a copy of that
-# condition and should not become one — this only needs to be no BROADER than it, so an
-# event that will be skipped never kills a running review.
-#
-# The job's own `if:` still decides whether the run does anything; this only decides
-# whether it is allowed to kill a running one.
+# One rule, nothing to keep in sync, and it subsumes both #42 and #53.
 concurrency:
   group: >-
     quorum-review-${{ github.event.pull_request.number
       || github.event.issue.number
       || github.event.inputs.pr }}
-  cancel-in-progress: >-
-    ${{ (github.event_name != 'issue_comment'
-         && github.event_name != 'pull_request_review_comment')
-        || (github.event.comment.user.type != 'Bot'
-            && contains(github.event.comment.body, '@quorum')
-            && (github.event_name == 'pull_request_review_comment'
-                || contains(github.event.comment.body, '/review')
-                || contains(github.event.comment.body, '/criteria'))) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

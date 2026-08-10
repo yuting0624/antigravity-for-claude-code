@@ -915,28 +915,24 @@ echo "== CI workflow invariants =="
 # when it posted its summary (#42); `comment.user.type != 'Bot'` fixed that but still let
 # ANY human comment kill an in-flight review (#52). It needs both guards.
 QW="$ROOT/.github/workflows/quorum-review.yml"
-if grep -q "cancel-in-progress: *true" "$QW"; then
+CONC="$(sed -n '/^concurrency:/,/^permissions:/p' "$QW")"
+if printf '%s' "$CONC" | grep -q "cancel-in-progress: *true"; then
   echo "FAIL: quorum cancel-in-progress is bare true — the review will cancel itself"; FAIL=$((FAIL+1));
 else echo "ok: quorum cancel-in-progress is an expression"; PASS=$((PASS+1)); fi
-# SCOPED to the concurrency block. The first version of this test grepped the whole
-# file — and `comment.user.type != 'Bot'` also appears twice in the job's `if:`, so it
-# passed whether or not the concurrency expression still had it. A test that cannot
-# observe the thing it names is the failure mode this repo keeps producing; caught by
-# both reviewers on #53.
-CONC="$(sed -n '/^concurrency:/,/^permissions:/p' "$QW")"
-miss=""
-printf '%s' "$CONC" | grep -q "comment.user.type != 'Bot'" || miss="$miss bot-loop"
-printf '%s' "$CONC" | grep -q "github.event_name != 'issue_comment'" || miss="$miss non-comment-events"
-printf '%s' "$CONC" | grep -q "contains(github.event.comment.body, '/review')" || miss="$miss command-form"
-if [ -z "$miss" ]; then
-  echo "ok: cancel-in-progress guards the bot loop, plain comments, and bare @quorum mentions"; PASS=$((PASS+1));
-else echo "FAIL: cancel-in-progress missing guard(s):$miss"; FAIL=$((FAIL+1)); fi
-# It must stay no BROADER than the job's `if:` — a run that gets skipped must never be
-# able to cancel a real review. Both key on the same command forms.
-if printf '%s' "$CONC" | grep -q "'/criteria'" \
-   && sed -n '/^  review:/,/runs-on:/p' "$QW" | grep -q "@quorum /criteria"; then
-  echo "ok: concurrency and the job condition key on the same commands"; PASS=$((PASS+1));
-else echo "FAIL: concurrency and the job condition have drifted apart"; FAIL=$((FAIL+1)); fi
+# Cancel ONLY on a push. `cancel-in-progress: false` queues the new run rather than
+# discarding it, so nothing else ever needs to cancel — a comment or a dispatch waits its
+# turn. This is what makes the expression safe without replicating the job's `if:`.
+if printf '%s' "$CONC" | grep -q "github.event_name == 'pull_request'"; then
+  echo "ok: cancel-in-progress cancels only on a push"; PASS=$((PASS+1));
+else echo "FAIL: cancel-in-progress no longer keys on pull_request alone"; FAIL=$((FAIL+1)); fi
+# The design decision, asserted directly: the moment this expression starts reasoning
+# about WHO commented or WHAT they said, it is predicting whether the job will run — and
+# it was broader than the job's `if:` on both previous attempts (#42, #53), which is how
+# a run that gets skipped ends up cancelling a live review.
+if printf '%s' "$CONC" | grep -qE 'comment\.(body|user|author_association)'; then
+  echo "FAIL: concurrency inspects the comment again — it must not predict the job condition"; FAIL=$((FAIL+1));
+else echo "ok: concurrency does not try to predict whether the job will run"; PASS=$((PASS+1)); fi
+
 # The fork guard runs before anything is cloned or any credential is minted.
 if [ "$(grep -n 'Refuse a fork' "$QW" | cut -d: -f1)" \
      -lt "$(grep -n 'actions/checkout@' "$QW" | head -1 | cut -d: -f1)" ]; then
