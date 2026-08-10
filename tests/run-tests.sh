@@ -610,16 +610,34 @@ check "reason offers the remedy"        0 0 "backslash"               "$(gate_wh
 check "reason names a ';' separator"    0 0 "command separator"       "$(gate_why '"agy-delegate x; foo"')"
 check "reason names substitution"       0 0 "command substitution"    "$(gate_why '"agy-delegate \"$(foo)\""')"
 check "reason names an unbalanced quote" 0 0 "unterminated"           "$(gate_why '"agy-delegate \"hi"')"
-check "reason names the wrong argv[0]"  0 0 "not agy-delegate"        "$(gate_why '"somethingelse --flag x"')"
+check "reason names the wrong first command" 0 0 "not agy-delegate"    "$(gate_why '"somethingelse --flag x"')"
 check "reason names the pipe count"     0 0 "at most one"             "$(gate_why '"cat f | agy-delegate - | wc"')"
 check "reason names the bad producer"   0 0 "left side of the pipe"   "$(gate_why '"ls | agy-delegate -"')"
 
 # The reason goes into the AGENT'S CONTEXT, and a blocked command routinely carries a
-# delegation prompt. It must describe the syntax, never quote the command back.
-why="$(gate_why '"agy-delegate \"SECRETPROMPTMARKER goes here\"; foo"')"
-if printf '%s' "$why" | grep -q 'SECRETPROMPTMARKER'; then
-  echo "FAIL: block reason echoes the command text back into the agent's context"; FAIL=$((FAIL+1));
-else echo "ok: block reason does not echo the command text"; PASS=$((PASS+1)); fi
+# delegation prompt. It must describe the syntax and never quote ANY of the command back.
+#
+# The shapes below are the ones that actually reach the token-naming branches. An earlier
+# version of this test put the marker after a valid argv[0] and behind a `;` — the scan
+# rejected it first, so the branch under test was never executed and the test passed for
+# free. Both PR reviewers found the leak the test was supposed to cover (#52).
+#
+# argv[0] is not a safe exception: head() returns shlex.split(seg)[0], the first shell
+# WORD, so a leading quoted string becomes argv[0]. Restricting to "name-shaped" tokens
+# does not help either — an API key is name-shaped, which is why nothing is echoed at all.
+leak_free() { # $1 = label, $2 = json command, $3 = marker that must not appear
+  local why; why="$(gate_why "$2")"
+  if printf '%s' "$why" | grep -qF "$3"; then
+    echo "FAIL: block reason leaks command text ($1)"; FAIL=$((FAIL+1));
+  elif [ -z "$why" ]; then
+    echo "FAIL: no reason emitted at all ($1) — the assertion below would pass for free"; FAIL=$((FAIL+1));
+  else echo "ok: no command text in the reason ($1)"; PASS=$((PASS+1)); fi
+}
+leak_free "leading quoted token becomes argv[0]" '"\"SECRETPROMPTMARKER text\" agy-delegate \"hi\""' 'SECRETPROMPTMARKER'
+leak_free "right side of a pipe"                 '"git diff | \"SECRETPROMPTMARKER\" agy-delegate -"' 'SECRETPROMPTMARKER'
+leak_free "left side of a pipe"                  '"\"SECRETPROMPTMARKER\" | agy-delegate -"'           'SECRETPROMPTMARKER'
+leak_free "name-shaped token (an API key is)"    '"sk-ant-oat01-SECRETPROMPTMARKER x"'                 'SECRETPROMPTMARKER'
+leak_free "plain wrong command"                  '"SECRETPROMPTMARKER --flag x"'                       'SECRETPROMPTMARKER'
 
 AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")

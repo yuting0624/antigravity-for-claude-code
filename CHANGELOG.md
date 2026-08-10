@@ -17,9 +17,15 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   naming the newline and the remedy, the specific metacharacter, command substitution
   (including inside double quotes), an unterminated quote, a wrong `argv[0]`, too many pipes,
   or a non-allowlisted pipeline producer.
-  **The reason never quotes the command back.** It lands in the agent's context and a blocked
-  command routinely carries a delegation prompt; a character name and an offset are enough.
-  `argv[0]` is the one exception — a command name, not content, and most of the diagnostic value.
+  **The reason never quotes ANY of the command back** — not even `argv[0]`. It lands in the
+  agent's context and a blocked command routinely carries a delegation prompt; a character
+  name and an offset are enough. `argv[0]` looks like a safe exception and is not: `head()`
+  returns `shlex.split(seg)[0]`, the first shell *word*, so `"some prompt text" agy-delegate
+  ...` makes attacker-chosen content `argv[0]`. Restricting it to name-shaped tokens does not
+  help either — an API key is name-shaped. Caught by **both** PR reviewers, whose finding also
+  exposed that the test written to cover it could not fail: it placed the marker after a valid
+  `argv[0]` and behind a `;`, so the scan rejected the command first and the branch under test
+  never ran. Five replacement cases now exercise the branches directly.
 - **Leading and trailing whitespace is stripped before scanning.** Line 45 already computed
   `cmd.strip()` to test for emptiness and discarded it. bash ignores surrounding whitespace, so
   this cannot change what a command does, and a newline with nothing after it cannot begin a

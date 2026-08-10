@@ -73,10 +73,6 @@ def deny(reason):
     sys.stderr.write("[antigravity-delegate] reason: %s\n" % reason)
     sys.exit(2)
 
-def shown(tok):                      # argv[0] only: printable, bounded
-    t = "".join(ch if ch.isprintable() else "?" for ch in str(tok))
-    return t if len(t) <= 40 else t[:37] + "..."
-
 CHAR_NAMES = {";": "';' (command separator)", "&": "'&' (background / chaining)",
               "<": "'<' (redirection)",       ">": "'>' (redirection)",
               "(": "'(' (subshell)",          ")": "')' (subshell)",
@@ -157,17 +153,17 @@ if len(segs) == 1:
     if not t:
         deny("the command could not be tokenised")
     if base(t) not in WRAPPERS:
-        deny("the first command is `%s`, not agy-delegate or agy-job" % shown(t))
+        deny("the first command is not agy-delegate or agy-job")
     sys.exit(0)
 elif len(segs) == 2:
     lt, rt = head(segs[0]), head(segs[1])
     if not lt or not rt:
         deny("one side of the pipe could not be tokenised")
     if base(lt) not in PRODUCERS:
-        deny("the left side of the pipe is `%s`; only git, cat, echo or printf may feed "
-             "the wrapper" % shown(lt))
+        deny("the left side of the pipe is not allowed — only git, cat, echo or "
+             "printf may feed the wrapper")
     if base(rt) not in WRAPPERS:
-        deny("the right side of the pipe is `%s`, not agy-delegate or agy-job" % shown(rt))
+        deny("the right side of the pipe is not agy-delegate or agy-job")
     sys.exit(0)
 else:
     deny("%d pipes — at most one is allowed, as `<git|cat|echo|printf> | agy-delegate -`"
