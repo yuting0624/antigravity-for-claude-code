@@ -8,7 +8,7 @@
 # never fires the wrapper itself: full automation is a measured net loss below
 # the break-even, so the break-even call must remain a per-task judgment.
 #
-# Heuristic is deliberately conservative (volume/fan-out phrases, EN + JA), and
+# Heuristic is deliberately conservative (volume/fan-out phrases, EN + JA + ZH), and
 # the nudge text is a FIXED string — the user's prompt is never echoed back into
 # the context (no escaping/injection surface).
 #
@@ -39,7 +39,11 @@ case "$PROMPT" in
   *"all files"*|*"every file"*|*"across the codebase"*|*"entire codebase"*|*"whole repo"*| \
   *migrate*|*migration*|*"generate tests"*|*"test coverage"*|*"exhaustive test"*| \
   *scaffold*|*boilerplate*|*"deep research"*|*"web search"*| \
-  *一括*|*全ファイル*|*すべてのファイル*|*網羅*|*移行*|*大量*|*横断*|*リポジトリ全体*)
+  *一括*|*全ファイル*|*すべてのファイル*|*網羅*|*移行*|*大量*|*横断*|*リポジトリ全体*| \
+  *批量*|*全量*|*所有文件*|*全部文件*|*整个项目*|*整个仓库*|*整个代码库*| \
+  *迁移*|*生成测试*|*测试覆盖*|*全套测试*|*脚手架*|*深度研究*|*调研*|*联网搜索*|*网页搜索*|*遍历*|*逐一*| \
+  *子代理*|*子agent*|*"子 agent"*|*交叉验证*|*交叉核对*|*双模型*|*第二意见*|*复核*| \
+  *审查*|*代码审查*|*审阅*|*校对*|*并行*|*批量生成*|*通读*)
     HIT=1 ;;
 esac
 shopt -u nocasematch
