@@ -44,9 +44,22 @@ permissions:
   pull-requests: write
   id-token: write   # the action mints an OIDC token even with token auth
 
+# One review at a time per pull request. `cancel-in-progress` is evaluated BEFORE any job
+# condition, so a run that will be skipped still enters the group and can cancel a live
+# one — the same defect fixed in quorum-review.yml (#42, #53), which this file never got.
+#
+# It cost a real review on #57. Two labels were applied in the same second, so GitHub sent
+# TWO `labeled` events: the `claude-review` one started `authorise`, the `documentation`
+# one arrived two seconds later, cancelled it, and then skipped itself because
+# `github.event.label.name` was not `claude-review`. Result: `authorise cancelled`,
+# `authorise skipped`, and no review — with nothing on the pull request saying why.
+#
+# A label event never makes a running review obsolete: the head commit is unchanged. Only
+# a push does. And `false` does not DISCARD the second run, it queues it — so an unrelated
+# label waits its turn and then skips, costing a few seconds of a queue slot.
 concurrency:
   group: claude-review-ext-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
 
 jobs:
   # Cheap gate, separate job: nothing with secrets runs until this passes.
@@ -128,6 +141,30 @@ jobs:
       - uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b  # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Pass the GitHub token explicitly instead of letting the action mint one.
+          #
+          # Left out, the action exchanges a GitHub OIDC token for a Claude App
+          # installation token. That works on `pull_request` — claude-review.yml does it
+          # every run — and returned `401 Unauthorized - Invalid OIDC token` on all three
+          # attempts here, the first time this workflow ever reached the action at all
+          # (before that it died at the checkout guard, then at the concurrency bug
+          # above). The action version is not the difference: the 26 commits between this
+          # pin and the tag the internal workflow resolves touch `workflow_run` support,
+          # not the token exchange.
+          #
+          # `github_token` is documented as "optional if using GitHub App", and upstream
+          # recommends passing it for the analogous privileged context (`workflow_run`
+          # with a non-write actor). So this is a supported path rather than a
+          # workaround — and for a `pull_request_target` job it is the better one:
+          # GITHUB_TOKEN is scoped by this workflow's `permissions:` block
+          # (contents: read, pull-requests: write), whereas an App installation token
+          # carries whatever that App was granted across the whole repository. The
+          # narrower credential belongs in the context that most needs one.
+          #
+          # The cost is cosmetic — comments arrive as github-actions[bot] rather than the
+          # Claude app — plus one real benefit: a GITHUB_TOKEN comment does not trigger
+          # other workflows, which is the class of failure #42 was.
+          github_token: ${{ github.token }}
           # Surfaces the real API error instead of a bare is_error:true (the action
           # suppresses it by default). Keep on until the review path is proven stable.
           show_full_output: true

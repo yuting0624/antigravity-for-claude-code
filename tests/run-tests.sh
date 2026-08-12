@@ -1228,6 +1228,46 @@ if grep -qE 'comment\.(body|user|author_association)' <<<"$CONC"; then
   echo "FAIL: concurrency inspects the comment again — it must not predict the job condition"; FAIL=$((FAIL+1));
 else echo "ok: concurrency does not try to predict whether the job will run"; PASS=$((PASS+1)); fi
 
+# The SAME property on the external workflow, which never got the #42/#53 fix and lost a
+# real review to it on #57: two labels applied in the same second produced two `labeled`
+# events, the `documentation` one cancelled the live `claude-review` one and then skipped
+# itself. Asserted separately rather than looped over both files, because the two differ —
+# quorum discriminates on `github.event_name`, this one is all `pull_request_target` and
+# has to key on the action — and a shared assertion would have to be loose enough to pass
+# on either, which is how a guard stops guarding.
+XW="$ROOT/.github/workflows/claude-review-external.yml"
+# NOTE the range: this file puts `permissions:` BEFORE `concurrency:`, so the quorum
+# extraction above would come back empty here and every assertion would pass on nothing.
+XCONC="$(sed -n '/^concurrency:/,/^jobs:/p' "$XW")"
+if [ -z "${XCONC//[$' \t\n']/}" ]; then
+  echo "FAIL: could not read the external workflow concurrency block"; FAIL=$((FAIL+1));
+else echo "ok: external concurrency block located"; PASS=$((PASS+1)); fi
+if grep -q "cancel-in-progress: *true" <<<"$XCONC"; then
+  echo "FAIL: external cancel-in-progress is bare true — an unrelated label kills the review"; FAIL=$((FAIL+1));
+else echo "ok: external cancel-in-progress is an expression"; PASS=$((PASS+1)); fi
+# Only a push makes a running review obsolete; a label leaves the head commit alone.
+if grep -q "github.event.action == 'synchronize'" <<<"$XCONC"; then
+  echo "ok: external cancels only on a push"; PASS=$((PASS+1));
+else echo "FAIL: external cancel-in-progress no longer keys on synchronize alone"; FAIL=$((FAIL+1)); fi
+# Same design decision as quorum: the expression must not try to predict the job's `if:`.
+if grep -qE 'label\.name|labels\.\*' <<<"$XCONC"; then
+  echo "FAIL: external concurrency inspects the label — it must not predict the job condition"; FAIL=$((FAIL+1));
+else echo "ok: external concurrency does not inspect the label"; PASS=$((PASS+1)); fi
+
+# The external reviewer must not fall back to minting a Claude App installation token.
+# Doing so 401'"'"'d on every attempt under pull_request_target, and even when it works it is
+# the WIDER credential: an App token carries whatever that App holds across the
+# repository, while GITHUB_TOKEN is bounded by this workflow'"'"'s permissions block. The
+# privileged context is the one place not to take the wider one.
+if grep -qE '^ +github_token: \$\{\{ *github\.token *\}\}' "$XW"; then
+  echo "ok: external review uses the workflow-scoped GITHUB_TOKEN"; PASS=$((PASS+1));
+else echo "FAIL: external review has no explicit github_token — it will mint an App token"; FAIL=$((FAIL+1)); fi
+# ...and the permissions that token is scoped BY have to actually cover posting a review.
+XPERM="$(sed -n '/^permissions:/,/^concurrency:/p' "$XW")"
+if grep -q 'pull-requests: write' <<<"$XPERM"; then
+  echo "ok: the workflow grants pull-requests: write for the review comment"; PASS=$((PASS+1));
+else echo "FAIL: GITHUB_TOKEN cannot post the review with these permissions"; FAIL=$((FAIL+1)); fi
+
 # The fork guard runs before anything is cloned or any credential is minted.
 if [ "$(grep -n 'Refuse a fork' "$QW" | cut -d: -f1)" \
      -lt "$(grep -n 'actions/checkout@' "$QW" | head -1 | cut -d: -f1)" ]; then
