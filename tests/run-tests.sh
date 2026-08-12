@@ -1255,9 +1255,9 @@ if grep -qE 'label\.name|labels\.\*' <<<"$XCONC"; then
 else echo "ok: external concurrency does not inspect the label"; PASS=$((PASS+1)); fi
 
 # The external reviewer must not fall back to minting a Claude App installation token.
-# Doing so 401'"'"'d on every attempt under pull_request_target, and even when it works it is
+# Doing so 401ed on every attempt under pull_request_target, and even when it works it is
 # the WIDER credential: an App token carries whatever that App holds across the
-# repository, while GITHUB_TOKEN is bounded by this workflow'"'"'s permissions block. The
+# repository, while GITHUB_TOKEN is bounded by this workflow's permissions block. The
 # privileged context is the one place not to take the wider one.
 if grep -qE '^ +github_token: \$\{\{ *github\.token *\}\}' "$XW"; then
   echo "ok: external review uses the workflow-scoped GITHUB_TOKEN"; PASS=$((PASS+1));
