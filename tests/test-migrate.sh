@@ -77,6 +77,15 @@ if has "remote-x" "$OUT" && has "local-x" "$OUT"; then
   ok "finds project .mcp.json servers"
 else bad "missed .mcp.json"; fi
 
+# --roots has to narrow MCP too, not only CLAUDE.md — the help text and SKILL.md
+# describe it as scoping both, and it used to fold in every recorded project regardless.
+mkdir -p "$H/elsewhere"
+if has "remote-x" "$(run --roots "$H/work")" &&
+   ! has "remote-x" "$(run --roots "$H/elsewhere")"; then
+  ok "--roots scopes MCP discovery, not just CLAUDE.md"
+else bad "--roots does not narrow MCP discovery"; fi
+rmdir "$H/elsewhere"
+
 # --- apply -------------------------------------------------------------------
 OUT="$(run --roots "$H" --include-repos --apply)"
 
@@ -329,6 +338,68 @@ else bad "bad flag did not exit 1"; fi
 ( CLAUDE_CONFIG_DIR="$TMP/nope" NO_COLOR=1 python3 "$MIG" >/dev/null 2>&1 )
 if [ $? -eq 18 ]; then ok "a missing prerequisite exits 18, not 1"
 else bad "missing prerequisite did not exit 18"; fi
+
+# --- postprocess_staged: the two repairs the importer makes necessary ---------
+# The plugins unit needs a real agy, but the glue that repairs its output does not:
+# hand-build the exact tree the importer produces and drive the function directly.
+# This is the code that actually decides whether a migrated plugin works.
+if python3 - "$MIG" "$TMP" <<'PY'
+import importlib.util, json, os, sys
+spec = importlib.util.spec_from_file_location("m", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+tmp = sys.argv[2]
+
+src = os.path.join(tmp, "src", "p")                       # the Claude-side original
+staged = os.path.join(tmp, "stage", ".gemini", "config", "plugins", "p")
+for d in (src, os.path.join(staged, ".claude-plugin"), os.path.join(staged, "commands"),
+          os.path.join(staged, "hooks"), os.path.join(staged, "skills", "p-cmd-x")):
+    os.makedirs(d, exist_ok=True)
+
+# Original plugin: one remote server, one stdio server.
+json.dump({"mcpServers": {"rem": {"type": "http", "url": "https://ex.test/mcp"},
+                          "loc": {"command": "echo", "args": ["1"]}}},
+          open(os.path.join(src, ".mcp.json"), "w"))
+
+# Exactly what the importer emits: the remote entry gutted to an empty command.
+json.dump({"mcpServers": {"rem": {"command": "", "args": None, "cwd": "", "env": None},
+                          "loc": {"command": "echo", "args": ["1"], "cwd": "", "env": None}}},
+          open(os.path.join(staged, "mcp_config.json"), "w"))
+# ...Claude's hook schema copied verbatim, pointing at a script in hooks/.
+json.dump({"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [
+    {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run.sh"}]}]}},
+          open(os.path.join(staged, "hooks.json"), "w"))
+json.dump({"hooks": {}}, open(os.path.join(staged, "hooks", "hooks.json"), "w"))
+open(os.path.join(staged, "hooks", "run.sh"), "w").write("#!/bin/sh\n")
+open(os.path.join(staged, "commands", "x.md"), "w").write("---\ndescription: c\n---\nbody\n")
+open(os.path.join(staged, "skills", "p-cmd-x", "SKILL.md"), "w").write(
+    "---\ndescription: c\n---\nbody\n")           # command-derived: no name:
+json.dump({"name": "p"}, open(os.path.join(staged, ".claude-plugin", "plugin.json"), "w"))
+
+notes = m.postprocess_staged(os.path.join(tmp, "stage"), {"p": src}, m.Plan())
+
+mcp = json.load(open(os.path.join(staged, "mcp_config.json")))["mcpServers"]
+assert mcp["rem"] == {"serverUrl": "https://ex.test/mcp"}, mcp   # URL recovered
+assert mcp["loc"]["command"] == "echo" and "cwd" not in mcp["loc"], mcp  # blanks dropped
+
+h = json.load(open(os.path.join(staged, "hooks.json")))
+assert list(h) == ["p-hooks"], h                                  # named-hook map
+assert h["p-hooks"]["PreToolUse"][0]["matcher"] == "run_command", h
+cmd = h["p-hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+assert "CLAUDE_PLUGIN_ROOT" not in cmd and cmd.startswith("./"), cmd
+
+# hooks/ holds the executable the rewritten command points at — it must survive,
+# while the Claude-side inputs the importer already consumed must not.
+assert os.path.isfile(os.path.join(staged, "hooks", "run.sh"))
+assert not os.path.exists(os.path.join(staged, "hooks", "hooks.json"))
+for junk in (".claude-plugin", "commands", ".mcp.json"):
+    assert not os.path.exists(os.path.join(staged, junk)), junk
+
+fm = open(os.path.join(staged, "skills", "p-cmd-x", "SKILL.md")).read()
+assert fm.startswith("---\nname: p-cmd-x\n"), fm                  # name: restored
+assert any("restored remote MCP" in n for n in notes), notes
+PY
+then ok "postprocess_staged repairs MCP + hooks and keeps the hook scripts"
+else bad "postprocess_staged integration check failed"; fi
 
 # --- hook conversion (unit level) -------------------------------------------
 # The plugins unit needs the real agy binary, so exercise the translation the

@@ -59,6 +59,9 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   losing game, so discovery now consults only the project roots Claude Code itself
   records, plus the desktop config. `CLAUDE.md` still walks, with both config trees,
   `~/Library` and dot-directories pruned.
+- `--roots` narrows MCP discovery, not only `CLAUDE.md`. It previously folded in every
+  project recorded in `~/.claude.json` regardless of the flag, so it could only ever
+  broaden the scan — which is not what the help text or the skill's flag table said.
 - Exclusion compares on a path boundary, not a bare string prefix. `~/.claude-pro` —
   a second Claude Code profile selected with `CLAUDE_CONFIG_DIR` — shares a prefix with
   the excluded `~/.claude` and was being pruned from the scan, silently, as was

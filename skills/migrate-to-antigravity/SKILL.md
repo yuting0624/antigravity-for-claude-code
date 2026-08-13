@@ -132,7 +132,7 @@ Also not migrated, by design: `model` (no Gemini equivalent for a Claude model i
 | `--include-orphan-memory` | fold memory whose source directory no longer exists into global rules |
 | `--apply-permissions` | actually write the translated allow-list |
 | `--no-register-projects` | skip agy project registration (workspace rules then stay inert) |
-| `--roots` | where to look for `CLAUDE.md` / `.mcp.json` (default: the project paths recorded in `~/.claude.json`, or `~` if there are none) |
+| `--roots` | scope for `CLAUDE.md` and MCP discovery (default: the project paths recorded in `~/.claude.json`, or `~` if there are none). The desktop app's `claude_desktop_config.json` is global and always included. |
 | `--json` | machine-readable plan |
 | `--uninstall` | remove what was generated |
 

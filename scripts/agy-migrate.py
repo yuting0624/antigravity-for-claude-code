@@ -713,8 +713,16 @@ def collect_mcp(roots):
         if name not in found:
             found[name] = (spec, source)
 
+    roots_abs = [os.path.abspath(r) for r in roots]
+
+    def in_roots(path):
+        p = os.path.abspath(path)
+        return any(p == r or p.startswith(r.rstrip(os.sep) + os.sep) for r in roots_abs)
+
     cj = read_json(claude_json_path(), None) or {}
     for proj, cfg in (cj.get("projects") or {}).items():
+        if not in_roots(proj):
+            continue
         for name, spec in (cfg.get("mcpServers") or {}).items():
             take(name, spec, f".claude.json:{proj}")
     for name, spec in (cj.get("mcpServers") or {}).items():
@@ -725,7 +733,8 @@ def collect_mcp(roots):
     # (~/.claude/plugins/marketplaces/ and Claude Desktop's rpm/plugin_*/) — 40 servers
     # the user had never configured. The real project roots are already recorded, so
     # consult exactly those and nothing can smuggle entries in.
-    candidates = list(roots) + [d for d in (cj.get("projects") or {}) if os.path.isdir(d)]
+    candidates = list(roots) + [d for d in (cj.get("projects") or {})
+                                if os.path.isdir(d) and in_roots(d)]
     for d in dict.fromkeys(os.path.abspath(c) for c in candidates):
         if under_excluded(d):
             continue
@@ -733,6 +742,8 @@ def collect_mcp(roots):
         for name, spec in ((read_json(p, None) or {}).get("mcpServers") or {}).items():
             take(name, spec, p)
 
+    # The desktop app's config is a single global file with no project scope, so
+    # --roots cannot meaningfully narrow it.
     desktop = os.path.join(home(), "Library", "Application Support", "Claude",
                            "claude_desktop_config.json")
     for name, spec in ((read_json(desktop, None) or {}).get("mcpServers") or {}).items():
