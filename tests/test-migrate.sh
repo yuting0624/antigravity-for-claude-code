@@ -65,13 +65,15 @@ BEFORE="$(find "$H/.gemini" "$H/.claude" -type f | sort)"
 OUT="$(run --roots "$H" --include-repos)"
 AFTER="$(find "$H/.gemini" "$H/.claude" -type f | sort)"
 if [ "$BEFORE" = "$AFTER" ]; then ok "dry-run writes nothing"; else bad "dry-run created files"; fi
-if has "dry-run" "$OUT"; then ok "dry-run says so"; else bad "no dry-run notice"; fi
+if has "dry run" "$OUT" && has "--apply" "$OUT"; then
+  ok "dry run says so, and names the flag that performs it"
+else bad "no dry-run notice"; fi
 
 # --- detection ---------------------------------------------------------------
 if has "demo-skill" "$OUT" && has "allowed-tools" "$OUT"; then
   ok "flags Claude-only skill frontmatter agy ignores"
 else bad "did not flag allowed-tools"; fi
-if has "remote-x" "$OUT" || has "1 サーバー" "$OUT" || has "2 サーバー" "$OUT"; then
+if has "remote-x" "$OUT" && has "local-x" "$OUT"; then
   ok "finds project .mcp.json servers"
 else bad "missed .mcp.json"; fi
 
@@ -183,6 +185,24 @@ else bad "uninstall left MCP keys"; fi
 if [ -f "$REPO/CLAUDE.md" ] && [ -f "$H/.claude/settings.json" ]; then
   ok "Claude Code side untouched throughout"
 else bad "Claude Code side was modified"; fi
+
+# --- a failing step must not report success ----------------------------------
+# Reinstall from scratch, then wedge one destination so its write raises. The run
+# must exit non-zero and must still have persisted what it did manage to do —
+# saving the manifest only at the end would strand those files beyond --uninstall.
+run --uninstall --apply >/dev/null 2>&1
+rm -rf "$H/.gemini/.agy-migrate"
+mkdir -p "$H/.gemini/config/skills.json"        # a directory where a file must go
+OUT="$(run --roots "$H" --apply)"; RC=$?
+rmdir "$H/.gemini/config/skills.json" 2>/dev/null
+if [ "$RC" -ne 0 ]; then ok "a failed step exits non-zero"
+else bad "failed step still exited 0 (rc=$RC)"; fi
+if has "failed" "$OUT"; then ok "the failure is named in the output"
+else bad "failure not reported"; fi
+if [ -f "$H/.gemini/.agy-migrate/manifest.json" ]; then
+  ok "manifest persisted despite the failure (uninstall can still clean up)"
+else bad "manifest lost on failure"; fi
+run --uninstall --apply >/dev/null 2>&1
 
 # --- hook conversion (unit level) -------------------------------------------
 # The plugins unit needs the real agy binary, so exercise the translation the

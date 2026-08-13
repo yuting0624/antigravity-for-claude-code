@@ -343,12 +343,12 @@ def render_rule(name, description, body, part=None, total=None):
 def unit_skills(plan, mf):
     src = os.path.join(claude_dir(), "skills")
     if not os.path.isdir(src):
-        plan.add("skills", "skip", "no-op", src, "Claude 側にユーザースキルなし")
+        plan.add("skills", "skip", "no-op", src, "no user skills on the Claude side")
         return
     names = sorted(d for d in os.listdir(src)
                    if os.path.isfile(os.path.join(src, d, "SKILL.md")))
     if not names:
-        plan.add("skills", "skip", "no-op", src, "SKILL.md を持つディレクトリなし")
+        plan.add("skills", "skip", "no-op", src, "no directory contains a SKILL.md")
         return
 
     # Report Claude-only frontmatter that agy will silently ignore.
@@ -358,14 +358,14 @@ def unit_skills(plan, mf):
                 if k in meta]
         if dead:
             plan.add("skills", "warn", "ignored-frontmatter", n,
-                     f"{', '.join(dead)} は Antigravity では効きません")
+                     f"{', '.join(dead)} has no effect in Antigravity")
 
     cfg = os.path.join(gemini_config(), "skills.json")
     existing = read_json(cfg, None) or {}
     entries = existing.get("entries") or []
     if any(os.path.abspath(os.path.expanduser(e.get("path", ""))) == src for e in entries):
         plan.add("skills", "skip", "already-registered", cfg,
-                 f"{len(names)} スキルは登録済み")
+                 f"{len(names)} skill(s) already registered")
         return
 
     preexisting = os.path.exists(cfg)
@@ -383,7 +383,7 @@ def unit_skills(plan, mf):
             mf.files.append(cfg)
 
     plan.add("skills", "ok", "register", cfg,
-             f"{len(names)} スキルを実体のまま読ませる (entries += {src})", fn)
+             f"read {len(names)} skill(s) in place (entries += {src})", fn)
 
 
 # --- unit: CLAUDE.md ---------------------------------------------------------
@@ -402,20 +402,20 @@ def find_claude_mds(roots):
 def unit_claudemd(plan, mf, roots, include_repos):
     mds = find_claude_mds(roots)
     if not mds:
-        plan.add("claudemd", "skip", "no-op", ", ".join(roots), "CLAUDE.md が見つかりません")
+        plan.add("claudemd", "skip", "no-op", ", ".join(roots), "no CLAUDE.md found")
         return
     if not include_repos:
-        plan.add("claudemd", "skip", "needs-flag", f"{len(mds)} 件",
-                 "--include-repos を付けると AGENTS.md シンボリックリンクを作ります")
+        plan.add("claudemd", "skip", "needs-flag", f"{len(mds)} file(s)",
+                 "pass --include-repos to create AGENTS.md symlinks")
         return
     for md in mds:
         agents = os.path.join(os.path.dirname(md), "AGENTS.md")
         if os.path.islink(agents):
-            plan.add("claudemd", "skip", "exists", agents, "既にシンボリックリンク")
+            plan.add("claudemd", "skip", "exists", agents, "already a symlink")
             continue
         if os.path.exists(agents):
             plan.add("claudemd", "warn", "conflict", agents,
-                     "実ファイルの AGENTS.md が既にあります。上書きしません")
+                     "a real AGENTS.md already exists; not overwriting")
             continue
 
         def fn(agents=agents):
@@ -480,7 +480,7 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
     srcs = memory_sources()
     if not srcs:
         plan.add("memory", "skip", "no-op", os.path.join(claude_dir(), "projects"),
-                 "メモリが見つかりません")
+                 "no memory found")
         return
 
     home_enc = encode_project_dir(home())
@@ -496,7 +496,7 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
             scope = "global"
         elif src["cwd"] and not include_repos:
             plan.add("memory", "skip", "needs-flag", src["cwd"],
-                     f"{len(src['files'])} 件。--include-repos で .agents/rules に書きます")
+                     f"{len(src['files'])} note(s); --include-repos writes them to .agents/rules")
             continue
         elif src["cwd"]:
             dest = os.path.join(src["cwd"], ".agents", "rules")
@@ -506,21 +506,21 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
             # invisible from inside any of them.
             if git_root(src["cwd"]) is None:
                 plan.add("memory", "warn", "out-of-reach", src["cwd"],
-                         "git リポジトリではないため、配下のリポジトリ内からは読まれません"
-                         "（探索はリポジトリルートで止まります）。グローバル配置を検討してください")
+                         "not a git repository, so nested repos will never see these "
+                         "(discovery stops at the repo root) — consider global scope")
         elif include_orphans:
             dest = os.path.join(gemini_config(), "plugins", MEMORY_PLUGIN,
                                 "rules", "orphan-" + src["enc"].strip("-"))
             scope = "global (orphan)"
         else:
             plan.add("memory", "warn", "unresolved", src["enc"],
-                     f"{len(src['files'])} 件。元ディレクトリが特定できません"
-                     "（--include-orphan-memory でグローバルに取り込み）")
+                     f"{len(src['files'])} note(s); source directory no longer exists "
+                     "(--include-orphan-memory folds them into global rules)")
             continue
 
-        detail = f"{len(rules)} ルール -> {scope}"
+        detail = f"{len(rules)} rule(s) -> {scope}"
         if split:
-            detail += f" / {split} 件は 12000 字上限で分割"
+            detail += f" / {split} split at the 12000-char cap"
 
         def fn(dest=dest, rules=rules, is_global=is_global, src=src):
             os.makedirs(dest, exist_ok=True)
@@ -567,7 +567,7 @@ def plan_project_registration(plan, mf, path, unit):
     """Workspace rules never load unless the session is bound to a project."""
     have = existing_project_for(path)
     if have:
-        plan.add(unit, "skip", "project-exists", path, f"agy プロジェクト {have[:8]} を再利用")
+        plan.add(unit, "skip", "project-exists", path, f"reusing agy project {have[:8]}")
         return
     pid = str(uuid.uuid4())
 
@@ -583,7 +583,7 @@ def plan_project_registration(plan, mf, path, unit):
         mf.projects.append(pid)
 
     plan.add(unit, "ok", "register-project", path,
-             f"agy プロジェクトを新規登録 ({pid[:8]}) — これが無いと .agents/ は無視されます", fn)
+             f"register a new agy project ({pid[:8]}) — without one, .agents/ is ignored", fn)
 
 
 # --- unit: MCP ---------------------------------------------------------------
@@ -594,18 +594,18 @@ def translate_mcp(spec):
     url = spec.get("serverUrl") or spec.get("url") or spec.get("httpUrl")
     if url:
         if spec.get("headers"):
-            warns.append("headers は Antigravity にないため破棄")
+            warns.append("headers dropped: unsupported")
         return {"serverUrl": url}, warns
     cmd = spec.get("command")
     if not cmd:
-        return None, ["command も url も無い定義"]
+        return None, ["neither command nor url"]
     out = {"command": cmd}
     if spec.get("args"):
         out["args"] = spec["args"]
     if spec.get("env"):
         out["env"] = spec["env"]
     if not shutil.which(cmd) and not os.path.isabs(cmd):
-        warns.append(f"`{cmd}` が PATH に見つかりません（agy は起動時に失敗します）")
+        warns.append(f"`{cmd}` is not on PATH (agy will fail to start it)")
     return out, warns
 
 
@@ -644,7 +644,7 @@ def collect_mcp(roots):
 def unit_mcp(plan, mf, roots):
     found = collect_mcp(roots)
     if not found:
-        plan.add("mcp", "skip", "no-op", "-", "Claude 側に MCP サーバー定義なし")
+        plan.add("mcp", "skip", "no-op", "-", "no MCP servers defined on the Claude side")
         return
     dest = os.path.join(gemini_config(), "mcp_config.json")
     current = (read_json(dest, None) or {}).get("mcpServers") or {}
@@ -652,7 +652,7 @@ def unit_mcp(plan, mf, roots):
     for name, (spec, source) in sorted(found.items()):
         if name in current:
             plan.add("mcp", "skip", "name-taken", name,
-                     f"Antigravity 側に同名あり。上書きしません ({source})")
+                     f"name already taken in Antigravity; not overwriting ({source})")
             continue
         entry, warns = translate_mcp(spec)
         if entry is None:
@@ -678,7 +678,7 @@ def unit_mcp(plan, mf, roots):
         cur["mcpServers"] = servers
         write_json(dest, cur)
 
-    plan.add("mcp", "ok", "write", dest, f"{len(to_add)} サーバーを追記", fn)
+    plan.add("mcp", "ok", "write", dest, f"append {len(to_add)} server(s)", fn)
 
 
 # --- unit: settings / permissions -------------------------------------------
@@ -752,7 +752,7 @@ def unit_settings(plan, mf, apply_permissions):
     if new_allow:
         if apply_permissions:
             plan.add("settings", "ok", "permissions", agy_settings_path(),
-                     f"{len(allow)} 件 -> {len(new_allow)} 件の command() を追加")
+                     f"{len(allow)} rule(s) -> add {len(new_allow)} command() entries")
         else:
             # Every mapping here widens the grant, so it is never applied implicitly.
             def fn_prop(new_allow=new_allow, proposal_path=proposal_path):
@@ -760,13 +760,13 @@ def unit_settings(plan, mf, apply_permissions):
                 mf.files.append(proposal_path)
 
             plan.add("settings", "ok", "propose-permissions", proposal_path,
-                     f"{len(allow)} 件 -> {len(new_allow)} 件の command() 案を書き出すだけ"
-                     f"（権限が広がるため --apply-permissions が必要）: "
+                     f"{len(allow)} rule(s) -> propose {len(new_allow)} command() entries only "
+                     f"(this widens the grant, so --apply-permissions is required): "
                      f"{', '.join(new_allow[:5])}…", fn_prop)
     if unmapped:
         kinds = sorted({re.split(r"[(_]", u)[0] for u in unmapped})
-        plan.add("settings", "warn", "unmappable-permissions", f"{len(unmapped)} 件",
-                 f"クォート・シェルメタ文字・非 Bash のため対応不可: {', '.join(kinds[:8])}")
+        plan.add("settings", "warn", "unmappable-permissions", f"{len(unmapped)} rule(s)",
+                 f"quoted args, shell metacharacters or non-Bash — no equivalent: {', '.join(kinds[:8])}")
 
     # trustedWorkspaces is the one setting that maps cleanly.
     cj = read_json(claude_json_path(), None) or {}
@@ -778,24 +778,24 @@ def unit_settings(plan, mf, apply_permissions):
                               for t in cur_trusted)]
     if add_trusted:
         plan.add("settings", "ok", "trustedWorkspaces", agy_settings_path(),
-                 f"{len(add_trusted)} 件の信頼済みパスを追加")
+                 f"add {len(add_trusted)} trusted path(s)")
 
     # Report-only: these have no representable equivalent.
     cc = read_json(os.path.join(claude_dir(), "settings.json"), None) or {}
     if cc.get("model"):
         plan.add("settings", "warn", "not-migrated", "model",
-                 f"{cc['model']} に相当する Gemini モデルはありません。agy の model は変更しません")
+                 f"{cc['model']} has no Gemini equivalent; agy's model is left untouched")
     if cc.get("effortLevel"):
         plan.add("settings", "warn", "not-migrated", "effortLevel",
-                 f"{cc['effortLevel']} — agy では設定ではなく --effort (low|medium|high) です")
+                 f"{cc['effortLevel']} — in agy this is the --effort flag (low|medium|high), not a setting")
     if cc.get("env"):
         plan.add("settings", "warn", "not-migrated", "env",
-                 f"{len(cc['env'])} 個の環境変数（Anthropic/Vertex 向けで agy には無関係）")
+                 f"{len(cc['env'])} variable(s) — Anthropic/Vertex routing, meaningless to agy")
 
     write_perms = bool(new_allow) and apply_permissions
     if not (write_perms or add_trusted):
         if not seen_files:
-            plan.add("settings", "skip", "no-op", claude_dir(), "settings が見つかりません")
+            plan.add("settings", "skip", "no-op", claude_dir(), "no settings found")
         return
 
     def fn():
@@ -814,7 +814,7 @@ def unit_settings(plan, mf, apply_permissions):
                 mf.note_key(agy_settings_path(), "trustedWorkspaces", k)
         write_json(agy_settings_path(), s)
 
-    plan.add("settings", "ok", "write", agy_settings_path(), "設定を追記", fn)
+    plan.add("settings", "ok", "write", agy_settings_path(), "append settings", fn)
 
 
 # --- unit: plugins (native importer via staging HOME) ------------------------
@@ -862,11 +862,11 @@ def convert_hooks(claude_hooks, plugin):
     events = claude_hooks.get("hooks") if "hooks" in claude_hooks else claude_hooks
     out, notes = {}, []
     if not isinstance(events, dict):
-        return {}, ["hooks.json の形が解釈できません"]
+        return {}, ["unrecognised hooks.json shape"]
     for cev, groups in events.items():
         aev = HOOK_EVENT_MAP.get(cev)
         if not aev:
-            notes.append(f"{cev} に対応するイベントがないため削除")
+            notes.append(f"dropped {cev}: no equivalent event")
             continue
         if not isinstance(groups, list):
             continue
@@ -897,9 +897,9 @@ def convert_matcher(matcher):
             mapped.append(TOOL_MAP[n])
         elif n in TOOL_MAP_AMBIGUOUS:
             mapped.append(TOOL_MAP_AMBIGUOUS[n])
-            unknown.append(f"{n}→{TOOL_MAP_AMBIGUOUS[n]}(推定)")
+            unknown.append(f"{n}->{TOOL_MAP_AMBIGUOUS[n]} (approximate)")
         else:
-            unknown.append(f"{n}(対応不明・そのまま)")
+            unknown.append(f"{n} (unmapped; left as-is)")
             mapped.append(n)
     note = f"matcher {matcher!r}: " + ", ".join(unknown) if unknown else None
     return "|".join(mapped), note
@@ -928,9 +928,9 @@ def run_native_import(stage, plugins):
                            timeout=180, stdin=subprocess.DEVNULL)
         return r.returncode, (r.stdout or "") + (r.stderr or "")
     except FileNotFoundError:
-        return 127, "agy が PATH にありません"
+        return 127, "agy is not on PATH"
     except subprocess.TimeoutExpired:
-        return 124, "agy plugin import claude がタイムアウトしました"
+        return 124, "agy plugin import claude timed out"
 
 
 def postprocess_staged(stage, plugins, plan):
@@ -959,10 +959,10 @@ def postprocess_staged(stage, plugins, plan):
                     fixed[sname] = entry
                     changed.append(sname)
                 else:
-                    changed.append(sname + "(復元不可)")
+                    changed.append(sname + " (unrecoverable)")
             if changed:
                 write_json(mcp_path, {"mcpServers": fixed})
-                notes.append(f"{name}: リモート MCP を復元 ({', '.join(changed)})")
+                notes.append(f"{name}: restored remote MCP ({', '.join(changed)})")
 
         # Defect 2: Claude's hook schema copied verbatim.
         hpath = os.path.join(d, "hooks.json")
@@ -989,7 +989,7 @@ def postprocess_staged(stage, plugins, plan):
             if new != txt:
                 with open(hpath, "w", encoding="utf-8") as fh:
                     fh.write(new)
-                notes.append(f"{name}: ${{CLAUDE_PLUGIN_ROOT}} を相対パスに書き換え")
+                notes.append(f"{name}: rewrote ${{CLAUDE_PLUGIN_ROOT}} to a relative path")
 
         # command-derived SKILL.md loses its name:; the dir name carries it.
         sk = os.path.join(d, "skills")
@@ -1019,20 +1019,20 @@ def unit_plugins(plan, mf):
     plugins = installed_plugins()
     if not plugins:
         plan.add("plugins", "skip", "no-op", os.path.join(claude_dir(), "plugins"),
-                 "インストール済みプラグインなし")
+                 "no installed plugins")
         return
     dest_root = os.path.join(gemini_config(), "plugins")
     fresh = {n: p for n, p in plugins.items()
              if not os.path.isdir(os.path.join(dest_root, n))}
     for n in sorted(set(plugins) - set(fresh)):
-        plan.add("plugins", "skip", "exists", n, "Antigravity 側に同名プラグインあり")
+        plan.add("plugins", "skip", "exists", n, "a plugin of that name already exists in Antigravity")
 
     # The importer keys off .claude-plugin/plugin.json and silently ignores anything
     # without one, so surface those here rather than letting them vanish.
     for n in sorted(fresh):
         if not os.path.isfile(os.path.join(fresh[n], ".claude-plugin", "plugin.json")):
             plan.add("plugins", "warn", "no-manifest", n,
-                     ".claude-plugin/plugin.json が無いため純正インポータは無視します")
+                     "no .claude-plugin/plugin.json, so the native importer skips it")
     fresh = {n: p for n, p in fresh.items()
              if os.path.isfile(os.path.join(p, ".claude-plugin", "plugin.json"))}
     if not fresh:
@@ -1043,9 +1043,9 @@ def unit_plugins(plan, mf):
         try:
             rc, out = run_native_import(stage, fresh)
             if rc != 0:
-                print(f"  {C['err']}✗{C['off']} 純正インポータ失敗 (rc={rc}): "
+                print(f"    · native importer failed (rc={rc}): "
                       f"{out.strip().splitlines()[-1] if out.strip() else ''}")
-                return
+                return False
             for n in postprocess_staged(stage, fresh, plan):
                 print(f"    · {n}")
             sroot = os.path.join(stage, ".gemini", "config", "plugins")
@@ -1053,9 +1053,9 @@ def unit_plugins(plan, mf):
             if not staged:
                 # rc==0 with no output is how the importer reports "found nothing".
                 # Reporting success here would be a lie.
-                print(f"  {C['err']}✗{C['off']} 純正インポータが何も生成しませんでした: "
-                      f"{out.strip() or '(出力なし)'}")
-                return
+                print(f"    · native importer produced nothing: "
+                      f"{out.strip() or '(no output)'}")
+                return False
             copied = 0
             for name in staged:
                 target = os.path.join(dest_root, name)
@@ -1064,7 +1064,7 @@ def unit_plugins(plan, mf):
                 shutil.copytree(os.path.join(sroot, name), target)
                 mf.trees.append(target)     # we created it whole; undo removes it whole
                 copied += 1
-            print(f"    · {copied}/{len(fresh)} プラグインを配置")
+            print(f"    · placed {copied}/{len(fresh)} plugin(s)")
             sman = read_json(os.path.join(stage, ".gemini", "config",
                                           "import_manifest.json"), None)
             if sman:
@@ -1084,8 +1084,8 @@ def unit_plugins(plan, mf):
             shutil.rmtree(stage, ignore_errors=True)
 
     plan.add("plugins", "ok", "native-import", ", ".join(sorted(fresh)),
-             f"{len(fresh)} プラグインをステージング HOME 経由で純正インポート後、"
-             "リモート MCP と hooks を修復してマージ", fn)
+             f"native-import {len(fresh)} plugin(s) via a staging HOME, then repair "
+             "remote MCP + hooks and merge", fn)
 
 
 # --- uninstall ---------------------------------------------------------------
@@ -1149,7 +1149,7 @@ def do_uninstall(apply_):
             n += 1
             if apply_:
                 os.rmdir(p)
-    print(f"\n{n} 件{'を撤去しました' if apply_ else 'が撤去対象です（--apply で実行）'}")
+    print(f"\n{n} item(s) " + ("removed" if apply_ else "would be removed (--apply to do it)"))
     if apply_:
         for f in (manifest_path(),):
             if os.path.exists(f):
@@ -1175,10 +1175,10 @@ def print_report(plan, apply_):
             if i["detail"]:
                 print(f"      {i['detail']}")
     c = plan.counts()
-    print(f"\n{C['hdr']}合計{C['off']}: 実行 {c.get('ok',0)} / 警告 {c.get('warn',0)} / "
-          f"スキップ {c.get('skip',0)}")
+    print(f"\n{C['hdr']}Total{C['off']}: {c.get('ok',0)} to apply / {c.get('warn',0)} warning(s) / "
+          f"{c.get('skip',0)} skipped")
     if not apply_:
-        print(f"\n{C['warn']}dry-run です。実行するには --apply を付けてください。{C['off']}")
+        print(f"\n{C['warn']}This was a dry run. Pass --apply to perform it.{C['off']}")
 
 
 # --- main --------------------------------------------------------------------
@@ -1186,35 +1186,37 @@ def print_report(plan, apply_):
 def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="agy-migrate",
-        description="Claude Code の設定・スキル・メモリ・MCP を Antigravity CLI に移行します。")
-    ap.add_argument("--apply", action="store_true", help="実際に書き込む（既定は dry-run）")
-    ap.add_argument("--only", default="", help=f"対象を限定: {','.join(UNITS)}")
-    ap.add_argument("--skip", default="", help="対象から除外")
+        description="Migrate a Claude Code setup (skills, memory, CLAUDE.md, MCP, "
+                    "plugins, permissions) to the Antigravity CLI.")
+    ap.add_argument("--apply", action="store_true", help="actually write (default is a dry run)")
+    ap.add_argument("--only", default="", help=f"limit to these units: {','.join(UNITS)}")
+    ap.add_argument("--skip", default="", help="exclude these units")
     ap.add_argument("--include-repos", action="store_true",
-                    help="git リポジトリにも書き込む（AGENTS.md リンク / .agents/rules）")
+                    help="also write inside git repos (AGENTS.md symlink, .agents/rules)")
     ap.add_argument("--include-orphan-memory", action="store_true",
-                    help="元ディレクトリが特定できないメモリもグローバルに取り込む")
+                    help="fold memory whose source directory no longer exists into global rules")
     ap.add_argument("--no-register-projects", action="store_true",
-                    help="agy プロジェクト登録を行わない（.agents/ は読まれなくなります）")
+                    help="skip agy project registration (workspace .agents/ then stays inert)")
     ap.add_argument("--roots", default="",
-                    help="CLAUDE.md / .mcp.json を探すルート（カンマ区切り。"
-                         "既定は ~/.claude.json が記録している実プロジェクトパス）")
+                    help="comma-separated roots to scan for CLAUDE.md / .mcp.json "
+                         "(default: the real project paths recorded in ~/.claude.json)")
     ap.add_argument("--apply-permissions", action="store_true",
-                    help="権限ルールを settings.json に実際に書く（既定は案の書き出しのみ。"
-                         "Claude の allow はコマンド行そのものなので、変換は必ず権限を広げます）")
-    ap.add_argument("--uninstall", action="store_true", help="生成物を撤去する")
-    ap.add_argument("--json", action="store_true", help="機械可読なレポートを出す")
+                    help="actually write the translated allow-list to settings.json. Off by "
+                         "default: Claude's allow-list holds whole command lines, so any "
+                         "translation widens the grant")
+    ap.add_argument("--uninstall", action="store_true", help="remove what a previous run generated")
+    ap.add_argument("--json", action="store_true", help="emit a machine-readable plan")
     args = ap.parse_args(argv)
 
     if args.uninstall:
         return do_uninstall(args.apply)
 
     if not os.path.isdir(claude_dir()):
-        print(f"{C['err']}Claude Code の設定ディレクトリが見つかりません: {claude_dir()}{C['off']}")
+        print(f"{C['err']}No Claude Code config directory at {claude_dir()}{C['off']}")
         return 1
     if not os.path.isdir(gemini_root()):
-        print(f"{C['err']}Antigravity が見つかりません: {gemini_root()}"
-              f"（agy を一度起動してください）{C['off']}")
+        print(f"{C['err']}No Antigravity install at {gemini_root()} "
+              f"— run agy once first{C['off']}")
         return 1
 
     only = {u for u in args.only.split(",") if u} or set(UNITS)
@@ -1226,8 +1228,8 @@ def main(argv=None):
 
     print(f"{C['hdr']}Claude Code{C['off']}  {claude_dir()}")
     print(f"{C['hdr']}Antigravity{C['off']}  {gemini_config()}")
-    print(f"{C['hdr']}走査対象{C['off']}     {len(roots)} ルート"
-          f"{'' if args.roots else '（--roots で変更可）'}")
+    print(f"{C['hdr']}Scanning{C['off']}     {len(roots)} root(s)"
+          f"{'' if args.roots else ' (override with --roots)'}")
 
     mf = Manifest()
     plan = Plan()
@@ -1255,14 +1257,37 @@ def main(argv=None):
         return 0
 
     dest = backup([gemini_config(), agy_settings_path()])
-    print(f"\nバックアップ: {dest}")
-    for i in plan.items:
-        if i["level"] == "ok" and i["fn"]:
-            i["fn"]()
-            print(f"  {C['ok']}✓{C['off']} {i['action']} {i['target']}")
-    mf.runs.append({"at": now_iso(), "units": active, "backup": dest})
-    mf.save()
-    print(f"\n完了。撤去するには: agy-migrate --uninstall --apply")
+    print(f"\nBackup: {dest}")
+    failed = []
+    try:
+        for i in plan.items:
+            if i["level"] != "ok" or not i["fn"]:
+                continue
+            try:
+                res = i["fn"]()
+            except Exception as e:                       # keep going; report at the end
+                res, e_txt = False, f"{type(e).__name__}: {e}"
+                print(f"  {C['err']}✗{C['off']} {i['action']} {i['target']} — {e_txt}")
+            else:
+                mark = C["err"] + "✗" if res is False else C["ok"] + "✓"
+                print(f"  {mark}{C['off']} {i['action']} {i['target']}")
+            if res is False:
+                failed.append(f"{i['unit']}/{i['action']}")
+            # Saved per step, not once at the end: a crash halfway through must still
+            # leave --uninstall able to find everything written so far.
+            mf.save()
+    finally:
+        mf.runs.append({"at": now_iso(), "units": active, "backup": dest,
+                        "failed": failed})
+        mf.save()
+
+    if failed:
+        print(f"\n{C['err']}{len(failed)} step(s) failed:{C['off']} {', '.join(failed)}")
+        print(f"Everything that did succeed is tracked; "
+              f"revert with: agy-migrate --uninstall --apply")
+        print(f"Backup of the previous state: {dest}")
+        return 2
+    print("\nDone. To revert: agy-migrate --uninstall --apply")
     return 0
 
 

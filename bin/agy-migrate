@@ -7,8 +7,11 @@
 # 12k-char rule chunking — the repo already ships python3 scripts for the same reason.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Exit 16, the next free code in this plugin's contract (docs/TROUBLESHOOTING.md).
+# 13 is "agy not on PATH" and 14 is "model unavailable" — a missing python3 is
+# neither, and reusing either would misreport the dependency that is actually absent.
 if ! command -v python3 >/dev/null 2>&1; then
-  echo "agy-migrate: python3 が必要です (brew install python3)" >&2
-  exit 13
+  echo "agy-migrate: python3 is required (brew install python3)" >&2
+  exit 16
 fi
 exec python3 "$ROOT/scripts/agy-migrate.py" "$@"

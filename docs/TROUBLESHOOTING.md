@@ -151,6 +151,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 13 | agy not on PATH | install the Antigravity CLI |
 | 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
 | 15 | permission denied | agy ≥ 1.1.3 soft-denied a tool needing permission in headless mode (e.g. a file write) — add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
+| 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 
 ---
 

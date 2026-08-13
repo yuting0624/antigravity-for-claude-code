@@ -41,6 +41,13 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   comment you removed is treated as yours. The Claude Code config dir is never written
   to — the one exception is an `AGENTS.md` symlink beside a `CLAUDE.md`, under
   `--include-repos`.
+- Failure is propagated, not swallowed: a step that fails prints `✗`, is named in a
+  summary, and makes the run exit 2. The manifest is written after **every** step rather
+  than once at the end, so a crash halfway through still leaves `--uninstall` able to
+  find what was already written.
+- `bin/agy-migrate` exits **16** when python3 is missing — the next free code in the
+  plugin's contract. 13 is "agy not on PATH" and 14 is "model unavailable"; reusing
+  either would misreport which dependency is actually absent.
 - Session history is **not** migrated and cannot be: Antigravity stores conversations as
   opaque protobuf blobs inside per-conversation SQLite files. `docs/MIGRATION.md` has the
   full layout reference and compatibility matrix.
