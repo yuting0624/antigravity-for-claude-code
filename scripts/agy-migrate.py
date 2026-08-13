@@ -966,7 +966,7 @@ def postprocess_staged(stage, plugins, plan):
         staged = read_json(mcp_path, None)
         if staged and src:
             original = claude_plugin_mcp(src)
-            fixed, changed = {}, []
+            fixed, restored, dropped = {}, [], []
             for sname, sspec in (staged.get("mcpServers") or {}).items():
                 if sspec.get("command"):
                     fixed[sname] = {k: v for k, v in sspec.items()
@@ -975,12 +975,18 @@ def postprocess_staged(stage, plugins, plan):
                 entry, _ = translate_mcp(original.get(sname, {}))
                 if entry:
                     fixed[sname] = entry
-                    changed.append(sname)
+                    restored.append(sname)
                 else:
-                    changed.append(sname + " (unrecoverable)")
-            if changed:
+                    # Removing an entry is not the same as repairing one; say so.
+                    dropped.append(sname)
+            if restored or dropped:
                 write_json(mcp_path, {"mcpServers": fixed})
-                notes.append(f"{name}: restored remote MCP ({', '.join(changed)})")
+            if restored:
+                notes.append(f"{name}: restored remote MCP ({', '.join(restored)})")
+            if dropped:
+                notes.append(f"{name}: REMOVED unusable MCP entries the importer "
+                             f"emptied and we could not reconstruct "
+                             f"({', '.join(dropped)}) — re-add them by hand")
 
         # Defect 2: Claude's hook schema copied verbatim.
         hpath = os.path.join(d, "hooks.json")
