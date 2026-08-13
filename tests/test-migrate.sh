@@ -46,8 +46,10 @@ printf -- '- [G](g-rule.md)\n' > "$H/.claude/projects/$ENC/memory/MEMORY.md"
 # A memory file well over Antigravity's 12000-char per-rule cap.
 REPO_ENC="$(python3 -c "import re,sys;print(re.sub(r'[/_.]','-',sys.argv[1]))" "$REPO")"
 mkdir -p "$H/.claude/projects/$REPO_ENC/memory"
+# 2400 paragraphs -> >10 chunks, so the "(part 10/NN)" suffix is wider than a
+# single-digit estimate would reserve.
 { printf -- '---\nname: big\ndescription: big one\n---\n'
-  for i in $(seq 1 400); do printf 'paragraph %s with enough text to add up quickly.\n\n' "$i"; done
+  for i in $(seq 1 2400); do printf 'paragraph %s with enough text to add up quickly.\n\n' "$i"; done
 } > "$H/.claude/projects/$REPO_ENC/memory/big.md"
 
 printf '{"projects":{"%s":{"hasTrustDialogAccepted":true,"mcpServers":{}},"%s":{"hasTrustDialogAccepted":false}}}\n' \
@@ -119,6 +121,9 @@ else bad "$OVER rule(s) over the cap"; fi
 if ls "$REPO/.agents/rules/"big-1.md >/dev/null 2>&1; then
   ok "oversized memory is split into parts"
 else bad "oversized memory not split"; fi
+if ls "$REPO/.agents/rules/"big-10.md >/dev/null 2>&1; then
+  ok "a two-digit part count still respects the cap (checked above)"
+else bad "fixture no longer produces 10+ parts, so the wide suffix is untested"; fi
 
 # Workspace rules are dead without a project, so registration must happen.
 if python3 -c "

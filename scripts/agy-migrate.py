@@ -514,8 +514,16 @@ def rules_from_memory_dir(src):
         meta, body = split_frontmatter(text)
         name = meta.get("name") or fname[:-3]
         body = resolve_wikilinks(body, slugs)
-        overhead = len(render_rule(name, meta.get("description", ""), "", 1, 9))
-        chunks = chunk_body(body, max(1000, RULE_MAX_CHARS - overhead))
+        # The overhead depends on the part suffix, whose width depends on the total,
+        # which depends on the budget. Estimate, then re-measure until it settles.
+        total, chunks = 1, [body]
+        for _ in range(4):
+            overhead = len(render_rule(name, meta.get("description", ""), "",
+                                       total, total))
+            chunks = chunk_body(body, max(1000, RULE_MAX_CHARS - overhead))
+            if len(chunks) == total:
+                break
+            total = len(chunks)
         total = len(chunks)
         for i, chunk in enumerate(chunks, 1):
             out_name = fname if total == 1 else f"{fname[:-3]}-{i}.md"
@@ -1057,6 +1065,10 @@ def postprocess_staged(stage, plugins, plan):
         # Defect 1: remote servers arrive as {"command":"", ...} with the URL gone.
         mcp_path = os.path.join(d, "mcp_config.json")
         staged = read_json(mcp_path, None)
+        if staged and not src:
+            notes.append(f"{name}: staged under a name that does not match any source "
+                         f"plugin, so remote MCP entries could NOT be repaired — "
+                         f"check {mcp_path} by hand")
         if staged and src:
             original = claude_plugin_mcp(src)
             fixed, restored, dropped = {}, [], []
