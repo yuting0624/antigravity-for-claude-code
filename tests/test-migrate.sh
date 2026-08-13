@@ -244,6 +244,30 @@ if has "needs-var" "$OUT" && has "never sets" "$OUT"; then
 else bad "unexpanded Claude variable was migrated as-is"; fi
 rm -rf "$H/.claude/plugins/marketplaces" "$H/work/withvar"
 
+# --- a shared prefix is not containment --------------------------------------
+# ~/.claude-pro is a second Claude Code profile (CLAUDE_CONFIG_DIR), not part of
+# ~/.claude; ~/Library-notes is not part of ~/Library. A bare startswith() prunes
+# both, and silently — the report never says a root was skipped.
+mkdir -p "$H/.claude-pro/proj" "$H/Library-notes/deep"
+printf '{"mcpServers":{"sibling-prefix-server":{"command":"echo"}}}\n' > "$H/.claude-pro/proj/.mcp.json"
+printf '# notes\n' > "$H/Library-notes/deep/CLAUDE.md"
+python3 - "$H" <<'PY2'
+import json, os, sys
+h = sys.argv[1]; p = os.path.join(h, ".claude.json")
+d = json.load(open(p))
+d["projects"][os.path.join(h, ".claude-pro", "proj")] = {"hasTrustDialogAccepted": False}
+json.dump(d, open(p, "w"))
+PY2
+# --include-repos so the claudemd unit lists paths instead of only a count.
+OUT="$(run --roots "$H" --include-repos)"
+if has "sibling-prefix-server" "$OUT"; then
+  ok "~/.claude-pro is not pruned by the ~/.claude exclusion"
+else bad "a sibling sharing a prefix with an excluded root was pruned"; fi
+if has "Library-notes" "$OUT"; then
+  ok "~/Library-notes is not pruned by the ~/Library exclusion"
+else bad "Library-notes was pruned"; fi
+rm -rf "$H/.claude-pro" "$H/Library-notes"
+
 # --- a lossy-encoding collision must not misfile memory ----------------------
 # `a_b` and `a/b` both encode to `a-b`. Guessing would write one repo's memory into
 # the other's .agents/rules/, so the tool must decline to resolve it.

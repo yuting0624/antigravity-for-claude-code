@@ -407,15 +407,27 @@ def excluded_roots():
             os.path.join(home(), "Library"))
 
 
+def under_excluded(path):
+    """True only when `path` is the excluded root itself or genuinely inside it.
+
+    A bare startswith() would prune `~/.claude-pro` (a second Claude Code profile,
+    selected via CLAUDE_CONFIG_DIR) because it shares a prefix with `~/.claude`, and
+    `~/Library-notes` because of `~/Library`. The exclusion is silent, so that would
+    just look like the tool ignoring a directory for no reason.
+    """
+    p = os.path.abspath(path)
+    return any(p == e or p.startswith(e.rstrip(os.sep) + os.sep)
+               for e in (os.path.abspath(x) for x in excluded_roots()))
+
+
 def walk_user_tree(root):
     """os.walk with vendor dirs and both config trees pruned."""
-    excl = excluded_roots()
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [
             d for d in dirnames
             if d not in SKIP_DIRS
             and not d.startswith(".")
-            and not os.path.join(dirpath, d).startswith(excl)
+            and not under_excluded(os.path.join(dirpath, d))
         ]
         yield dirpath, dirnames, filenames
 
@@ -715,7 +727,7 @@ def collect_mcp(roots):
     # consult exactly those and nothing can smuggle entries in.
     candidates = list(roots) + [d for d in (cj.get("projects") or {}) if os.path.isdir(d)]
     for d in dict.fromkeys(os.path.abspath(c) for c in candidates):
-        if d.startswith(excluded_roots()):
+        if under_excluded(d):
             continue
         p = os.path.join(d, ".mcp.json")
         for name, spec in ((read_json(p, None) or {}).get("mcpServers") or {}).items():

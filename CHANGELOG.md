@@ -59,6 +59,10 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   losing game, so discovery now consults only the project roots Claude Code itself
   records, plus the desktop config. `CLAUDE.md` still walks, with both config trees,
   `~/Library` and dot-directories pruned.
+- Exclusion compares on a path boundary, not a bare string prefix. `~/.claude-pro` —
+  a second Claude Code profile selected with `CLAUDE_CONFIG_DIR` — shares a prefix with
+  the excluded `~/.claude` and was being pruned from the scan, silently, as was
+  anything like `~/Library-notes`.
 - An MCP entry referencing `${CLAUDE_PLUGIN_ROOT}` is reported, not imported.
   Antigravity never sets it, so the server could only ever fail to start.
 - **Registering an agy project is not enough, and the tool no longer implies it is.**
