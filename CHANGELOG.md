@@ -59,6 +59,9 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   losing game, so discovery now consults only the project roots Claude Code itself
   records, plus the desktop config. `CLAUDE.md` still walks, with both config trees,
   `~/Library` and dot-directories pruned.
+- A misspelt `--only`/`--skip` unit is a usage error instead of an empty plan that
+  reads as "nothing to migrate" — the same silent no-op class the rest of this
+  entry is about.
 - `--roots` narrows MCP discovery, not only `CLAUDE.md`. It previously folded in every
   project recorded in `~/.claude.json` regardless of the flag, so it could only ever
   broaden the scan — which is not what the help text or the skill's flag table said.

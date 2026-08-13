@@ -322,8 +322,8 @@ rm -rf "$H/.gemini/.agy-migrate"
 mkdir -p "$H/.gemini/config/skills.json"        # a directory where a file must go
 OUT="$(run --roots "$H" --apply)"; RC=$?
 rmdir "$H/.gemini/config/skills.json" 2>/dev/null
-if [ "$RC" -ne 0 ]; then ok "a failed step exits non-zero"
-else bad "failed step still exited 0 (rc=$RC)"; fi
+if [ "$RC" -eq 17 ]; then ok "a failed step exits exactly 17 (not 1, the usage code)"
+else bad "failed step exited $RC, want 17"; fi
 if has "failed" "$OUT"; then ok "the failure is named in the output"
 else bad "failure not reported"; fi
 if [ -f "$H/.gemini/.agy-migrate/manifest.json" ]; then
@@ -332,6 +332,9 @@ else bad "manifest lost on failure"; fi
 run --uninstall --apply >/dev/null 2>&1
 
 # --- exit codes conform to the plugin's shared contract ----------------------
+NO_COLOR=1 python3 "$MIG" --only pluigns >/dev/null 2>&1
+if [ $? -eq 1 ]; then ok "a misspelt --only unit is a usage error, not an empty plan"
+else bad "unknown --only unit did not fail"; fi
 NO_COLOR=1 python3 "$MIG" --definitely-not-a-flag >/dev/null 2>&1
 if [ $? -eq 1 ]; then ok "a bad flag exits 1 (usage error), not argparse's default 2"
 else bad "bad flag did not exit 1"; fi

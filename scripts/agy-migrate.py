@@ -1359,6 +1359,13 @@ def main(argv=None):
 
     only = {u for u in args.only.split(",") if u} or set(UNITS)
     skip = {u for u in args.skip.split(",") if u}
+    unknown = sorted((only | skip) - set(UNITS))
+    if unknown:
+        # Exit 1 = usage error, per the shared table. Silently planning nothing would
+        # be indistinguishable from "you have nothing to migrate".
+        print(f"{C['err']}unknown unit(s): {', '.join(unknown)}{C['off']}\n"
+              f"known units: {', '.join(UNITS)}")
+        return 1
     active = [u for u in UNITS if u in only and u not in skip]
 
     roots = [os.path.abspath(os.path.expanduser(r))

@@ -150,7 +150,7 @@ object. Matchers are step-type names (`CORTEX_STEP_TYPE_*` lowercased, prefix re
 | `LS` | `list_directory` |
 | `WebFetch` | `read_url_content` |
 | `WebSearch` | `search_web` |
-| `Task` | `invoke_subagent` |
+| `Task`, `Agent` | `invoke_subagent` |
 | `NotebookEdit` | `edit_notebook` |
 | `Write`, `Edit` | `propose_code\|write_blob` (approximate) |
 
