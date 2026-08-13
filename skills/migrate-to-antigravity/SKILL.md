@@ -95,8 +95,8 @@ but:
 - It **copies hooks verbatim**. Antigravity's `hooks.json` is a map of *named* hooks
   (`{"my-hook": {"PreToolUse": [...]}}`), its matchers are step-type names
   (`run_command`, not `Bash`), and it fires only `PreToolUse`, `PostToolUse`,
-  `PreInvocation`, `PostInvocation`, `Stop` — `SessionStart`, `PreCompact`,
-  `Notification` and `SubagentStop` have no equivalent. `${CLAUDE_PLUGIN_ROOT}` is
+  `PreInvocation`, `PostInvocation`, `Stop` — `SessionStart`, `SessionEnd`,
+  `PreCompact`, `Notification` and `SubagentStop` have no equivalent. `${CLAUDE_PLUGIN_ROOT}` is
   never set, so hook commands referencing it break.
 
 `agy-migrate` runs the importer anyway (so the output tracks Google's format), then

@@ -218,6 +218,14 @@ if [ -f "$H/.gemini/.agy-migrate/manifest.json" ]; then
 else bad "manifest lost on failure"; fi
 run --uninstall --apply >/dev/null 2>&1
 
+# --- exit codes conform to the plugin's shared contract ----------------------
+NO_COLOR=1 python3 "$MIG" --definitely-not-a-flag >/dev/null 2>&1
+if [ $? -eq 1 ]; then ok "a bad flag exits 1 (usage error), not argparse's default 2"
+else bad "bad flag did not exit 1"; fi
+( CLAUDE_CONFIG_DIR="$TMP/nope" NO_COLOR=1 python3 "$MIG" >/dev/null 2>&1 )
+if [ $? -eq 18 ]; then ok "a missing prerequisite exits 18, not 1"
+else bad "missing prerequisite did not exit 18"; fi
+
 # --- hook conversion (unit level) -------------------------------------------
 # The plugins unit needs the real agy binary, so exercise the translation the
 # native importer gets wrong directly instead of stubbing the import.

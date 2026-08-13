@@ -153,6 +153,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 15 | permission denied | agy ≥ 1.1.3 soft-denied a tool needing permission in headless mode (e.g. a file write) — add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
 | 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 | 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
+| 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir, or agy has never been run |
 
 ---
 

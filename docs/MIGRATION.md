@@ -126,7 +126,7 @@ object. Matchers are step-type names (`CORTEX_STEP_TYPE_*` lowercased, prefix re
 | `PostToolUse` | `PostToolUse` | grouped |
 | `UserPromptSubmit` | `PreInvocation` | flat list of handlers |
 | `Stop` | `Stop` | flat |
-| `SessionStart`, `PreCompact`, `Notification`, `SubagentStop` | — | dropped, reported |
+| `SessionStart`, `SessionEnd`, `PreCompact`, `Notification`, `SubagentStop` | — | dropped, reported |
 
 | Claude tool | Antigravity |
 | --- | --- |

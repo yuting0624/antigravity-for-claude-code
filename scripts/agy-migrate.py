@@ -1189,8 +1189,18 @@ def print_report(plan, apply_):
 
 # --- main --------------------------------------------------------------------
 
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a bad flag; the plugin's shared table calls 2 "agy
+    failed" and 1 "usage error". Conform to the table rather than add an exception."""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        sys.stderr.write(f"{self.prog}: error: {message}\n")
+        sys.exit(1)
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(
+    ap = _Parser(
         prog="agy-migrate",
         description="Migrate a Claude Code setup (skills, memory, CLAUDE.md, MCP, "
                     "plugins, permissions) to the Antigravity CLI.")
@@ -1217,13 +1227,14 @@ def main(argv=None):
     if args.uninstall:
         return do_uninstall(args.apply)
 
+    # 18: a missing prerequisite, not a usage error and not an agy failure.
     if not os.path.isdir(claude_dir()):
         print(f"{C['err']}No Claude Code config directory at {claude_dir()}{C['off']}")
-        return 1
+        return 18
     if not os.path.isdir(gemini_root()):
         print(f"{C['err']}No Antigravity install at {gemini_root()} "
               f"— run agy once first{C['off']}")
-        return 1
+        return 18
 
     only = {u for u in args.only.split(",") if u} or set(UNITS)
     skip = {u for u in args.skip.split(",") if u}

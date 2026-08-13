@@ -52,8 +52,10 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   a `rules/orphan-<id>/` subdirectory. Whether Antigravity descends into a rules
   subdirectory was never measured, and shipping an unverified layout is the exact silent
   no-op this tool exists to prevent.
-- A failed run exits **17**, not 2: argparse already exits 2 for a bad flag, and the
-  shared table calls 2 "agy failed".
+- Exit codes conform to the plugin's shared table rather than carving out exceptions:
+  a bad flag exits **1** (argparse's own 2 would have read as "agy failed"), a missing
+  prerequisite exits **18**, and a failed run exits **17**. All three are in
+  `docs/TROUBLESHOOTING.md`.
 - Session history is **not** migrated and cannot be: Antigravity stores conversations as
   opaque protobuf blobs inside per-conversation SQLite files. `docs/MIGRATION.md` has the
   full layout reference and compatibility matrix.
