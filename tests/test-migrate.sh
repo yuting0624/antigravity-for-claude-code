@@ -204,6 +204,28 @@ if [ -f "$REPO/CLAUDE.md" ] && [ -f "$H/.claude/settings.json" ]; then
   ok "Claude Code side untouched throughout"
 else bad "Claude Code side was modified"; fi
 
+# --- a lossy-encoding collision must not misfile memory ----------------------
+# `a_b` and `a/b` both encode to `a-b`. Guessing would write one repo's memory into
+# the other's .agents/rules/, so the tool must decline to resolve it.
+python3 - "$H" <<'PY2'
+import json, os, sys
+h = sys.argv[1]
+p = os.path.join(h, ".claude.json")
+d = json.load(open(p))
+for x in (os.path.join(h, "coll_x"), os.path.join(h, "coll", "x")):
+    os.makedirs(x, exist_ok=True)
+    d["projects"][x] = {"hasTrustDialogAccepted": False}
+json.dump(d, open(p, "w"))
+enc = os.path.join(h, ".claude", "projects",
+                   __import__("re").sub(r"[/_.]", "-", os.path.join(h, "coll_x")), "memory")
+os.makedirs(enc, exist_ok=True)
+open(os.path.join(enc, "amb.md"), "w").write("---\nname: amb\n---\nbody\n")
+PY2
+OUT="$(run --roots "$H" --include-repos)"
+if has "unresolved" "$OUT" && [ ! -d "$H/coll_x/.agents" ] && [ ! -d "$H/coll/x/.agents" ]; then
+  ok "an ambiguous encoded directory is reported, not guessed at"
+else bad "ambiguous encoding was resolved by guessing"; fi
+
 # --- orphan memory lands flat, not in a nested rules/ subdirectory -----------
 # Only a flat rules/ is verified to load. A rules/<sub>/ would be the same silent
 # no-op the rest of this tool exists to avoid, so the prefix goes in the filename.

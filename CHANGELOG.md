@@ -52,6 +52,9 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   a `rules/orphan-<id>/` subdirectory. Whether Antigravity descends into a rules
   subdirectory was never measured, and shipping an unverified layout is the exact silent
   no-op this tool exists to prevent.
+- An encoded project directory that maps to two different real paths (`a_b` and `a/b`
+  both encode to `a-b`) resolves to neither. Picking by dict order could file one
+  repo's memory into another repo's `.agents/rules/`.
 - `--uninstall` removes our *entries* from `skills.json` and `import_manifest.json`,
   not the files. Both are shared with agy and the desktop apps, which append to them
   after a migration; deleting the file wholesale — which is what "we created it, so we

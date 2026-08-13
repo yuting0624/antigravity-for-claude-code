@@ -37,8 +37,11 @@ Things people expect and will not find: `~/.claude/CLAUDE.md`, `~/.claude/memory
 ```
 
 So it can only be used forward. `agy-migrate` re-encodes every path in
-`~/.claude.json`'s `projects` and matches; a memory dir that matches nothing (the
-working directory was deleted) is reported, not guessed at.
+`~/.claude.json`'s `projects` and matches. Two cases resolve to nothing and are
+reported rather than guessed at: a directory that matches no known path (the working
+directory was deleted), and one that matches **more than one** — `a_b` and `a/b` both
+encode to `a-b`, and filing a repo's memory into a different repo's `.agents/rules/`
+would be worse than declining.
 
 ## 2. Claude Desktop / Cowork
 

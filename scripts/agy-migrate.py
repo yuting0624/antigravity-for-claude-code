@@ -443,7 +443,14 @@ def memory_sources():
     if not os.path.isdir(base):
         return []
     cj = read_json(claude_json_path(), None) or {}
-    by_enc = {encode_project_dir(p): p for p in (cj.get("projects") or {})}
+    # The encoding is lossy, so two distinct project paths can produce the same
+    # directory name. Picking one by dict order could file a repo's memory into a
+    # different repo's .agents/rules/, so a collision resolves to nothing and the
+    # dir is reported as unresolved instead.
+    by_enc = {}
+    for path in (cj.get("projects") or {}):
+        enc = encode_project_dir(path)
+        by_enc[enc] = None if enc in by_enc else path
 
     out = []
     for enc in sorted(os.listdir(base)):
