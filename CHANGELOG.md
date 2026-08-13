@@ -52,6 +52,11 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   a `rules/orphan-<id>/` subdirectory. Whether Antigravity descends into a rules
   subdirectory was never measured, and shipping an unverified layout is the exact silent
   no-op this tool exists to prevent.
+- `--uninstall` removes our *entries* from `skills.json` and `import_manifest.json`,
+  not the files. Both are shared with agy and the desktop apps, which append to them
+  after a migration; deleting the file wholesale — which is what "we created it, so we
+  can remove it" amounted to — would have taken those additions with it. The file is
+  deleted only if nothing remains once our keys are gone.
 - Exit codes conform to the plugin's shared table rather than carving out exceptions:
   a bad flag exits **1** (argparse's own 2 would have read as "agy failed"), a missing
   prerequisite exits **18**, and a failed run exits **17**. All three are in

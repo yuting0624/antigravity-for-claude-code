@@ -218,6 +218,10 @@ class Manifest:
         self.symlinks = d.get("symlinks", [])
         self.dirs = d.get("dirs", [])       # ensured to exist; rmdir only if empty
         self.trees = d.get("trees", [])     # created wholesale by us; rmtree on undo
+        # Shared config files we happened to create. agy and the desktop apps append
+        # to these after a migration, so undo removes our KEYS and only then deletes
+        # the file if nothing else ended up in it.
+        self.created_json = d.get("created_json", [])
         self.json_keys = d.get("json_keys", {})   # file -> {"pointer": [keys]}
         self.projects = d.get("projects", [])
         self.runs = d.get("runs", [])
@@ -228,6 +232,7 @@ class Manifest:
             "symlinks": sorted(set(self.symlinks)),
             "dirs": sorted(set(self.dirs)),
             "trees": sorted(set(self.trees)),
+            "created_json": sorted(set(self.created_json)),
             "json_keys": self.json_keys,
             "projects": sorted(set(self.projects)),
             "runs": self.runs[-20:],
@@ -376,11 +381,11 @@ def unit_skills(plan, mf):
         ents.append({"path": src})          # absolute: '~' is not expanded here
         cur["entries"] = ents
         write_json(cfg, cur)
-        if preexisting:
-            # We only added an entry, so uninstall must remove the entry, not the file.
-            mf.note_key(cfg, "entries", src)
-        else:
-            mf.files.append(cfg)
+        # Always per-entry: skills.json is shared, so even when we created it, agy may
+        # have added entries of its own by the time anyone runs --uninstall.
+        mf.note_key(cfg, "entries", src)
+        if not preexisting:
+            mf.created_json.append(cfg)
 
     plan.add("skills", "ok", "register", cfg,
              f"read {len(names)} skill(s) in place (entries += {src})", fn)
@@ -1081,11 +1086,10 @@ def unit_plugins(plan, mf):
                 for i in sman.get("imports", []):
                     if i.get("name") not in have:
                         dman.setdefault("imports", []).append(i)
-                        if preexisting:
-                            mf.note_key(dman_path, "imports", i.get("name"))
+                        mf.note_key(dman_path, "imports", i.get("name"))
                 write_json(dman_path, dman)
                 if not preexisting:
-                    mf.files.append(dman_path)
+                    mf.created_json.append(dman_path)
         finally:
             shutil.rmtree(stage, ignore_errors=True)
 
@@ -1149,6 +1153,17 @@ def do_uninstall(apply_):
                         n += 1
         if apply_:
             write_json(path, d)
+    for p in mf.created_json:
+        d = read_json(p, None)
+        if d is None:
+            continue
+        if isinstance(d, dict) and any(v for v in d.values()):
+            print(f"  keep file      {p} (still holds entries we did not add)")
+            continue
+        print(f"  remove file    {p}")
+        n += 1
+        if apply_:
+            os.remove(p)
     for p in sorted(mf.dirs, key=len, reverse=True):
         if os.path.isdir(p) and not os.listdir(p):
             print(f"  rmdir          {p}")

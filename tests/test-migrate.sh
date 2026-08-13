@@ -170,6 +170,24 @@ if [ "$(cat "$RULES/g-rule.md")" = "MY OWN EDIT" ]; then
   ok "user-edited rule (marker removed) is not clobbered"
 else bad "clobbered a user-edited rule"; fi
 
+# --- uninstall must not take shared config down with it ----------------------
+# skills.json is shared with agy and the desktop apps, which append to it after a
+# migration. Even when we created the file, undo has to remove our entry only.
+python3 - "$SKJ" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["entries"].append({"path": "/somewhere/agy/added/later"})
+json.dump(d, open(sys.argv[1], "w"), indent=2)
+PY
+run --uninstall --apply >/dev/null 2>&1
+if [ -f "$SKJ" ] && python3 -c "
+import json,sys
+p=[x['path'] for x in json.load(open('$SKJ'))['entries']]
+sys.exit(0 if p == ['/somewhere/agy/added/later'] else 1)"; then
+  ok "uninstall removes only our skills.json entry, keeping foreign ones"
+else bad "uninstall clobbered shared skills.json content"; fi
+rm -f "$SKJ"
+
 # --- uninstall ---------------------------------------------------------------
 run --uninstall --apply >/dev/null 2>&1
 if [ ! -L "$REPO/AGENTS.md" ] && [ ! -f "$RULES/other.md" ]; then
