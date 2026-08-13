@@ -393,12 +393,37 @@ def unit_skills(plan, mf):
 
 # --- unit: CLAUDE.md ---------------------------------------------------------
 
+SKIP_DIRS = {"node_modules", ".git", ".venv", "venv", "dist", "build", "__pycache__"}
+
+
+def excluded_roots():
+    """Never scan either tool's own config tree.
+
+    `~/.claude/plugins/marketplaces/` holds cloned marketplace catalogues — hundreds
+    of third-party `.mcp.json` files the user never configured. A real run over `$HOME`
+    pulled 40 servers out of one. Plugin-owned MCP is the plugins unit's job anyway.
+    """
+    return (claude_dir(), gemini_root(), state_dir(),
+            os.path.join(home(), "Library"))
+
+
+def walk_user_tree(root):
+    """os.walk with vendor dirs and both config trees pruned."""
+    excl = excluded_roots()
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [
+            d for d in dirnames
+            if d not in SKIP_DIRS
+            and not d.startswith(".")
+            and not os.path.join(dirpath, d).startswith(excl)
+        ]
+        yield dirpath, dirnames, filenames
+
+
 def find_claude_mds(roots):
     out = []
-    skip = {"node_modules", ".git", ".venv", "venv", "dist", "build", "__pycache__"}
     for root in roots:
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = [d for d in dirnames if d not in skip]
+        for dirpath, _dirnames, filenames in walk_user_tree(root):
             if "CLAUDE.md" in filenames:
                 out.append(os.path.join(dirpath, "CLAUDE.md"))
     return sorted(out)
@@ -550,6 +575,7 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
                     write_json(pj, {"name": MEMORY_PLUGIN,
                                     "description": "Memory migrated from Claude Code"})
                     mf.files.append(pj)
+                mf.dirs.append(os.path.dirname(pj))
             for name, content in rules:
                 out = os.path.join(dest, name)
                 if not generated(out):
@@ -581,11 +607,39 @@ def existing_project_for(path):
     return None
 
 
+def bind_path_to_project(path, pid, mf):
+    """Add the cwd -> project id entry each surface keeps in cache/projects.json.
+
+    This is what makes the project selectable for that directory. It is a CACHE, so
+    agy may rewrite it — and in print mode it is not consulted at all (see below).
+    """
+    for surface in ("antigravity-cli", "antigravity", "antigravity-ide"):
+        cache = os.path.join(gemini_root(), surface, "cache", "projects.json")
+        if not os.path.isfile(cache):
+            continue
+        d = read_json(cache, None) or {}
+        if d.get(path) == pid:
+            continue
+        d[path] = pid
+        write_json(cache, d)
+        mf.note_key(cache, "", path)
+
+
 def plan_project_registration(plan, mf, path, unit):
-    """Workspace rules never load unless the session is bound to a project."""
+    """Workspace rules never load unless the session is bound to a project.
+
+    Registration is necessary but NOT sufficient: `agy -p` always uses the id in
+    cache/default_project_id.txt (`default-cli-project` out of the box) regardless of
+    cwd, so headless runs need `--project <id>` explicitly. Measured on agy 1.1.12 —
+    a canary rule fires with `--project`/`--new-project` and stays silent without.
+    Saying "registered" and stopping would leave the memory looking migrated and never
+    loading, so the id is reported for the user to pass.
+    """
     have = existing_project_for(path)
     if have:
-        plan.add(unit, "skip", "project-exists", path, f"reusing agy project {have[:8]}")
+        plan.add(unit, "skip", "project-exists", path,
+                 f"reusing agy project {have} — run agy there as: "
+                 f"agy --project {have}")
         return
     pid = str(uuid.uuid4())
 
@@ -599,16 +653,25 @@ def plan_project_registration(plan, mf, path, unit):
         })
         mf.files.append(out)
         mf.projects.append(pid)
+        bind_path_to_project(path, pid, mf)
 
     plan.add(unit, "ok", "register-project", path,
-             f"register a new agy project ({pid[:8]}) — without one, .agents/ is ignored", fn)
+             f"register agy project {pid} — headless runs must select it: "
+             f"agy --project {pid}", fn)
 
 
 # --- unit: MCP ---------------------------------------------------------------
 
+UNEXPANDED = re.compile(r"\$\{?CLAUDE_[A-Z_]+\}?")
+
+
 def translate_mcp(spec):
     """Claude mcpServers entry -> Antigravity. Returns (entry, warnings)."""
     warns = []
+    blob = json.dumps(spec)
+    if UNEXPANDED.search(blob):
+        return None, ["references a Claude Code variable Antigravity never sets "
+                      f"({UNEXPANDED.search(blob).group(0)})"]
     url = spec.get("serverUrl") or spec.get("url") or spec.get("httpUrl")
     if url:
         if spec.get("headers"):
@@ -628,7 +691,10 @@ def translate_mcp(spec):
 
 
 def collect_mcp(roots):
-    """Every place Claude Code keeps MCP servers, plus the desktop app's config."""
+    """Every place Claude Code keeps the USER's MCP servers, plus the desktop config.
+
+    Vendored plugin catalogues are excluded by construction — see below.
+    """
     found = {}   # name -> (spec, source)
 
     def take(name, spec, source):
@@ -642,14 +708,18 @@ def collect_mcp(roots):
     for name, spec in (cj.get("mcpServers") or {}).items():
         take(name, spec, ".claude.json")
 
-    skip = {"node_modules", ".git", ".venv", "venv", "dist", "build"}
-    for root in roots:
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = [d for d in dirnames if d not in skip]
-            if ".mcp.json" in filenames:
-                p = os.path.join(dirpath, ".mcp.json")
-                for name, spec in ((read_json(p, None) or {}).get("mcpServers") or {}).items():
-                    take(name, spec, p)
+    # Deliberately NOT a filesystem walk. `.mcp.json` sits at a project root by
+    # convention, and walking $HOME found vendored catalogues in two separate caches
+    # (~/.claude/plugins/marketplaces/ and Claude Desktop's rpm/plugin_*/) — 40 servers
+    # the user had never configured. The real project roots are already recorded, so
+    # consult exactly those and nothing can smuggle entries in.
+    candidates = list(roots) + [d for d in (cj.get("projects") or {}) if os.path.isdir(d)]
+    for d in dict.fromkeys(os.path.abspath(c) for c in candidates):
+        if d.startswith(excluded_roots()):
+            continue
+        p = os.path.join(d, ".mcp.json")
+        for name, spec in ((read_json(p, None) or {}).get("mcpServers") or {}).items():
+            take(name, spec, p)
 
     desktop = os.path.join(home(), "Library", "Application Support", "Claude",
                            "claude_desktop_config.json")
@@ -1141,7 +1211,7 @@ def do_uninstall(apply_):
             continue
         for pointer, keys in pointers.items():
             node, parent, last = d, None, None
-            for part in pointer.split("."):
+            for part in ([] if pointer == "" else pointer.split(".")):
                 parent, last = node, part
                 node = node.get(part) if isinstance(node, dict) else None
                 if node is None:

@@ -52,6 +52,20 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   a `rules/orphan-<id>/` subdirectory. Whether Antigravity descends into a rules
   subdirectory was never measured, and shipping an unverified layout is the exact silent
   no-op this tool exists to prevent.
+- **The scan no longer walks `$HOME` for `.mcp.json`.** Running the migration on a real
+  machine imported **40 MCP servers the user had never configured** — vendored plugin
+  catalogues found in two separate caches (`~/.claude/plugins/marketplaces/` and Claude
+  Desktop's `local-agent-mode-sessions/.../rpm/plugin_*/`). Blocklisting caches is a
+  losing game, so discovery now consults only the project roots Claude Code itself
+  records, plus the desktop config. `CLAUDE.md` still walks, with both config trees,
+  `~/Library` and dot-directories pruned.
+- An MCP entry referencing `${CLAUDE_PLUGIN_ROOT}` is reported, not imported.
+  Antigravity never sets it, so the server could only ever fail to start.
+- **Registering an agy project is not enough, and the tool no longer implies it is.**
+  `agy -p` always uses the id in `antigravity-cli/cache/default_project_id.txt`
+  regardless of cwd, so per-repo `.agents/rules/` stays inert in headless runs. The
+  report now prints `agy --project <id>` for each repo. (The written project shape is
+  confirmed correct: passing that id back does load the workspace's rules.)
 - An encoded project directory that maps to two different real paths (`a_b` and `a/b`
   both encode to `a-b`) resolves to neither. Picking by dict order could file one
   repo's memory into another repo's `.agents/rules/`.

@@ -89,14 +89,24 @@ built-ins → global declared.
 | --- | --- | --- |
 | 1 | `.agents/rules/*.md` and plugin `rules/*.md` need `trigger: always_on` frontmatter | without it they load **never**, silently |
 | 2 | Workspace `.agents/` loads only when the session is bound to an agy project | `AGENTS.md`, `.agents/rules/`, `.agents/skills/` all inert under `default-cli-project` |
+| 2b | Registering the project is **not** sufficient for `agy -p` | print mode always uses `antigravity-cli/cache/default_project_id.txt`, never the cwd — headless runs need `--project <id>` |
 | 3 | Global `skills.json` does not expand `~/` | entries must be absolute paths |
 | 4 | Global `~/.gemini/config/plugins/<n>/rules/` **does** load with no project bound | the only reliable always-on global channel |
 | 5 | Rule/workflow files are capped at 12,000 characters | longer memory must be split |
 | 6 | Rule discovery stops at the repository root | `.agents/` in a plain parent of several repos is unreachable from inside them |
 
-Reproduction for 1 and 2: put a rule saying "end every reply with TOKEN" at each
+Reproduction for 1, 2 and 2b: put a rule saying "end every reply with TOKEN" at each
 candidate location and run `agy -p "say hi" < /dev/null`, with and without
-`--new-project`.
+`--new-project` / `--project <id>`.
+
+**Project file provenance.** The shape `agy-migrate` writes —
+`{"id", "name", "projectResources": {"resources": [{"folderUri": "file://<path>"}]},
+"updatedAt"}` — was read off files agy itself created via `--new-project`, then
+confirmed the other way: a project written by the tool and passed back as
+`agy --project <id>` does load that workspace's `.agents/rules/`. The cwd→id map in
+each surface's `cache/projects.json` is written too, but it is a cache and print mode
+ignores it — which is why the tool reports the id rather than claiming the wiring is
+finished.
 
 ## 5. `agy plugin import claude`
 

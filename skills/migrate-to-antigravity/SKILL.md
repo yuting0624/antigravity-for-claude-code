@@ -72,11 +72,12 @@ These are measured against agy 1.1.12, and none of them are documented.
 1. **A rule without `trigger: always_on` is silently ignored.** No error, no warning.
    Only bare `AGENTS.md` / `GEMINI.md` are always-on without frontmatter. Migrated
    memory is therefore *rewritten with* frontmatter, never stripped of it.
-2. **Workspace `.agents/` only loads when the session is bound to an agy project.**
-   Under the default `default-cli-project`, `AGENTS.md`, `.agents/rules/` and
-   `.agents/skills/` are all ignored. The tool registers repos in
-   `~/.gemini/config/projects/`; otherwise use `agy --new-project`.
-   Global `~/.gemini/config/` loads regardless.
+2. **Workspace `.agents/` only loads when the session is bound to an agy project —
+   and registering one is not enough for headless runs.** `agy -p` always uses the id
+   in `antigravity-cli/cache/default_project_id.txt` (`default-cli-project` out of the
+   box) regardless of cwd. The tool registers each repo and **prints the id**; run
+   `agy --project <id>` there, or pick the project in the TUI. Global
+   `~/.gemini/config/` loads regardless, which is why global memory goes to a plugin.
 3. **`~/` is not expanded in the global `skills.json`.** Entry paths must be absolute.
 4. **Rules and workflows are capped at 12,000 characters per file.** Oversized memory
    is split into `-1.md`, `-2.md` parts on paragraph boundaries.

@@ -122,6 +122,18 @@ else bad "repo not registered"; fi
 if [ -L "$REPO/AGENTS.md" ]; then ok "AGENTS.md symlinked to CLAUDE.md"
 else bad "no AGENTS.md symlink"; fi
 
+# Registration alone does not activate .agents/ in print mode — agy -p always uses
+# cache/default_project_id.txt. The report has to hand over the id to pass to --project,
+# or the memory looks migrated and silently never loads.
+PID="$(python3 -c "
+import json,glob
+for f in glob.glob('$H/.gemini/config/projects/*.json'):
+    d=json.load(open(f))
+    if d.get('name')=='$REPO': print(d['id']); break")"
+if [ -n "$PID" ] && has "agy --project $PID" "$OUT"; then
+  ok "the report names 'agy --project <id>', not just 'registered'"
+else bad "project id not surfaced for the user to select"; fi
+
 MCP="$H/.gemini/config/mcp_config.json"
 if python3 -c "
 import json,sys
@@ -203,6 +215,34 @@ else bad "uninstall left MCP keys"; fi
 if [ -f "$REPO/CLAUDE.md" ] && [ -f "$H/.claude/settings.json" ]; then
   ok "Claude Code side untouched throughout"
 else bad "Claude Code side was modified"; fi
+
+# --- the scan must not descend into either tool's own config tree ------------
+# ~/.claude/plugins/marketplaces/ holds cloned third-party catalogues. A real run
+# over $HOME imported 40 MCP servers the user had never configured out of one.
+mkdir -p "$H/.claude/plugins/marketplaces/official/plugins/vendored"
+printf '{"mcpServers":{"vendor-catalog-server":{"serverUrl":"https://vendor.test/mcp"}}}\n' \
+  > "$H/.claude/plugins/marketplaces/official/plugins/vendored/.mcp.json"
+printf '# vendored\n' > "$H/.claude/plugins/marketplaces/official/plugins/vendored/CLAUDE.md"
+# An entry Antigravity can never run: it never sets ${CLAUDE_PLUGIN_ROOT}. It has to
+# sit in a RECORDED project — .mcp.json is no longer discovered by walking.
+mkdir -p "$H/work/withvar"
+printf '{"mcpServers":{"needs-var":{"command":"bun","args":["--cwd","${CLAUDE_PLUGIN_ROOT}"]}}}\n' \
+  > "$H/work/withvar/.mcp.json"
+python3 - "$H" <<'PY2'
+import json, os, sys
+h = sys.argv[1]; p = os.path.join(h, ".claude.json")
+d = json.load(open(p))
+d["projects"][os.path.join(h, "work", "withvar")] = {"hasTrustDialogAccepted": False}
+json.dump(d, open(p, "w"))
+PY2
+OUT="$(run --roots "$H")"
+if ! has "vendor-catalog-server" "$OUT"; then
+  ok "vendored marketplace .mcp.json is not scanned"
+else bad "imported a third-party marketplace MCP server"; fi
+if has "needs-var" "$OUT" && has "never sets" "$OUT"; then
+  ok "an entry using \${CLAUDE_PLUGIN_ROOT} is reported, not imported"
+else bad "unexpanded Claude variable was migrated as-is"; fi
+rm -rf "$H/.claude/plugins/marketplaces" "$H/work/withvar"
 
 # --- a lossy-encoding collision must not misfile memory ----------------------
 # `a_b` and `a/b` both encode to `a-b`. Guessing would write one repo's memory into
