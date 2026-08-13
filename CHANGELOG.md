@@ -48,6 +48,12 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
 - `bin/agy-migrate` exits **16** when python3 is missing — the next free code in the
   plugin's contract. 13 is "agy not on PATH" and 14 is "model unavailable"; reusing
   either would misreport which dependency is actually absent.
+- `--include-orphan-memory` writes flat into `rules/` with a filename prefix rather than
+  a `rules/orphan-<id>/` subdirectory. Whether Antigravity descends into a rules
+  subdirectory was never measured, and shipping an unverified layout is the exact silent
+  no-op this tool exists to prevent.
+- A failed run exits **17**, not 2: argparse already exits 2 for a bad flag, and the
+  shared table calls 2 "agy failed".
 - Session history is **not** migrated and cannot be: Antigravity stores conversations as
   opaque protobuf blobs inside per-conversation SQLite files. `docs/MIGRATION.md` has the
   full layout reference and compatibility matrix.

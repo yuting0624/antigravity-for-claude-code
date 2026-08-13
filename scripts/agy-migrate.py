@@ -486,6 +486,7 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
     home_enc = encode_project_dir(home())
     for src in srcs:
         rules = rules_from_memory_dir(src)
+        prefix = ""
         split = sum(1 for n, _ in rules if re.search(r"-\d+\.md$", n))
 
         # The home-dir project is Claude's de-facto global memory; everything else
@@ -509,8 +510,11 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
                          "not a git repository, so nested repos will never see these "
                          "(discovery stops at the repo root) — consider global scope")
         elif include_orphans:
-            dest = os.path.join(gemini_config(), "plugins", MEMORY_PLUGIN,
-                                "rules", "orphan-" + src["enc"].strip("-"))
+            # Flat, with a filename prefix — NOT a nested rules/<sub>/ directory.
+            # Only a flat rules/ is verified to load; a subdirectory would be the
+            # same silent no-op this whole tool exists to avoid.
+            dest = os.path.join(gemini_config(), "plugins", MEMORY_PLUGIN, "rules")
+            prefix = "orphan-" + src["enc"].strip("-") + "-"
             scope = "global (orphan)"
         else:
             plan.add("memory", "warn", "unresolved", src["enc"],
@@ -518,6 +522,8 @@ def unit_memory(plan, mf, include_orphans, include_repos, register_projects):
                      "(--include-orphan-memory folds them into global rules)")
             continue
 
+        if prefix:
+            rules = [(prefix + n, c) for n, c in rules]
         detail = f"{len(rules)} rule(s) -> {scope}"
         if split:
             detail += f" / {split} split at the 12000-char cap"
@@ -1286,7 +1292,9 @@ def main(argv=None):
         print(f"Everything that did succeed is tracked; "
               f"revert with: agy-migrate --uninstall --apply")
         print(f"Backup of the previous state: {dest}")
-        return 2
+        # 17, not 2: argparse already exits 2 for a bad flag, and the plugin's shared
+        # table calls 2 "agy failed". Neither is what happened here.
+        return 17
     print("\nDone. To revert: agy-migrate --uninstall --apply")
     return 0
 

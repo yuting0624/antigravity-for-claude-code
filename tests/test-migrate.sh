@@ -186,6 +186,20 @@ if [ -f "$REPO/CLAUDE.md" ] && [ -f "$H/.claude/settings.json" ]; then
   ok "Claude Code side untouched throughout"
 else bad "Claude Code side was modified"; fi
 
+# --- orphan memory lands flat, not in a nested rules/ subdirectory -----------
+# Only a flat rules/ is verified to load. A rules/<sub>/ would be the same silent
+# no-op the rest of this tool exists to avoid, so the prefix goes in the filename.
+mkdir -p "$H/.claude/projects/-Users-x-deleted-dir/memory"
+printf -- '---\nname: orph\ndescription: o\n---\norphan body\n' \
+  > "$H/.claude/projects/-Users-x-deleted-dir/memory/orph.md"
+run --roots "$H" --include-repos --include-orphan-memory --apply >/dev/null 2>&1
+if ls "$RULES"/orphan-*orph.md >/dev/null 2>&1; then
+  ok "orphan memory lands flat in rules/ with a filename prefix"
+else bad "orphan memory not flattened into rules/"; fi
+if [ -z "$(find "$RULES" -mindepth 1 -type d 2>/dev/null)" ]; then
+  ok "no nested subdirectory under rules/"
+else bad "created a rules/ subdirectory of unverified behaviour"; fi
+
 # --- a failing step must not report success ----------------------------------
 # Reinstall from scratch, then wedge one destination so its write raises. The run
 # must exit non-zero and must still have persisted what it did manage to do —
