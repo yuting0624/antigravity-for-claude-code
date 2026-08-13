@@ -42,7 +42,7 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   to — the one exception is an `AGENTS.md` symlink beside a `CLAUDE.md`, under
   `--include-repos`.
 - Failure is propagated, not swallowed: a step that fails prints `✗`, is named in a
-  summary, and makes the run exit 2. The manifest is written after **every** step rather
+  summary, and makes the run exit non-zero. The manifest is written after **every** step rather
   than once at the end, so a crash halfway through still leaves `--uninstall` able to
   find what was already written.
 - `bin/agy-migrate` exits **16** when python3 is missing — the next free code in the
