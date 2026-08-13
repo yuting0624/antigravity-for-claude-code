@@ -3,6 +3,48 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.23.0
+- **New: `/antigravity:migrate` — move an existing Claude Code setup onto agy.**
+  `agy plugin import claude` already exists, and on any current install it prints
+  `No claude extensions found.` and exits 0: it scans `~/.claude/plugins/<name>/` one
+  level deep, and Claude Code 2.x keeps plugins at
+  `plugins/cache/<marketplace>/<plugin>/<version>/`. It also does not follow symlinks.
+  It does, however, run without authentication — so `agy-migrate` copies the real
+  plugins flat into a staging `HOME`, lets the native importer do the conversion there,
+  repairs its output, and merges. Keeping Google's converter in the loop means the
+  output tracks their format instead of ours.
+  Two repairs are not optional. The importer turns a remote MCP server
+  (`{"type":"http","url":…}`) into `{"command":"","args":null}` — the URL is discarded
+  and no `serverUrl` written, leaving an entry that fails on PATH lookup. And it copies
+  hooks byte-for-byte, though Antigravity's `hooks.json` is a map of *named* hooks, its
+  matchers are step types (`run_command`, not `Bash`), it fires five events rather than
+  Claude's nine, and it never sets `${CLAUDE_PLUGIN_ROOT}`.
+- **Skills are linked, not copied.** `~/.gemini/config/skills.json` gets an entry
+  pointing at `~/.claude/skills`, so both tools read one set of files. The path is
+  written absolute: `~/` is not expanded in the global config, only in workspace ones.
+- **Memory is rewritten, not stripped.** A rule without `trigger: always_on` in its
+  frontmatter is ignored by Antigravity with no error and no warning — the failure mode
+  a "strip the frontmatter" migration would produce is invisible. Global memory becomes
+  a `claude-code-memory` plugin's rules (the only always-on channel that works with no
+  project bound); per-repo memory goes to `<repo>/.agents/rules/` **and** registers the
+  repo in `~/.gemini/config/projects/`, because workspace customizations do not load at
+  all for an unbound session.
+  Oversized notes are split on paragraph boundaries at the undocumented 12,000-character
+  per-rule cap, and `[[wikilinks]]` resolve to relative links or flatten.
+- **Permissions are proposed, never applied silently.** Claude's `allow` list holds whole
+  command *lines* — quoted prompts included — not prefixes, so nothing maps 1:1 onto
+  agy's `command()`. Collapsing them always widens the grant, so the result goes to
+  `~/.gemini/.agy-migrate/proposed-permissions.json` and needs `--apply-permissions`.
+  `model`, `effortLevel` and `env` are reported and deliberately not written.
+- Dry-run by default; `--apply` backs up first and `--uninstall --apply` reverses it,
+  including merged JSON keys. Re-running is a no-op, and a generated file whose marker
+  comment you removed is treated as yours. The Claude Code config dir is never written
+  to — the one exception is an `AGENTS.md` symlink beside a `CLAUDE.md`, under
+  `--include-repos`.
+- Session history is **not** migrated and cannot be: Antigravity stores conversations as
+  opaque protobuf blobs inside per-conversation SQLite files. `docs/MIGRATION.md` has the
+  full layout reference and compatibility matrix.
+
 ## 0.22.5
 - **`doctor` now asks agy which model it will run, instead of inferring it from a version
   string.** 0.22.4 added a warning for agy below 1.1.10, where `--model` was ignored in

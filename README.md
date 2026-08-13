@@ -95,8 +95,47 @@ In Claude Code:
 | `/antigravity:media <file> [focus] [--convert]` | understand audio / video / images — agy transcribes + analyzes, returns a **timestamped digest**; full transcript goes to a file, not your context |
 | `/antigravity:cloud-run-debug [--service <s>] [--region <r>] [--project <id>] [--since 1h] [--apply]` | diagnose a failing Cloud Run service — agy digests the error logs, Claude infers the root cause + fix; read-only by default (`--apply` writes to a branch) |
 | `/antigravity:status [id]` · `:result <id>` · `:cancel <id>` | manage background delegation jobs |
+| `/antigravity:migrate [--apply] [--include-repos]` | move an existing Claude Code setup onto agy — skills, CLAUDE.md, memory, MCP, plugins, permissions; dry-run by default, `--uninstall` reverses it |
 
 > Background jobs are for **interactive** sessions (fire-and-collect). In headless `claude -p` (one-shot), delegate **synchronously** — there's no later turn to collect a result.
+
+---
+
+## 📦 Bringing your Claude Code setup across
+
+`/antigravity:migrate` moves an existing Claude Code configuration onto `agy`. Dry-run
+by default; `--apply` backs up first and `--uninstall --apply` reverses it. Your
+`~/.claude` is never written to.
+
+```
+/antigravity:migrate                             # see the plan
+/antigravity:migrate --apply                     # global assets
+/antigravity:migrate --apply --include-repos     # also AGENTS.md + per-repo memory
+```
+
+| your Claude Code asset | becomes |
+|---|---|
+| `~/.claude/skills/` | read **in place** — a `skills.json` entry, not a copy, so one edit serves both tools |
+| installed plugins | `~/.gemini/config/plugins/` via the native importer, with its output repaired |
+| `CLAUDE.md` | an `AGENTS.md` symlink beside it |
+| auto-memory | always-on rules — global ones in a plugin, per-repo ones in `<repo>/.agents/rules/` |
+| MCP servers (project + desktop app) | merged into `~/.gemini/config/mcp_config.json` |
+| trusted projects | `trustedWorkspaces` |
+| `permissions.allow` | a **proposal file** — see below |
+| session history | nothing. Antigravity stores conversations as protobuf blobs inside per-conversation SQLite files; there is no writer |
+
+Two things are deliberately not automatic. **Permissions widen when translated** —
+Claude's allow-list holds whole command *lines*, while agy's `command()` matches a
+prefix — so the result is written out for review and merged only with
+`--apply-permissions`. **`model` / `effortLevel` / `env`** are reported and never
+written, because no honest mapping exists.
+
+Worth knowing if you would rather do it by hand: an Antigravity rule without
+`trigger: always_on` in its frontmatter is ignored with no error and no warning,
+workspace `.agents/` is ignored entirely unless the session is bound to an agy project,
+and `agy plugin import claude` finds nothing on a current Claude Code because it only
+looks one directory deep. [`docs/MIGRATION.md`](docs/MIGRATION.md) has the full layout
+reference, the compatibility matrix, and how each of these was measured.
 
 ---
 
@@ -233,8 +272,8 @@ skills/antigravity/SKILL.md   WHEN + HOW Claude collaborates with agy
 agents/           antigravity-delegate subagent (file work runs on Gemini, not Claude)
 commands/         slash commands (delegate, review, research, media, cloud-run-debug, setup, status, result, cancel)
 hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
-bin/              PATH shims (bare names): agy-delegate · agy-job · agy-cost-compare · agy-doctor · cloud-debug · agy-trace · agy-media · measure-session
-scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · agy-media · measure-session · doctor
+bin/              PATH shims (bare names): agy-delegate · agy-job · agy-cost-compare · agy-doctor · cloud-debug · agy-trace · agy-media · measure-session · agy-migrate
+scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · agy-media · measure-session · doctor · agy-migrate
 docs/             AB-RESULTS (measured A/B) · POC-PLAYBOOK · TROUBLESHOOTING · DEMO-KIT
 prices.json       Vertex rate config (verify before quoting)
 ```

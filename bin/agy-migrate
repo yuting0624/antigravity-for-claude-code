@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# bin/ entrypoint on the Bash-tool PATH (Claude Code adds a plugin's bin/ to PATH).
+# $CLAUDE_PLUGIN_ROOT is NOT exported to model-run Bash (issue #11), so commands and
+# skills invoke this bare name; it forwards to ../scripts/agy-migrate.py.
+#
+# Python (not bash) because the job is JSON merging, YAML frontmatter rewriting and
+# 12k-char rule chunking — the repo already ships python3 scripts for the same reason.
+set -u
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "agy-migrate: python3 が必要です (brew install python3)" >&2
+  exit 13
+fi
+exec python3 "$ROOT/scripts/agy-migrate.py" "$@"

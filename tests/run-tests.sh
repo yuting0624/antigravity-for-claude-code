@@ -1364,6 +1364,14 @@ PY
 rc=$?
 check "plugin contract (manifests, hook/agent refs, frontmatter, exec bits)" 0 "$rc"
 
+# The migration tool has its own suite: it needs a synthetic HOME rather than the
+# `agy` stub this file installs, so it runs as a child and reports one line here.
+if bash "$HERE/test-migrate.sh" > "$TMP/migrate.log" 2>&1; then
+  echo "ok: agy-migrate suite ($(grep -c '^ok:' "$TMP/migrate.log") checks)"; PASS=$((PASS+1))
+else
+  echo "FAIL: agy-migrate suite"; sed 's/^/    /' "$TMP/migrate.log" | tail -20; FAIL=$((FAIL+1))
+fi
+
 echo ""
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
