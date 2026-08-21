@@ -27,10 +27,11 @@
 #       --sandbox                    Run agent with terminal sandbox restrictions
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
-#       --mode <accept-edits|plan>   agy execution mode (agy >= 1.1.0). accept-edits: auto-apply
-#                                    FILE EDITS to the workspace without granting terminal/tool
-#                                    permissions (the safer choice for pure write tasks — narrower
-#                                    than --yolo). plan: strategize only, touch nothing.
+#       --mode <accept-edits|plan>   agy execution mode (agy >= 1.1.0). accept-edits is NOT a
+#                                    write grant: measured on agy 1.1.13, where the flag is
+#                                    applied at all (1.1.12 fixed it being ignored headless),
+#                                    the write is denied exactly like one without it. Use a
+#                                    permissions.allow rule or --yolo. plan: strategize only.
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
@@ -128,11 +129,14 @@ signal() {
 permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   # The rc != 0 path dumps $ERR before it classifies, so echoing it again here printed
   # agy's diagnostic twice on the plain-stderr shape. Both reviewers caught it.
-  # An `if`, not `cond || { ...; }`. The second half can itself fail when $ERR is
-  # empty, and under `set -e` that would exit before the guidance and the signal
-  # below ever ran. This file uses `set -uo pipefail` today, so it is an unenforced
-  # invariant rather than a live bug — which is the shape this repo keeps getting
-  # caught by. Reviewers flagged it; make it structural instead.
+  # An `if`, not `cond || { ...; }`. The group is the LAST element of that list, so a
+  # failure inside it is NOT exempt from `set -e` — and this file runs `set -euo pipefail`
+  # (line 60). With $ERR empty the group returns 1, the shell exits, and the guidance and
+  # the AGY_SIGNAL below never run. Only the callers keep that from happening today.
+  #
+  # The first version of this comment said the file uses `set -uo pipefail` and called the
+  # risk theoretical. That was copied from doctor.sh, which really has no `-e`. A reviewer
+  # checked the line instead of believing the sentence.
   if [ "${1:-}" != shown ] && [ -s "$ERR" ]; then
     cat "$ERR" >&2
   fi

@@ -17,11 +17,10 @@ Do this:
    `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
    there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
    is what web / Vertex AI Search / terminal need. Without a grant,
-   headless agy leaves your workspace untouched while still reporting success (it
-   describes / scratch-diverts / soft-denies / fails outright depending on version, and only
-   the newest admit it; issue #10). `--mode
-   accept-edits` is NOT a dependable substitute — it only wrote headless on agy 1.1.0–1.1.2
-   is not a grant either: measured on agy 1.1.13, denied exactly like a plain write. Run
+   headless agy leaves your workspace untouched, and only the newest versions admit it (it
+   describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
+   accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
+   at all, the write is denied exactly like one without it. Run
    write tasks on a dedicated branch (+ `--sandbox`), and
    **verify files actually changed** with `git status`. Claude Code may prompt for or block
    `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive

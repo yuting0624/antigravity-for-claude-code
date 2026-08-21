@@ -84,6 +84,13 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   level on purpose — a line rule needs exceptions for the version history, the
   subagent-spawn case and single-branch code comments, and a guard with three exceptions
   gets deleted. What actually went wrong was coarser: a whole file was never opened.
+  A fourth round then found the `--help` text still calling `--mode accept-edits` "the
+  safer choice for pure write tasks" — the claim this release retracts in seven other
+  places — plus a sentence in `commands/delegate.md` spliced in half by an incomplete
+  find/replace, and a comment justifying a `set -e` fix by citing the wrong `set` line
+  (copied from doctor.sh, which has no `-e`; this file does). The accept-edits guard is
+  LINE level for that reason: file level could not see it, because the same file retracts
+  the claim three hundred lines further down.
 
 ## 0.23.0
 - **New: `/antigravity:migrate` — move an existing Claude Code setup onto agy.**

@@ -430,7 +430,7 @@ out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=
 if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "implement the parser module" 2>&1); rc=$?
-if grep -qF "$WARN" <<<"$out"; then echo "ok: --mode accept-edits still warns (soft-denied on 1.1.3)"; PASS=$((PASS+1));
+if grep -qF "$WARN" <<<"$out"; then echo "ok: --mode accept-edits still warns (it is not a grant on any version)"; PASS=$((PASS+1));
 else echo "FAIL: no warning with --mode accept-edits (should warn since 1.1.3)"; FAIL=$((FAIL+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
 if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
@@ -877,12 +877,33 @@ echo "== exit 15 is described consistently across the user-facing surfaces =="
 # coarser and worth pinning exactly: a whole file talks about exit 15 and never mentions
 # the shape this release added.
 e15_bad=""
-for f in README.md docs/POC-PLAYBOOK.md docs/TROUBLESHOOTING.md \
-         skills/antigravity/SKILL.md agents/*.md commands/*.md; do
+# scripts/ is in the list because the --help text lives there and is user-facing: it kept
+# advertising `--mode accept-edits` as "the safer choice for pure write tasks" through a
+# sweep that retracted exactly that claim in seven other files.
+# doctor.sh is deliberately NOT here for the exit-15 rule: it references the code from a
+# permissions diagnostic without describing what produces it, so requiring the taxonomy
+# there is noise in a line someone reads while fixing a rule.
+E15_SURFACES="README.md docs/POC-PLAYBOOK.md docs/TROUBLESHOOTING.md
+skills/antigravity/SKILL.md agents/antigravity-delegate.md commands/delegate.md
+scripts/agy-delegate.sh"
+for f in $E15_SURFACES; do
   [ -f "$ROOT/$f" ] || continue
   grep -qE 'exit [`]?15' "$ROOT/$f" || continue
   grep -qE '1\.1\.13|hard error' "$ROOT/$f" || e15_bad="$e15_bad $f"
 done
+# Same shape for the other claim this release retracted: anything that mentions
+# accept-edits must say it is not a grant, or it is still selling it as one.
+# LINE level for this one, unlike exit 15 above. The claim is narrow enough to state
+# exactly — accept-edits is safer / auto-applies edits — and file level could not catch
+# what actually happened: the --help text kept selling it while the same file's runtime
+# message retracted it three hundred lines away. Verified against the tree: no legitimate
+# line pairs these words today.
+ae_bad="$(grep -rniE 'accept-edits' "$ROOT"/README.md "$ROOT"/docs/*.md "$ROOT"/skills \
+            "$ROOT"/agents "$ROOT"/commands "$ROOT"/scripts 2>/dev/null \
+          | grep -iE 'safer|auto-appl' | sed "s|$ROOT/||" | cut -d: -f1-2 | tr '\n' ' ')"
+if [ -z "$ae_bad" ]; then
+  echo "ok: no line still sells --mode accept-edits as safer or auto-applying"; PASS=$((PASS+1));
+else echo "FAIL: --mode accept-edits still advertised at: $ae_bad"; FAIL=$((FAIL+1)); fi
 if [ -z "$e15_bad" ]; then
   echo "ok: every file that describes exit 15 names both denial shapes"; PASS=$((PASS+1));
 else echo "FAIL: describes exit 15 without the 1.1.13 hard error:$e15_bad"; FAIL=$((FAIL+1)); fi
