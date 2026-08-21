@@ -19,7 +19,9 @@
 #
 # Env overrides (USD per 1M tokens):
 #   CLAUDE_IN_PER_M  CLAUDE_OUT_PER_M     (default: 5 / 25   -- VERIFY!)
-#   GEMINI_IN_PER_M  GEMINI_OUT_PER_M     (default: 0.30 / 2.50 -- VERIFY!)
+#   GEMINI_IN_PER_M  GEMINI_OUT_PER_M     (default: prices.json gemini_flash,
+#                                          today 0.75 / 3.75 -- VERIFY against
+#                                          your own Vertex rates)
 #   CHARS_PER_TOKEN                       (default: 4)
 #
 set -euo pipefail
@@ -58,8 +60,8 @@ fi
 # the situation where nobody can see where it came from.
 CLAUDE_IN_PER_M="${CLAUDE_IN_PER_M:-${_CIN:-5}}"
 CLAUDE_OUT_PER_M="${CLAUDE_OUT_PER_M:-${_COUT:-25}}"
-GEMINI_IN_PER_M="${GEMINI_IN_PER_M:-${_GIN:-1.50}}"
-GEMINI_OUT_PER_M="${GEMINI_OUT_PER_M:-${_GOUT:-9.00}}"
+GEMINI_IN_PER_M="${GEMINI_IN_PER_M:-${_GIN:-0.75}}"
+GEMINI_OUT_PER_M="${GEMINI_OUT_PER_M:-${_GOUT:-3.75}}"
 CPT="${CHARS_PER_TOKEN:-4}"
 case "$CPT" in ''|*[!0-9]*) CPT=4 ;; esac   # must be a positive integer (avoid awk div-by-zero)
 [ "$CPT" -gt 0 ] || CPT=4

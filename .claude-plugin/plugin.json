@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
@@ -22,7 +22,7 @@
     "default_tier": {
       "type": "string",
       "title": "Default Antigravity tier",
-      "description": "Tier used by agy-delegate.sh when --tier is not passed. One of: flash (Gemini 3.5 Flash High, default — bulk work), flash-lo (Flash Low, cheapest/trivial), pro (Gemini 3.1 Pro High, harder reasoning).",
+      "description": "Tier used by agy-delegate.sh when --tier is not passed. One of: flash (Gemini 3.7 Flash High, default — bulk work), flash-lo (Flash Low, cheapest/trivial), pro (Gemini 3.1 Pro High, harder reasoning).",
       "default": "flash"
     },
     "timeout": {
@@ -46,13 +46,13 @@
     "tier_flash": {
       "type": "string",
       "title": "Model for the 'flash' tier",
-      "description": "Override the exact agy model the 'flash' tier maps to (default: Gemini 3.5 Flash (High)). Use a name from `agy models`.",
+      "description": "Override the exact agy model the 'flash' tier maps to (default: Gemini 3.7 Flash (High)). Use a name from `agy models`.",
       "default": ""
     },
     "tier_flash_lo": {
       "type": "string",
       "title": "Model for the 'flash-lo' tier",
-      "description": "Override the exact agy model the 'flash-lo' tier maps to (default: Gemini 3.5 Flash (Low)). Use a name from `agy models`.",
+      "description": "Override the exact agy model the 'flash-lo' tier maps to (default: Gemini 3.7 Flash (Low)). Use a name from `agy models`.",
       "default": ""
     },
     "tier_pro": {

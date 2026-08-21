@@ -9,10 +9,42 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 DELEGATE="$ROOT/scripts/agy-delegate.sh"
+
 MEASURE="$ROOT/scripts/measure-session.py"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 PASS=0; FAIL=0
+
+# The shipped tier defaults, read from the wrapper — the single source of truth. Every
+# stub `agy models` list and every expectation below uses these, so changing a default is
+# a one-line edit in one file instead of a hunt through ten string literals. Bumping the
+# flash tier to 3.7 broke four assertions that had the old name baked in, which is what
+# this removes.
+tier_default() { # $1 = FLASH | FLASH_LO | PRO
+  sed -n "s/.*CLAUDE_PLUGIN_OPTION_TIER_$1:-\\(.*\\)}\".*/\\1/p" "$DELEGATE" | head -1
+}
+DEF_FLASH="$(tier_default FLASH)"
+DEF_FLASH_LO="$(tier_default FLASH_LO)"
+DEF_PRO="$(tier_default PRO)"
+
+# The stub answers `agy models` in SLUG form, which is what agy 1.1.5+ emits and what
+# doctor's either-direction matcher exists for. Derive the slugs from the same defaults
+# rather than writing them out, so the two cannot disagree — and keep one loose entry
+# (`gemini-3.5-flash`, no effort suffix) so the matcher is still exercised against a form
+# that is neither an exact slug nor a display name.
+slug_of() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '()' | tr ' ' '-'; }
+STUB_MODELS="$(slug_of "$DEF_FLASH") $(slug_of "$DEF_FLASH_LO") $(slug_of "$DEF_PRO") gemini-3.5-flash"
+export STUB_MODELS
+
+# doctor keeps its OWN copy of these defaults, and a mismatch makes it warn that a tier
+# model is missing while delegation happily uses a different one. Pin them together.
+for _t in FLASH FLASH_LO PRO; do
+  _w="$(tier_default "$_t")"
+  _d="$(sed -n "s/.*CLAUDE_PLUGIN_OPTION_TIER_$_t:-\\(.*\\)}\".*/\\1/p" "$ROOT/scripts/doctor.sh" | head -1)"
+  if [ -n "$_w" ] && [ "$_w" = "$_d" ]; then
+    echo "ok: doctor and the wrapper agree on the $_t tier default"; PASS=$((PASS+1));
+  else echo "FAIL: tier $_t default drift — wrapper '$_w' vs doctor '$_d'"; FAIL=$((FAIL+1)); fi
+done
 
 # bash does not hoist: a function called above its definition is `command not found`,
 # exit 127, and every `if` around it silently takes the else branch. That is how two
@@ -57,7 +89,8 @@ cat > "$TMP/bin/agy" <<'STUB'
 # `agy models` emits the slug format agy 1.1.5+ uses (was display names before) so doctor's
 # tier-model check is exercised against the current format.
 if [ "$1" = "models" ]; then
-  printf '%s\n' gemini-3.6-flash-high gemini-3.5-flash gemini-3.5-flash-low gemini-3.1-pro-high
+  # shellcheck disable=SC2086  # word splitting is the point: one slug per argument
+  printf '%s\n' ${STUB_MODELS:-gemini-3.6-flash-high gemini-3.5-flash gemini-3.5-flash-low gemini-3.1-pro-high}
   exit 0
 fi
 # `agy --help`: advertise --output-format only when STUB_JSON_CAPABLE=1, so tests can
@@ -80,6 +113,13 @@ case "${STUB_MODE:-text}" in
   # agy >= 1.1.8 structured envelope. Note the RAW newline inside "response" — agy really
   # emits that, and it makes the payload invalid for strict JSON parsers.
   json_ok)  printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":1,"cache_read_tokens":3,"total_tokens":16}}'; exit 0 ;;
+  # agy 1.1.13 turned the write-without-grant SOFT deny into a HARD error: rc=1, and the
+  # diagnostic in the envelope's `error` field, carrying none of the 1.1.3 anchors. That
+  # shape lands on the rc != 0 path, above the soft-deny check, so exit 15 stopped being
+  # reachable at all. Captured verbatim from a real 1.1.13 run.
+  json_denied) printf '{"conversation_id":"c1","status":"ERROR","response":"","error":"permission check failed for write_file \\"/tmp/x/probe.txt\\": user denied permission for write_file(/tmp/x/probe.txt)","usage":{}}'; exit 1 ;;
+  # Same denial without the JSON envelope, for older agy / the plain-text fallback path.
+  harddeny) echo 'permission check failed for write_file "/tmp/x/probe.txt": user denied permission for write_file(/tmp/x/probe.txt)' >&2; exit 1 ;;
   json_err) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model X is not recognized as a known model","usage":{}}'; exit 1 ;;
   # Same failure, but with agy's REAL wording — it quotes the offending value. The
   # diagnostic text sits AFTER the embedded quotes, so any field extraction that stops
@@ -149,7 +189,7 @@ out=$("$DELEGATE" --tier 2>/dev/null); rc=$?
 check "option without value -> exit 1 (friendly)" 1 "$rc"
 
 out=$(STUB_MODE=args "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
-check "flash tier -> correct model string" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+check "flash tier -> correct model string" 0 "$rc" "Gemini 3.7 Flash (High)" "$out"
 
 out=$(STUB_MODE=args "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
 check "pro tier -> correct model string" 0 "$rc" "Gemini 3.1 Pro (High)" "$out"
@@ -342,13 +382,13 @@ out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" "hi" 2>/d
 check "userConfig default_tier=pro -> Pro model" 0 "$rc" "Gemini 3.1 Pro (High)" "$out"
 
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
-check "explicit --tier overrides userConfig" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+check "explicit --tier overrides userConfig" 0 "$rc" "Gemini 3.7 Flash (High)" "$out"
 
 # multi-model: default_model + per-tier remap (agy supports Claude/GPT on some plans)
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "userConfig default_model -> used as-is" 0 "$rc" "Claude Sonnet 4.5" "$out"
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
-check "explicit --tier beats default_model" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+check "explicit --tier beats default_model" 0 "$rc" "Gemini 3.7 Flash (High)" "$out"
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" -m "GPT-X" "hi" 2>/dev/null); rc=$?
 check "explicit --model beats default_model" 0 "$rc" "GPT-X" "$out"
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_TIER_FLASH="Claude Sonnet 4.5" "$DELEGATE" --tier flash "hi" 2>/dev/null); rc=$?
@@ -364,7 +404,7 @@ check "explicit --timeout overrides userConfig" 0 "$rc" "--print-timeout 3m" "$o
 
 # invalid default tier from config falls back to flash; explicit --tier typo still errors
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=bogus "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "invalid userConfig tier -> falls back to flash" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+check "invalid userConfig tier -> falls back to flash" 0 "$rc" "Gemini 3.7 Flash (High)" "$out"
 out=$("$DELEGATE" --tier bogus "hi" 2>/dev/null); rc=$?
 check "explicit --tier bogus -> exit 1" 1 "$rc"
 
@@ -405,6 +445,29 @@ if has 'NOT write to your workspace without it' "$out"; then
 else echo "ok: warning no longer claims --yolo is the only write grant"; PASS=$((PASS+1)); fi
 # Same correction on the exit-15 path — where someone lands after being denied.
 out=$(STUB_MODE=softdeny "$DELEGATE" "implement it" 2>&1); rc=$?
+# NOTE the distinct variable names. The softdeny capture above is still live and its
+# assertion is BELOW this block; reusing $out/$rc here silently rebinds what that
+# assertion reads, which is how the json-envelope check was voided once before.
+# agy 1.1.13: the denial is now a hard error (rc=1), not a soft deny (rc=0 + empty).
+# Both shapes must reach exit 15 — the guidance they carry is the whole point of the
+# code, and 0.22.5 verified the anchor strings were still in the binary without noticing
+# the ROUTE had moved out from under them.
+deny_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_denied "$DELEGATE" "write a file" 2>&1 >/dev/null); deny_rc=$?
+check "hard permission error (json envelope) -> exit 15" 15 "$deny_rc" "PERMISSION_DENIED" "$deny_out"
+check "hard permission error names the permissions.allow route" 15 "$deny_rc" "permissions.allow" "$deny_out"
+deny_out=$(STUB_MODE=harddeny "$DELEGATE" "write a file" 2>&1 >/dev/null); deny_rc=$?
+check "hard permission error (plain stderr) -> exit 15" 15 "$deny_rc" "PERMISSION_DENIED" "$deny_out"
+# It must NOT be swallowed by a broader category on the same path.
+if has 'AGY_FAILED' "$deny_out"; then
+  echo "FAIL: the hard permission error fell through to the generic failure"; FAIL=$((FAIL+1));
+else echo "ok: the hard permission error is not classified as a generic failure"; PASS=$((PASS+1)); fi
+# --mode accept-edits is not a grant: measured on 1.1.13, denied exactly like a plain
+# write. The docs said "soft-denied on 1.1.3", which described a shape that no longer
+# happens; the message must not promise the flag as a way in.
+if has 'accept-edits' "$deny_out"; then
+  echo "ok: the denial message addresses --mode accept-edits"; PASS=$((PASS+1));
+else echo "FAIL: the denial message is silent on --mode accept-edits"; FAIL=$((FAIL+1)); fi
+
 check "exit-15 message offers the narrower grant first" 15 "$rc" "permissions.allow" "$out"
 # The message must not hand the pre-1.1.11 match-everything history to the placeholder it
 # names two sentences earlier. That history belongs to a command(...) rule naming no
@@ -719,7 +782,7 @@ out=$(bash "$ROOT/scripts/doctor.sh" 2>&1)
 if grep -q "tier model not in" <<<"$out"; then
   echo "FAIL: doctor falsely warns tier model missing against slug-format agy models"; FAIL=$((FAIL+1));
 else echo "ok: doctor recognizes tier models across display-name/slug formats"; PASS=$((PASS+1)); fi
-if grep -q "tier model present: Gemini 3.5 Flash (High)" <<<"$out"; then
+if grep -q "tier model present: $DEF_FLASH" <<<"$out"; then
   echo "ok: doctor matches default flash tier in slug format"; PASS=$((PASS+1));
 else echo "FAIL: doctor did not confirm the default flash tier present"; FAIL=$((FAIL+1)); fi
 
@@ -733,7 +796,7 @@ ver_doctor() { # $1 = version the stub reports; echoes doctor's output
   local d; d="$TMP/agyver"; mkdir -p "$d"
   { echo '#!/usr/bin/env bash'
     echo "[ \"\$1\" = --version ] && { echo '$1'; exit 0; }"
-    echo '[ "$1" = models ] && { printf "%s\n" "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; exit 0; }'
+    echo "[ \"\$1\" = models ] && { printf '%s\\n' '$DEF_FLASH' '$DEF_FLASH_LO' '$DEF_PRO'; exit 0; }"
     echo 'exit 0'; } > "$d/agy"
   chmod +x "$d/agy"
   PATH="$d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1
@@ -766,7 +829,7 @@ brk="$TMP/nosort"; mkdir -p "$brk"; printf '#!/bin/sh\nexit 127\n' > "$brk/sort"
 d="$TMP/agyver"; mkdir -p "$d"
 { echo '#!/usr/bin/env bash'
   echo '[ "$1" = --version ] && { echo 1.1.9; exit 0; }'
-  echo '[ "$1" = models ] && { printf "%s\n" "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; exit 0; }'
+  echo "[ \"\$1\" = models ] && { printf '%s\\n' '$DEF_FLASH' '$DEF_FLASH_LO' '$DEF_PRO'; exit 0; }"
   echo 'exit 0'; } > "$d/agy"
 chmod +x "$d/agy"
 # Capture, THEN grep. `cmd | grep -q` exits at the first match and closes the pipe, the
@@ -805,7 +868,7 @@ probe_doctor() { # $1 = version the stub reports, $2 = what `-p /model` answers 
   local d="$TMP/agyprobe"; rm -rf "$d"; mkdir -p "$d"
   { echo '#!/usr/bin/env bash'
     echo "[ \"\$1\" = --version ] && { echo '$1'; exit 0; }"
-    echo '[ "$1" = models ] && { printf "%s\n" "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; exit 0; }'
+    echo "[ \"\$1\" = models ] && { printf '%s\\n' '$DEF_FLASH' '$DEF_FLASH_LO' '$DEF_PRO'; exit 0; }"
     # Log every /model invocation, whatever position the flag lands in.
     echo "for a in \"\$@\"; do [ \"\$a\" = /model ] && { echo \"\$*\" >> '$d/probed'; printf '%s\n' '$2'; exit 0; }; done"
     echo 'exit 0'; } > "$d/agy"
@@ -819,7 +882,7 @@ probe_doctor 1.1.10 "gemini-3.5-flash-high" >/dev/null
 if [ -f "$TMP/agyprobe/probed" ]; then
   echo "FAIL: doctor probes -p /model on agy 1.1.10, where it costs a real agent turn"; FAIL=$((FAIL+1));
 else echo "ok: no -p /model probe below agy 1.1.11"; PASS=$((PASS+1)); fi
-probe_out="$(probe_doctor 1.1.11 "gemini-3.5-flash-high	Gemini 3.5 Flash (High)")"
+probe_out="$(probe_doctor 1.1.11 "$(printf '%s\t%s' "$(printf '%s' "$DEF_FLASH" | tr '[:upper:] ' '[:lower:]-' | tr -d '()')" "$DEF_FLASH")")"
 if [ -f "$TMP/agyprobe/probed" ]; then
   echo "ok: doctor probes -p /model on agy 1.1.11"; PASS=$((PASS+1));
 else echo "FAIL: doctor never asked agy which model it would use"; FAIL=$((FAIL+1)); fi
@@ -851,13 +914,16 @@ echo "== doctor.sh permissions.allow validation (agy 1.1.11 zero-word rules) =="
 # auto-approved anything the agent ran — broader than the --yolo it replaced — and from
 # 1.1.11 it matches nothing, so the grant is simply absent. HOME is redirected so this
 # never reads, and can never be confused by, the developer's own settings.json.
-allow_doctor() { # $1 = agy version, $2 = contents of the "allow" array
+allow_doctor() { # $1 = agy version, $2 = the "allow" array, $3 = optional /permissions output
   local h="$TMP/allowhome"; rm -rf "$h"; mkdir -p "$h/.gemini/antigravity-cli"
   printf '{"permissions":{"allow":[%s]}}' "$2" > "$h/.gemini/antigravity-cli/settings.json"
   local d="$TMP/agyallow"; rm -rf "$d"; mkdir -p "$d"
   { echo '#!/usr/bin/env bash'
     echo "[ \"\$1\" = --version ] && { echo '$1'; exit 0; }"
-    echo '[ "$1" = models ] && { printf "%s\n" "Gemini 3.5 Flash (High)" "Gemini 3.5 Flash (Low)" "Gemini 3.1 Pro (High)"; exit 0; }'
+    echo "[ \"\$1\" = models ] && { printf '%s\\n' '$DEF_FLASH' '$DEF_FLASH_LO' '$DEF_PRO'; exit 0; }"
+    # agy 1.1.12+ answers /permissions in print mode. Empty by default, so every
+    # existing case still exercises the settings.json fallback unchanged.
+    echo "for a in \"\$@\"; do [ \"\$a\" = /permissions ] && { printf '%s' '${3:-}'; exit 0; }; done"
     echo 'exit 0'; } > "$d/agy"
   chmod +x "$d/agy"
   HOME="$h" PATH="$d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1
@@ -954,6 +1020,30 @@ else echo "FAIL: header claims $claimed entries but names $listed"; FAIL=$((FAIL
 if printf '%s' "$allow_out" | grep -qE '^ +[^ ]+ — *$'; then
   echo "FAIL: a newline in a rule produced a finding with no reason"; FAIL=$((FAIL+1));
 else echo "ok: a newline inside a rule leaves no reasonless finding"; PASS=$((PASS+1)); fi
+
+# agy applies MORE than the one file doctor used to read: a `shared` scope lives in
+# ~/.gemini/config/config.json, and a broken rule there was reported clean. agy 1.1.12
+# answers `-p /permissions` with what it RESOLVED, so doctor stops guessing which files
+# to open. The fixture puts the bad rule ONLY in the resolved view — if doctor still read
+# the file, it would see nothing wrong.
+PERMS_OUT="$(printf 'shared\tallow\tcommand(time)\nglobal\tallow\tcommand(agy)\n')"
+allow_out="$(allow_doctor 1.1.12 '"command(agy)"' "$PERMS_OUT")"
+if has 'command(time)' "$allow_out"; then
+  echo "ok: doctor validates the rules agy resolved, not just one file"; PASS=$((PASS+1));
+else echo "FAIL: a bad rule outside settings.json went unreported"; FAIL=$((FAIL+1)); fi
+# Below 1.1.12 the command is not answered, so the file is all there is — and doctor must
+# not read a stray answer as authoritative there.
+allow_out="$(allow_doctor 1.1.11 '"command(agy)"' "$PERMS_OUT")"
+if has 'command(time)' "$allow_out"; then
+  echo "FAIL: doctor used /permissions on agy 1.1.11, where it is not answered"; FAIL=$((FAIL+1));
+else echo "ok: below 1.1.12 doctor falls back to the settings file"; PASS=$((PASS+1)); fi
+# An empty answer is a hang or an older build than the version claims — not proof that
+# there are no rules. Falling through to the file is the difference between "nothing to
+# report" and "nothing was looked at".
+allow_out="$(allow_doctor 1.1.12 '"command(time)"' "")"
+if has 'command(time)' "$allow_out"; then
+  echo "ok: an empty /permissions answer falls back to the file"; PASS=$((PASS+1));
+else echo "FAIL: an empty /permissions answer was read as no rules at all"; FAIL=$((FAIL+1)); fi
 
 # The three shapes upstream names, all claimed in the CHANGELOG and none previously
 # exercised here — the "claim not backed by a test" gap this release keeps closing.
@@ -1132,13 +1222,24 @@ m = re.search(r'flash\)\s*echo "\$\{CLAUDE_PLUGIN_OPTION_TIER_FLASH:-([^}]*)\}"'
 if not m:
     print("flash tier default not found (model_for_tier pattern changed?)"); raise SystemExit
 default = m.group(1)
-flash, f36 = pj["gemini_flash"], pj.get("gemini_flash_36", {})
-if "3.6" in default:
-    print("OK" if flash == f36 else f"flash tier is {default!r} but gemini_flash {flash} != gemini_flash_36 {f36}")
-elif "3.5" in default:
-    print("OK" if flash.get("out") == 9.00 else f"flash tier is {default!r} (out 9.00) but gemini_flash.out = {flash.get('out')}")
+# Derive the key from the default rather than enumerating versions. The previous shape
+# hardcoded 3.5 and 3.6 and told you to "reconcile by hand" for anything else, which is a
+# failure the moment a new Flash ships — the exact situation 3.7 created.
+ver = re.search(r"(\d+)\.(\d+)", default)
+if not ver:
+    print(f"cannot read a version out of the flash default {default!r}"); raise SystemExit
+key = "gemini_flash_%s%s" % ver.groups()
+flash, per_model = pj["gemini_flash"], pj.get(key)
+if per_model is None:
+    print(f"flash tier is {default!r} but prices.json has no {key} to mirror")
+elif flash != per_model:
+    print(f"flash tier is {default!r} but gemini_flash {flash} != {key} {per_model}")
+elif key not in pj.get("_gemini_flash_note", ""):
+    # The note is how a human learns which model the generic key is priced for. If it
+    # names a different one, the next person reprices against the wrong model.
+    print(f"_gemini_flash_note does not mention {key}, so it describes the wrong model")
 else:
-    print(f"flash tier default {default!r} is neither 3.5 nor 3.6 — reconcile prices.json by hand")
+    print("OK")
 PY
 )
 if [ "$out" = "OK" ]; then

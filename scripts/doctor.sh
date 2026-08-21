@@ -13,7 +13,7 @@ info() { printf '    %s\n' "$*"; }
 FAIL=0
 
 # Normalize a model id to lowercase alphanumerics only, so a configured display name
-# ("Gemini 3.5 Flash (High)") and an `agy models` entry survive comparison regardless of
+# ("Gemini 3.7 Flash (High)") and an `agy models` entry survive comparison regardless of
 # format. agy 1.1.5 switched `agy models` output from display names to slugs
 # (`gemini-3.5-flash`), which broke a strict grep and made doctor falsely warn that every
 # tier model was missing (they still worked). Both forms normalize to a comparable core.
@@ -110,18 +110,16 @@ sys.exit(0 if n else 1)
 # is broader than the `--yolo` it was chosen over; from 1.1.11 it matches nothing, so
 # the grant simply is not there and the write is soft-denied for no visible reason.
 # Same typo, opposite failures, no message either time.
-bad_allow_rules() {
+bad_allow_rules() {   # $1 = the allow rules, one per line
   command -v python3 >/dev/null 2>&1 || return 1
+  [ -n "${1:-}" ] || return 1
   python3 -c '
-import json, re, shlex, sys
+import re, shlex, sys
 
-try:
-    perm = (json.load(open(sys.argv[1])) or {}).get("permissions") or {}
-    allow = perm.get("allow")
-except Exception:
-    sys.exit(1)
-if not isinstance(allow, list):
-    sys.exit(1)
+# Rules arrive as text, one per line, so the SOURCE is the callers business — the file
+# for old agy, and agys own resolved view for 1.1.12+. Reading the file was the whole
+# defect: it sees one scope, and agy applies more than one.
+allow = [l for l in sys.argv[1].split(chr(10)) if l.strip()]
 
 # Shell reserved words that may PREFIX a command without being one, so a rule made
 # only of them names no command. agy 1.1.11 describes the class it fixed as an entry
@@ -194,6 +192,43 @@ for t, why, cls in bad:
     print("%s\t%s\t%s" % (cls, why, esc(t)))
 sys.exit(0 if bad else 1)
 ' "$1" 2>/dev/null
+}
+
+# The allow rules agy will actually apply, one per line.
+#
+# The file parse below reads ONE scope. agy applies more: a `shared` scope lives in
+# ~/.gemini/config/config.json (userSettings.globalPermissionGrants), and doctor never
+# saw it — so it could report every rule clean while a broken one sat in a file it does
+# not open. Guessing which files agy reads is what produced that, and 1.1.12 removes the
+# need to guess: `-p /permissions` returns what agy RESOLVED, one
+# `<scope>\t<action>\t<rule>` record per line, with no agent turn and no tokens.
+allow_rules() {
+  case "${AGY_VER:-}" in
+    ''|*[!0-9.]*) : ;;
+    *)
+      if ! ver_lt "$AGY_VER" 1.1.12; then
+        local resolved
+        resolved="$(agy_guard 20 -p /permissions 2>/dev/null)"
+        if [ -n "$resolved" ]; then
+          printf '%s\n' "$resolved" | awk -F'\t' '$2 == "allow" && $3 != "" { print $3 }'
+          return 0
+        fi
+        # Empty is not proof of no rules — it is also what a hang or an older build than
+        # the version claims looks like. Fall through to the file rather than report clean.
+      fi ;;
+  esac
+  [ -f "$SETTINGS" ] || return 1
+  python3 -c '
+import json, sys
+try:
+    allow = ((json.load(open(sys.argv[1])) or {}).get("permissions") or {}).get("allow")
+except Exception:
+    sys.exit(1)
+if not isinstance(allow, list):
+    sys.exit(1)
+for e in allow:
+    print(e if isinstance(e, str) else repr(e))
+' "$SETTINGS" 2>/dev/null
 }
 
 # True when version $1 is strictly older than $2. Pure shell on purpose: `sort -V` is
@@ -286,8 +321,8 @@ if command -v agy >/dev/null 2>&1; then
     ok "agy authenticated — $(printf '%s' "$MODELS" | grep -c . ) models available"
     # 2b. configured tier->model names exist (respecting userConfig remaps). agy is
     # multi-model and plan-dependent, so a miss is a WARNING, not a failure.
-    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.5 Flash (High)}"
-    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.5 Flash (Low)}"
+    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.7 Flash (High)}"
+    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.7 Flash (Low)}"
     PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}"
     for m in "$FLASH" "$FLASH_LO" "$PRO"; do
       if model_present "$m"; then
@@ -350,7 +385,8 @@ if [ -f "$SETTINGS" ]; then
   [ -n "$PROJ" ] && info "GCP project: $PROJ   location: ${LOC:-?}"
 
   # 3b. permissions.allow entries agy cannot use as written.
-  if BAD_RULES="$(bad_allow_rules "$SETTINGS")"; then
+  ALLOW_RULES="$(allow_rules)"
+  if BAD_RULES="$(bad_allow_rules "$ALLOW_RULES")"; then
     warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
     ZEROWORDS=0
     while IFS="$(printf '\t')" read -r cls why rule; do

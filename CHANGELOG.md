@@ -3,6 +3,66 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.24.0
+- **agy turned the write-without-grant denial into a hard error, and exit 15 quietly
+  stopped happening.** Since 1.1.3 a denied tool in headless mode came back as rc 0 with
+  empty stdout and `auto-denied` on stderr; the wrapper matched that and returned **15**
+  with the guidance that names `permissions.allow`, `--yolo` and `agy-doctor`. By agy
+  1.1.13 the same denial fails the run: rc 1, and `permission check failed for write_file
+  "...": user denied permission for write_file(...)` — none of the old anchors, and it
+  lands in the rc != 0 branch, above the soft-deny check entirely. So the single most
+  documented failure in this plugin (issue #10) came back as a bare `agy exited 1`.
+  Both shapes now route through one function, so they cannot drift apart again. Measured,
+  not inferred: a plain write and `--mode accept-edits` were each run against a real
+  1.1.13 and both produced the hard error; after the fix the same run returns 15.
+  **0.22.5 said this path was intact.** It checked that `auto-denied` and
+  `permissions.allow` were still present in the agy binary and concluded the classifier
+  was safe. The strings were there. The route was not — agy no longer takes it. Verifying
+  an anchor is not verifying that anything still reaches it.
+- **The `flash` tiers move to Gemini 3.7 Flash (High) / (Low).** 3.6 and 3.7 are priced
+  *identically*, and both are **half** of the 3.5 this plugin has defaulted to since the
+  beginning: $0.75/M in, $3.75/M out, $0.075/M cached-in against $1.50 / $9.00 / $0.15.
+  That is promotional pricing which **ends 2026-12-31**, after which they settle at
+  $1.50 / $7.50 / $0.15 — still cheaper than 3.5 on output, identical on the rest.
+  Checked on 2026-08-17 against ai.google.dev and Google Cloud's Agent Platform page.
+  **No quality claim is attached.** The reason is price and currency; this repo has
+  already retracted a 3.5-vs-3.6 comparison for being measured on a build where `--model`
+  was ignored, and nothing has been re-measured since. The old default was justified on
+  "broad plan availability", which still argues the other way for a model four days old —
+  but that failure is loud, not silent: `doctor` warns the tier model is absent from
+  `agy models`, and a delegation exits 14 naming the fix. 3.6 is a cost-identical remap.
+  `prices.json` gains `gemini_flash_35/36/37` plus `_post_2026` entries carrying the rates
+  that take over on 2027-01-01, and the note says which key `gemini_flash` currently
+  mirrors. The old note claimed 3.6's "input and cached-input unchanged" — true only
+  after the promotion ends; today both are half.
+- **`doctor` validates the rules agy RESOLVED, not the one file it used to read.**
+  0.22.5 added `permissions.allow` validation by parsing
+  `~/.gemini/antigravity-cli/settings.json`. agy applies more than that: a `shared` scope
+  lives in `~/.gemini/config/config.json`, so a broken rule there was reported clean —
+  a check that says all-clear about a file it never opened. agy 1.1.12 answers
+  `-p /permissions` with one `<scope>\t<action>\t<rule>` record per line, no agent turn
+  and no tokens, so doctor stops guessing which files to open. Below 1.1.12, and whenever
+  the answer comes back empty, it falls back to the file — empty is also what a hang looks
+  like, and the difference between "nothing to report" and "nothing was looked at" is the
+  whole point. On this machine the resolved view returns 13 rules where the file returned
+  12.
+- **`--mode accept-edits` is not a write grant, and the old explanation was unsound.**
+  Four places said it "auto-applied file edits headless on 1.1.0–1.1.2 but is soft-denied
+  on 1.1.3". agy 1.1.12's own notes say `--mode` was *ignored in headless `-p`* until it
+  was fixed — so on the builds that claim was formed on, the flag was never applied, and
+  the observation could not tell a denial apart from the flag doing nothing. Re-measured
+  on 1.1.13, where it IS applied: the write is denied exactly like one without the flag.
+  The conclusion survives; the reasoning behind it did not, and now says so.
+- **The tier defaults are read from the wrapper in the test suite instead of written out
+  again.** Moving `flash` to 3.7 broke four assertions and two stub model lists that had
+  the old name baked in, and `doctor` keeps its own copy of all three defaults — a
+  mismatch there makes it warn that a tier model is missing while delegation happily uses
+  a different one. The suite now derives all three from `model_for_tier()`, builds the
+  stub's slug list from them, and asserts doctor's copies match. The `prices.json` check
+  likewise derives its key from the default rather than enumerating 3.5 and 3.6 and
+  telling you to reconcile by hand for anything else — which is exactly what it did when
+  3.7 arrived.
+
 ## 0.23.0
 - **New: `/antigravity:migrate` — move an existing Claude Code setup onto agy.**
   `agy plugin import claude` already exists, and on any current install it prints

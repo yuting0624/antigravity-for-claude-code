@@ -110,6 +110,26 @@ signal() {
   tee_usage "$line"
 }
 
+# The write-without-grant failure (issue #10) has changed shape three times, and the
+# LAST change silently killed this branch. agy 1.1.3 soft-denied: rc=0, empty stdout,
+# "auto-denied" on stderr. By 1.1.13 it is a HARD error — rc=1, and the diagnostic reads
+# `permission check failed for write_file "...": user denied permission for
+# write_file(...)`, which contains none of the old anchors and lands in the rc != 0
+# branch, above the soft-deny check entirely. So the most documented failure in this
+# plugin came back as a bare "agy exited 1" with none of the guidance below.
+#
+# 0.22.5 checked that the old anchors were still present in the agy binary and concluded
+# exit 15 was intact. The strings were there; the ROUTE was not. Measured on 1.1.13:
+# both a plain write and `--mode accept-edits` produce the hard error.
+#
+# One function, called from both branches, so the two shapes cannot drift apart again.
+permission_denied() {
+  [ -s "$ERR" ] && cat "$ERR" >&2
+  echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
+  signal PERMISSION_DENIED "agy denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"
+  exit 15
+}
+
 # Print the header comment between "# Usage:" and "# Exit codes:" (anchored to
 # content, not line numbers, so it never desyncs when the header changes).
 usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
@@ -119,8 +139,8 @@ usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; ex
 # (env), so non-Vertex/non-Gemini plans (Claude/GPT) work without code changes.
 model_for_tier() {
   case "$1" in
-    flash)    echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.5 Flash (High)}" ;;
-    flash-lo) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.5 Flash (Low)}" ;;
+    flash)    echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.7 Flash (High)}" ;;
+    flash-lo) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.7 Flash (Low)}" ;;
     pro)      echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}" ;;
     *) die "unknown tier '$1' (use flash | flash-lo | pro)" ;;
   esac
@@ -247,7 +267,8 @@ fi
 # We cannot see settings.json from here (it is not ours, and --dir is not where it
 # lives), so this stays a warning rather than a check — but it must not assert that
 # --yolo is required. It fired immediately before a write that then succeeded.
-# (--mode accept-edits worked headless only on 1.1.0-1.1.2 and is soft-denied on 1.1.3.)
+# (--mode accept-edits is NOT a grant: measured on agy 1.1.13, where the flag is
+#  actually applied since 1.1.12, the write is denied exactly like one without it.)
 # Best-effort heuristic; warn only. --print-command (dry run) is exempt.
 if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
@@ -465,6 +486,12 @@ if [ $RC -ne 0 ]; then
 $blob"
   shopt -s nocasematch
   case "$blob" in
+    # FIRST, because these strings are the most specific ones here and must not be
+    # shadowed. agy 1.1.13 fails the run outright on a denied tool instead of soft-denying
+    # it, so this shape reaches the rc != 0 path and never sees the check further down.
+    *"user denied permission"*|*"permission check failed"*|*"auto-denied"*|\
+    *"permission that headless"*|*"dangerously-skip-permissions"*)
+      shopt -u nocasematch; permission_denied ;;
     *quota*|*"rate limit"*|*"resource exhausted"*)
       shopt -u nocasematch; signal QUOTA_EXHAUSTED "agy quota / rate limit"; exit 10 ;;
     *unauthenticated*|*unauthorized*|*"sign in"*|*"please authenticate"*|*reauth*)
@@ -493,9 +520,7 @@ if [ -z "${OUT//[$' \t\n\r']/}" ]; then
   case "$eblob" in
     *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"dangerously-skip-permissions"*)
       shopt -u nocasematch
-      [ -s "$ERR" ] && cat "$ERR" >&2
-      echo "agy-delegate: agy soft-denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. agy's own message above names the specific permission it wanted. If a rule is ALREADY in that file and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did). (agy >= 1.1.3)" >&2
-      signal PERMISSION_DENIED "agy soft-denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"; exit 15 ;;
+      permission_denied ;;
   esac
   shopt -u nocasematch
   echo "agy-delegate: agy returned empty output (model='$MODEL')" >&2

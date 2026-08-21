@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.23.0
+version: 0.24.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -67,12 +67,17 @@ the cross-model verification value (Claude executing Claude loses both).
 > it would actually run. Below 1.1.11 it does not probe, because there the slash command
 > falls through as prompt text and the model answers as though it had run.
 >
-> The `flash` default is **Gemini 3.5 Flash (High)**, for broad plan availability — newer
-> models can lag on enterprise Vertex. Gemini 3.6 Flash is available and its **output is
-> cheaper ($7.50/M vs $9.00/M; input and cached-input unchanged — confirmed against two
-> pricing sources)**, so remapping `tier_flash` to `gemini-3.6-flash-high` is reasonable
-> when your plan serves it. Price it with `prices.json`'s `gemini_flash_36`;
-> `agy-cost-compare` picks the `gemini_flash` key by tier name, not by model.
+> The `flash` tiers default to **Gemini 3.7 Flash (High)** / **(Low)** since 0.24.0.
+> 3.6 and 3.7 are priced identically and both are half of 3.5 on every axis today
+> ($0.75/M in, $3.75/M out, $0.075/M cached-in vs $1.50 / $9.00 / $0.15), under a
+> promotion that **ends 2026-12-31** and then settles at $1.50 / $7.50 / $0.15.
+> Price a run with `prices.json`'s `gemini_flash`, which mirrors whatever the flash
+> tier resolves to; `agy-cost-compare` picks that key by tier NAME, not by model.
+>
+> **The move is justified on price and currency, not on quality** — no comparison
+> has been run between these models on a build where `--model` actually applies.
+> If a plan does not serve 3.7, `doctor` says so and a delegation exits 14 naming
+> the fix; remap `tier_flash` to a name from `agy models` (3.6 costs the same).
 >
 > **Retracted:** earlier versions of this note quoted token-level comparisons between
 > 3.5 / 3.6 / `flash-medium` (−23% input, `cache_read` +43%, and so on). Those runs were
@@ -97,9 +102,7 @@ Vertex AI Search / terminal, and for writes not covered by a `permissions.allow`
 file write the narrower grant is usually a `write_file(<dir>)` entry in
 `~/.gemini/antigravity-cli/settings.json`, which needs no flag — see below. Run write tasks
 on a branch) · `--mode accept-edits|plan`
-(agy execution mode: `accept-edits` auto-applied file edits headless on 1.1.0–1.1.2 but is
-**soft-denied on 1.1.3** — no longer a dependable headless write grant;
-`plan` = strategize only) · `--sandbox` ·
+(agy execution mode. `--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing. `plan` = strategize only) · `--sandbox` ·
 `--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·

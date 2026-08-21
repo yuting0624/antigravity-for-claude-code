@@ -1,14 +1,54 @@
 {
+  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh picks this key by tier NAME, not by model. Today that is Gemini 3.7 Flash (High), so gemini_flash mirrors gemini_flash_37. IMPORTANT: 3.6 and 3.7 are on PROMOTIONAL pricing that ends 2026-12-31 — on 2027-01-01 input goes 0.75 -> 1.50, output 3.75 -> 7.50 and cached_in 0.075 -> 0.15. Leaving these as-is after that date understates the Gemini side by half. The _post_2026 entries carry the standard rates; copy them over then. Verified 2026-08-17 against ai.google.dev/gemini-api/docs/pricing and Google Cloud's Agent Platform pricing page.",
+  "gemini_flash": {
+    "in": 0.75,
+    "out": 3.75,
+    "cached_in": 0.075
+  },
+  "gemini_flash_37": {
+    "in": 0.75,
+    "out": 3.75,
+    "cached_in": 0.075
+  },
+  "gemini_flash_36": {
+    "in": 0.75,
+    "out": 3.75,
+    "cached_in": 0.075
+  },
+  "gemini_flash_35": {
+    "in": 1.5,
+    "out": 9.0,
+    "cached_in": 0.15
+  },
+  "gemini_flash_37_post_2026": {
+    "in": 1.5,
+    "out": 7.5,
+    "cached_in": 0.15
+  },
+  "gemini_flash_36_post_2026": {
+    "in": 1.5,
+    "out": 7.5,
+    "cached_in": 0.15
+  },
   "_comment": "Per-1M-token USD on Vertex AI, ~2026-07. VERIFY against current Google Cloud / Anthropic pricing before quoting. Global endpoints; regional/multi-region carry a ~10% premium.",
-  "_sources": ["cloud.google.com/vertex-ai/generative-ai/pricing", "platform.claude.com/docs/en/about-claude/pricing"],
-  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier actually resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh picks this key by tier NAME, not by model. Today that is Gemini 3.5 Flash (High) — hence out 9.00. If you remap tier_flash to Gemini 3.6 Flash, its output is cheaper (7.50; in and cached-in unchanged) — see gemini_flash_36 and pass GEMINI_OUT_PER_M=7.50, or move those rates into gemini_flash when you make 3.6 your default.",
+  "_sources": [
+    "cloud.google.com/vertex-ai/generative-ai/pricing",
+    "platform.claude.com/docs/en/about-claude/pricing"
+  ],
   "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only. Gemini prices cached input at a flat rate (cached_in) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
-  "claude_opus":   { "in": 5.00, "out": 25.00 },
-  "claude_sonnet": { "in": 3.00, "out": 15.00 },
-  "gemini_flash":  { "in": 1.50, "out": 9.00, "cached_in": 0.15 },
-  "gemini_flash_36": { "in": 1.50, "out": 7.50, "cached_in": 0.15 },
-  "gemini_pro":    { "in": 2.00, "out": 12.00 },
+  "claude_opus": {
+    "in": 5.0,
+    "out": 25.0
+  },
+  "claude_sonnet": {
+    "in": 3.0,
+    "out": 15.0
+  },
+  "gemini_pro": {
+    "in": 2.0,
+    "out": 12.0
+  },
   "cache_write_mult": 1.25,
-  "cache_read_mult": 0.10,
+  "cache_read_mult": 0.1,
   "orchestrator": "claude_opus"
 }
