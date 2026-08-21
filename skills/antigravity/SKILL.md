@@ -144,7 +144,8 @@ wrapper; it returns a digest for you to verify). Either way, *you* still own ver
 **Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout · `13`
 agy-missing · `14` model-unavailable (a `--model` / `tier_*` / `default_model` name not in
 `agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
-permission-denied (agy ≥ 1.1.3 soft-denies a permissioned tool headless — pass `--yolo`)
+permission-denied (a tool needed permission headless — BOTH agy 1.1.3's soft deny and
+1.1.13's hard error — add a `permissions.allow` rule or pass `--yolo`)
 (besides `2` failed / `3` empty). On agy ≥ 1.1.8 these are derived from the structured
 `status`/`error` envelope rather than stderr pattern-matching, so the classification is
 reliable. It prints a `AGY_SIGNAL {...}` line on stderr;
@@ -214,8 +215,9 @@ Read-only work (search, review, analysis) is low-risk. **When agy writes files o
 commands** (`--yolo` grants write + terminal):
 - **Write tasks need a grant — and it does not have to be `--yolo`.** Headless agy's no-permission behavior has shifted
   every few releases — describe-only (pre-1.1.0), scratch-divert (1.1.0–1.1.2), soft-deny
-  with a stderr notice (1.1.3) — but in every version **your workspace stays untouched
-  while the run still "succeeds"** (issue #10). **Two things grant a write, and `--yolo` is
+  with a stderr notice (1.1.3+), **hard error by 1.1.13** — but **your workspace stays
+  untouched every time**; what varies is whether the run admits it (issue #10). The
+  wrapper maps the soft deny and the hard error alike to exit 15. **Two things grant a write, and `--yolo` is
   the blunt one.** A `write_file(<dir>)` entry under `permissions.allow` in
   `~/.gemini/antigravity-cli/settings.json` allows writes **recursively beneath `<dir>`**
   with no flag at all — confirmed on agy 1.1.9 by a controlled A/B (#37): covered target
@@ -232,7 +234,8 @@ commands** (`--yolo` grants write + terminal):
   Run write tasks on a branch and verify with `git status`.
   prompt for or block `--dangerously-skip-permissions` — approve it or pre-allow
   `Bash(agy-delegate*)`. Always verify files actually changed **in the workspace** with
-  `git status` (the wrapper maps a 1.1.3 soft-deny to exit `15` so you're not left guessing).
+  `git status` (the wrapper maps BOTH denial shapes — 1.1.3's soft deny and 1.1.13's
+  hard error — to exit `15`, so you're not left guessing).
 - Run it on a **dedicated git branch or worktree** so changes are isolated.
 - Add `--sandbox` for execution containment.
 - **Claude reviews the diff before merging** — never auto-merge agy's writes.

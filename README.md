@@ -233,8 +233,9 @@ Delegation doesn't save money by itself — these do (also in the skill):
 - **The executor's trajectory is auditable.** Every agy run writes a step-by-step `transcript.jsonl`, and the `conversationId` in `AGY_USAGE` joins it to the cost 1:1. `agy-trace --audit <id>` (or `--audit --last`) shows step-type counts and every non-zero exit — a delegation can report SUCCESS while commands inside it failed. The command **strings** are recorded nowhere, so to attribute a filesystem change you must diff the tree.
 - **Two write grants, and the narrow one is not `--yolo`.** Headless agy's
   no-permission behavior has shifted every few releases (describe-only pre-1.1.0 ·
-  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+), and in every version an ungranted write
-  leaves **your workspace untouched while the run still "succeeds"**
+  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+ · **hard error by 1.1.13**). An ungranted
+  write always **leaves your workspace untouched**; what changed is whether the run admits
+  it — through 1.1.1x it still reported success, and by 1.1.13 it fails outright
   ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Two things
   grant it:
   
@@ -242,7 +243,7 @@ Delegation doesn't save money by itself — these do (also in the skill):
     `write_file(<dir>)` entry allows writes **recursively beneath `<dir>`** and needs no
     flag. This is the narrower grant and usually the right one.
     **`<dir>` is a placeholder — substitute a real path.** Left as written it grants
-    nothing on any agy version, and the write is soft-denied with the rule sitting visibly
+    nothing on any agy version, and the write is denied with the rule sitting visibly
     in the file. A *different* mistake is the version-sensitive one: a `command(...)` rule
     that names no command (`command(time)`, a comment-only entry, `()`) matched **every**
     command before agy 1.1.11 and silently auto-approved anything the agent ran — broader
@@ -257,7 +258,8 @@ Delegation doesn't save money by itself — these do (also in the skill):
   the rule as the only variable. agy's own denial text names the rule and offers `--yolo` as
   the alternative. Not verified on other versions, and a glob form (`write_file(/path/**)`)
   was reported *not* to match. Either way: run write tasks on a branch and verify with
-  `git status`; the wrapper maps a soft-deny to exit `15`.
+  `git status`; the wrapper maps either denial shape — the soft one and 1.1.13's hard
+  error — to exit `15`.
 - **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
 - **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
 

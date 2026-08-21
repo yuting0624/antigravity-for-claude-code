@@ -128,7 +128,14 @@ signal() {
 permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   # The rc != 0 path dumps $ERR before it classifies, so echoing it again here printed
   # agy's diagnostic twice on the plain-stderr shape. Both reviewers caught it.
-  [ "${1:-}" = shown ] || { [ -s "$ERR" ] && cat "$ERR" >&2; }
+  # An `if`, not `cond || { ...; }`. The second half can itself fail when $ERR is
+  # empty, and under `set -e` that would exit before the guidance and the signal
+  # below ever ran. This file uses `set -uo pipefail` today, so it is an unenforced
+  # invariant rather than a live bug — which is the shape this repo keeps getting
+  # caught by. Reviewers flagged it; make it structural instead.
+  if [ "${1:-}" != shown ] && [ -s "$ERR" ]; then
+    cat "$ERR" >&2
+  fi
   echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
   signal PERMISSION_DENIED "agy denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"
   exit 15
@@ -257,7 +264,7 @@ fi
 
 # Heads-up: a likely write task with no visible write grant. Headless agy's write
 # behavior has shifted across versions (describe-only pre-1.1.0; scratch-divert
-# 1.1.0-1.1.2; soft-deny with a stderr notice on 1.1.3), and without a grant YOUR
+# 1.1.0-1.1.2; soft-deny on 1.1.3+; hard error by 1.1.13), and without a grant YOUR
 # WORKSPACE IS UNTOUCHED while the run still "succeeds" (issue #10).
 #
 # There are TWO grants, and this used to claim there was one. A `write_file(<dir>)`
@@ -278,7 +285,7 @@ if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies depending on version, while the run still 'succeeds'; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this — but <dir> is a placeholder, and agy-doctor will tell you whether yours actually parses. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies / fails outright depending on version; the workspace is untouched either way, and only the newest versions admit it; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this — but <dir> is a placeholder, and agy-doctor will tell you whether yours actually parses. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi

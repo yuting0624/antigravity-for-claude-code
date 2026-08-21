@@ -111,11 +111,11 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
 - **For a file write, add an allow-rule — the narrower fix.** In
   `~/.gemini/antigravity-cli/settings.json`, under `permissions.allow`, add
   `write_file(<dir>)`. It matches **recursively beneath `<dir>`** and needs no flag.
-  This is the rule agy's own soft-deny message is naming. Confirmed on agy 1.1.9 by a
+  This is the rule agy's own denial message is naming. Confirmed on agy 1.1.9 by a
   controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37));
   a glob form (`write_file(/path/**)`) was reported *not* to match.
   **Substitute a real path for `<dir>`** — and if the rule is in place and the write is
-  *still* soft-denied, suspect the rule before suspecting agy. An entry agy cannot parse
+  *still* denied, suspect the rule before suspecting agy. An entry agy cannot parse
   grants nothing on any version, which is exactly this exit 15 with the rule sitting
   right there in the file. Only one shape of mistake is version-sensitive, and it is not
   this one: a `command(...)` rule naming no command — `command(time)`, a comment-only
@@ -154,7 +154,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 12 | timeout (agy's own, or the wall-clock guard) | raise `--timeout`, narrow the task; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
 | 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
-| 15 | permission denied | agy ≥ 1.1.3 soft-denied a tool needing permission in headless mode (e.g. a file write) — add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
+| 15 | permission denied | a tool needed permission headless — **both** shapes: agy 1.1.3's soft deny (rc 0, empty stdout) and 1.1.13's hard error (`user denied permission`). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
 | 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 | 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
 | 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir, or agy has never been run |
