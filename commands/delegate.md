@@ -18,13 +18,16 @@ Do this:
    there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
    is what web / Vertex AI Search / terminal need. Without a grant,
    headless agy leaves your workspace untouched while still reporting success (it
-   describes / scratch-diverts / soft-denies depending on version; issue #10). `--mode
+   describes / scratch-diverts / soft-denies / fails outright depending on version, and only
+   the newest admit it; issue #10). `--mode
    accept-edits` is NOT a dependable substitute — it only wrote headless on agy 1.1.0–1.1.2
-   and is soft-denied on 1.1.3. Run write tasks on a dedicated branch (+ `--sandbox`), and
+   is not a grant either: measured on agy 1.1.13, denied exactly like a plain write. Run
+   write tasks on a dedicated branch (+ `--sandbox`), and
    **verify files actually changed** with `git status`. Claude Code may prompt for or block
    `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
    (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper
-   returns exit `15`, that's exactly this: agy soft-denied the write — add `--yolo`.)
+   returns exit `15`, that's exactly this: agy denied the write — soft on 1.1.3, a hard
+   error by 1.1.13, the same exit either way — add `--yolo` or a `permissions.allow` rule.)
 2. Run **synchronously** (you may be headless — do not background-and-wait):
    `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
    For read/analysis tasks, add `--digest` — it appends a digest-only output contract so

@@ -74,6 +74,16 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   axis" was wrong in three files: input and cached-input halve exactly, output goes
   $9.00 -> $3.75, which is 58%. Each now has a test, including the duplicate-output one,
   which had none until a mutation showed the fix could be reverted in silence.
+  **Then the terminology sweep missed files three separate times** — README and SKILL.md
+  still said an ungranted write leaves the run "succeeding" while TROUBLESHOOTING already
+  said it fails; then POC-PLAYBOOK.md, `commands/delegate.md` and
+  `agents/antigravity-delegate.md` were found still describing exit 15 as the 1.1.3 soft
+  deny alone, and so was the `info` line doctor actually prints. Reviewers caught each
+  round. A grep would have caught all of them, so there is one now: any user-facing file
+  that describes exit 15 must also name the 1.1.13 shape. FILE level rather than line
+  level on purpose — a line rule needs exceptions for the version history, the
+  subagent-spawn case and single-branch code comments, and a guard with three exceptions
+  gets deleted. What actually went wrong was coarser: a whole file was never opened.
 
 ## 0.23.0
 - **New: `/antigravity:migrate` — move an existing Claude Code setup onto agy.**

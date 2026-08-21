@@ -412,7 +412,7 @@ EOF
   # printed only when such an entry is actually present — putting a security claim in
   # front of someone holding a mistyped write_file() would be worse than saying less.
   info "an entry agy cannot use grants nothing, so the tool it was meant to cover is"
-  info "still soft-denied (exit 15) with nothing in the message naming the rule."
+  info "still denied (exit 15) with nothing in the message naming the rule."
   if [ "$ZEROWORDS" -eq 1 ]; then
     case "${AGY_VER:-}" in
       ''|*[!0-9.]*)

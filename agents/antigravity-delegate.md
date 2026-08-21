@@ -88,7 +88,8 @@ Options: `--tier flash|flash-lo|pro` · `--dir <repo-root>` (so agy reads
   `write_file(<dir>)` rule covering the target in `~/.gemini/antigravity-cli/settings.json`
   — that grants the write recursively beneath `<dir>` with no flag, and is narrower than
   `--yolo`, which approves every tool. If they say a rule is in place and the write is
-  still soft-denied, have them run `agy-doctor` before anything else: an entry agy cannot
+  still denied (soft on older agy, a hard error by 1.1.13 — the wrapper reports exit 15
+  for both), have them run `agy-doctor` before anything else: an entry agy cannot
   parse grants nothing. (The "granted everything before 1.1.11" history belongs to a
   `command(...)` rule naming no command, not to a mistyped `write_file()`.) You cannot see that file, so `--yolo` stays the
   default; if a run comes back exit `15`, the allow-rule is the smaller fix. Either way tell

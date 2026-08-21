@@ -864,6 +864,29 @@ if python3 "$HERE/check-embedded-python.py" "$ROOT"/scripts/*.sh "$ROOT"/hooks/*
   echo "ok: no embedded python is truncated by a stray quote"; PASS=$((PASS+1));
 else echo "FAIL: an embedded python block is cut short (it runs a partial program)"; FAIL=$((FAIL+1)); fi
 
+echo "== exit 15 is described consistently across the user-facing surfaces =="
+# Three separate sweeps in 0.24.0 updated some files and missed others: POC-PLAYBOOK.md,
+# commands/delegate.md and agents/antigravity-delegate.md each kept describing exit 15 as
+# agy 1.1.3's soft deny after the release made it cover 1.1.13's hard error too, so the
+# docs contradicted each other about the same behaviour. Reviewers found all three; a grep
+# would have.
+#
+# FILE level, not line level, on purpose. A line-level rule needs exceptions for the
+# historical version list, for the subagent-spawn case, and for code comments describing
+# one branch — and a guard with three exceptions gets deleted. What actually went wrong is
+# coarser and worth pinning exactly: a whole file talks about exit 15 and never mentions
+# the shape this release added.
+e15_bad=""
+for f in README.md docs/POC-PLAYBOOK.md docs/TROUBLESHOOTING.md \
+         skills/antigravity/SKILL.md agents/*.md commands/*.md; do
+  [ -f "$ROOT/$f" ] || continue
+  grep -qE 'exit [`]?15' "$ROOT/$f" || continue
+  grep -qE '1\.1\.13|hard error' "$ROOT/$f" || e15_bad="$e15_bad $f"
+done
+if [ -z "$e15_bad" ]; then
+  echo "ok: every file that describes exit 15 names both denial shapes"; PASS=$((PASS+1));
+else echo "FAIL: describes exit 15 without the 1.1.13 hard error:$e15_bad"; FAIL=$((FAIL+1)); fi
+
 echo "== doctor.sh --model probe (ask agy instead of inferring from a version) =="
 # The version gate above can only INFER that --model works. agy 1.1.11 answers the
 # read-only slash commands in print mode without starting an agent turn, so doctor asks
