@@ -457,6 +457,11 @@ check "hard permission error (json envelope) -> exit 15" 15 "$deny_rc" "PERMISSI
 check "hard permission error names the permissions.allow route" 15 "$deny_rc" "permissions.allow" "$deny_out"
 deny_out=$(STUB_MODE=harddeny "$DELEGATE" "write a file" 2>&1 >/dev/null); deny_rc=$?
 check "hard permission error (plain stderr) -> exit 15" 15 "$deny_rc" "PERMISSION_DENIED" "$deny_out"
+# agy's own diagnostic must appear ONCE. The rc != 0 path prints $ERR before it
+# classifies, so the handler echoing it again doubled it on the plain-stderr shape.
+if [ "$(printf '%s\n' "$deny_out" | grep -c 'permission check failed')" = 1 ]; then
+  echo "ok: agy's denial diagnostic is printed once, not twice"; PASS=$((PASS+1));
+else echo "FAIL: agy's denial diagnostic is duplicated on the hard-error path"; FAIL=$((FAIL+1)); fi
 # It must NOT be swallowed by a broader category on the same path.
 if has 'AGY_FAILED' "$deny_out"; then
   echo "FAIL: the hard permission error fell through to the generic failure"; FAIL=$((FAIL+1));
@@ -1020,6 +1025,23 @@ else echo "FAIL: header claims $claimed entries but names $listed"; FAIL=$((FAIL
 if printf '%s' "$allow_out" | grep -qE '^ +[^ ]+ — *$'; then
   echo "FAIL: a newline in a rule produced a finding with no reason"; FAIL=$((FAIL+1));
 else echo "ok: a newline inside a rule leaves no reasonless finding"; PASS=$((PASS+1)); fi
+
+# ...and it has to run when there is no settings.json at all. The whole point is the
+# `shared` scope, which lives in a different file — nesting the check inside "does
+# settings.json exist" meant the one configuration it was written for got no check and no
+# message. allow_doctor always creates the file, so this case needs its own fixture.
+noset_h="$TMP/nosettings"; rm -rf "$noset_h"; mkdir -p "$noset_h/.gemini"
+noset_d="$TMP/agynoset"; rm -rf "$noset_d"; mkdir -p "$noset_d"
+{ echo '#!/usr/bin/env bash'
+  echo '[ "$1" = --version ] && { echo 1.1.12; exit 0; }'
+  echo "[ \"\$1\" = models ] && { printf '%s\\n' '$DEF_FLASH' '$DEF_FLASH_LO' '$DEF_PRO'; exit 0; }"
+  echo "for a in \"\$@\"; do [ \"\$a\" = /permissions ] && { printf 'shared\\tallow\\tcommand(time)\\n'; exit 0; }; done"
+  echo 'exit 0'; } > "$noset_d/agy"
+chmod +x "$noset_d/agy"
+noset_out="$(HOME="$noset_h" PATH="$noset_d:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1)"
+if has 'command(time)' "$noset_out"; then
+  echo "ok: the allow-rule check runs with no settings.json present"; PASS=$((PASS+1));
+else echo "FAIL: no settings.json means no allow-rule check at all"; FAIL=$((FAIL+1)); fi
 
 # agy applies MORE than the one file doctor used to read: a `shared` scope lives in
 # ~/.gemini/config/config.json, and a broken rule there was reported clean. agy 1.1.12

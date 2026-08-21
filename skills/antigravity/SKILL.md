@@ -68,8 +68,9 @@ the cross-model verification value (Claude executing Claude loses both).
 > falls through as prompt text and the model answers as though it had run.
 >
 > The `flash` tiers default to **Gemini 3.7 Flash (High)** / **(Low)** since 0.24.0.
-> 3.6 and 3.7 are priced identically and both are half of 3.5 on every axis today
-> ($0.75/M in, $3.75/M out, $0.075/M cached-in vs $1.50 / $9.00 / $0.15), under a
+> 3.6 and 3.7 are priced identically and undercut 3.5 on every axis today: input
+> and cached-input are exactly half ($1.50 -> $0.75, $0.15 -> $0.075) and output
+> is cheaper still, $9.00 -> $3.75 — a 58% cut, not a halving. Under a
 > promotion that **ends 2026-12-31** and then settles at $1.50 / $7.50 / $0.15.
 > Price a run with `prices.json`'s `gemini_flash`, which mirrors whatever the flash
 > tier resolves to; `agy-cost-compare` picks that key by tier NAME, not by model.

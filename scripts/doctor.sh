@@ -384,40 +384,48 @@ if [ -f "$SETTINGS" ]; then
   ok "agy settings: ${SETTINGS/#$HOME/~}"
   [ -n "$PROJ" ] && info "GCP project: $PROJ   location: ${LOC:-?}"
 
-  # 3b. permissions.allow entries agy cannot use as written.
-  ALLOW_RULES="$(allow_rules)"
-  if BAD_RULES="$(bad_allow_rules "$ALLOW_RULES")"; then
-    warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
-    ZEROWORDS=0
-    while IFS="$(printf '\t')" read -r cls why rule; do
-      [ -n "$rule" ] || continue
-      info "$rule — $why"
-      [ "$cls" = zerowords ] && ZEROWORDS=1
-    done <<EOF
-$BAD_RULES
-EOF
-    # Every class above means the grant is not in effect. Only the zero-command-word
-    # class ALSO has the pre-1.1.11 history of matching everything, so that sentence is
-    # printed only when such an entry is actually present — putting a security claim in
-    # front of someone holding a mistyped write_file() would be worse than saying less.
-    info "an entry agy cannot use grants nothing, so the tool it was meant to cover is"
-    info "still soft-denied (exit 15) with nothing in the message naming the rule."
-    if [ "$ZEROWORDS" -eq 1 ]; then
-      case "${AGY_VER:-}" in
-        ''|*[!0-9.]*)
-          info "a rule naming no command is also version-sensitive: before agy 1.1.11 it"
-          info "matched EVERY command. Check your version." ;;
-        *)
-          if ver_lt "$AGY_VER" 1.1.11; then
-            info "worse on agy $AGY_VER: a rule naming no command matches EVERY command there"
-            info "and silently auto-approves anything the agent runs — broader than the --yolo"
-            info "it was chosen instead of. Fix the entry, or \`agy update\` to 1.1.11+."
-          fi ;;
-      esac
-    fi
-  fi
 else
   info "no agy settings.json yet (${SETTINGS/#$HOME/~})"
+fi
+
+# 3b. permissions.allow entries agy cannot use as written.
+#
+# OUTSIDE the settings.json branch on purpose. From agy 1.1.12 the rules come from
+# `-p /permissions`, which resolves scopes living in other files entirely — the `shared`
+# scope in ~/.gemini/config/config.json is the one this check was added for. Nesting it
+# under "does settings.json exist" meant a machine configured only through those other
+# scopes ran no check at all, and said nothing about it. Both reviewers caught that the
+# fix could not reach the case it was written for.
+ALLOW_RULES="$(allow_rules)"
+if BAD_RULES="$(bad_allow_rules "$ALLOW_RULES")"; then
+  warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
+  ZEROWORDS=0
+  while IFS="$(printf '\t')" read -r cls why rule; do
+    [ -n "$rule" ] || continue
+    info "$rule — $why"
+    [ "$cls" = zerowords ] && ZEROWORDS=1
+  done <<EOF
+$BAD_RULES
+EOF
+  # Every class above means the grant is not in effect. Only the zero-command-word
+  # class ALSO has the pre-1.1.11 history of matching everything, so that sentence is
+  # printed only when such an entry is actually present — putting a security claim in
+  # front of someone holding a mistyped write_file() would be worse than saying less.
+  info "an entry agy cannot use grants nothing, so the tool it was meant to cover is"
+  info "still soft-denied (exit 15) with nothing in the message naming the rule."
+  if [ "$ZEROWORDS" -eq 1 ]; then
+    case "${AGY_VER:-}" in
+      ''|*[!0-9.]*)
+        info "a rule naming no command is also version-sensitive: before agy 1.1.11 it"
+        info "matched EVERY command. Check your version." ;;
+      *)
+        if ver_lt "$AGY_VER" 1.1.11; then
+          info "worse on agy $AGY_VER: a rule naming no command matches EVERY command there"
+          info "and silently auto-approves anything the agent runs — broader than the --yolo"
+          info "it was chosen instead of. Fix the entry, or \`agy update\` to 1.1.11+."
+        fi ;;
+    esac
+  fi
 fi
 
 # 4. plugin scripts executable

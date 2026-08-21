@@ -39,7 +39,9 @@
 #
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
 #             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
-#             | 15 permission denied (agy >= 1.1.3 soft-denied a permissioned tool headless — pass --yolo)
+#             | 15 permission denied — a tool needed permission headless. BOTH shapes:
+#             |    agy 1.1.3's soft deny (rc 0, empty stdout) and 1.1.13's hard error
+#             |    (rc 1, "user denied permission"). Add a permissions.allow rule, or --yolo
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -123,8 +125,10 @@ signal() {
 # both a plain write and `--mode accept-edits` produce the hard error.
 #
 # One function, called from both branches, so the two shapes cannot drift apart again.
-permission_denied() {
-  [ -s "$ERR" ] && cat "$ERR" >&2
+permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
+  # The rc != 0 path dumps $ERR before it classifies, so echoing it again here printed
+  # agy's diagnostic twice on the plain-stderr shape. Both reviewers caught it.
+  [ "${1:-}" = shown ] || { [ -s "$ERR" ] && cat "$ERR" >&2; }
   echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
   signal PERMISSION_DENIED "agy denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"
   exit 15
@@ -491,7 +495,7 @@ $blob"
     # it, so this shape reaches the rc != 0 path and never sees the check further down.
     *"user denied permission"*|*"permission check failed"*|*"auto-denied"*|\
     *"permission that headless"*|*"dangerously-skip-permissions"*)
-      shopt -u nocasematch; permission_denied ;;
+      shopt -u nocasematch; permission_denied shown ;;
     *quota*|*"rate limit"*|*"resource exhausted"*)
       shopt -u nocasematch; signal QUOTA_EXHAUSTED "agy quota / rate limit"; exit 10 ;;
     *unauthenticated*|*unauthorized*|*"sign in"*|*"please authenticate"*|*reauth*)

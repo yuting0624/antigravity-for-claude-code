@@ -20,8 +20,10 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   was safe. The strings were there. The route was not — agy no longer takes it. Verifying
   an anchor is not verifying that anything still reaches it.
 - **The `flash` tiers move to Gemini 3.7 Flash (High) / (Low).** 3.6 and 3.7 are priced
-  *identically*, and both are **half** of the 3.5 this plugin has defaulted to since the
-  beginning: $0.75/M in, $3.75/M out, $0.075/M cached-in against $1.50 / $9.00 / $0.15.
+  *identically*, and both undercut the 3.5 this plugin has defaulted to since the
+  beginning on every axis: input and cached-input are exactly **half** ($1.50 -> $0.75,
+  $0.15 -> $0.075) and output is cheaper still, **$9.00 -> $3.75** — a 58% cut, not a
+  halving, which the first draft of this entry got wrong in three files.
   That is promotional pricing which **ends 2026-12-31**, after which they settle at
   $1.50 / $7.50 / $0.15 — still cheaper than 3.5 on output, identical on the rest.
   Checked on 2026-08-17 against ai.google.dev and Google Cloud's Agent Platform page.
@@ -62,6 +64,16 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   likewise derives its key from the default rather than enumerating 3.5 and 3.6 and
   telling you to reconcile by hand for anything else — which is exactly what it did when
   3.7 arrived.
+- **Four things this release got wrong on the first pass, all caught in review.** The
+  `permissions.allow` check was nested inside `if [ -f settings.json ]` — so on a machine
+  configured only through the `shared` scope, the one case it was written for, it ran no
+  check and said nothing. The `# Exit codes:` header, which `--help` prints verbatim, still
+  described 15 as the 1.1.3 soft deny after this release made it cover both shapes. agy's
+  own diagnostic printed twice on the hard-error path, because the rc != 0 branch dumps
+  `$ERR` before classifying and the handler dumped it again. And "half of 3.5 on every
+  axis" was wrong in three files: input and cached-input halve exactly, output goes
+  $9.00 -> $3.75, which is 58%. Each now has a test, including the duplicate-output one,
+  which had none until a mutation showed the fix could be reverted in silence.
 
 ## 0.23.0
 - **New: `/antigravity:migrate` — move an existing Claude Code setup onto agy.**
