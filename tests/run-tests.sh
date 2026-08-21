@@ -880,15 +880,25 @@ e15_bad=""
 # scripts/ is in the list because the --help text lives there and is user-facing: it kept
 # advertising `--mode accept-edits` as "the safer choice for pure write tasks" through a
 # sweep that retracted exactly that claim in seven other files.
-# doctor.sh is deliberately NOT here for the exit-15 rule: it references the code from a
-# permissions diagnostic without describing what produces it, so requiring the taxonomy
-# there is noise in a line someone reads while fixing a rule.
-E15_SURFACES="README.md docs/POC-PLAYBOOK.md docs/TROUBLESHOOTING.md
-skills/antigravity/SKILL.md agents/antigravity-delegate.md commands/delegate.md
-scripts/agy-delegate.sh"
+# A GLOB, not a list. The first version of this guard enumerated the files it knew about
+# and left agy-job.sh out — whose rc_label() mirrors these exact codes — so the fifth
+# round of this finding landed in the file the guard existed to prevent. Both reviewers
+# named the enumeration itself. A new surface is covered by existing now, not by being
+# remembered.
+#
+# doctor.sh is the one exclusion, on purpose: it references the code from a permissions
+# diagnostic without describing what produces it, and demanding the taxonomy there is
+# noise in a line someone reads while fixing a rule. CHANGELOG.md is out because its older
+# entries describe what was true when they were written.
+E15_SURFACES="$(cd "$ROOT" && ls -1 README.md docs/*.md skills/*/SKILL.md agents/*.md \
+                  commands/*.md scripts/*.sh hooks/*.sh 2>/dev/null \
+                | grep -vE '^(CHANGELOG\.md|scripts/doctor\.sh)$')"
 for f in $E15_SURFACES; do
   [ -f "$ROOT/$f" ] || continue
-  grep -qE 'exit [`]?15' "$ROOT/$f" || continue
+  # Trigger on the CODE as well as the phrase: agy-job.sh renders it as a bare `15)` case
+  # arm and never writes "exit 15", so the phrase alone would have skipped the very file
+  # that prompted this guard even once the glob included it.
+  grep -qE 'exit [`]?15|PERMISSION.?denied|PERMISSION_DENIED' "$ROOT/$f" || continue
   grep -qE '1\.1\.13|hard error' "$ROOT/$f" || e15_bad="$e15_bad $f"
 done
 # Same shape for the other claim this release retracted: anything that mentions
@@ -907,6 +917,22 @@ else echo "FAIL: --mode accept-edits still advertised at: $ae_bad"; FAIL=$((FAIL
 if [ -z "$e15_bad" ]; then
   echo "ok: every file that describes exit 15 names both denial shapes"; PASS=$((PASS+1));
 else echo "FAIL: describes exit 15 without the 1.1.13 hard error:$e15_bad"; FAIL=$((FAIL+1)); fi
+# LINE level too, because file level demonstrably is not enough here: agy-job.sh's stale
+# arm survived it twice — once because the glob left the file out, then because a comment
+# two lines above mentioned 1.1.13 and satisfied the file. What every one of the five
+# stale spots had in common is narrower and checkable: the code named beside the OLD
+# version only.
+e15_lines=""
+for f in $E15_SURFACES; do
+  [ -f "$ROOT/$f" ] || continue
+  hit="$(grep -nE 'exit .?15|PERMISSION.?denied|PERMISSION_DENIED|^[[:space:]]*15\)' "$ROOT/$f" \
+         | grep -E '1\.1\.3|soft.?den' | grep -viE '1\.1\.13|hard error|both' \
+         | cut -d: -f1 | tr '\n' ',')"
+  [ -n "$hit" ] && e15_lines="$e15_lines $f:${hit%,}"
+done
+if [ -z "$e15_lines" ]; then
+  echo "ok: no line pairs the permission exit code with the old version alone"; PASS=$((PASS+1));
+else echo "FAIL: permission code described as 1.1.3-only at:$e15_lines"; FAIL=$((FAIL+1)); fi
 
 echo "== doctor.sh --model probe (ask agy instead of inferring from a version) =="
 # The version gate above can only INFER that --model works. agy 1.1.11 answers the

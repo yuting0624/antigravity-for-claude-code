@@ -414,7 +414,9 @@ agy-delegate --dir . --yolo --digest --timeout 10m \
 
 Verified behaviors (1.0.12 → 1.1.5):
 - **Pass `--yolo`.** On 1.1.3+ the subagent tools need permission that headless mode
-  can't prompt for, so without `--yolo` the spawn is soft-denied (wrapper exit 15).
+  can't prompt for, so without `--yolo` the spawn is denied (wrapper exit 15). Whether
+  it is a soft deny or the hard error 1.1.13 introduced for writes has not been
+  measured for this tool — the grant and the exit code are the same either way.
   (On 1.0.x spawning was ungated, but `--yolo` is the durable choice here: a
   `permissions.allow` `write_file(...)` rule covers file writes only, not
   `define_subagent`/`invoke_subagent`, and not web / Vertex AI Search.)

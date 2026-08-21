@@ -91,6 +91,15 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   (copied from doctor.sh, which has no `-e`; this file does). The accept-edits guard is
   LINE level for that reason: file level could not see it, because the same file retracts
   the claim three hundred lines further down.
+  A fifth round found `agy-job.sh`'s `rc_label()` — which mirrors these exact codes — still
+  telling a background job to "pass --yolo (agy >= 1.1.3)". The guard added to prevent
+  exactly that had **enumerated** the files it knew about and left this one out; both
+  reviewers named the enumeration itself. It is a glob now, it triggers on the code as
+  well as the phrase (this file writes a bare `15)` case arm and never the words "exit
+  15"), and it checks LINE level as well as file level — because the stale arm survived
+  the file-level rule twice, once through the glob's omission and once because a comment
+  two lines above mentioned 1.1.13 and satisfied the file. What all five had in common is
+  narrower and checkable: the code named beside the old version alone.
 
 ## 0.23.0
 - **New: `/antigravity:migrate` — move an existing Claude Code setup onto agy.**
