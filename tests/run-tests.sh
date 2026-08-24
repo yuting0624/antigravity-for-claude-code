@@ -877,7 +877,12 @@ sbc_case split-pair 1 'Add `--sandbox` for isolation. It contains the untrusted 
 sbc_case negated    0 'The `--sandbox` flag is not containment. It was measured and it is not those.'
 # A contraction is still a negation. Requiring the literal word would flag a CORRECT
 # sentence, which is the opposite failure and the one that gets a checker deleted.
-sbc_case contracted 0 'The `--sandbox` flag does not contain anything; it doesn'"'"'t contain the agent.'
+#
+# ONLY the contraction — no bare "not" or "never" anywhere in it. The first version of
+# this case read "does not contain anything; it doesn't contain the agent", where the
+# earlier bare "not" matched first and the case passed with contraction support deleted
+# outright. Both reviewers caught that independently.
+sbc_case contracted 0 'The `--sandbox` flag doesn'"'"'t contain the agent.'
 
 echo "== agy-media says what --yolo --dir exposes =="
 # GHSA-hwv2-vjgj-8rcv listed this as a contributing factor and scoped it to the containing

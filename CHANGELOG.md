@@ -37,7 +37,10 @@ The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the a
   passes run and neither subsumes the other. The negation also accepts contractions:
   requiring the literal word would have flagged "`--sandbox` doesn't contain the agent",
   a *correct* sentence, which is the opposite failure and the one that gets a checker
-  deleted. All six shapes are pinned by the checker's own tests.
+  deleted. All six shapes are pinned by the checker's own tests — and the contraction case
+  had to be rewritten, because its first version said "does not contain anything; it
+  doesn't contain the agent", where the bare "not" matched first and the case passed with
+  contraction support deleted outright. Both reviewers caught that independently.
 - The comments in `agy-media.sh` and the test block still framed the exposure as the
   containing directory, directly above the new text saying the opposite, and `SKILL.md`'s
   recipes still passed `--yolo --sandbox` — teaching a flag the same file had just called
