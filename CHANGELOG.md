@@ -23,12 +23,21 @@ The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the a
   it is where agy starts looking. `--yolo` is a grant over the **whole machine**, and the
   message says that now.
 - Two guards, both mutation-verified: no user-facing file may recommend `--sandbox` as
-  containment, and the media warning must say the grant covers the machine. The first
-  guard's initial version exempted any line containing "is not" — and the measurement
-  sentence pasted after the claim says "it is not those", so re-adding "adds containment"
-  passed it. The negation now has to sit next to the word.
+  containment, and the media warning must say the grant covers the machine.
+  **The containment rule needed three shapes, each killed by a real mutation.** Matching
+  per line exempted any line containing "is not" — and the measurement sentence pasted
+  after the claim says "it is not those", so re-adding "adds containment" passed. Per line
+  with the negation required *adjacent* to the word fixed that and then missed a claim
+  split across a wrap, which is how prose is written. Two-line windows fixed the wrap and
+  then exempted a bad sentence sitting beside a good one, because the neighbour's negation
+  satisfied the whole window. `tests/check-sandbox-claims.py` judges **sentences**, so each
+  claim carries its own negation or none, and it has its own tests for all three shapes.
+- The comments in `agy-media.sh` and the test block still framed the exposure as the
+  containing directory, directly above the new text saying the opposite, and `SKILL.md`'s
+  recipes still passed `--yolo --sandbox` — teaching a flag the same file had just called
+  useless. Both found in review.
 
-298 -> 299.
+298 -> 303.
 
 ## 0.25.0 — security
 

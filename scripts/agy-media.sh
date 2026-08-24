@@ -164,10 +164,11 @@ Transcript file: $OUT"
 # --yolo: agy needs tool permission to read the media file and write the transcript.
 #
 # Say what that costs, every time. GHSA-hwv2-vjgj-8rcv named this as a contributing
-# factor: --yolo approves ALL tools, including terminal, and --dir hands over the media
-# file's whole CONTAINING directory — so picking one file exposes everything beside it.
-# That is not obvious from "transcribe this recording", and the person choosing the file
-# is the only one who can judge what else is in there.
+# factor and framed it as the containing directory — "picking one file exposes everything
+# beside it". Measured, that is too small: --dir is where agy starts looking, not a
+# boundary, and under --yolo it writes outside it. The grant is over the machine. None of
+# that is obvious from "transcribe this recording", and the person choosing the file is
+# the only one who can judge what is reachable from here.
 #
 # --sandbox was the candidate narrowing in 0.25.0 and it is NOT coming. It was deferred
 # there because agy could not run; now it can, and the measurement says it does nothing:

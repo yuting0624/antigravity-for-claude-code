@@ -341,7 +341,7 @@ any figure.
 ROOT=agy-delegate
 
 # Scaffold from a spec (Claude wrote the spec/architecture)
-"$ROOT" --tier pro --yolo --sandbox --dir ./app \
+"$ROOT" --tier pro --yolo --dir ./app \
   "Scaffold per ARCHITECTURE.md: dirs, configs, stub modules. Follow AGENTS.md."
 
 # Generate tests for a contract Claude defined
@@ -352,11 +352,11 @@ ROOT=agy-delegate
 "$ROOT" --tier pro "Review for bugs/security/perf, be skeptical. List file:line: <diff>"
 
 # Implement-until-tests-pass (feedback loop; isolate on a branch)
-"$ROOT" --tier pro --yolo --sandbox --dir ./app \
+"$ROOT" --tier pro --yolo --dir ./app \
   "Implement feature X to satisfy AGENTS.md and make 'pytest -q' pass. Iterate until green."
 
 # Migration / modernization
-"$ROOT" --tier pro --yolo --sandbox --dir ./svc \
+"$ROOT" --tier pro --yolo --dir ./svc \
   "Migrate all callers from APIv1 to APIv2 per MIGRATION.md. List every file changed."
 
 # Web search → Claude re-checks

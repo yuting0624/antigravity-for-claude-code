@@ -852,24 +852,33 @@ echo "== --sandbox is not sold as containment =="
 # flag. Four documents were recommending it "for containment", which is the shape this
 # repo keeps having to remove: a guard that reads as protection and provides none.
 #
-# The negation must sit NEXT TO the word, not anywhere on the line. The first version
-# exempted any line containing "is not", and the measurement sentence pasted after the
-# claim says "it is not those" — so re-adding "adds containment" passed the guard.
-sb_bad=""
-for f in README.md docs/*.md skills/*/SKILL.md agents/*.md commands/*.md scripts/*.sh hooks/*.sh; do
-  [ -f "$ROOT/$f" ] || continue
-  hit="$(grep -niE 'sandbox' "$ROOT/$f" | grep -iE 'contain' \
-         | grep -viE 'not[^.]{0,20}contain' | cut -d: -f1 | tr '\n' ',')"
-  [ -n "$hit" ] && sb_bad="$sb_bad $f:${hit%,}"
-done
-if [ -z "$sb_bad" ]; then
+# The rule went through three shapes before it worked, each failing a real mutation:
+# per line missed a claim split across a wrap; two-line windows fixed that and then
+# exempted a bad sentence sitting beside a good one, because the neighbour's negation
+# satisfied the window. check-sandbox-claims.py judges SENTENCES, so each claim carries
+# its own negation or none.
+if python3 "$HERE/check-sandbox-claims.py" "$ROOT"/README.md "$ROOT"/docs/*.md \
+     "$ROOT"/skills/*/SKILL.md "$ROOT"/agents/*.md "$ROOT"/commands/*.md \
+     "$ROOT"/scripts/*.sh "$ROOT"/hooks/*.sh; then
   echo "ok: nothing recommends --sandbox as containment"; PASS=$((PASS+1));
-else echo "FAIL: --sandbox described as containment at:$sb_bad"; FAIL=$((FAIL+1)); fi
+else echo "FAIL: --sandbox described as containment (see above)"; FAIL=$((FAIL+1)); fi
+# The checker is itself the guard, so a shape it misses is a silent pass. All three that
+# bit the inline versions are pinned, plus the negated form that must stay clean.
+sbc_case() { # $1 = label, $2 = expected rc, $3 = file body
+  local f="$TMP/sbc-$1.md"; printf '%b\n' "$3" > "$f"
+  python3 "$HERE/check-sandbox-claims.py" "$f" >/dev/null 2>&1; local rc=$?
+  if [ "$rc" = "$2" ]; then echo "ok: sandbox-claim checker — $1"; PASS=$((PASS+1));
+  else echo "FAIL: sandbox-claim checker — $1 (rc=$rc, want $2)"; FAIL=$((FAIL+1)); fi
+}
+sbc_case one-line   1 'Run on a branch. Add `--sandbox` for real containment of the agent.'
+sbc_case wrapped    1 'Run on a branch. Add `--sandbox` for real\ncontainment of the agent.'
+sbc_case beside-ok  1 '`--sandbox` is *not* containment: measured.\nAdd `--sandbox` for real containment.'
+sbc_case negated    0 'The `--sandbox` flag is not containment. It was measured and it is not those.'
 
 echo "== agy-media says what --yolo --dir exposes =="
-# GHSA-hwv2-vjgj-8rcv listed this as a contributing factor: --yolo approves ALL tools and
-# --dir hands over the media file's whole containing directory, which "transcribe this
-# recording" does not suggest. --print-command stops before any delegation runs.
+# GHSA-hwv2-vjgj-8rcv listed this as a contributing factor and scoped it to the containing
+# directory. Measured, the grant is wider than that — --dir is not a boundary — which is
+# what the assertion below pins. --print-command stops before any delegation runs.
 mdir="$TMP/mediawarn"; rm -rf "$mdir"; mkdir -p "$mdir"
 : > "$mdir/clip.wav"; : > "$mdir/tax-return.pdf"
 media_out="$(bash "$ROOT/scripts/agy-media.sh" --print-command "$mdir/clip.wav" 2>&1 >/dev/null)"
