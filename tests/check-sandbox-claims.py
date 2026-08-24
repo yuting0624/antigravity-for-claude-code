@@ -25,6 +25,12 @@ were tried and each of the first three was killed by a mutation, not by reading:
 So both passes run. A sentence is judged with its own negation or none, and each
 adjacent pair is judged too. Either firing is enough. Neither subsumes the other: pairs
 alone re-admit the beside-a-good-one bug, sentences alone miss the split claim.
+
+WHAT IT DOES NOT CATCH, deliberately: a claim spread across THREE or more sentences.
+A window of N is always beatable at N+1, so widening it is a race the checker cannot
+win, and each widening costs a false-positive surface — the pair pass already had to be
+paired with the single pass to avoid one. This is a guard against drift, not a proof.
+Read the prose when you change it.
 """
 import re
 import sys

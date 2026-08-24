@@ -24,7 +24,7 @@ The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the a
   message says that now.
 - Two guards, both mutation-verified: no user-facing file may recommend `--sandbox` as
   containment, and the media warning must say the grant covers the machine.
-  **The containment rule needed three shapes, each killed by a real mutation.** Matching
+  **The containment rule needed five shapes; four were killed by a mutation, not by reading.** Matching
   per line exempted any line containing "is not" — and the measurement sentence pasted
   after the claim says "it is not those", so re-adding "adds containment" passed. Per line
   with the negation required *adjacent* to the word fixed that and then missed a claim
@@ -37,7 +37,10 @@ The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the a
   passes run and neither subsumes the other. The negation also accepts contractions:
   requiring the literal word would have flagged "`--sandbox` doesn't contain the agent",
   a *correct* sentence, which is the opposite failure and the one that gets a checker
-  deleted. All six shapes are pinned by the checker's own tests — and the contraction case
+  deleted. It does NOT catch a claim spread over three or more sentences, and that is left
+  alone on purpose: a window of N is beatable at N+1, so widening is a race the checker
+  cannot win, and each widening adds false-positive surface. It guards against drift; it
+  is not a proof. All six shapes are pinned by the checker's own tests — and the contraction case
   had to be rewritten, because its first version said "does not contain anything; it
   doesn't contain the agent", where the bare "not" matched first and the case passed with
   contraction support deleted outright. Both reviewers caught that independently.
