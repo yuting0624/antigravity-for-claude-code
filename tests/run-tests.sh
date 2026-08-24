@@ -873,7 +873,11 @@ sbc_case() { # $1 = label, $2 = expected rc, $3 = file body
 sbc_case one-line   1 'Run on a branch. Add `--sandbox` for real containment of the agent.'
 sbc_case wrapped    1 'Run on a branch. Add `--sandbox` for real\ncontainment of the agent.'
 sbc_case beside-ok  1 '`--sandbox` is *not* containment: measured.\nAdd `--sandbox` for real containment.'
+sbc_case split-pair 1 'Add `--sandbox` for isolation. It contains the untrusted commands.'
 sbc_case negated    0 'The `--sandbox` flag is not containment. It was measured and it is not those.'
+# A contraction is still a negation. Requiring the literal word would flag a CORRECT
+# sentence, which is the opposite failure and the one that gets a checker deleted.
+sbc_case contracted 0 'The `--sandbox` flag does not contain anything; it doesn'"'"'t contain the agent.'
 
 echo "== agy-media says what --yolo --dir exposes =="
 # GHSA-hwv2-vjgj-8rcv listed this as a contributing factor and scoped it to the containing

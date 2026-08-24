@@ -10,14 +10,21 @@ This is a security claim, which is why it gets a checker rather than a habit. Te
 someone a flag confines an agent that it does not confine is the worst direction for a
 documentation error to fail in.
 
-SENTENCES, not lines and not two-line windows, because both of those were tried:
+SENTENCES, after joining wrapped lines — and adjacent sentence PAIRS as well. Four rules
+were tried and each of the first three was killed by a mutation, not by reading:
 
-  * per line missed a claim split across a wrap, which is how prose is written;
-  * two-line windows fixed that and then exempted a bad sentence sitting next to a good
-    one — the negation from the neighbour satisfied the whole window.
+  * per line, negation anywhere on it: the measurement text pasted after a claim says
+    "it is not those", which exempted a re-added "adds containment";
+  * per line, negation adjacent to the word: missed a claim split across a wrap, which
+    is how prose is written;
+  * two-line windows: caught the wrap, then exempted a bad sentence sitting beside a
+    good one, because the neighbour's negation satisfied the whole window;
+  * single sentences: fixed that, and missed a claim spread over two of them — "Add
+    --sandbox for isolation. It contains the untrusted commands."
 
-Splitting on sentence boundaries after joining the lines handles both: each claim is
-judged with its own negation or without one.
+So both passes run. A sentence is judged with its own negation or none, and each
+adjacent pair is judged too. Either firing is enough. Neither subsumes the other: pairs
+alone re-admit the beside-a-good-one bug, sentences alone miss the split claim.
 """
 import re
 import sys
@@ -26,7 +33,10 @@ import sys
 # The negation has to sit next to the word: an "is not" elsewhere in the sentence is
 # about something else, and letting it exempt the sentence is how the first version of
 # this rule passed a re-added "adds containment".
-NEGATED = re.compile(r"\bnot\b[^.]{0,20}contain", re.I)
+# Contractions count. Requiring the literal word would flag "--sandbox doesn't contain
+# the agent" — a correct sentence — which is the opposite failure and the one that makes
+# a checker get deleted. Reviewers caught it.
+NEGATED = re.compile(r"(?:\bnot\b|n't|\bnever\b)[^.]{0,20}contain", re.I)
 SANDBOX = re.compile(r"sandbox", re.I)
 CONTAIN = re.compile(r"contain", re.I)
 
@@ -54,12 +64,34 @@ def sentences(text):
     return split
 
 
+def claims(sent):
+    """True when this text asserts containment without negating it."""
+    return bool(SANDBOX.search(sent) and CONTAIN.search(sent) and not NEGATED.search(sent))
+
+
 def problems(path):
-    text = open(path).read()
-    bad = []
-    for line_no, sent in sentences(text):
-        if SANDBOX.search(sent) and CONTAIN.search(sent) and not NEGATED.search(sent):
-            bad.append((path, line_no, sent[:110]))
+    """Single sentences AND adjacent pairs. The two catch different shapes and neither
+    subsumes the other, so both run and either one is enough to flag.
+
+    A pair alone re-admits the bug the sentence split fixed — a bad sentence beside a
+    good one, exempted by the neighbour's negation. A sentence alone misses a claim
+    spread over two of them ("Add --sandbox for isolation. It contains the commands."),
+    which is what review found here. Running both costs one extra pass.
+    """
+    sents = sentences(open(path).read())
+    bad, seen = [], set()
+
+    def add(line_no, text):
+        if line_no not in seen:
+            seen.add(line_no)
+            bad.append((path, line_no, text[:110]))
+
+    for line_no, sent in sents:
+        if claims(sent):
+            add(line_no, sent)
+    for (line_no, a), (_, b) in zip(sents, sents[1:]):
+        if claims(a + " " + b):
+            add(line_no, (a + " " + b))
     return bad
 
 

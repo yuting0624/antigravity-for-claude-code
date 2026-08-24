@@ -31,13 +31,19 @@ The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the a
   split across a wrap, which is how prose is written. Two-line windows fixed the wrap and
   then exempted a bad sentence sitting beside a good one, because the neighbour's negation
   satisfied the whole window. `tests/check-sandbox-claims.py` judges **sentences**, so each
-  claim carries its own negation or none, and it has its own tests for all three shapes.
+  claim carries its own negation or none — and adjacent PAIRS are judged too, after a
+  fourth mutation showed a claim can be spread across two sentences ("Add `--sandbox` for
+  isolation. It contains the untrusted commands."), which neither half trips alone. Both
+  passes run and neither subsumes the other. The negation also accepts contractions:
+  requiring the literal word would have flagged "`--sandbox` doesn't contain the agent",
+  a *correct* sentence, which is the opposite failure and the one that gets a checker
+  deleted. All six shapes are pinned by the checker's own tests.
 - The comments in `agy-media.sh` and the test block still framed the exposure as the
   containing directory, directly above the new text saying the opposite, and `SKILL.md`'s
   recipes still passed `--yolo --sandbox` — teaching a flag the same file had just called
   useless. Both found in review.
 
-298 -> 303.
+298 -> 305.
 
 ## 0.25.0 — security
 
