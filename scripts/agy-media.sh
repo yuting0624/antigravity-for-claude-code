@@ -169,13 +169,17 @@ Transcript file: $OUT"
 # That is not obvious from "transcribe this recording", and the person choosing the file
 # is the only one who can judge what else is in there.
 #
-# --sandbox is the candidate narrowing (it restricts the terminal tool, which is the bulk
-# of what --yolo grants, and the transcript is written by the file tool). It is NOT
-# applied here because it could not be verified: agy on this account currently fails every
-# run with "Eligibility check failed", so a behavioural change to a working feature would
-# ship untested. Warn now, narrow when it can be measured.
+# --sandbox was the candidate narrowing in 0.25.0 and it is NOT coming. It was deferred
+# there because agy could not run; now it can, and the measurement says it does nothing:
+# with --yolo, a write to an absolute path OUTSIDE --dir succeeded, `id` ran, and curl
+# reached the network — identical with and without the flag. Adding it would have shipped
+# something that reads as containment and provides none.
+#
+# The same measurement corrected this warning. 0.25.0 said "--dir exposes $DIR", which
+# UNDERSTATES it: --dir is where agy looks first, not a boundary. --yolo approves every
+# tool, and agy then writes wherever it likes.
 NEIGHBOURS="$(ls -1 "$DIR" 2>/dev/null | grep -c . || echo 0)"
-echo "agy-media: --yolo approves ALL agy tools (including terminal) and --dir exposes $DIR — $NEIGHBOURS entr(y/ies) beside your file — for this run. Move the file to a directory of its own if anything there is sensitive." >&2
+echo "agy-media: --yolo approves ALL agy tools for this run, including the terminal, so this is a grant over YOUR WHOLE MACHINE — not just $DIR ($NEIGHBOURS entr(y/ies) beside your file), which is only where agy starts looking. Measured: under --yolo, agy writes outside --dir and runs shell commands, and --sandbox does not change that. Run this on files you are willing to hand an unsupervised agent." >&2
 ARGS=(--tier "$TIER" --yolo --dir "$DIR" --timeout "$TIMEOUT")
 if [ "$PRINT_CMD" -eq 1 ]; then
   { printf 'agy-delegate'; printf ' %q' "${ARGS[@]}" "$PROMPT"; printf '\n'; }

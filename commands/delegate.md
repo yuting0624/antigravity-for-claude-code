@@ -21,7 +21,8 @@ Do this:
    describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
    accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
    at all, the write is denied exactly like one without it. Run
-   write tasks on a dedicated branch (+ `--sandbox`), and
+   write tasks on a dedicated branch — `--sandbox` is not containment, it was measured
+   doing nothing under `--yolo` — and
    **verify files actually changed** with `git status`. Claude Code may prompt for or block
    `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
    (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper

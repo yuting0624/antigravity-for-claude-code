@@ -845,6 +845,27 @@ out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/measure-session" 2>&1 | head -1)
 case "$out" in *measure-session*) echo "ok: bin/measure-session forwards to the .py"; PASS=$((PASS+1));;
   *) echo "FAIL: bin/measure-session did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
 
+echo "== --sandbox is not sold as containment =="
+# 0.25.0 deferred adding --sandbox to agy-media because agy could not run. It runs now,
+# and the measurement killed the idea: under --yolo a write to an absolute path OUTSIDE
+# --dir succeeded, `id` ran, curl reached the network — identical with and without the
+# flag. Four documents were recommending it "for containment", which is the shape this
+# repo keeps having to remove: a guard that reads as protection and provides none.
+#
+# The negation must sit NEXT TO the word, not anywhere on the line. The first version
+# exempted any line containing "is not", and the measurement sentence pasted after the
+# claim says "it is not those" — so re-adding "adds containment" passed the guard.
+sb_bad=""
+for f in README.md docs/*.md skills/*/SKILL.md agents/*.md commands/*.md scripts/*.sh hooks/*.sh; do
+  [ -f "$ROOT/$f" ] || continue
+  hit="$(grep -niE 'sandbox' "$ROOT/$f" | grep -iE 'contain' \
+         | grep -viE 'not[^.]{0,20}contain' | cut -d: -f1 | tr '\n' ',')"
+  [ -n "$hit" ] && sb_bad="$sb_bad $f:${hit%,}"
+done
+if [ -z "$sb_bad" ]; then
+  echo "ok: nothing recommends --sandbox as containment"; PASS=$((PASS+1));
+else echo "FAIL: --sandbox described as containment at:$sb_bad"; FAIL=$((FAIL+1)); fi
+
 echo "== agy-media says what --yolo --dir exposes =="
 # GHSA-hwv2-vjgj-8rcv listed this as a contributing factor: --yolo approves ALL tools and
 # --dir hands over the media file's whole containing directory, which "transcribe this
@@ -852,9 +873,12 @@ echo "== agy-media says what --yolo --dir exposes =="
 mdir="$TMP/mediawarn"; rm -rf "$mdir"; mkdir -p "$mdir"
 : > "$mdir/clip.wav"; : > "$mdir/tax-return.pdf"
 media_out="$(bash "$ROOT/scripts/agy-media.sh" --print-command "$mdir/clip.wav" 2>&1 >/dev/null)"
-if has 'approves ALL agy tools' "$media_out" && has "$mdir" "$media_out"; then
-  echo "ok: agy-media names the directory --dir exposes"; PASS=$((PASS+1));
-else echo "FAIL: agy-media does not say what --yolo --dir exposes"; FAIL=$((FAIL+1)); fi
+# It must say the grant is over the MACHINE. 0.25.0's version said "--dir exposes $DIR",
+# which understates it — --dir is where agy starts looking, not a boundary, and that was
+# measured: under --yolo agy writes outside it.
+if has 'WHOLE MACHINE' "$media_out" && has "$mdir" "$media_out"; then
+  echo "ok: agy-media says the grant covers the machine, not just --dir"; PASS=$((PASS+1));
+else echo "FAIL: agy-media understates --yolo as a --dir-scoped exposure"; FAIL=$((FAIL+1)); fi
 
 echo "== doctor.sh tier-model check (agy 1.1.5 slug format) =="
 # The stub's `agy models` emits slugs (gemini-3.5-flash); doctor's default tier models are

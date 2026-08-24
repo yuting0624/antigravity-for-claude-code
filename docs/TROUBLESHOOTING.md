@@ -127,7 +127,7 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   Search / terminal when no rule covers them. (`--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing.)
 - Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
   approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
-- Run write tasks on a **dedicated branch** (add `--sandbox` for containment).
+- Run write tasks on a **dedicated branch**. `--sandbox` is *not* containment: Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux.
 - **Always verify files actually changed in your workspace** (`git status`) — never trust
   the self-report. The wrapper maps BOTH denial shapes — the 1.1.3 soft-deny and the
   1.1.13 hard error — to **exit 15**, so you get an actionable message instead of a

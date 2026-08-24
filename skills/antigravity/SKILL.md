@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.25.0
+version: 0.25.1
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -237,7 +237,8 @@ commands** (`--yolo` grants write + terminal):
   `git status` (the wrapper maps BOTH denial shapes — 1.1.3's soft deny and 1.1.13's
   hard error — to exit `15`, so you're not left guessing).
 - Run it on a **dedicated git branch or worktree** so changes are isolated.
-- Add `--sandbox` for execution containment.
+- `--sandbox` is NOT execution containment. Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux. Contain by what you check
+  out and by `permissions.allow`, not by the flag.
 - **Claude reviews the diff before merging** — never auto-merge agy's writes.
 
 ## Cost discipline — where the savings actually come from

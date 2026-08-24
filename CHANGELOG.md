@@ -3,6 +3,33 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.25.1
+
+The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the answer is no.
+
+- **`--sandbox` is not containment, and four documents were recommending it as such.**
+  0.25.0 held it back because agy was failing every run with an eligibility error and this
+  repository does not ship behavioural changes it cannot measure. Measured now, on macOS
+  with agy 1.1.19: **with `--yolo`, the flag changes nothing.** A write to an absolute path
+  *outside* `--dir` succeeded (rc 0, 8 bytes, verified by content), `id` ran and returned a
+  real uid, and `curl https://example.com` returned 200 — identical with and without it.
+  agy's own `--help` says "terminal restrictions"; whatever it restricts, it is not those,
+  not in this combination. Not tested on Linux, and the claim is scoped to what was run.
+  Withholding it in 0.25.0 turned out to be the right call for the wrong reason: it would
+  have been a flag that reads as containment and provides none, which is the exact shape
+  this repository keeps having to remove.
+- **The warning 0.25.0 added to `agy-media` understated the exposure.** It said `--dir`
+  exposes the containing directory. The same measurement shows `--dir` is not a boundary —
+  it is where agy starts looking. `--yolo` is a grant over the **whole machine**, and the
+  message says that now.
+- Two guards, both mutation-verified: no user-facing file may recommend `--sandbox` as
+  containment, and the media warning must say the grant covers the machine. The first
+  guard's initial version exempted any line containing "is not" — and the measurement
+  sentence pasted after the claim says "it is not those", so re-adding "adds containment"
+  passed it. The negation now has to sit next to the word.
+
+298 -> 299.
+
 ## 0.25.0 — security
 
 Fixes **GHSA-hwv2-vjgj-8rcv** (CVSS 8.6), reported privately by @Valkyness with

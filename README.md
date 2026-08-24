@@ -224,7 +224,9 @@ Delegation doesn't save money by itself — these do (also in the skill):
 
 **Guardrails**
 - Always **verify** agy's output (it can be wrong, and may even alter its environment to make a check pass — re-run gates yourself in a clean state).
-- `--yolo` auto-approves every tool call — use with `--sandbox` or in a throwaway dir.
+- `--yolo` auto-approves every tool call — a grant over your whole machine, not over `--dir`.
+  **`--sandbox` does not contain it.** Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux. Use a throwaway checkout, or a
+  `permissions.allow` rule instead of the flag.
 - Write tasks: run on a dedicated branch/worktree, review the diff before merging.
 
 **Known limits (agy v1.0.x)**
