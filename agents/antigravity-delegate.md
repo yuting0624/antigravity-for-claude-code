@@ -64,7 +64,9 @@ agy-delegate [options] "<task>"
 
 Options: `--tier flash|flash-lo|pro` · `--dir <repo-root>` (so agy reads
 `AGENTS.md` + the real files — always prefer this over pasting code) · `--yolo`
-(required for any tool use or file writing in headless mode) · `--sandbox` ·
+(required for any tool use or file writing in headless mode — a grant over the machine,
+not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert under
+`--yolo`) ·
 `--timeout 10m` · `-c`/`--continue` to hold state on the cheap side.
 
 ## Cost discipline (why this subagent exists)
