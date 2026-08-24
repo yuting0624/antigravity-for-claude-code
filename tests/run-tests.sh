@@ -872,6 +872,11 @@ sbc_case() { # $1 = label, $2 = expected rc, $3 = file body
 }
 sbc_case one-line   1 'Run on a branch. Add `--sandbox` for real containment of the agent.'
 sbc_case wrapped    1 'Run on a branch. Add `--sandbox` for real\ncontainment of the agent.'
+# beside-ok pins the SINGLE-sentence pass: a good neighbour must not exempt a bad
+# sentence. Note what it does NOT pin — deleting the pair pass leaves it green, because
+# sentence splitting already separates the two claims. The window bug it is named for
+# belonged to the discarded two-LINE implementation. split-pair below is the fixture that
+# actually requires the pair pass. Review caught the comment claiming otherwise.
 sbc_case beside-ok  1 '`--sandbox` is *not* containment: measured.\nAdd `--sandbox` for real containment.'
 sbc_case split-pair 1 'Add `--sandbox` for isolation. It contains the untrusted commands.'
 sbc_case negated    0 'The `--sandbox` flag is not containment. It was measured and it is not those.'
