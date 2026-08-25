@@ -17,7 +17,7 @@ label.
 ## Dev setup
 
 You need the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`,
-authenticated — `agy models` should list Gemini models) and Claude Code.
+authenticated — `agy models` should list Gemini models) and the pi coding agent.
 
 ```bash
 git clone https://github.com/yuting0624/antigravity-for-claude-code ~/antigravity-for-claude-code

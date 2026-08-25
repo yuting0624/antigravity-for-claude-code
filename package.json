@@ -1,0 +1,36 @@
+{
+  "name": "antigravity-for-glm-code",
+  "version": "0.27.0",
+  "description": "GLM conducts, executors execute: run the Antigravity CLI (Gemini) AND local model servers (Ollama/LM Studio/vLLM) as collaborating executors inside the pi coding agent on GLM, with intelligent model routing across the SDLC.",
+  "keywords": [
+    "pi-package",
+    "antigravity",
+    "glm",
+    "zhipu",
+    "zai",
+    "gemini",
+    "ollama",
+    "local-llm",
+    "multi-agent",
+    "orchestration",
+    "delegation",
+    "sdlc",
+    "model-routing"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "linyuting"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuting0624/antigravity-for-claude-code"
+  },
+  "dependencies": {
+    "typebox": "1.3.7"
+  },
+  "pi": {
+    "extensions": ["./extensions"],
+    "skills": ["./skills"],
+    "prompts": ["./prompts"]
+  }
+}

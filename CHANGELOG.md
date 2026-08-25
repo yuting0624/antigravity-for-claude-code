@@ -1,7 +1,66 @@
 # Changelog
 
-All notable changes to **Antigravity for Claude Code**. Format loosely follows
+All notable changes to **Antigravity for GLM Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
+
+## 0.27.0
+
+The harness release: the host becomes the pi coding agent. GLM brain, both executors, all wrapper semantics unchanged.
+
+- **Host swap: Claude Code plugin → pi package.** `.claude-plugin/` manifests become a `package.json` with a `pi` manifest (`extensions/`, `skills/`, `prompts/`). Install via `pi install git:github.com/<you>/antigravity-for-glm-code`, or run live with `pi -e <dir>`; slash commands are now prompt templates named `/agy-*`.
+- **NEW: extensions/antigravity-glm.ts** ports the former shell hooks onto pi's event system and registers native tools so nothing depends on plugin binaries being on PATH (pi does not put packages on PATH):
+  - `delegate` tool — spawns scripts/agy-delegate.sh (the unified `--backend agy|local` entry point); returns stdout plus classified exit-code guidance on failure;
+  - `job` tool — scripts/agy-job.sh (start/list/status/result/cancel) for background delegations;
+  - `session_start` — fast health check (brain provider detection, agy CLI, local server probe) surfaced as a notification;
+  - `before_agent_start` — injects the COST-AWARE routing policy once per session, and appends the fixed advisory nudge when a prompt looks like bulk work (EN/中文/JA heuristics preserved; judgment stays with the conductor). Toggles: `AGY_OPTION_CODING_POLICY` / `AGY_OPTION_DELEGATION_NUDGE`.
+- **Subagent layer removed** (pi has none by design): agents/antigravity-delegate.md and the PreToolUse bash gate are gone — delegation happens directly through the tools above, and the discipline lives in the skill. The gate's hardening history remains documented upstream.
+- **Brain config rewritten for pi**: built-in ZAI Coding Plan provider (`pi /login` → ZAI Coding Plan (China), env `ZAI_CODING_CN_API_KEY` / `ZAI_API_KEY`) or a custom `anthropic-messages` endpoint in `~/.pi/agent/models.json`. doctor detects all three shapes.
+- **Option env vars gain short aliases** `AGY_OPTION_*` across the wrappers and doctor; legacy `CLAUDE_PLUGIN_OPTION_*` names keep working and win on conflict.
+- Tests: hook/gate/manifest sections replaced with pi-package contract checks (manifest entries exist, extension registers both tools + events, prompts carry frontmatter and no Claude Code-isms, skill version tracks package version). Suite: 265 checks green.
+- **Security: the omlx fallback key is no longer hardcoded** in local-delegate/doctor. `LOCAL_DELEGATE_API_KEY` comes from the environment or an untracked local env file (default `~/.config/antigravity-for-glm/env`, chmod 600, auto-loaded; override path via `LOCAL_DELEGATE_ENV_FILE`). Both scripts print a fix hint when the omlx endpoint has no key.
+- Docs: README and docs/使用指南.md rewritten around the pi host (install via pi install/-e, ZAI login, delegate/job tools, /agy-* commands).
+## 0.26.0
+
+The fork release: the brain becomes GLM, and the executor side gains LOCAL models.
+
+- **GLM is now the intended conductor.** The harness stays Claude Code; the brain
+  behind it becomes GLM via GLM Coding Plan's Anthropic-compatible endpoint
+  (`ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic` + `ANTHROPIC_AUTH_TOKEN`,
+  model `glm-4.6` / `glm-4.5`). Plugin renamed `antigravity-glm` (slash commands are
+  now `/antigravity-glm:*`), skill dir `skills/antigravity-glm/`. `doctor` reports
+  which brain it detects and prints the exact env to switch.
+- **NEW: LOCAL executor (`scripts/local-delegate.sh` + `bin/local-delegate`).** Any
+  OpenAI-compatible server — Ollama, LM Studio, llama.cpp server, vLLM — can now be
+  the delegated worker for execution/test-generation/search-style tasks: private,
+  free, offline-capable, no agy install required. Honest shape: it is a chat
+  completion, not an agent — no file access (feed content on stdin), writes land via
+  its `--out <file>` flag (the wrapper writes, nothing executes), search via `--web`
+  (the wrapper fetches SearXNG JSON or DuckDuckGo Lite results and hands them over as
+  citable context). Exit codes mirror agy-delegate's (10 quota / 11 auth / 12 timeout /
+  13 backend-missing / 14 model-not-found), signals go out as `LOCAL_SIGNAL`, token
+  usage as `LOCAL_USAGE`; `agy-job status/result` surface both signal families.
+- **NEW: unified dispatch — `agy-delegate --backend agy|local|auto`** (plugin option
+  `executor_backend`, default `auto` = agy when installed, else the local server).
+  Tier aliases map across (flash/flash-lo→fast, pro→think); agy-only flags are
+  accepted-and-warned on the local path so one command spelling serves both.
+  The delegate subagent's PreToolUse gate now also allows bare `local-delegate`.
+- **doctor grew three checks**: brain endpoint detection, live probe of the local
+  server (`GET {base}/models`) with per-configured-model presence, and executable
+  bits for the two new entrypoints.
+- **Nudge heuristics gained Chinese bulk-work phrases** (所有文件 / 批量 / 迁移 /
+  生成测试 / 脚手架 / 深度调研 …) alongside the existing EN/JA set; the injected
+  routing policy now names both executors.
+- New command `/antigravity-glm:local`; `/antigravity-glm:delegate`, `review`,
+  `research`, `setup` reworked for dual-executor guidance (review defaults to the
+  local backend so the diff stays on your machine).
+- 中文详细使用文档：`docs/使用指南.md`（安装、GLM 大脑接入、双执行器选型、本地模型
+  服务配置、成本纪律、验证关卡、退出码与故障排查）。README 已改为中文。
+- Tests: the suite covers the local wrapper end-to-end against a stubbed
+  OpenAI-compatible server (success/empty/404/401/429/unreachable/slow, --out fence
+  unwrap, base-URL normalization, dispatcher forwarding, job-signal surfacing), and
+  the backend-resolution contract (forced-agy missing → exit 13 AGY_MISSING; auto
+  fallback → clean BACKEND_MISSING). The pipe-hang mechanism test now SKIps with an
+  explanation instead of false-passing when GNU timeout/gtimeout is absent.
 
 ## 0.25.1
 

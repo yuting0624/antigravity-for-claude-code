@@ -7,7 +7,9 @@ Migrate this machine's Claude Code configuration to Antigravity (`agy`).
 
 Run the tool in **dry-run first, always**:
 
-`agy-migrate $ARGUMENTS`
+`bash <pkg>/scripts/agy-migrate.sh $ARGUMENTS`
+
+(`<pkg>` = two levels above the `antigravity-glm` skill directory)
 
 Then read the report back to the user, grouped by unit, and explain:
 
@@ -31,4 +33,4 @@ Only run with `--apply` after the user has seen the dry-run and agreed. Then tel
 If the user is only asking what *would* move, stop at the dry-run — do not apply.
 
 For the full compatibility matrix and the reasons behind each mapping, read
-`docs/MIGRATION.md` in this plugin.
+`docs/MIGRATION.md` in this package (`<pkg>/docs/MIGRATION.md`).

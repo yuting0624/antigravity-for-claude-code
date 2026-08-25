@@ -1,9 +1,9 @@
 ---
-description: Diagnose a failing Cloud Run service — Antigravity (agy/Gemini) digests the error logs cheaply, Claude infers the root cause and proposes a fix. Read-only by default; --apply writes the fix to a branch.
+description: Diagnose a failing Cloud Run service — Antigravity (agy/Gemini) digests the error logs cheaply, GLM (the conductor) infers the root cause and proposes a fix. Read-only by default; --apply writes the fix to a branch.
 argument-hint: "[--service <name>] [--region <r>] [--project <id>] [--since 1h] [--limit 200] [--apply]"
 ---
 
-Diagnose a broken Cloud Run service. This is a **Conductor / Executor** split: **you (Claude)
+Diagnose a broken Cloud Run service. This is a **Conductor / Executor** split: **you (GLM)
 conduct** — confirm scope, reason about the root cause, and propose the fix — while the cheap,
 high-volume work (pulling and clustering potentially hundreds of error log lines) is **offloaded
 to agy (Gemini)** so your context stays lean. You ingest only agy's digest, never the raw logs.
@@ -21,7 +21,7 @@ Do this:
 
 1. **Resolve scope.** Parse the flags above.
    - `--service` is required. If it's missing, ask the user which Cloud Run service to diagnose
-     (AskUserQuestion) — there is no "default service".
+     — there is no "default service".
    - `--region` is optional; if omitted, logs across all regions are queried. If the user's
      `gcloud config` has a default region you can offer it.
    - `--project` is optional; when omitted the engine falls back to `gcloud config`'s default
@@ -30,11 +30,11 @@ Do this:
      project`) and confirm it before reading — or have the user pass `--project <id>` explicitly.
    - Never ask for or handle credentials/tokens — the engine uses the existing `gcloud` ADC.
 
-2. **Fetch + digest (delegate to agy — one batch, not parallel).** Run the plugin's read-only
-   engine, which pulls `severity>=ERROR` logs via `gcloud logging read` and hands them to agy for
+2. **Fetch + digest (delegate to agy — one batch, not parallel).** Run this package's read-only
+   engine (two levels above the `antigravity-glm` skill directory), which pulls `severity>=ERROR` logs via `gcloud logging read` and hands them to agy for
    a structured digest (error clusters / representative stack traces / time distribution / likely
    root-cause candidates):
-   `cloud-debug --service <name> [--region <r>] [--project <id>] [--since <dur>] [--limit <n>]`
+   `bash <pkg>/scripts/cloud-debug.sh --service <name> [--region <r>] [--project <id>] [--since <dur>] [--limit <n>]`
    - **Ingest only the digest** it prints — do **not** re-fetch or paste the raw logs into your
      context (that lean handoff is where the cost saving comes from).
    - If it exits **3** (permission denied), relay the `roles/logging.viewer` guidance it printed
@@ -58,6 +58,6 @@ Do this:
      merge — a human reviews and merges.
    - Confirm before any destructive or hard-to-reverse step.
 
-Keep it tight: the demo is Claude conducting the diagnosis while a cheaper model does the log
+Keep it tight: the demo is the conductor (GLM) directing the diagnosis while a cheaper model does the log
 grunt-work. Report what you delegated, the root cause you landed on, and the fix (plus the diff
 if `--apply`).

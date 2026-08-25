@@ -1,7 +1,7 @@
 # Troubleshooting
 
 Symptom-first guide to every problem reported so far. **Start by running `agy-doctor`**
-(or `/antigravity:setup` inside Claude Code) — it diagnoses most of the below and prints
+(or `/agy-setup` inside Claude Code) — it diagnoses most of the below and prints
 the plugin version, agy version/auth state, and platform warnings.
 
 ---
@@ -43,11 +43,11 @@ hang" instead of the misleading "not authenticated".
 2. Install Claude Code **and** the Antigravity CLI *inside* WSL; authenticate agy there
    (`agy models` should list models)
 3. Keep your repo on the WSL Linux filesystem (`~/project`), **not** `/mnt/c/...`
-4. Run `/antigravity:setup` from WSL — it should go green
+4. Run `/agy-setup` from WSL — it should go green
 
 ---
 
-## Everything hangs forever, and `/antigravity:setup` says the CLI is broken
+## Everything hangs forever, and `/agy-setup` says the CLI is broken
 
 **Symptom:** `agy models` and every delegation never return. `agy-doctor` reports a hung or
 unauthenticated CLI — but typing `agy models` yourself works fine. macOS and Linux, not just
@@ -134,7 +134,7 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   bare "empty output" or "agy exited 1".
 - Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
   background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
-  `/antigravity:status` / `/antigravity:result <id>` (interactive sessions only).
+  `/agy-status` / `/agy-result <id>` (interactive sessions only).
 
 ---
 

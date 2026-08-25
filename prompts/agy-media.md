@@ -1,18 +1,18 @@
 ---
-description: Understand an audio / video / image file — Antigravity (agy/Gemini) transcribes and analyzes it, returning a timestamped digest while the full transcript goes to a file.
+description: Understand an audio / video / image file — Antigravity (agy/Gemini) transcribes and analyzes it, returning a timestamped digest while the full transcript goes to a file. (agy-only — local models cannot ingest audio/video through this plugin.)
 argument-hint: "<file> [what to focus on] [--convert] [--tier pro|flash] [--timeout 20m]"
 ---
 
-Claude Code can't hear audio or watch video, and doing it locally means an ffmpeg +
-speech-model stack. Gemini is natively multimodal — so **delegate the perception** to agy
-and keep the judgment here.
+The pi coding agent can't hear audio or watch video, and doing it locally means an
+ffmpeg + speech-model stack. Gemini is natively multimodal — so **delegate the perception** to agy
+and keep the judgment here. (Local models cannot ingest audio/video — agy only.)
 
 Input: $ARGUMENTS
 
 Do this:
 
 1. **Resolve the file.** First arg is the path; anything else (that isn't a flag) is the
-   focus/question. If no file was given, ask which one (AskUserQuestion) — don't guess.
+   focus/question. If no file was given, ask which one — don't guess.
 
 2. **Delegate** (the engine handles format pre-flight, the digest contract, and writes the
    full transcript to a file):

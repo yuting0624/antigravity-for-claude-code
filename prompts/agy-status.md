@@ -3,12 +3,11 @@ description: List background Antigravity (agy) delegation jobs for this repo, or
 argument-hint: "[job-id]"
 ---
 
-Show background agy delegation jobs.
+Show background delegation jobs (either executor).
 
-- If a job id is given in `$ARGUMENTS`, run:
-  `agy-job status $ARGUMENTS`
-- Otherwise list jobs started from this directory:
-  `agy-job list`
+Use the **`job` tool**:
+- A job id in `$ARGUMENTS` → action=status with that id.
+- Otherwise → action=list (lists jobs started from this directory).
 
 Report each job's id, state (running / done / failed), and task. For finished jobs,
-remind the user they can fetch output with `/antigravity:result <id>`.
+remind the user they can fetch output with `/agy-result <id>`.

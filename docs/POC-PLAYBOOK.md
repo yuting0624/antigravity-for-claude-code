@@ -227,7 +227,7 @@ worse than no claim.
 What to present instead, in descending order of how hard it is to argue with:
 
 1. **Work the frontier model cannot do at all.** Audio and video understanding
-   (`/antigravity:media`), Vertex AI Search over internal data, grounded search. There is no
+   (`/agy-media`), Vertex AI Search over internal data, grounded search. There is no
    cost comparison because there is no baseline — the task either happens or it doesn't.
 2. **The context ceiling.** On material that would otherwise exceed the conductor's window,
    offloading is the difference between finishing and not. That is not a percentage, and it

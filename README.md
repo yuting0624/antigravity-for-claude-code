@@ -1,312 +1,111 @@
 <div align="center">
 
-# 🛰️ Antigravity for Claude Code
+# 🛰️ Antigravity for GLM Code
 
-**Run the Antigravity CLI (Gemini) as a collaborating sub-agent, right inside Claude Code.**
-![Antigravity for Claude Code — Claude directs, Gemini executes](docs/hero.png)
-Claude conducts the judgement; Gemini does the heavy lifting — intelligent model routing across the SDLC.
+**GLM 担任大脑，Gemini 与本地大模型担任执行者——在 pi coding agent 里实现跨软件开发生命周期的智能模型路由。**
 
-[![CI](https://github.com/yuting0624/antigravity-for-claude-code/actions/workflows/ci.yml/badge.svg)](https://github.com/yuting0624/antigravity-for-claude-code/actions/workflows/ci.yml)
+GLM 负责判断与验收；执行者负责吞吐——繁重的脚手架、测试生成、检索、迁移都路由到更便宜的算力上。
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF?logo=claudecode&logoColor=#D97757)
-[![Antigravity CLI](https://img.shields.io/badge/Antigravity%20CLI-agy-4285F4?logo=googlegemini&logoColor=white)](https://antigravity.google/docs/cli-using)
+![pi package](https://img.shields.io/badge/pi-package-137CFF)
+![Brain: GLM](https://img.shields.io/badge/大脑-GLM%20Coding%20Plan-137CFF?logo=chatbot&logoColor=white)
+![Executor: Gemini](https://img.shields.io/badge/执行器-agy%2FGemini-4285F4?logo=googlegemini&logoColor=white)
+![Executor: Local LLM](https://img.shields.io/badge/执行器-Ollama%20%2F%20LM%20Studio-6E42D6)
 
 </div>
 
 ---
 
-## ⚡ Quick look
+> 📖 **完整使用文档请看 [docs/使用指南.md](docs/使用指南.md)** —— 安装配置、双执行器选型、本地模型服务搭建、成本纪律、验证关卡、故障排查，一册在手。
+>
+> 本项目 fork 自 [yuting0624/antigravity-for-claude-code](https://github.com/yuting0624/antigravity-for-claude-code)（v0.25.1），经历两次改造：
+> ① **把大脑从 Claude（Anthropic）换成 GLM**（智谱 GLM Coding Plan）；
+> ② **让执行侧支持本地大模型**（Ollama / LM Studio / llama.cpp / vLLM），不再只有 Gemini；
+> ③ **宿主外壳从 Claude Code 插件移植为 [pi coding agent](https://github.com/badlogic/pi-mono) 包**（skills + prompts + extension，`pi install` 即用）。
 
-![Antigravity for Claude Code demo](docs/demo.gif)
+## 💡 核心思路
 
-Claude stays the conductor; the bulk, token-heavy read ran on cheaper Gemini, and Claude verified the result.
-
----
-
-## 💡 Why
-
-| | Claude (conductor) | Gemini / `agy` (executor) |
-|---|---|---|
-| **Owns** | requirements · architecture · the hard 20% · **verification** · review | scaffold · implementation · test generation · search |
-| **Strength** | judgement | cheap, fast throughput |
-
-```
-you → Claude Code (conduct: design / verify / review)
-         └── agy → Gemini (execute: implement / test / search)
-```
-
-> *Generation is solved; verification, judgement, and direction are the craft.*
-
-## ✨ What it does
-
-- **Routes work across the SDLC** — Claude keeps the judgement calls; Antigravity handles scaffolding, **test generation**, **first-pass review**, and **migrations** under a shared `AGENTS.md`.
-- **Adds tools Claude lacks natively** — live **Google/web search**, **Vertex AI Search** over your internal data, deep research, Cloud Logging. Claude reviews and re-checks the results.
-- **Hears audio, watches video** — `/antigravity:media` delegates the perception to Gemini (natively multimodal, **no local ffmpeg/Whisper stack**): you get a **timestamped digest** while the full transcript is written to a file, so a 1-hour recording never lands in Claude's context.
-- **Cross-model verification** — an independent, different-model opinion on your code.
-- **Background jobs** — fire a long delegation, keep working, collect later.
-- **Internal fan-out** — one delegation, and agy spawns its own subagents on the cheap side (dynamic `define_subagent` on agy ≥ 1.0.16; `TypeName "self"` + Role on any version); each leaves a **readable trajectory** you audit with `agy-trace`.
-- **Built-in cost discipline** — measured, not guessed (see below).
-- **Drops in with the discipline on** — a `SessionStart` hook injects the *cost-aware*
-  routing policy automatically (toggle in plugin settings), and the `antigravity-delegate`
-  subagent does file **writing** on Gemini, so Claude spends **no tokens generating file contents**.
-- **No slash command required** — the delegate subagent is picked up **proactively** for bulk
-  work, and a prompt-level nudge flags bulk-looking requests as delegation candidates.
-  Both are advisory: **the break-even judgment stays with Claude** (full auto-routing is a
-  measured net loss below the break-even), and the nudge is toggleable (`delegation_nudge`).
-
-## 📊 Measured results
-
-On a **large** ADK multi-agent build (+ `adk eval`), same task / same model, 3 ways:
-
-| | Claude solo @high | solo @max | **hybrid** |
+| | GLM（指挥者 / 大脑） | agy/Gemini（执行器） | 本地模型（执行器） |
 |---|---|---|---|
-| frontier cost (COST-WEIGHTED) | 2.62M | 5.34M | **1.91M** |
-| quality (`adk eval`) | ✅ 3/3 | ✅ 3/3 | ✅ **3/3** |
+| **职责** | 需求 · 架构 · 最难的 20% · **验证** · 评审 | 脚手架 · 改文件 · 测试生成 · 网络搜索 · 子代理扇出 | 私有文本生成：测试代码 · 配置转换 · 评审初筛 · 语料摘要 |
+| **优势** | 判断力 | 有工具的完整终端代理（读写文件、联网） | 免费 · 私密 · 可离线 |
 
-→ **−27% vs solo@high, −64% vs solo@max, at equal quality** — and the cheap Gemini work isn't even counted. Savings scale with task size; tiny one-off tasks are cheaper to just run on Claude. Full A/B: [`docs/AB-RESULTS.md`](docs/AB-RESULTS.md).
-
-> **Note on cost figures:** numbers are **estimates** — token counts are approximated and rates live in [`prices.json`](prices.json). **Set your real Vertex rates there before quoting any figure.**
-
-## 🚀 Install
-
-In Claude Code:
 ```
-/plugin marketplace add yuting0624/antigravity-for-claude-code
-/plugin install antigravity@antigravity-for-claude-code
-/antigravity:setup        # verifies agy is installed + authenticated
+你 → pi coding agent（大脑 = GLM，经内置 ZAI Coding Plan Provider 接入）
+        ├── backend "agy"   → Antigravity CLI（Gemini）：有代理能力，能读写仓库、联网搜索
+        └── backend "local" → 本地 OpenAI 兼容服务（Ollama 等）：纯文本进出，数据不出机器
 ```
 
-**Prerequisites:** the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`) installed & authenticated (`agy models` lists Gemini models), and Claude Code. For the same-bill cost benefit, run Claude Code on Vertex too.
+> *生成已被解决；验证、判断与方向感才是手艺。*
 
-**Platform support:** macOS, Linux, and **WSL** are the supported targets for headless delegation. **Native Windows (Git Bash/MSYS) is not recommended** — `agy -p` can hang with a 0-byte log when run without a real console (ConPTY); see [issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6). The wrapper now bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`, returning a clean TIMEOUT instead of hanging), and `doctor` distinguishes a hang from an auth failure — but for reliable headless use, run from **WSL/macOS/Linux**.
+## ✨ 它做什么
 
-## 🧩 Slash commands
+- **跨 SDLC 的模型路由** —— GLM 保留所有判断性工作；把确定性的高产量工作（脚手架、测试生成、首轮评审、批量迁移）委托给执行器，双方共读同一份 `AGENTS.md`。
+- **注册为原生工具的委派** —— 扩展向 pi 注册 `delegate` 与 `job` 工具：GLM 直接调用即可完成委派与后台任务管理，无需插件 PATH。
+- **会话级策略注入** —— `before_agent_start` 事件自动注入成本感知的路由策略；批量任务提示词（中/英/日）触发建议性 nudge，判断权始终在指挥者手里。
+- **补齐 GLM 原生没有的工具** —— 通过 agy 获得 Google/网络搜索、Vertex AI Search 内部数据检索、Cloud Logging；通过本地 `--web` 获得私有化的搜索综合。
+- **本地大模型 = 隐私 + 零边际成本** —— 敏感 diff 的跨模型评审、测试套件生成、语料摘要都可以完全跑在本机；`--out` 让模型生成的代码直接落盘（由 wrapper 写入，不执行任何东西）。
+- **听得声音、看得视频** —— `/agy-media` 把感知交给 Gemini（原生多模态），返回带时间戳的摘要，全文转录落盘不占上下文。
+- **跨模型交叉验证** —— 用不同模型家族对同一份代码做独立评审，分歧处才值得人再看一眼。
 
-<img src="docs/image.png" alt="The /antigravity slash commands in a Claude Code terminal session" width="720">
+## 🚀 快速开始
 
-*The plugin's commands show up natively in Claude Code's `/` menu.*
+详细步骤见 **[docs/使用指南.md](docs/使用指南.md) 第 3 章**，这里是最短路径：
 
-| command | what it does |
+```bash
+# ① 安装本包
+pi install git:github.com/<you>/antigravity-for-glm-code
+# 或开发模式直接加载：
+pi -e /path/to/antigravity-for-glm-code
+
+# ② 大脑接 GLM（三选一）
+pi /login            # 选 ZAI Coding Plan (China)，再 /model 选 glm-4.6
+export ZAI_CODING_CN_API_KEY=<你的智谱编程套餐 Key>     # bigmodel.cn → 编程套餐 → API Key
+# 或 ~/.pi/agent/models.json 加 anthropic-messages 自定义 Provider（见使用指南）
+
+# ③ 执行器（至少配一个）
+#    a. Gemini 执行器：安装并登录 Antigravity CLI（https://antigravity.google/docs/cli-using）
+#    b. 本地执行器：安装 Ollama 并拉一个编码模型
+curl -fsSL https://ollama.com/install.sh | sh && ollama pull qwen2.5-coder:7b && ollama serve
+
+# ④ 体检
+/agy-setup           # 或命令行运行 bin/agy-doctor
+```
+
+## 🧩 斜杠命令（提示模板）
+
+| 命令 | 作用 |
 |---|---|
-| `/antigravity:setup` | health check — `agy` installed + authenticated, scripts ready |
-| `/antigravity:delegate [--tier flash\|pro] <task>` | delegate a subtask to agy under cost discipline, then verify |
-| `/antigravity:review [--adversarial]` | independent cross-model review of the current diff; Claude reconciles |
-| `/antigravity:research <topic>` | Claude-orchestrated deep research — agy does grounded web legwork, Claude verifies citations across ≥2 sources |
-| `/antigravity:media <file> [focus] [--convert]` | understand audio / video / images — agy transcribes + analyzes, returns a **timestamped digest**; full transcript goes to a file, not your context |
-| `/antigravity:cloud-run-debug [--service <s>] [--region <r>] [--project <id>] [--since 1h] [--apply]` | diagnose a failing Cloud Run service — agy digests the error logs, Claude infers the root cause + fix; read-only by default (`--apply` writes to a branch) |
-| `/antigravity:status [id]` · `:result <id>` · `:cancel <id>` | manage background delegation jobs |
-| `/antigravity:migrate [--apply] [--include-repos]` | move an existing Claude Code setup onto agy — skills, CLAUDE.md, memory, MCP, plugins, permissions; dry-run by default, `--uninstall` reverses it |
+| `/agy-setup` | 健康检查——GLM 大脑、agy 认证、本地服务探活 |
+| `/agy-delegate [--backend agy\|local] [--tier …] <task>` | 在成本纪律下把子任务委托给执行器，然后验证 |
+| `/agy-local [--tier fast\|think] [--out f] [--web] <task>` | 专门走本地模型的委托（隐私生成 / 写文件 / 本地综合搜索） |
+| `/agy-review [--adversarial]` | 跨模型独立评审当前 diff（默认本地后端，diff 不出机器）；GLM 仲裁 |
+| `/agy-research <topic>` | GLM 主导的深度调研——执行器跑腿搜集，GLM 验证引证（≥2 来源）后成文 |
+| `/agy-media <file>` | 音频/视频/图片理解（agy 独占——Gemini 原生多模态） |
+| `/agy-status` · `/agy-result` · `/agy-cancel` | 后台委托任务管理 |
+| `/agy-migrate [--apply]` | 把既有 Claude Code 配置迁到 agy（默认 dry-run） |
+| `/agy-cloud-debug` | Cloud Run 故障诊断（agy 分析日志 + GLM 定因） |
 
-> Background jobs are for **interactive** sessions (fire-and-collect). In headless `claude -p` (one-shot), delegate **synchronously** — there's no later turn to collect a result.
+另有扩展注册的原生工具：`delegate`（同步委派）与 `job`(后台任务)，GLM 无需任何 PATH 配置即可调用。
 
----
-
-## 📦 Bringing your Claude Code setup across
-
-`/antigravity:migrate` moves an existing Claude Code configuration onto `agy`. Dry-run
-by default; `--apply` backs up first and `--uninstall --apply` reverses it. Your
-`~/.claude` is never written to.
+## 📦 目录结构
 
 ```
-/antigravity:migrate                             # see the plan
-/antigravity:migrate --apply                     # global assets
-/antigravity:migrate --apply --include-repos     # also AGENTS.md + per-repo memory
+package.json             pi 包清单（extensions / skills / prompts）
+extensions/antigravity-glm.ts   pi 扩展：delegate/job 工具注册 + 策略注入 + 批量任务 nudge + 健康检查
+skills/antigravity-glm/  核心策略文档（WHEN + HOW：GLM 如何与双执行器协作）
+prompts/                 斜杠命令模板（agy-setup / agy-delegate / agy-local / …）
+bin/                     手动 CLI 垫片：agy-delegate · local-delegate · agy-job · agy-doctor · …
+scripts/                 实现：local-delegate(本地执行器) · agy-delegate(统一入口) · doctor · …
+docs/使用指南.md         ★ 详细中文使用文档
+docs/安装.md             ★ 他人下载后的完整安装步骤
+docs/EVALUATION.md       ★ GLM + 本地 omlx/Ornith 配合效果实测
+docs/TROUBLESHOOTING.md  上游英文排障手册（症状 → 解法）
+prices.json              费率配置（引用任何数字前先核对）
+tests/run-tests.sh       无依赖测试套件（stub 掉 agy 与 HTTP 服务）
 ```
 
-| your Claude Code asset | becomes |
-|---|---|
-| `~/.claude/skills/` | read **in place** — a `skills.json` entry, not a copy, so one edit serves both tools |
-| installed plugins | `~/.gemini/config/plugins/` via the native importer, with its output repaired |
-| `CLAUDE.md` | an `AGENTS.md` symlink beside it |
-| auto-memory | always-on rules — global ones in a plugin, per-repo ones in `<repo>/.agents/rules/` |
-| MCP servers (project + desktop app) | merged into `~/.gemini/config/mcp_config.json` |
-| trusted projects | `trustedWorkspaces` |
-| `permissions.allow` | a **proposal file** — see below |
-| session history | nothing. Antigravity stores conversations as protobuf blobs inside per-conversation SQLite files; there is no writer |
+## 🤝 致谢与声明
 
-Two things are deliberately not automatic. **Permissions widen when translated** —
-Claude's allow-list holds whole command *lines*, while agy's `command()` matches a
-prefix — so the result is written out for review and merged only with
-`--apply-permissions`. **`model` / `effortLevel` / `env`** are reported and never
-written, because no honest mapping exists.
-
-Worth knowing if you would rather do it by hand: an Antigravity rule without
-`trigger: always_on` in its frontmatter is ignored with no error and no warning,
-workspace `.agents/` is ignored entirely unless the session is bound to an agy project,
-and `agy plugin import claude` finds nothing on a current Claude Code because it only
-looks one directory deep. [`docs/MIGRATION.md`](docs/MIGRATION.md) has the full layout
-reference, the compatibility matrix, and how each of these was measured.
-
----
-
-## 🗳️ The same two models, arranged differently
-
-This plugin is one shape of Claude and Gemini working together: **conductor and executor** — judgement on one side, throughput on the other, one workflow. It is also the shape for people who live in a terminal.
-
-[**gemini-studio-mcp**](https://github.com/yuting0624/gemini-studio-mcp) is the same thesis on the other surface: **Claude Desktop**, for the colleagues who will never open one. An MCP server rather than a CLI delegation, and the verb flips from *execute* to *ingest* — Gemini reads the recording, the PDF corpus, the internal search index, and only the digest reaches Claude. The split is not cosmetic: you can hand a developer a `--tier` flag and an `AGENTS.md`, but a business user drags a PDF into a chat window, so the routing that is explicit here is automatic there, and the cost discipline that is a documented practice here is a number printed on every response there. They also fail differently — delegated *writing* can silently not happen and has to be checked against the filesystem; delegated *reading* can quietly summarise away the one paragraph that mattered and has to be checked against citations. Same author as this plugin.
-
-[**quorum-review**](https://github.com/yuting0624/quorum-review) is the third shape: the two as **peers**. Both read the same pull request independently, neither sees the other's output, and where they agree independently *that is the result* — only the disagreements are worth a second opinion. Both run on **one** Google Cloud credential, so no vendor API keys live in the repository. Same author as this plugin.
-
-**This repo is its client zero.** It runs on every pull request opened here, alongside a Claude review — including the ones that change this plugin. Keeping the habit of not quoting numbers we haven't measured, here is what that has actually been worth:
-
-- On a fixture holding three known bugs it found **two, with no false positives**, and reached the correct root cause on one that the single-model review took two rounds to get right.
-- Reviewing this repo's own CI, both of its models **independently** caught a fork-guard hole in the review workflow itself — one that would have put an outside contributor's code on the runner next to live credentials.
-- It has also produced a confident **false positive that both models agreed on** — the code disproving it lived outside the checkout either model could read.
-
-That last one is the useful lesson, and it cuts against the obvious pitch: two independent scans insure you against *one model's* blind spot. They do not insure you against a gap in what you handed **both** of them.
-
----
-
-<details>
-<summary><b>🛠️ Direct script usage &amp; tiers</b></summary>
-
-```bash
-# one-shot delegation (plain text on stdout)
-scripts/agy-delegate.sh --tier flash "Summarize this changelog in 3 bullets: ..."
-
-# give Antigravity a workspace for multi-file agentic work
-scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
-
-# bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
-scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
-
-# write task: needs a grant — a permissions.allow write_file(<dir>) rule, or --yolo (run on a branch)
-scripts/agy-delegate.sh --yolo --dir ./app "Implement X per SPEC.md"
-
-# live web / Google search (tools need --yolo in headless mode)
-scripts/agy-delegate.sh --tier pro --yolo "Web-search <X>. Give URLs + dates."
-
-# Vertex AI Search over internal data
-scripts/agy-delegate.sh --tier pro --yolo "List Vertex AI Search engines (list_engines)."
-
-# cross-model review / stdin / background job
-scripts/agy-delegate.sh --tier pro "Review for bugs, be skeptical: <paste>"
-cat big-prompt.txt | scripts/agy-delegate.sh -
-ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh result "$ID"
-```
-
-| tier | model | use for |
-|------|-------|---------|
-| `flash` (default) | Gemini 3.7 Flash (High) | most bulk work |
-| `flash-lo` | Gemini 3.7 Flash (Low) | cheapest, trivial tasks |
-| `pro` | Gemini 3.1 Pro (High) | harder reasoning / cross-checks |
-
-**agy is multi-model.** Tiers default to Gemini, but you can use any model `agy models` lists
-(Claude / GPT on plans that expose them): pass `--model "<exact name>"`, or set it persistently
-via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_lo` / `tier_pro`
-(env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
-conductor — that's what gives both the cost saving and the cross-model verification.
-
-> **The `flash` tiers moved to Gemini 3.7 Flash in 0.24.0.** 3.6 and 3.7 are priced *identically* and both undercut 3.5 on every axis — input and cached-input are exactly **half** ($1.50 -> $0.75, $0.15 -> $0.075) and output is cheaper still, **$9.00 -> $3.75** (a 58% cut, not half) — under promotional pricing that **ends 2026-12-31**, after which they settle at $1.50 / $7.50 / $0.15 (still cheaper than 3.5 on output). Checked against two sources on 2026-08-17; [`prices.json`](prices.json) carries both sets. No quality claim is made here — the reason to move is price and currency, and this repo has retracted a model comparison before for being measured on a build where `--model` was ignored. **If your plan does not serve 3.7 yet** (newer models can lag on enterprise Vertex) you find out immediately, not silently: `agy-doctor` warns that the tier model is absent from `agy models`, and a delegation exits **14** naming the fix. Remap with the `tier_flash` / `tier_flash_lo` options to anything `agy models` lists — `Gemini 3.6 Flash (High)` costs exactly the same. (agy 1.1.5 switched `agy models` to slugs like `gemini-3.7-flash`; both slugs and display names work with `--model`, and `doctor` matches either.)
-
-</details>
-
-<details>
-<summary><b>💸 How to actually get the savings (cost discipline)</b></summary>
-
-Delegation doesn't save money by itself — these do (also in the skill):
-
-1. **Delegate above the break-even** — bulk/parallel/repetitive work, not tiny tasks.
-2. **Keep Claude's context lean** — don't re-read what agy already handled; take a **digest**, not raw output. (Biggest lever — it collapses `cache_read`.) Enforced in code: `--digest` appends a digest-only output contract, and the wrapper **warns when a reply comes back dump-sized** (tune via the `digest_warn_chars` plugin option).
-3. **Batch** — one big delegation beats many round-trips.
-4. **Review the diff, not the whole tree.**
-
-`scripts/measure-session.py <session-id>` prints the COST-WEIGHTED + est. USD breakdown for a session (Claude side; Gemini side priced separately). `scripts/agy-cost-compare.sh` shows the per-token gap for a task — **estimates from char-count, so verify `prices.json` first.**
-
-**Running a PoC in your org?** [`docs/POC-PLAYBOOK.md`](docs/POC-PLAYBOOK.md) is the step-by-step method — quality gate first, baseline, one lever at a time, break-even reporting, and org-level rollout/enforcement (incl. Windows/WSL requirements).
-
-</details>
-
-<details>
-<summary><b>🚧 Guardrails &amp; known limits</b></summary>
-
-> **Something broken?** See **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — symptom-first fixes for Windows/WSL, writes that silently don't happen, quota/auth/timeout codes, and updating.
-
-**Guardrails**
-- Always **verify** agy's output (it can be wrong, and may even alter its environment to make a check pass — re-run gates yourself in a clean state).
-- `--yolo` auto-approves every tool call — a grant over your whole machine, not over `--dir`.
-  **`--sandbox` does not contain it.** Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux. Use a throwaway checkout, or a
-  `permissions.allow` rule instead of the flag.
-- Write tasks: run on a dedicated branch/worktree, review the diff before merging.
-
-**Known limits (agy v1.0.x)**
-- `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
-- `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`). **Structured output arrived in agy 1.1.8** (`--output-format json`): the wrapper now uses it internally on ≥1.1.8 to classify failures from the structured error and to report the executor's real token usage (incl. `cache_read`) as an `AGY_USAGE` line on stderr — stdout is unchanged. Older agy falls back to plain text (toggle with the `structured_output` option). **If you're measuring, set `AGY_USAGE_LOG=/path`** (or the `usage_log` option): stderr is easily lost — `2>&1 | tail -N`, the natural way to keep Claude's context lean, keeps the digest and drops the usage line.
-- **The executor's trajectory is auditable.** Every agy run writes a step-by-step `transcript.jsonl`, and the `conversationId` in `AGY_USAGE` joins it to the cost 1:1. `agy-trace --audit <id>` (or `--audit --last`) shows step-type counts and every non-zero exit — a delegation can report SUCCESS while commands inside it failed. The command **strings** are recorded nowhere, so to attribute a filesystem change you must diff the tree.
-- **Two write grants, and the narrow one is not `--yolo`.** Headless agy's
-  no-permission behavior has shifted every few releases (describe-only pre-1.1.0 ·
-  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+ · **hard error by 1.1.13**). An ungranted
-  write always **leaves your workspace untouched**; what changed is whether the run admits
-  it — through 1.1.1x it still reported success, and by 1.1.13 it fails outright
-  ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Two things
-  grant it:
-  
-  - **`permissions.allow` in `~/.gemini/antigravity-cli/settings.json`** — a
-    `write_file(<dir>)` entry allows writes **recursively beneath `<dir>`** and needs no
-    flag. This is the narrower grant and usually the right one.
-    **`<dir>` is a placeholder — substitute a real path.** Left as written it grants
-    nothing on any agy version, and the write is denied with the rule sitting visibly
-    in the file. A *different* mistake is the version-sensitive one: a `command(...)` rule
-    that names no command (`command(time)`, a comment-only entry, `()`) matched **every**
-    command before agy 1.1.11 and silently auto-approved anything the agent ran — broader
-    than the `--yolo` it was chosen instead of. 1.1.11 makes that entry match nothing too.
-    `agy-doctor` checks your entries and reports the consequence that actually applies.
-  - **`--yolo`** (`--dangerously-skip-permissions`) — auto-approves **all** tools, not just
-    writes. Needed when no rule covers the target, and for web / Vertex AI Search / terminal
-    tools.
-  
-  Confirmed on **agy 1.1.9** by a controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)):
-  a covered target wrote with no flag; an uncovered one came back `PERMISSION_DENIED` with
-  the rule as the only variable. agy's own denial text names the rule and offers `--yolo` as
-  the alternative. Not verified on other versions, and a glob form (`write_file(/path/**)`)
-  was reported *not* to match. Either way: run write tasks on a branch and verify with
-  `git status`; the wrapper maps either denial shape — the soft one and 1.1.13's hard
-  error — to exit `15`.
-- **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
-- **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
-
-</details>
-
-<details>
-<summary><b>📦 What's inside · local dev · tests</b></summary>
-
-```
-.claude-plugin/   plugin (+ userConfig: default_tier, timeout, coding_policy) + marketplace manifests
-skills/antigravity/SKILL.md   WHEN + HOW Claude collaborates with agy
-agents/           antigravity-delegate subagent (file work runs on Gemini, not Claude)
-commands/         slash commands (delegate, review, research, media, cloud-run-debug, setup, status, result, cancel)
-hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
-bin/              PATH shims (bare names): agy-delegate · agy-job · agy-cost-compare · agy-doctor · cloud-debug · agy-trace · agy-media · measure-session · agy-migrate
-scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · agy-media · measure-session · doctor · agy-migrate
-docs/             AB-RESULTS (measured A/B) · POC-PLAYBOOK · TROUBLESHOOTING · DEMO-KIT
-prices.json       Vertex rate config (verify before quoting)
-```
-
-**Local development** (hack on the plugin — loads live files, `$CLAUDE_PLUGIN_ROOT` resolves):
-```bash
-git clone https://github.com/yuting0624/antigravity-for-claude-code ~/antigravity-for-claude-code
-claude --plugin-dir ~/antigravity-for-claude-code
-```
-
-**Tests** (no dependencies; stubs `agy`):
-```bash
-bash tests/run-tests.sh
-```
-
-</details>
-
----
-
-## 🤝 Contributing
-
-Early-stage and MIT — issues, PRs, and ⭐ all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [`good first issue`](https://github.com/yuting0624/antigravity-for-claude-code/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) list.
-
-**Automated review:** PRs get two reviews in CI on top of the usual tests/shellcheck — a Claude review carrying this repo's own contracts, and [quorum-review](https://github.com/yuting0624/quorum-review) — see the section above.
-
-**From a fork:** quorum doesn't run at all. The Claude review runs only once a maintainer **with write access** applies the `claude-review` label — the label alone isn't authorisation, since triage collaborators can apply labels too — and it re-runs on every later push, so an approved review can't go stale behind new commits. Your code never reaches the runner at all — the reviewer sees it as a diff (`gh pr diff`), with this repository's base checkout for context. Nothing of yours is fetched or executed.
-
----
-
-## ⚠️ Disclaimer
-
-Community project. **Not affiliated with, endorsed by, or supported by Google or Anthropic.** "Antigravity", "Gemini", "Claude", and "Claude Code" are trademarks of their respective owners. This plugin orchestrates the third-party `agy` CLI; you are responsible for your own API/cloud costs, credentials, and data-sharing choices. MIT licensed — see [LICENSE](LICENSE).
+- 架构与大量工程细节来自上游 [antigravity-for-claude-code](https://github.com/yuting0624/antigravity-for-claude-code)（MIT），包括 issue #10/#29/#37 等用实测换来的防护。本分支的全部改动同样以 MIT 发布。
+- 社区项目，与 Google、Anthropic、智谱（Zhipu AI）、pi 均无隶属或背书关系。"Antigravity""Gemini""Claude""GLM""pi" 为各自所有者的商标。API/云费用、凭据与数据共享选择由你自己负责。

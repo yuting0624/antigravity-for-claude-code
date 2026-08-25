@@ -27,7 +27,7 @@ do), and a **non-destructive** proof-of-concept (exit codes / policy decisions, 
 - **`scripts/agy-delegate.sh` / `agy-job.sh`** — the wrappers that invoke `agy`.
 - **`hooks/`** — anything injected into the model's context or run at session start.
 - Trust boundary reminder: `agy` output and repo contents are **untrusted** — the plugin
-  treats agy as a tool whose results Claude must verify, never as a trusted authority.
+  treats agy as a tool whose results the conductor (GLM) must verify, never as a trusted authority.
 
 ## Not in scope
 

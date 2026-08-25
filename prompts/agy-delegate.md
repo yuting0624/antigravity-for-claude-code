@@ -1,52 +1,40 @@
 ---
-description: Delegate a well-scoped subtask to Antigravity (agy/Gemini) under cost discipline, then verify.
-argument-hint: "[--tier flash|pro] <task>"
+description: Delegate a well-scoped subtask to an executor (agy/Gemini or the local model server) under cost discipline, then verify.
+argument-hint: "[--backend agy|local] [--tier flash|pro|fast|think] <task>"
 ---
 
-Delegate the following task to Antigravity (`agy` / Gemini) via the plugin wrapper,
-following the `antigravity` skill's **Cost discipline** and **Verification gates**.
+Delegate the following task using the plugin's delegation discipline (see the
+`antigravity-glm` skill for the full policy).
 
 Task: $ARGUMENTS
 
 Do this:
-1. Pick a tier (`flash` default; `pro` for hard reasoning). If the task needs the repo,
-   add `--dir <repo-root>` so agy reads the real files (don't paste them into context).
-   **If the task WRITES files or uses tools** (web / Vertex AI Search / terminal), it needs
-   a grant. For a plain file write the narrower one is a `write_file(<dir>)` entry under
-   `permissions.allow` in `~/.gemini/antigravity-cli/settings.json` (recursive beneath
-   `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
-   there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
-   is what web / Vertex AI Search / terminal need. Without a grant,
-   headless agy leaves your workspace untouched, and only the newest versions admit it (it
-   describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
-   accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
-   at all, the write is denied exactly like one without it. Run
-   write tasks on a dedicated branch — `--sandbox` is not containment, it was measured
-   doing nothing under `--yolo` — and
-   **verify files actually changed** with `git status`. Claude Code may prompt for or block
-   `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
-   (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper
-   returns exit `15`, that's exactly this: agy denied the write. Both shapes land here —
-   the soft deny on agy 1.1.3 and the hard error on 1.1.13 — and both take the same
-   fix: a `permissions.allow` rule covering the target, or `--yolo`.)
-2. Run **synchronously** (you may be headless — do not background-and-wait):
-   `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
-   For read/analysis tasks, add `--digest` — it appends a digest-only output contract so
-   agy returns compact bullets instead of raw content.
-3. Ingest only the **result/digest** — do NOT re-read the files agy already handled
-   (keeps your context lean; that's where the cost savings come from). If the wrapper
-   prints a *"looks like a raw dump"* note on stderr, do NOT ingest the raw output —
-   re-run with `--digest` or ask agy to summarize it first.
-4. **Verify**: actually run/check the output; never trust a self-reported "done".
+1. **Pick the executor backend** (default auto = agy if installed, else local):
+   - **agy (Gemini)** for agentic repo work — it reads/writes files (`dir` = repo root,
+     so it loads AGENTS.md + real code; don't paste files into context), runs terminal,
+     web / Vertex AI Search. **If the task WRITES files or uses tools** it needs a grant:
+     the narrower one is a `write_file(<real-dir>)` entry under `permissions.allow` in
+     `~/.gemini/antigravity-cli/settings.json`; otherwise **`--yolo`** (approves ALL tools —
+     what web search / terminal need). Run write tasks on a dedicated branch and verify
+     with `git status`. Wrapper exit `15` = permission denied — soft deny on agy 1.1.3 and hard error on 1.1.13 alike,
+     same fix for both. `--sandbox` is not containment.
+   - **local (Ollama/LM Studio/vLLM)** for private generation — tests, scaffolds as text,
+     summaries, reviews of pasted diffs. NO file access (put content in the prompt or pipe
+     via stdin when using the CLI); writes land via `out` (the wrapper writes, nothing
+     executes). `--yolo`/`--dir` have no effect there.
+2. Pick a tier: agy `flash` (default) / `pro` (hard reasoning); local `fast` / `think`.
+3. Call the **`delegate` tool** with the matching options (`prompt`, `backend`, `tier`,
+   `dir`, `yolo`, `digest`, `out`, `web`, `timeout`) — or run the wrapper from bash:
+   `<pkg>/scripts/agy-delegate.sh --backend <b> --tier <t> [--digest] "<task>"` (path =
+   two levels above the `antigravity-glm` skill dir). Run **synchronously**: wait for the
+   result before continuing (in print mode there is no later turn). Long interactive task?
+   Use the **`job` tool** (action=start) instead, then check with `/agy-status`.
+4. Ingest only the **result/digest** — do NOT re-read files an executor already handled.
+   If stderr warns "looks like a raw dump", do NOT ingest raw output — re-run with digest/out.
+5. **Verify**: actually run/check the output; never trust a self-reported "done".
    Report what you delegated and how you verified it.
 
 Remember the break-even: only delegate if the offloaded volume clearly exceeds the
 spec + round-trip + verification overhead. Tiny tasks are cheaper to just do yourself.
-
-**Long task, interactive session?** A sync delegation can also hit Claude Code's ~2-min
-Bash-tool limit — start it in the background and keep working (this also keeps the prompt
-cache warm and frees you to do other turns):
-`ID=$(agy-job start --tier pro --dir . "<task>")`
-then check `/antigravity:status` and collect with `/antigravity:result <id>`.
-(Don't do this when YOU are headless `claude -p` — one-shot, no later turn to collect;
-delegate synchronously there.)
+(The local backend's marginal token cost is ~0 — there the tradeoff is quality/wait, and
+privacy is often worth it regardless.)
