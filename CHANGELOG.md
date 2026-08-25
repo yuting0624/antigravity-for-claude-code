@@ -3,6 +3,16 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## Unreleased
+
+- **agy-delegate.sh no longer burns a CPU core on large outputs on macOS.** The two
+  whitespace-emptiness checks stripped every whitespace character from the whole output
+  (`${OUT//[...]/}`) just to test if anything was left — on the bash 3.2.57 that macOS
+  ships, that gets drastically slower as output grows (measured: 26.6 s at 8 KB; two real
+  wrappers spun at ~99% CPU for 24 min and 2+ hours after agy had already finished). Both
+  checks are now a glob that stops at the first non-whitespace character, with the same
+  whitespace set and unchanged exit-code behavior (#66).
+
 ## 0.25.1
 
 The `--sandbox` follow-up 0.25.0 deferred, now that agy runs again — and the answer is no.

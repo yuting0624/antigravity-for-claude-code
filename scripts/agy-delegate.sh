@@ -420,7 +420,9 @@ set -e
 # the structured error for classification, and reports token usage on stderr.
 # Any parse failure falls back to treating OUT as plain text (never fatal).
 JSON_STATUS=""; JSON_ERROR=""
-if [ "$JSON_MODE" -eq 1 ] && [ -n "${OUT//[$' \t\n\r']/}" ]; then
+# Glob, not ${OUT//[...]/}: stripping the whole string to test emptiness is minutes-to-
+# hours at tens of KB on macOS /bin/bash 3.2 (n^~2.6); the glob stops at the first hit.
+if [ "$JSON_MODE" -eq 1 ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
   # The response can be multi-line, so it goes to a temp file; the single-line
   # metadata comes back on stdout. (Command substitution strips NUL bytes, so a
   # NUL-delimited stream is not an option here.)
@@ -525,7 +527,7 @@ $blob"
   signal AGY_FAILED "agy exited $RC"
   exit 2
 fi
-if [ -z "${OUT//[$' \t\n\r']/}" ]; then
+if [[ "$OUT" != *[!$' \t\n\r']* ]]; then   # same glob as above, not the quadratic strip
   # agy >= 1.1.3 soft-denies a tool needing permission in headless mode and returns
   # rc=0 with EMPTY stdout plus an explanatory stderr notice (the evolved issue #10:
   # earlier versions silently wrote to a scratch dir or only described the edit). Detect
