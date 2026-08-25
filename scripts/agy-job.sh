@@ -45,17 +45,18 @@ job_state() {
   fi
 }
 
-# Human label for a delegate exit code (mirrors agy-delegate.sh structured codes).
+# Human label for a delegate exit code (mirrors agy-delegate.sh / local-delegate.sh
+# structured codes -- both executors share the code space, so one table serves both).
 rc_label() {
   case "$1" in
     0)  echo 'ok' ;;
-    2)  echo 'agy failed' ;;
+    2)  echo 'executor failed' ;;
     3)  echo 'empty output' ;;
-    10) echo 'QUOTA — retry later with --continue' ;;
-    11) echo 'AUTH required — run `agy` once interactively' ;;
-    12) echo 'TIMEOUT — raise --timeout or narrow scope' ;;
-    13) echo 'agy MISSING — install the Antigravity CLI' ;;
-    14) echo 'MODEL unavailable — check `agy models` / tier remap' ;;
+    10) echo 'QUOTA — retry later with --continue (agy) / after a pause (local)' ;;
+    11) echo 'AUTH required — run `agy` once (agy) / check LOCAL_DELEGATE_API_KEY (local)' ;;
+    12) echo 'TIMEOUT — raise --timeout or narrow scope (local inference is slower)' ;;
+    13) echo 'BACKEND missing — agy not installed, or the local server is not running' ;;
+    14) echo 'MODEL unavailable — agy: `agy models`; local: ollama pull <model> / local_tier_*' ;;
     # Both denial shapes: agy 1.1.3's soft deny and 1.1.13's hard error.
     15) echo 'PERMISSION denied (soft on 1.1.3+, a hard error by 1.1.13) — add a permissions.allow rule, or --yolo' ;;
     *)  echo 'error' ;;
@@ -96,8 +97,8 @@ case "$cmd" in
     echo "job:    $(basename "$jd")"
     sed 's/^/  /' "$jd/meta" 2>/dev/null
     if [ -n "$rc" ]; then echo "  state=$st (rc=$rc: $(rc_label "$rc"))"; else echo "  state=$st"; fi
-    sig="$(grep -m1 '^AGY_SIGNAL ' "$jd/err" 2>/dev/null || true)"
-    if [ -n "$sig" ]; then echo "  signal=${sig#AGY_SIGNAL }"; fi
+    sig="$(grep -m1 -E '^(AGY|LOCAL)_SIGNAL ' "$jd/err" 2>/dev/null || true)"
+    if [ -n "$sig" ]; then echo "  signal=${sig#*_SIGNAL }"; fi
     ;;
   result)
     jd="$(jobdir "${1:-}")"; st="$(job_state "$jd")"

@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 #
-# agy-delegate.sh — robust headless wrapper around the Antigravity CLI (`agy`).
-# Part of the "Antigravity for Claude Code" plugin.
+# agy-delegate.sh — robust headless wrapper around the Antigravity CLI (`agy`), and the
+# unified delegation entry point for the "Antigravity for GLM Code" plugin.
 #
-# Purpose: let Claude Code (the orchestrator) hand a single, well-scoped subtask
-# to an Antigravity (Gemini) agent via `agy --print`, and get clean text back on
-# stdout — for delegation, cross-model checks, or offloading bulk work.
+# Purpose: let the conductor (GLM, running in the pi coding agent) hand a single,
+# well-scoped subtask to an EXECUTOR and get clean text back on stdout — for
+# delegation, cross-model checks, or offloading bulk work.
+#
+# Two executors, one command (--backend):
+#   agy   — the Antigravity CLI (Gemini): agentic (reads/writes files, terminal,
+#           web + Vertex AI Search tools). The capable executor.
+#   local — any OpenAI-compatible LOCAL server (Ollama / LM Studio / llama.cpp /
+#           vLLM) via scripts/local-delegate.sh: private, free, offline; a plain
+#           chat completion — no file access (feed content via stdin, write with
+#           its --out), and its --web gives it wrapper-fetched search results.
+#   auto  — agy when `agy` is on PATH, else the local server. Default.
 #
 # Why a wrapper instead of calling `agy` directly:
 #   * `agy --print` silently drops stdout when stdin is a non-TTY -> we always
@@ -21,10 +30,19 @@
 #
 # Options:
 #   -t, --tier <flash|flash-lo|pro>  Model tier (default: flash)
-#   -d, --dir  <path>                Add a workspace dir (repeatable)
+#       --backend <agy|local|auto>   Executor backend (default: auto = agy if `agy` is
+#                                    on PATH, else the local OpenAI-compatible server).
+#                                    `local` hands everything to local-delegate.sh
+#                                    (tier aliases map: flash/flash-lo->fast, pro->think).
+#   -d, --dir  <path>                Add a workspace dir (repeatable; agy backend only
+#                                    — the local backend has no file access)
 #       --timeout <dur>              Print-mode timeout, e.g. 10m (default: 5m)
 #       --yolo                       Auto-approve all tool permissions (DANGEROUS)
 #       --sandbox                    Run agent with terminal sandbox restrictions
+#       --out <file>                 (local only) write the reply to a file; on the agy
+#                                    backend this is rejected with a usage error
+#       --web                        (local only) wrapper-fetched search context; agy has
+#                                    native web tools instead — pass --yolo there
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
 #       --mode <accept-edits|plan>   agy execution mode (agy >= 1.1.0). accept-edits is NOT a
@@ -57,13 +75,43 @@
 # userConfig (env): CLAUDE_PLUGIN_OPTION_DEFAULT_TIER, _TIMEOUT, _DEFAULT_MODEL (exact name),
 # _USAGE_LOG, and per-tier remaps _TIER_FLASH / _TIER_FLASH_LO / _TIER_PRO.
 # Explicit --model/--tier win; AGY_USAGE_LOG wins over _USAGE_LOG.
+# Backend default via CLAUDE_PLUGIN_OPTION_EXECUTOR_BACKEND (agy|local|auto).
 #
 set -euo pipefail
+
+# --- option aliasing ----------------------------------------------------------
+# pi-package era: prefer the shorter AGY_OPTION_* names. The historical
+# CLAUDE_PLUGIN_OPTION_* names keep working (upstream scripts/tests use them);
+# when both are set the legacy name wins. Values may contain spaces.
+_agy_alias() {
+  _o="$1"
+  eval "_v=\"\${AGY_OPTION_$_o:-}\""
+  if [ -n "$_v" ]; then
+    eval "current=\"\${CLAUDE_PLUGIN_OPTION_$_o:-}\""
+    [ -n "$current" ] || eval "export CLAUDE_PLUGIN_OPTION_$_o=\"$_v\""
+  fi
+  unset _o _v current
+}
+for _agy_opt in DEFAULT_TIER TIMEOUT TIER_FLASH TIER_FLASH_LO TIER_PRO DEFAULT_MODEL \
+                EXECUTOR_BACKEND USAGE_LOG STRUCTURED_OUTPUT DIGEST_WARN_CHARS \
+                CODING_POLICY DELEGATION_NUDGE LOCAL_BASE_URL LOCAL_MODEL \
+                LOCAL_TIER_FAST LOCAL_TIER_THINK LOCAL_API_KEY SEARXNG_URL LOCAL_TIMEOUT; do
+  _agy_alias "$_agy_opt"
+done
+unset _agy_alias _agy_opt
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+# Original argv, captured before parsing: the local dispatch re-invokes
+# local-delegate.sh with the caller's flags verbatim (minus --backend), so every
+# option the two wrappers share keeps one spelling.
+ORIG_ARGS=("$@")
 
 TIER="${CLAUDE_PLUGIN_OPTION_DEFAULT_TIER:-flash}"
 TIMEOUT="${CLAUDE_PLUGIN_OPTION_TIMEOUT:-5m}"
 TIER_EXPLICIT=0
 MODEL=""
+BACKEND=""
 YOLO=0
 SANDBOX=0
 DIGEST=0
@@ -73,6 +121,9 @@ PROMPT=""
 CONTINUE=0
 CONV_ID=""
 PRINT_CMD=0
+LOCAL_OUT=""
+LOCAL_RAW=0
+LOCAL_WEB=0
 
 die() { echo "agy-delegate: $*" >&2; exit 1; }
 # $1 = remaining argc ($#). Fail with a friendly message if an option has no value
@@ -207,11 +258,15 @@ outer_timeout_secs() {
 while [ $# -gt 0 ]; do
   case "$1" in
     -t|--tier)      need "$#" "$1"; TIER="$2"; TIER_EXPLICIT=1; shift 2 ;;
+        --backend)  need "$#" "$1"; BACKEND="$2"; shift 2 ;;   # executor choice
     -d|--dir)       need "$#" "$1"; ADD_DIRS+=("$2"); shift 2 ;;
     --timeout)      need "$#" "$1"; TIMEOUT="$2"; shift 2 ;;
     --yolo)         YOLO=1; shift ;;
     --sandbox)      SANDBOX=1; shift ;;
-    --digest)       DIGEST=1; shift ;;               # ask agy for a digest-only reply
+    --digest)       DIGEST=1; shift ;;               # ask the executor for a digest-only reply
+    --out)          need "$#" "$1"; LOCAL_OUT="$2"; shift 2 ;;   # (local) write reply to file
+    --raw)          LOCAL_RAW=1; shift ;;            # (local) keep outer code fence
+    --web)          LOCAL_WEB=1; shift ;;            # (local) wrapper-fetched search context
     --mode)         need "$#" "$1"; MODE="$2"; shift 2
                     case "$MODE" in accept-edits|plan) ;;
                       *) die "invalid --mode '$MODE' (use accept-edits | plan; agy >= 1.1.0)" ;;
@@ -229,6 +284,43 @@ while [ $# -gt 0 ]; do
 done
 
 [ -n "$PROMPT" ] || die "no prompt given (pass a string, or '-' to read stdin)"
+
+# --- executor backend resolution ----------------------------------------------
+# Precedence: --backend > userConfig executor_backend > auto. `auto` prefers agy
+# (the capable executor) and falls back to the local OpenAI-compatible server when
+# `agy` is not installed — so a GLM-only machine still gets delegation, privately.
+# Resolved BEFORE the agy-on-PATH check: backend local must work without agy.
+BACKEND="${BACKEND:-${CLAUDE_PLUGIN_OPTION_EXECUTOR_BACKEND:-auto}}"
+case "$BACKEND" in
+  agy|local|auto) ;;
+  *) die "unknown backend '$BACKEND' (use agy | local | auto)" ;;
+esac
+if [ "$BACKEND" = auto ]; then
+  if command -v agy >/dev/null 2>&1; then
+    BACKEND=agy
+  else
+    BACKEND=local
+    echo "agy-delegate: agy not on PATH — auto backend fell back to the LOCAL executor (OpenAI-compatible server; see local-delegate --help). Install the Antigravity CLI to also get agentic + web-search delegation." >&2
+  fi
+fi
+if [ "$BACKEND" = local ]; then
+  LOCAL_SH="$HERE/local-delegate.sh"
+  [ -f "$LOCAL_SH" ] || die "local executor script missing: $LOCAL_SH"
+  # strip --backend <v> from the caller's argv and hand the rest over verbatim;
+  # local-delegate accepts the shared flags (and warns on the agy-only ones).
+  LD_ARGS=()
+  skip=0
+  for a in "${ORIG_ARGS[@]:-}"; do
+    [ "$skip" -eq 1 ] && { skip=0; continue; }
+    case "$a" in --backend) skip=1; continue ;; esac
+    LD_ARGS+=("$a")
+  done
+  exec "$LOCAL_SH" "${LD_ARGS[@]:-}"
+fi
+if [ -n "$LOCAL_OUT" ] || [ "$LOCAL_RAW" -eq 1 ] || [ "$LOCAL_WEB" -eq 1 ]; then
+  die "--out / --raw / --web are LOCAL-backend options (the agy executor writes files itself via --dir + grants; it has native web tools). Drop them or use --backend local."
+fi
+
 # --print-command is a dry run (introspection), so it doesn't require agy on PATH.
 if [ "$PRINT_CMD" -ne 1 ] && ! command -v agy >/dev/null 2>&1; then
   echo "agy-delegate: 'agy' not found on PATH — install the Antigravity CLI first" >&2

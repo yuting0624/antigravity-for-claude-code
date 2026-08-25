@@ -4,6 +4,27 @@
 # Verifies the agy CLI is installed + authenticated and the plugin is wired up.
 #
 set -uo pipefail
+
+# --- option aliasing ----------------------------------------------------------
+# pi-package era: prefer the shorter AGY_OPTION_* names. The historical
+# CLAUDE_PLUGIN_OPTION_* names keep working (upstream scripts/tests use them);
+# when both are set the legacy name wins. Values may contain spaces.
+_agy_alias() {
+  _o="$1"
+  eval "_v=\"\${AGY_OPTION_$_o:-}\""
+  if [ -n "$_v" ]; then
+    eval "current=\"\${CLAUDE_PLUGIN_OPTION_$_o:-}\""
+    [ -n "$current" ] || eval "export CLAUDE_PLUGIN_OPTION_$_o=\"$_v\""
+  fi
+  unset _o _v current
+}
+for _agy_opt in DEFAULT_TIER TIMEOUT TIER_FLASH TIER_FLASH_LO TIER_PRO DEFAULT_MODEL \
+                EXECUTOR_BACKEND USAGE_LOG STRUCTURED_OUTPUT DIGEST_WARN_CHARS \
+                CODING_POLICY DELEGATION_NUDGE LOCAL_BASE_URL LOCAL_MODEL \
+                LOCAL_TIER_FAST LOCAL_TIER_THINK LOCAL_API_KEY SEARXNG_URL LOCAL_TIMEOUT; do
+  _agy_alias "$_agy_opt"
+done
+unset _agy_alias _agy_opt
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 ok()   { printf '  ✓ %s\n' "$*"; }
@@ -255,7 +276,46 @@ on_windows_native() {
   return 1
 }
 
-echo "Antigravity for Claude Code — doctor"
+echo "Antigravity for GLM Code — doctor"
+
+# 0. BRAIN — is pi running GLM? Detected from (in order): ZAI Coding Plan keys,
+#    custom providers in ~/.pi/agent/models.json, or nothing (default Anthropic).
+if [ -n "${ZAI_CODING_CN_API_KEY:-}" ]; then
+  ok "brain: GLM via ZAI Coding Plan (中国区, provider zai-coding-cn)"
+elif [ -n "${ZAI_API_KEY:-}" ]; then
+  ok "brain: GLM via ZAI Coding Plan (Global, provider zai)"
+elif [ -n "${PI_PROVIDER:-}" ] && case "$PI_PROVIDER" in *zai*|*glm*) true ;; *) false ;; esac; then
+  # pi sets PI_PROVIDER/PI_MODEL inside a session (pi /login auth, no env key needed)
+  ok "brain: GLM via pi session provider $PI_PROVIDER (model ${PI_MODEL:-unknown})"
+else
+  MODELS_JSON="${PI_CODING_AGENT_DIR:-${HOME}/.pi/agent}/models.json"
+  if [ -f "$MODELS_JSON" ] && command -v python3 >/dev/null 2>&1; then
+    PROVS="$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(",".join(sorted((d.get("providers") or {}).keys())))
+except Exception:
+    pass
+' "$MODELS_JSON" 2>/dev/null)"
+    if [ -n "$PROVS" ]; then
+      case "$PROVS" in
+        *glm*|*zai*|*zhipu*|*bigmodel*)
+          ok "brain: custom provider(s) [$PROVS] — 含疑似 GLM 端点" ;;
+        *)
+          warn "brain: 自定义 provider(s) [$PROVS]，未见明显 GLM 端点" ;;
+      esac
+    else
+      warn "brain: models.json 存在但无 provider 定义"
+    fi
+  else
+    warn "brain: 默认 Anthropic 端点 —— GLM 未接入"
+    info "切换方式一（推荐）：运行 pi /login，选择 ZAI Coding Plan (China)（国际版选 ZAI Coding Plan）,"
+    info "                  然后 /model 选择 glm 模型（pi --list-models zai-coding-cn 可查看 id）"
+    info "切换方式二：export ZAI_CODING_CN_API_KEY=<智谱编程套餐 Key>（bigmodel.cn → 编程套餐 → API Key）"
+    info "切换方式三：在 $MODELS_JSON 添加 api=\"anthropic-messages\"、baseUrl=https://open.bigmodel.cn/api/anthropic 的自定义 Provider"
+  fi
+fi
 
 # 1. agy on PATH
 if command -v agy >/dev/null 2>&1; then
@@ -428,23 +488,79 @@ EOF
   fi
 fi
 
+# 3c. LOCAL executor (OpenAI-compatible server). This backend needs no agy at all —
+#     a GLM-only machine still gets delegation — so its check is independent.
+# Secrets never live in the repo: load the untracked local env file first (chmod 600,
+# outside any git tree), then fall back to plain environment variables.
+LOCAL_ENV_FILE="${LOCAL_DELEGATE_ENV_FILE:-$HOME/.config/antigravity-for-glm/env}"
+[ -r "$LOCAL_ENV_FILE" ] && . "$LOCAL_ENV_FILE"
+LOCAL_BASE="${LOCAL_DELEGATE_BASE_URL:-${CLAUDE_PLUGIN_OPTION_LOCAL_BASE_URL:-http://127.0.0.1:8000/v1}}"
+# omlx requires a Bearer key even locally; it is deliberately NOT hardcoded here.
+# Other engines get no header unless LOCAL_DELEGATE_API_KEY is set.
+LKEY="${LOCAL_DELEGATE_API_KEY:-}"
+case "$LOCAL_BASE" in
+  http://127.0.0.1:8000/*|http://localhost:8000/*)
+    [ -n "$LKEY" ] || warn "omlx 端点需要 LOCAL_DELEGATE_API_KEY（未设置；内置兜底 key 已移出仓库）"
+    ;;
+esac
+LOCAL_BASE="${LOCAL_BASE%/}"
+case "$LOCAL_BASE" in */v[0-9]*) : ;; *)
+  case "$LOCAL_BASE" in *://*/?*) : ;; *) LOCAL_BASE="$LOCAL_BASE/v1" ;; esac ;; esac
+echo "local executor: probing $LOCAL_BASE ..."
+if ! command -v curl >/dev/null 2>&1; then
+  warn "curl not found — the local executor talks HTTP via curl"
+  info "fix: install curl (macOS: xcode-select --install; Debian/Ubuntu: apt install curl)"
+elif curl -sS --max-time 3 ${LKEY:+-H "Authorization: Bearer $LKEY"} \
+     -o /dev/null "$LOCAL_BASE/models" 2>/dev/null; then
+  ok "local server reachable: $LOCAL_BASE"
+  # configured model present? (Ollama/vLLM/LM Studio all implement GET /v1/models)
+  LMODELS="$(curl -sS --max-time 5 ${LKEY:+-H "Authorization: Bearer $LKEY"} "$LOCAL_BASE/models" 2>/dev/null || true)"
+  LFIRST="${AGY_OPTION_LOCAL_TIER_FAST:-${CLAUDE_PLUGIN_OPTION_LOCAL_TIER_FAST:-Ornith-1.5-35B-A3B-MLX-4bit}}"
+  LTHINK="${AGY_OPTION_LOCAL_TIER_THINK:-${CLAUDE_PLUGIN_OPTION_LOCAL_TIER_THINK:-Ornith-1.5-35B-A3B-MLX-4bit}}"
+  for m in "$LFIRST" "$LTHINK" "${CLAUDE_PLUGIN_OPTION_LOCAL_MODEL:-}"; do
+    [ -n "$m" ] || continue
+    if printf '%s' "$LMODELS" | grep -q "$m"; then
+      ok "local model present: $m"
+    else
+      warn "local model not listed by the server: $m"
+      info "fix: pull it (ollama pull $m) or remap local_tier_fast / local_tier_think / local_model"
+      info "     see what it serves: curl -s $LOCAL_BASE/models"
+    fi
+  done
+  command -v ollama >/dev/null 2>&1 || info "note: 'ollama' CLI not on PATH, but the server answered — that is fine."
+else
+  if command -v ollama >/dev/null 2>&1; then
+    warn "local server NOT reachable at $LOCAL_BASE (ollama is installed — is 'ollama serve' running?)"
+    info "fix: start it (ollama serve, or open the Ollama app), then re-run agy-doctor"
+  else
+    info "local executor not configured (no server at $LOCAL_BASE, no ollama installed)"
+    info "to use it: install Ollama (https://ollama.com) → ollama pull qwen2.5-coder:7b → ollama serve"
+    info "        or point LOCAL_DELEGATE_BASE_URL / the local_base_url option at LM Studio / llama.cpp / vLLM"
+  fi
+fi
+
 # 4. plugin scripts executable
-for s in agy-delegate.sh agy-cost-compare.sh cloud-debug.sh agy-trace.sh agy-media.sh; do
+for s in agy-delegate.sh local-delegate.sh agy-cost-compare.sh cloud-debug.sh agy-trace.sh agy-media.sh; do
   if [ -x "$HERE/$s" ]; then ok "$s executable"; else
     bad "$s not executable"; info "fix: chmod +x \"$HERE/$s\""
   fi
 done
 
-# 4b. SessionStart hooks executable
-for h in check-agy.sh inject-policy.sh validate-delegate-bash.sh nudge-delegation.sh; do
-  if [ -x "$ROOT/hooks/$h" ]; then ok "hooks/$h executable"; else
-    bad "hooks/$h not executable"; info "fix: chmod +x \"$ROOT/hooks/$h\""
-  fi
-done
+# 4b. SessionStart hooks were removed in the 0.27.0 pi refactor (event wiring now
+#     lives in extensions/antigravity-glm.ts) — only check when a hooks/ dir exists.
+if [ -d "$ROOT/hooks" ]; then
+  for h in check-agy.sh inject-policy.sh validate-delegate-bash.sh nudge-delegation.sh; do
+    if [ -x "$ROOT/hooks/$h" ]; then ok "hooks/$h executable"; else
+      bad "hooks/$h not executable"; info "fix: chmod +x \"$ROOT/hooks/$h\""
+    fi
+  done
+else
+  ok "hooks/ absent as expected (0.27.0+ — wiring lives in extensions/antigravity-glm.ts)"
+fi
 
 # 4b2. bin/ entrypoints executable (added to the Bash-tool PATH; commands/skills call
 #      these bare names — $CLAUDE_PLUGIN_ROOT is not exported to model-run Bash, issue #11)
-for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session agy-media; do
+for b in agy-delegate local-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session agy-media; do
   if [ -x "$ROOT/bin/$b" ]; then ok "bin/$b executable"; else
     bad "bin/$b not executable"; info "fix: chmod +x \"$ROOT/bin/$b\""
   fi
@@ -466,6 +582,6 @@ PJ="$ROOT/.claude-plugin/plugin.json"
 [ -f "$PJ" ] && ok "plugin: $(sed -n 's/.*"version"[: ]*"\([^"]*\)".*/v\1/p' "$PJ" | head -1)"
 
 echo ""
-if [ "$FAIL" -eq 0 ]; then echo "All checks passed — ready to delegate."; else
+if [ "$FAIL" -eq 0 ]; then echo "All checks passed — ready to delegate (brain + at least one executor willing)."; else
   echo "Some checks failed — see fixes above."; fi
 exit "$FAIL"

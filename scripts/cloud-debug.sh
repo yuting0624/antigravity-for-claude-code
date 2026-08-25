@@ -4,7 +4,7 @@
 # Antigravity (`agy` / Gemini) for a compact, structured digest.
 # Part of the "Antigravity for Claude Code" plugin.
 #
-# This is the Executor half of the /antigravity:cloud-run-debug command:
+# This is the Executor half of the /antigravity-glm:cloud-run-debug command:
 # Claude (the Conductor) reasons about root cause + the fix; the bulk, cheap
 # work — pulling potentially hundreds of log lines and clustering them into a
 # digest — is offloaded here to agy so Claude's context stays lean.
