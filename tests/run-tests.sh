@@ -921,17 +921,23 @@ else echo "FAIL: cloud-debug pinned the CPU on a large log payload (rc=$cd_rc af
 # comments quietly narrowed it to the top level, so a script added under scripts/<sub>/
 # would have escaped. Nothing is nested today — the point is that nothing has to stay
 # that way for the guard to hold. Reviewers caught the narrowing.
-ws_bad=""
+ws_bad=""; ws_seen=0
 while IFS= read -r wsf; do
   [ -n "$wsf" ] || continue
+  ws_seen=$((ws_seen+1))
   hit="$(grep -vn 'ws-strip-ok:' "$wsf" | sed 's/#.*//' \
          | grep -n '\${[A-Za-z_][A-Za-z0-9_]*//\[' | cut -d: -f1 | tr '\n' ',')"
   [ -n "$hit" ] && ws_bad="$ws_bad ${wsf#"$ROOT"/}"
 done <<EOF
 $(find "$ROOT/scripts" "$ROOT/hooks" -name "*.sh" -type f 2>/dev/null)
 EOF
-if [ -z "$ws_bad" ]; then
-  echo "ok: no shipped script deletes whitespace to test for it"; PASS=$((PASS+1));
+# find's stderr is discarded, so a bad path or an unreadable directory would give the
+# loop nothing and the guard would report all-clear having scanned zero files.
+# Count what it saw. Reviewers caught the vacuous pass.
+if [ "$ws_seen" -lt 8 ]; then
+  echo "FAIL: the whitespace guard scanned only $ws_seen files — it found nothing to check"; FAIL=$((FAIL+1));
+elif [ -z "$ws_bad" ]; then
+  echo "ok: no shipped script deletes whitespace to test for it ($ws_seen files)"; PASS=$((PASS+1));
 else echo "FAIL: whitespace-deleting substitution is back in:$ws_bad"; FAIL=$((FAIL+1)); fi
 
 echo "== --sandbox is not sold as containment =="
