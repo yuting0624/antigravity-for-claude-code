@@ -200,11 +200,31 @@ if [ "$RC" -ne 0 ]; then
 fi
 
 # No matching logs is a valid diagnostic result, not an error.
-case "${LOGS//[[:space:]]/}" in
+#
+# The cheap glob runs FIRST. `${LOGS//[[:space:]]/}` rewrites the whole string, and on the
+# bash macOS ships (3.2.57) that is catastrophic past a few KB — measured here, 8 KB took
+# 23.8s and every doubling cost ~6x. $LOGS is raw `gcloud logging read` output and the
+# 200 KB cap below is applied AFTER this point, so a chatty service could pin a core for
+# hours before the cap ever ran. Same shape as issue #66, found by review of the fix for
+# it; the ANSI-C and POSIX-class spellings cost the same.
+#
+# `]` must be the FIRST character in the bracket expression to be literal. Spelled
+# `[![:space:][]]` instead, the `]` closes the expression early and plain text like `x`
+# is misread as "no logs" — measured, before this went in.
+#
+# Exactly equivalent, verified on 19 probes including `[]`, `[ ]`, `[\n]`, `[[]]`, `][`,
+# `]`, real arrays and plain text: anything carrying a character that is neither
+# whitespace nor a bracket is logs, and the strip still decides the rest — on a string
+# that by then contains nothing but whitespace and brackets.
+case "$LOGS" in
+  *[!][:space:][]*) : ;;   # real content: never strip a large string
+  *)
+case "${LOGS//[[:space:]]/}" in   # ws-strip-ok: reached only when $LOGS is ws+brackets
   ''|'[]')
     echo "cloud-debug: no logs at severity>=$SEVERITY for service '$SERVICE'${REGION:+ in $REGION} within --since $SINCE."
     echo "cloud-debug: widen the window (--since), lower --severity, or confirm the service name/region."
     exit 0 ;;
+esac ;;
 esac
 
 # Soft byte cap as a backstop: field projection already trims a lot, but a very

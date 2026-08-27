@@ -12,6 +12,22 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   wrappers spun at ~99% CPU for 24 min and 2+ hours after agy had already finished). Both
   checks are now a glob that stops at the first non-whitespace character, with the same
   whitespace set and unchanged exit-code behavior (#66).
+- **The same shape was live in `cloud-debug.sh`, and worse.** Found by review of the fix
+  above, not by the fix. `${LOGS//[[:space:]]/}` decided "did gcloud return any logs?" on
+  the raw `gcloud logging read` output — and the 200 KB cap sits *after* that line, so a
+  chatty service could pin a core before the cap ever ran. Measured on 3.2.57: the POSIX
+  class spelling costs the same as the ANSI-C one (23.8s vs 24.4s at 8 KB), so the first
+  static guard, which matched only the ANSI-C form, reported all-clear over it.
+  A cheap glob now runs first and the strip is reached only when the string is already
+  nothing but whitespace and brackets — exactly equivalent, checked on 19 probes.
+- **Why 305 tests on a bash-3.2 machine saw none of this.** The cost switches on whether
+  there is a *match at all*, not on how many: same 8 KB, 0% whitespace 0.04s, 2% or more
+  21-25s. Both large fixtures in the suite sat on the fast side — the delegate's `big` is
+  solid `x` and `$( )` strips its one trailing newline, and the gcloud `big` mode is solid
+  `A` inside JSON. Neither contained a single space. Both now have whitespace-bearing
+  counterparts, and both new tests kill the run at 30s rather than waiting it out, because
+  bash cannot service SIGTERM inside the substitution: `timeout 90` around the unfixed
+  wrapper returned after 205s, which is also why `agy-job status` kept saying `running`.
 
 ## 0.25.1
 
