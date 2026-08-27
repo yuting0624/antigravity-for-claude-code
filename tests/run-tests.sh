@@ -917,13 +917,19 @@ else echo "FAIL: cloud-debug pinned the CPU on a large log payload (rc=$cd_rc af
 # Comments are stripped first, and the marker is read BEFORE that — the lines explaining
 # why this shape is gone all quote it, and an unstripped grep reports the explanation as
 # the offence. That is the same trap the `sort -V` guard fell into.
+# find, not a flat glob. The first version used `grep -r`; rewriting it per-file to strip
+# comments quietly narrowed it to the top level, so a script added under scripts/<sub>/
+# would have escaped. Nothing is nested today — the point is that nothing has to stay
+# that way for the guard to hold. Reviewers caught the narrowing.
 ws_bad=""
-for wsf in "$ROOT"/scripts/*.sh "$ROOT"/hooks/*.sh; do
-  [ -f "$wsf" ] || continue
+while IFS= read -r wsf; do
+  [ -n "$wsf" ] || continue
   hit="$(grep -vn 'ws-strip-ok:' "$wsf" | sed 's/#.*//' \
          | grep -n '\${[A-Za-z_][A-Za-z0-9_]*//\[' | cut -d: -f1 | tr '\n' ',')"
   [ -n "$hit" ] && ws_bad="$ws_bad ${wsf#"$ROOT"/}"
-done
+done <<EOF
+$(find "$ROOT/scripts" "$ROOT/hooks" -name "*.sh" -type f 2>/dev/null)
+EOF
 if [ -z "$ws_bad" ]; then
   echo "ok: no shipped script deletes whitespace to test for it"; PASS=$((PASS+1));
 else echo "FAIL: whitespace-deleting substitution is back in:$ws_bad"; FAIL=$((FAIL+1)); fi
