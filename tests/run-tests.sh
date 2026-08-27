@@ -110,6 +110,12 @@ case "${STUB_MODE:-text}" in
   badmodel) echo "Error: invalid --model \"X\": model X is not recognized as a known model" >&2; exit 1 ;; # -> exit 14
   softdeny) echo "no output produced — a tool required the \"write_file\" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow" >&2; exit 0 ;; # rc=0 + empty stdout -> exit 15
   big)     printf 'x%.0s' $(seq 1 20000); echo ;;    # dump-sized reply -> digest guard warns
+  # Dump-sized AND whitespace-bearing. `big` above is 20 KB of solid 'x', and $( ) strips
+  # its one trailing newline, so the captured value contains NO whitespace at all — which
+  # is exactly the case bash 3.2's substitution handles fast. That is why 305 tests on a
+  # 3.2.57 machine never saw issue #66. Measured: same 8 KB, 0% whitespace 0.04s, 2% or
+  # more 21-25s. A regression test for this has to carry whitespace.
+  bigws)   printf 'word %.0s' $(seq 1 3400) ;;
   # agy >= 1.1.8 structured envelope. Note the RAW newline inside "response" — agy really
   # emits that, and it makes the payload invalid for strict JSON parsers.
   json_ok)  printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":1,"cache_read_tokens":3,"total_tokens":16}}'; exit 0 ;;
@@ -844,6 +850,36 @@ check "bin/cloud-debug forwards to cloud-debug.sh (no CLAUDE_PLUGIN_ROOT)" 0 "$r
 out=$(env -u CLAUDE_PLUGIN_ROOT "$BIN/measure-session" 2>&1 | head -1)
 case "$out" in *measure-session*) echo "ok: bin/measure-session forwards to the .py"; PASS=$((PASS+1));;
   *) echo "FAIL: bin/measure-session did not forward (got: '$out')"; FAIL=$((FAIL+1));; esac
+
+echo "== the whitespace check does not pin a CPU (issue #66, bash 3.2) =="
+# `${OUT//[$' \t\n\r']/}` answers "is this only whitespace?" by rewriting the whole
+# string. On the bash macOS ships — 3.2.57, frozen in 2007, and what /usr/bin/env bash
+# resolves to on a stock Mac — that is catastrophically slow as soon as the string
+# contains ONE whitespace character: measured on this machine, 8 KB took 24s and every
+# doubling cost ~6x. Reported wrappers held a core at 99% for over two hours after agy had
+# already finished successfully.
+#
+# It is also not interruptible: bash cannot service SIGTERM inside the substitution, so
+# `timeout 90` on the run above returned only after 205s. No wall-clock guard can bound
+# it, which is why `agy-job status` kept reporting `running`.
+#
+# The bound is generous on purpose — the fixed path is ~0.9s here and the broken one is
+# minutes, so anything in between separates them. -k forces a KILL so a regression fails
+# in 35s instead of hanging CI for the full 205.
+ws_dir="$TMP/wsbench"; rm -rf "$ws_dir"; mkdir -p "$ws_dir"
+ws_t0="$(python3 -c 'import time; print(time.time())')"
+STUB_MODE=bigws timeout -k 5 30 "$DELEGATE" "hi" >/dev/null 2>&1; ws_rc=$?
+ws_t1="$(python3 -c 'import time; print(time.time())')"
+ws_secs="$(python3 -c "print('%.1f' % ($ws_t1 - $ws_t0))")"
+if [ "$ws_rc" != 124 ] && [ "$ws_rc" != 137 ]; then
+  echo "ok: a 17KB whitespace-bearing reply completes (${ws_secs}s)"; PASS=$((PASS+1));
+else echo "FAIL: the whitespace check pinned the CPU on a 17KB reply (rc=$ws_rc after ${ws_secs}s)"; FAIL=$((FAIL+1)); fi
+# ...and the shipped scripts must not reintroduce the shape anywhere else. Scoped to what
+# ships: this file uses it once on a 30-line workflow snippet, where it costs nothing.
+ws_bad="$(grep -rln "//\[\$' " "$ROOT"/scripts "$ROOT"/hooks 2>/dev/null | sed "s|$ROOT/||" | tr '\n' ' ')"
+if [ -z "$ws_bad" ]; then
+  echo "ok: no shipped script deletes whitespace to test for it"; PASS=$((PASS+1));
+else echo "FAIL: whitespace-deleting substitution is back in:$ws_bad"; FAIL=$((FAIL+1)); fi
 
 echo "== --sandbox is not sold as containment =="
 # 0.25.0 deferred adding --sandbox to agy-media because agy could not run. It runs now,
