@@ -3,7 +3,7 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
-## Unreleased
+## 0.25.2
 
 - **agy-delegate.sh no longer burns a CPU core on large outputs on macOS.** The two
   whitespace-emptiness checks stripped every whitespace character from the whole output
