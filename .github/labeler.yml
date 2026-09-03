@@ -1,0 +1,36 @@
+# Path -> label map for actions/labeler (workflow: .github/workflows/labeler.yml).
+# Globs are minimatch; a label is added when ANY listed glob matches ANY changed file.
+# `documentation` and `security` are the repository's existing labels; the rest were
+# created for this map. Labels are added, never removed (sync-labels is off), so a
+# label a maintainer sets by hand stays.
+wrapper:
+  - changed-files:
+      - any-glob-to-any-file: ['scripts/**', 'bin/**']
+hooks:
+  - changed-files:
+      - any-glob-to-any-file: ['hooks/**']
+skill:
+  - changed-files:
+      - any-glob-to-any-file: ['skills/**', 'commands/**', 'agents/**', '.claude-plugin/**']
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ['tests/**']
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', 'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md']
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/**']
+experiments:
+  - changed-files:
+      - any-glob-to-any-file: ['experiments/**']
+pricing:
+  - changed-files:
+      - any-glob-to-any-file: ['prices.json', 'scripts/agy-cost-compare.sh']
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'hooks/validate-delegate-bash.sh'
+          - 'SECURITY.md'
+          - '.github/workflows/claude-review-external.yml'
+          - '.github/workflows/quorum-review.yml'
