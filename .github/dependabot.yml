@@ -1,0 +1,19 @@
+# Every action in .github/workflows is pinned to a commit SHA with a "# vN" comment.
+# A pin nobody updates is a pin that rots; Dependabot bumps the SHAs (and the comment)
+# in one grouped PR a week. Review workflows will run on those PRs like any other.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    groups:
+      github-actions:
+        patterns: ["*"]
+    labels: [ci]
+    commit-message:
+      prefix: "ci(deps)"
+    open-pull-requests-limit: 5
