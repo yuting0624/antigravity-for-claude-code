@@ -61,5 +61,13 @@ jobs:
 
       - name: Tests (stubs agy; no network)
         run: |
-          bash --version | head -1     # must say 3.2.x, or the job is not testing what it claims
+          # Gate, not a printout: if the PATH shim above ever stops shadowing Homebrew's
+          # bash 5, the suite would run on the wrong shell and this job would still be
+          # green while CONTRIBUTING tells contributors it proves 3.2 compatibility.
+          v="$(bash --version | head -1)"
+          echo "$v"
+          case "$v" in
+            *"version 3.2."*) ;;
+            *) echo "::error::expected /bin/bash 3.2.x first on PATH, got: $v" >&2; exit 1 ;;
+          esac
           bash tests/run-tests.sh
