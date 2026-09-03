@@ -13,7 +13,7 @@ info() { printf '    %s\n' "$*"; }
 FAIL=0
 
 # Normalize a model id to lowercase alphanumerics only, so a configured display name
-# ("Gemini 3.7 Flash (High)") and an `agy models` entry survive comparison regardless of
+# ("Gemini 3.8 Flash (High)") and an `agy models` entry survive comparison regardless of
 # format. agy 1.1.5 switched `agy models` output from display names to slugs
 # (`gemini-3.5-flash`), which broke a strict grep and made doctor falsely warn that every
 # tier model was missing (they still worked). Both forms normalize to a comparable core.
@@ -321,8 +321,8 @@ if command -v agy >/dev/null 2>&1; then
     ok "agy authenticated — $(printf '%s' "$MODELS" | grep -c . ) models available"
     # 2b. configured tier->model names exist (respecting userConfig remaps). agy is
     # multi-model and plan-dependent, so a miss is a WARNING, not a failure.
-    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.7 Flash (High)}"
-    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.7 Flash (Low)}"
+    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.8 Flash (High)}"
+    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.8 Flash (Low)}"
     PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}"
     for m in "$FLASH" "$FLASH_LO" "$PRO"; do
       if model_present "$m"; then

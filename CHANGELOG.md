@@ -3,6 +3,81 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.26.0
+
+Catch-up to agy **1.1.25** — the newest upstream release, so nothing here asks you to update
+agy; it asks whether what the wrapper says about agy is still true. The last route-level
+verification was 1.1.13 (0.24.0); the last measurement of anything was 1.1.19 (0.25.1).
+
+- **The `flash` tiers move to Gemini 3.8 Flash (High) / (Low).** agy 1.1.25 added it to the
+  catalog; `agy models` lists `gemini-3.8-flash-high|medium|low` here, and
+  `agy --model "Gemini 3.8 Flash (High)" -p /model` answers `gemini-3.8-flash-high` at
+  zero tokens, so doctor's probe keeps working and the display-name convention holds.
+  Price is the argument and it does not change: 3.8, 3.7 and 3.6 carry identical list
+  prices — $0.75 / $3.75 / $0.075 per 1M through 2026-12-31, then $1.50 / $7.50 / $0.15 —
+  checked 2026-09-03 against ai.google.dev and Google Cloud's Agent Platform page
+  (non-global endpoints +10%). **No quality claim**, and one caveat the 0.24.0 note left
+  implicit: an identical per-token price is not an identical per-task cost, because
+  thinking bills as output and nothing here has measured how much of it 3.8 does. Read the
+  `AGY_USAGE` line. agy's own note lists 3.8 "when connecting with a `GEMINI_API_KEY`"; it
+  is served on the GCP-project sign-in used here too. If a plan lacks it, doctor warns and
+  a delegation exits 14; 3.7 and 3.6 are cost-identical remaps. `prices.json` gains
+  `gemini_flash_38` and `gemini_flash_38_post_2026`.
+- **agy 1.1.20 reverted the hard error, and exit 15 survived — measured, not assumed.**
+  agy's 1.1.20 notes say print mode no longer treats "permission denials as fatal run
+  failures with non-zero exit codes". That sentence names the exact route 0.24.0 rebuilt
+  around 1.1.13's rc 1, so it was measured on 1.1.25 before anything was written: a write
+  with no grant returns **rc 0, an envelope saying SUCCESS with an empty response, and the
+  soft-deny notice on stderr again** — reworded (`jetski: no output produced — a tool
+  required the "write_file" permission that headless mode cannot prompt for, so it was
+  auto-denied. ... re-run with --dangerously-skip-permissions`) but carrying the anchors.
+  Asking the model for text around the write changes nothing: agy drops the reply and
+  prints the notice, so there is no silent-success sub-case to chase. The wrapper's rc 0 +
+  empty route — kept in 0.24.0 "for older agy" — is the current route: **exit 15 with
+  `PERMISSION_DENIED` in both structured and plain-text mode**, verified through the
+  wrapper on 1.1.25. No classifier change. The suite gains the 1.1.25 output verbatim (both
+  modes) so this is pinned to the real shape rather than the 1.1.3 paraphrase, plus a
+  **negative control**: the same denial wording inside the model's reply with clean
+  diagnostics must exit 0, because the classifier reads agy's stderr and the envelope's
+  `error` field and never the reply — killed by making the wrapper scan `$OUT`. The
+  history is now three shapes in every surface that describes exit 15 — soft 1.1.3+, hard
+  1.1.13–1.1.19, soft again from 1.1.20 — and the file-level guard requires the 1.1.20
+  fact next to the 1.1.13 one (mutation: rewriting "1.1.20" in README fails it). The
+  denied run still cost 23k input tokens, so a test pins that `AGY_USAGE` survives the
+  exit-15 path; without it a measured PoC undercounts every denied attempt.
+- **Found while running it: 3.8 High under `--digest` goes looking when there is nothing
+  to look at.** The digest contract asks for findings; handed a bare "reply OK" ping, 3.8
+  High ran a command to produce some — 6 of 7 runs on agy 1.1.25, which headless without
+  a grant is exit 15 (the trajectory shows eight denied attempts and 55-77k input tokens
+  for a one-word prompt). 3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 Low 0 of 2, 3.8 High
+  without `--digest` 0 of 2; rewording the contract to scope tool use changed nothing
+  (3 of 3). Given a real task — a file behind `--dir`, code pasted into the prompt — 3.8
+  High answered 6 of 6, so the default stands and README, SKILL.md and TROUBLESHOOTING
+  say: give it a task, or drop `--digest` for a ping. Small n, one machine, stated as such.
+- **`--yolo` is the wrapper's flag, not agy's.** agy 1.1.25 answers a literal `--yolo` with
+  `flags provided but not defined: -yolo`; only `--dangerously-skip-permissions` exists.
+  The wrapper has translated it since 0.18.2, so nothing broke — but three documents
+  introduced it with agy's flag in parentheses, which reads as an alias agy accepts, and
+  the fan-out recipe's comment said `--yolo` without qualification. They now say whose flag
+  it is and what reaches agy.
+- **Two 1.1.18 facts, one pinned.** `--print --sandbox 'task'` is now a usage error (rc 2,
+  `-p took "--sandbox" as its prompt` — verified at zero cost) where it used to run with
+  the prompt `--sandbox` and no sandbox. The wrapper has always put `-p <prompt>` last with
+  nothing after it; a test asserts that on the `--print-command` output, killed by moving
+  `-p` ahead of the flags. And a dropped agent stream exits non-zero since 1.1.18 instead
+  of rc 0 + empty, so the wrapper's exit 3 now means agy genuinely returned nothing — from
+  agy's changelog, not reproduced, and the exit-3 row says which.
+- **1.1.24 fixed the issue-#37 hang upstream** (`FD_CLOEXEC` on the preserved streams). The
+  wrapper keeps routing agy's output through files: it costs nothing and older agy still
+  hangs. The comment and README say so instead of presenting the workaround as the only
+  thing between you and a hang.
+- Four assertions still had the 3.7 tier name written out, two releases after the entry
+  that said the suite derives them; they read `$DEF_FLASH` now.
+
+308 -> 315. One more measured negative, recorded so nobody proposes it: across 193 local
+conversations no denial was ever written to `transcript.jsonl` as a step, so
+`agy-trace --audit` cannot see one either.
+
 ## 0.25.2
 
 - **agy-delegate.sh no longer burns a CPU core on large outputs on macOS.** The two

@@ -102,10 +102,18 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
 - pre-1.1.0: only *describes* the edits
 - 1.1.0–1.1.2: writes to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch/`)
 - 1.1.3–1.1.1x: **soft-denies** — rc 0, empty stdout, a stderr notice naming the allow-rule
-- by **1.1.13**: **hard error** — the run fails (rc 1) with `permission check failed for
+- by **1.1.13** (through 1.1.19): **hard error** — the run fails (rc 1) with `permission check failed for
   write_file "...": user denied permission for write_file(...)`. Same cause, different
   shape, and none of the older wording. The wrapper classifies both as **exit 15**; a
   plugin before 0.24.0 reports the hard one as a bare `agy exited 1` instead
+- **1.1.20 onward: soft again.** agy's changelog stops counting permission denials as run
+  failures. Measured on 1.1.25: rc 0, an empty response (even when the prompt asks for
+  text around the write — agy drops the reply), and on stderr `jetski: no output produced
+  — a tool required the "write_file" permission that headless mode cannot prompt for, so
+  it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g.
+  write_file(<target>)). Alternatively, re-run with --dangerously-skip-permissions to
+  auto-approve all tools.` The wrapper's soft-deny route catches it — **exit 15** in both
+  structured and plain-text mode
 
 **Fix:**
 - **For a file write, add an allow-rule — the narrower fix.** In
@@ -122,16 +130,17 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   entry, `()` — matched **every** command before **1.1.11** and silently auto-approved
   anything the agent ran. Run `agy-doctor`: it validates each entry and reports the
   consequence that actually applies to yours.
-- **Or pass `--yolo`** (`--dangerously-skip-permissions`) — works across all agy versions,
+- **Or pass `--yolo`** — the wrapper's flag, sent to agy as `--dangerously-skip-permissions`
+  (agy 1.1.25 rejects a literal `--yolo`) — works across all agy versions,
   but auto-approves **all** tools, not just the write. Required anyway for web / Vertex AI
   Search / terminal when no rule covers them. (`--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing.)
 - Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
   approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
 - Run write tasks on a **dedicated branch**. `--sandbox` is *not* containment: Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux.
 - **Always verify files actually changed in your workspace** (`git status`) — never trust
-  the self-report. The wrapper maps BOTH denial shapes — the 1.1.3 soft-deny and the
-  1.1.13 hard error — to **exit 15**, so you get an actionable message instead of a
-  bare "empty output" or "agy exited 1".
+  the self-report. The wrapper maps BOTH denial shapes — the soft deny (1.1.3+, and again
+  from 1.1.20; measured on 1.1.25) and the 1.1.13 hard error — to **exit 15**, so you get
+  an actionable message instead of a bare "empty output" or "agy exited 1".
 - Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
   background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
   `/antigravity:status` / `/antigravity:result <id>` (interactive sessions only).
@@ -148,16 +157,30 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 0 | success | — |
 | 1 | usage error | check flags (`agy-delegate --help`) |
 | 2 | agy failed (unclassified) | read the stderr it relayed |
-| 3 | agy returned empty output | retry; check model availability (`agy models`) |
+| 3 | agy returned empty output | retry; check model availability (`agy models`). Before agy 1.1.18 a dropped agent stream also landed here as a false clean success; from 1.1.18 it exits non-zero (exit 2 here) — per agy's changelog, not reproduced |
 | 10 | quota / rate limit | wait, then resume the same conversation with `--continue` |
 | 11 | not authenticated | run `agy` once interactively to sign in |
 | 12 | timeout (agy's own, or the wall-clock guard) | raise `--timeout`, narrow the task; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
 | 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
-| 15 | permission denied | a tool needed permission headless — **both** shapes: agy 1.1.3's soft deny (rc 0, empty stdout) and 1.1.13's hard error (`user denied permission`). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
+| 15 | permission denied | a tool needed permission headless — **both** shapes: the soft deny (rc 0, empty stdout, `auto-denied` on stderr — agy 1.1.3+, and again from 1.1.20, measured on 1.1.25) and 1.1.13's hard error (rc 1, `user denied permission`). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
 | 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 | 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
 | 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir, or agy has never been run |
+
+---
+
+## exit 15 on a read-only prompt (Gemini 3.8 Flash High + `--digest`)
+
+**Cause:** the digest contract asks for "findings / decisions / errors", and given a
+prompt with nothing to inspect — a bare "reply OK" ping — 3.8 High runs a *command* to
+find something to report. Headless without a grant that is a denial: measured on agy
+1.1.25, 6 of 7 runs (3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 High without `--digest`
+0 of 2; rewording the contract to scope tool use changed nothing, 3 of 3). Given a real
+task — a file behind `--dir`, or code pasted into the prompt — 3.8 High answered 6 of 6.
+
+**Fix:** give it a task, or drop `--digest` for a ping. `--yolo` here would grant a
+command the task never needed.
 
 ---
 

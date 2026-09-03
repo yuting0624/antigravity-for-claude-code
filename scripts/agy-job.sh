@@ -56,8 +56,8 @@ rc_label() {
     12) echo 'TIMEOUT — raise --timeout or narrow scope' ;;
     13) echo 'agy MISSING — install the Antigravity CLI' ;;
     14) echo 'MODEL unavailable — check `agy models` / tier remap' ;;
-    # Both denial shapes: agy 1.1.3's soft deny and 1.1.13's hard error.
-    15) echo 'PERMISSION denied (soft on 1.1.3+, a hard error by 1.1.13) — add a permissions.allow rule, or --yolo' ;;
+    # Both denial shapes: the soft deny (agy 1.1.3+, and again from 1.1.20) and 1.1.13's hard error.
+    15) echo 'PERMISSION denied (soft on 1.1.3+, a hard error by 1.1.13, soft again from 1.1.20) — add a permissions.allow rule, or --yolo' ;;
     *)  echo 'error' ;;
   esac
 }

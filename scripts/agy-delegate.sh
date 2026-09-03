@@ -23,7 +23,8 @@
 #   -t, --tier <flash|flash-lo|pro>  Model tier (default: flash)
 #   -d, --dir  <path>                Add a workspace dir (repeatable)
 #       --timeout <dur>              Print-mode timeout, e.g. 10m (default: 5m)
-#       --yolo                       Auto-approve all tool permissions (DANGEROUS)
+#       --yolo                       Auto-approve all tool permissions (DANGEROUS). Reaches agy as
+#                                    --dangerously-skip-permissions; agy 1.1.25 rejects a literal --yolo
 #       --sandbox                    Run agent with terminal sandbox restrictions
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
@@ -41,8 +42,9 @@
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
 #             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
 #             | 15 permission denied — a tool needed permission headless. BOTH shapes:
-#             |    agy 1.1.3's soft deny (rc 0, empty stdout) and 1.1.13's hard error
-#             |    (rc 1, "user denied permission"). Add a permissions.allow rule, or --yolo
+#             |    the soft deny (rc 0, empty stdout, "auto-denied" on stderr — agy 1.1.3+, and
+#             |    again from 1.1.20; measured on 1.1.25) and 1.1.13's hard error (rc 1, "user
+#             |    denied permission", 1.1.13-1.1.19). Add a permissions.allow rule, or --yolo
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -125,6 +127,16 @@ signal() {
 # exit 15 was intact. The strings were there; the ROUTE was not. Measured on 1.1.13:
 # both a plain write and `--mode accept-edits` produce the hard error.
 #
+# Then 1.1.20 moved it BACK. agy's own notes: print mode no longer treats "permission
+# denials as fatal run failures with non-zero exit codes". Measured on 1.1.25: rc 0, an
+# envelope saying SUCCESS with an EMPTY response, and the soft-deny notice on stderr again,
+# reworded — `jetski: no output produced — a tool required the "write_file" permission
+# that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under
+# permissions.allow in settings.json (e.g. write_file(<target>)). Alternatively, re-run
+# with --dangerously-skip-permissions to auto-approve all tools.` Asking for text around
+# the write changes nothing: agy drops the reply and prints the notice. So the rc 0 +
+# empty route below is the CURRENT one, and the rc != 0 route covers 1.1.13-1.1.19.
+#
 # One function, called from both branches, so the two shapes cannot drift apart again.
 permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   # The rc != 0 path dumps $ERR before it classifies, so echoing it again here printed
@@ -154,8 +166,8 @@ usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; ex
 # (env), so non-Vertex/non-Gemini plans (Claude/GPT) work without code changes.
 model_for_tier() {
   case "$1" in
-    flash)    echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.7 Flash (High)}" ;;
-    flash-lo) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.7 Flash (Low)}" ;;
+    flash)    echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.8 Flash (High)}" ;;
+    flash-lo) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.8 Flash (Low)}" ;;
     pro)      echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 3.1 Pro (High)}" ;;
     *) die "unknown tier '$1' (use flash | flash-lo | pro)" ;;
   esac
@@ -268,8 +280,8 @@ fi
 
 # Heads-up: a likely write task with no visible write grant. Headless agy's write
 # behavior has shifted across versions (describe-only pre-1.1.0; scratch-divert
-# 1.1.0-1.1.2; soft-deny on 1.1.3+; hard error by 1.1.13), and without a grant YOUR
-# WORKSPACE IS UNTOUCHED while the run still "succeeds" (issue #10).
+# 1.1.0-1.1.2; soft-deny on 1.1.3+; hard error by 1.1.13; soft again from 1.1.20, measured
+# on 1.1.25), and without a grant YOUR WORKSPACE IS UNTOUCHED either way (issue #10).
 #
 # There are TWO grants, and this used to claim there was one. A `write_file(<dir>)`
 # rule under `permissions.allow` in ~/.gemini/antigravity-cli/settings.json grants
@@ -289,7 +301,7 @@ if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies / fails outright depending on version; the workspace is untouched either way, and only the newest versions admit it; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this — but <dir> is a placeholder, and agy-doctor will tell you whether yours actually parses. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies / fails outright depending on version; the workspace is untouched either way, and since 1.1.3 the run says so on stderr; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this — but <dir> is a placeholder, and agy-doctor will tell you whether yours actually parses. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -386,7 +398,8 @@ ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
 # stdout goes to a file too, never a command-substitution pipe: agy's stdio MCP
 # children inherit our stdout and can outlive agy, so `$(agy ...)` blocks forever
 # waiting for EOF even after `timeout` kills agy itself (issue #37). A regular
-# file is inherited harmlessly.
+# file is inherited harmlessly. agy 1.1.24 fixed the upstream cause (FD_CLOEXEC on
+# the preserved streams); the file route stays — it costs nothing, and older agy hangs.
 OUTF="$(mktemp "${TMPDIR:-/tmp}/agy-out.XXXXXX")"
 
 # Wall-clock guard: on a non-TTY caller (the whole point of this wrapper), agy can
@@ -504,8 +517,9 @@ $blob"
   shopt -s nocasematch
   case "$blob" in
     # FIRST, because these strings are the most specific ones here and must not be
-    # shadowed. agy 1.1.13 fails the run outright on a denied tool instead of soft-denying
-    # it, so this shape reaches the rc != 0 path and never sees the check further down.
+    # shadowed. agy 1.1.13-1.1.19 fails the run outright on a denied tool instead of
+    # soft-denying it, so that shape reaches the rc != 0 path and never sees the check
+    # further down. (1.1.20 went back to the soft shape; the rc 0 path below has it.)
     *"user denied permission"*|*"permission check failed"*|*"auto-denied"*|\
     *"permission that headless"*|*"dangerously-skip-permissions"*)
       shopt -u nocasematch; permission_denied shown ;;
@@ -528,10 +542,14 @@ $blob"
   exit 2
 fi
 if [[ "$OUT" != *[!$' \t\n\r']* ]]; then   # same glob as above, not the quadratic strip
-  # agy >= 1.1.3 soft-denies a tool needing permission in headless mode and returns
-  # rc=0 with EMPTY stdout plus an explanatory stderr notice (the evolved issue #10:
-  # earlier versions silently wrote to a scratch dir or only described the edit). Detect
-  # it so the caller gets an actionable signal instead of a bare "empty output".
+  # agy 1.1.3+ soft-denies a tool needing permission in headless mode and returns rc=0
+  # with EMPTY stdout plus an explanatory stderr notice (the evolved issue #10: earlier
+  # versions silently wrote to a scratch dir or only described the edit). 1.1.13-1.1.19
+  # hard-errored instead (handled above); 1.1.20 came back here, and on 1.1.25 the JSON
+  # envelope says SUCCESS with an empty response, so OUT is empty at this point in both
+  # modes. Detect it so the caller gets an actionable signal instead of a bare "empty
+  # output". (Before agy 1.1.18 a dropped agent stream ALSO landed here as rc 0 + empty —
+  # a false clean success; 1.1.18 makes that rc != 0, so exit 3 is now a genuine empty.)
   eblob="$(cat "$ERR" 2>/dev/null)"
   shopt -s nocasematch
   case "$eblob" in
