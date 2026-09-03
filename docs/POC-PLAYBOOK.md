@@ -96,7 +96,8 @@ After each lever: rerun the task → rerun the gate → keep only if quality hel
 
 - **Two write grants, and the narrow one is not `--yolo`.** Headless agy's
   no-permission behavior has shifted every few releases (describe-only pre-1.1.0 ·
-  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+ · hard error by 1.1.13). An ungranted write
+  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+ · hard error by 1.1.13 · soft again from
+  1.1.20, measured on 1.1.25). An ungranted write
   **leaves your workspace untouched every time**; what varies is whether the run admits it
   ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Two things
   grant it:
@@ -111,7 +112,8 @@ After each lever: rerun the task → rerun the gate → keep only if quality hel
     1.1.11**, silently auto-approving anything the agent ran. Either one makes an arm's
     write behaviour a second uncontrolled variable, which is exactly what §5 says a cost
     claim cannot carry.
-  - **`--yolo`** (`--dangerously-skip-permissions`) — auto-approves **all** tools, not just
+  - **`--yolo`** — the wrapper's flag, sent to agy as `--dangerously-skip-permissions` (agy
+    1.1.25 rejects a literal `--yolo`) — auto-approves **all** tools, not just
     writes. Needed when no rule covers the target, and for web / Vertex AI Search / terminal
     tools.
   
@@ -120,8 +122,8 @@ After each lever: rerun the task → rerun the gate → keep only if quality hel
   the rule as the only variable. agy's own denial text names the rule and offers `--yolo` as
   the alternative. Not verified on other versions, and a glob form (`write_file(/path/**)`)
   was reported *not* to match. Either way: run write tasks on a branch and verify with
-  `git status`; the wrapper maps either denial shape — the soft one and 1.1.13's hard
-  error — to exit `15`.
+  `git status`; the wrapper maps both denial shapes — the soft one (agy 1.1.3+, and again
+  from 1.1.20; re-measured on 1.1.25) and 1.1.13's hard error — to exit `15`.
 - **One shared [`AGENTS.md`](https://github.com/yuting0624/antigravity-for-claude-code#-what-it-does)
   at the repo root** — the biggest first-pass-success factor, which means fewer retries,
   which means fewer conductor turns.

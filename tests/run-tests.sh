@@ -124,6 +124,18 @@ case "${STUB_MODE:-text}" in
   # shape lands on the rc != 0 path, above the soft-deny check, so exit 15 stopped being
   # reachable at all. Captured verbatim from a real 1.1.13 run.
   json_denied) printf '{"conversation_id":"c1","status":"ERROR","response":"","error":"permission check failed for write_file \\"/tmp/x/probe.txt\\": user denied permission for write_file(/tmp/x/probe.txt)","usage":{}}'; exit 1 ;;
+  # agy 1.1.20 stopped counting permission denials as run failures, and 1.1.25 is back to
+  # the soft shape — now INSIDE the structured envelope: rc 0, status SUCCESS, an EMPTY
+  # response, and the notice on stderr with new wording and a `jetski:` prefix. Captured
+  # verbatim from a real 1.1.25 run (23k input tokens spent on a run that did nothing).
+  json_softdeny_1125) echo 'jetski: no output produced — a tool required the "write_file" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g. write_file(<target>)). Alternatively, re-run with --dangerously-skip-permissions to auto-approve all tools.' >&2; printf '{"conversation_id":"b0f4bd0c-d590-4c4a-8c0e-c745f8c67218","status":"SUCCESS","response":"","duration_seconds":3.483514,"num_turns":1,"usage":{"input_tokens":22971,"output_tokens":78,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":23049}}'; exit 0 ;;
+  # The same run with structured_output=off, also verbatim from 1.1.25 (that attempt reached
+  # for a command instead of write_file; the shape is identical).
+  softdeny_1125) echo 'jetski: no output produced — a tool required the "command" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g. command(<target>)). Alternatively, re-run with --dangerously-skip-permissions to auto-approve all tools.' >&2; exit 0 ;;
+  # Negative control: the denial WORDING inside the model's reply, with clean diagnostics,
+  # is a successful run. The classifier reads agy's stderr and the envelope's error field
+  # and never the reply — a code review that quotes "user denied permission" is not exit 15.
+  json_reply_mentions_denial) printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY: the old build said user denied permission for write_file and auto-denied it\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'; exit 0 ;;
   # Same denial without the JSON envelope, for older agy / the plain-text fallback path.
   harddeny) echo 'permission check failed for write_file "/tmp/x/probe.txt": user denied permission for write_file(/tmp/x/probe.txt)' >&2; exit 1 ;;
   json_err) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model X is not recognized as a known model","usage":{}}'; exit 1 ;;
@@ -428,6 +440,15 @@ check "--print-command -> exit 0 + resolved flags" 0 "$rc" "--print-timeout 5m" 
 check "--print-command shows the tier model" 0 "$rc" "Pro" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
+# agy 1.1.18 made a valueless flag after -p an error (`--print --sandbox 'task'` used to run
+# with the prompt "--sandbox" and no sandbox; verified on 1.1.25: rc 2, "-p took
+# \"--sandbox\" as its prompt"). The wrapper has always put -p LAST with the prompt attached
+# and nothing after it. Pin that: on older agy the failure is silent, on newer a usage error.
+out=$("$DELEGATE" --print-command --sandbox --yolo --mode plan "hi" 2>/dev/null); rc=$?
+case "$out" in
+  *" -p hi") echo "ok: -p <prompt> is the last thing on the agy command line (agy 1.1.18 flag ordering)"; PASS=$((PASS+1)) ;;
+  *) echo "FAIL: -p is not last on the resolved command line: $out"; FAIL=$((FAIL+1)) ;;
+esac
 
 # write-task without --yolo -> warn (workspace untouched; issue #10).
 # --mode accept-edits stopped granting headless writes on agy 1.1.3, so it still warns.
@@ -482,6 +503,25 @@ else echo "ok: the hard permission error is not classified as a generic failure"
 if has 'accept-edits' "$deny_out"; then
   echo "ok: the denial message addresses --mode accept-edits"; PASS=$((PASS+1));
 else echo "FAIL: the denial message is silent on --mode accept-edits"; FAIL=$((FAIL+1)); fi
+# agy 1.1.20 reverted the hard error: a denial no longer fails the run. Measured on 1.1.25:
+# rc 0, status SUCCESS, an EMPTY response, the notice on stderr with new wording — the soft
+# shape again, now inside the JSON envelope. 0.24.0 kept this route "for older agy"; it is
+# the CURRENT route, so pin it with the real output rather than the 1.1.3 paraphrase above.
+sd25_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_softdeny_1125 "$DELEGATE" "write a file" 2>&1 >/dev/null); sd25_rc=$?
+check "agy 1.1.25 soft deny (json envelope, rc 0, empty response) -> exit 15" 15 "$sd25_rc" "PERMISSION_DENIED" "$sd25_err"
+check "agy 1.1.25 soft deny relays agy's own notice" 15 "$sd25_rc" "auto-denied" "$sd25_err"
+# The denied run still cost ~23k input tokens on the real binary; the usage line must
+# survive the failure path, or a measured PoC undercounts every denied attempt.
+check "agy 1.1.25 soft deny still reports AGY_USAGE" 15 "$sd25_rc" "AGY_USAGE" "$sd25_err"
+if has 'AGY_FAILED' "$sd25_err" || has 'empty output' "$sd25_err"; then
+  echo "FAIL: 1.1.25 soft deny fell through to a generic failure or exit 3"; FAIL=$((FAIL+1));
+else echo "ok: 1.1.25 soft deny is classified, not generic"; PASS=$((PASS+1)); fi
+sd25_err=$(STUB_MODE=softdeny_1125 "$DELEGATE" "write a file" 2>&1 >/dev/null); sd25_rc=$?
+check "agy 1.1.25 soft deny (plain-text mode) -> exit 15" 15 "$sd25_rc" "PERMISSION_DENIED" "$sd25_err"
+# Negative control for the classifier's one hard rule: the reply is never scanned. The
+# same anchor words inside the model's text, with clean diagnostics, are a success.
+nc_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_denial "$DELEGATE" "review it" 2>/dev/null); nc_rc=$?
+check "denial wording inside the reply alone never classifies (model text is not scanned)" 0 "$nc_rc" "JSONBODY" "$nc_out"
 
 check "exit-15 message offers the narrower grant first" 15 "$rc" "permissions.allow" "$out"
 # The message must not hand the pre-1.1.11 match-everything history to the placeholder it
@@ -1118,6 +1158,9 @@ for f in $E15_SURFACES; do
   # that prompted this guard even once the glob included it.
   grep -qE 'exit [`]?15|PERMISSION.?denied|PERMISSION_DENIED' "$ROOT/$f" || continue
   grep -qE '1\.1\.13|hard error' "$ROOT/$f" || e15_bad="$e15_bad $f"
+  # 1.1.20 reverted the hard error (measured on 1.1.25). A file that stops at 1.1.13 now
+  # presents a shape two releases gone as the current one. Same file-level rule.
+  grep -qE '1\.1\.20' "$ROOT/$f" || e15_bad="$e15_bad $f(no 1.1.20)"
 done
 # Same shape for the other claim this release retracted: anything that mentions
 # accept-edits must say it is not a grant, or it is still selling it as one.

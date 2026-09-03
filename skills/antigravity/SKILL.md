@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.25.2
+version: 0.26.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -148,8 +148,8 @@ wrapper; it returns a digest for you to verify). Either way, *you* still own ver
 **Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout · `13`
 agy-missing · `14` model-unavailable (a `--model` / `tier_*` / `default_model` name not in
 `agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
-permission-denied (a tool needed permission headless — BOTH agy 1.1.3's soft deny and
-1.1.13's hard error — add a `permissions.allow` rule or pass `--yolo`)
+permission-denied (a tool needed permission headless — BOTH the soft deny, agy 1.1.3+ and
+again from 1.1.20, and 1.1.13's hard error — add a `permissions.allow` rule or pass `--yolo`)
 (besides `2` failed / `3` empty). On agy ≥ 1.1.8 these are derived from the structured
 `status`/`error` envelope rather than stderr pattern-matching, so the classification is
 reliable. It prints a `AGY_SIGNAL {...}` line on stderr;
@@ -219,7 +219,8 @@ Read-only work (search, review, analysis) is low-risk. **When agy writes files o
 commands** (`--yolo` grants write + terminal):
 - **Write tasks need a grant — and it does not have to be `--yolo`.** Headless agy's no-permission behavior has shifted
   every few releases — describe-only (pre-1.1.0), scratch-divert (1.1.0–1.1.2), soft-deny
-  with a stderr notice (1.1.3+), **hard error by 1.1.13** — but **your workspace stays
+  with a stderr notice (1.1.3+), **hard error by 1.1.13**, soft again from **1.1.20**
+  (measured on 1.1.25) — but **your workspace stays
   untouched every time**; what varies is whether the run admits it (issue #10). The
   wrapper maps the soft deny and the hard error alike to exit 15. **Two things grant a write, and `--yolo` is
   the blunt one.** A `write_file(<dir>)` entry under `permissions.allow` in
@@ -238,8 +239,8 @@ commands** (`--yolo` grants write + terminal):
   Run write tasks on a branch and verify with `git status`.
   prompt for or block `--dangerously-skip-permissions` — approve it or pre-allow
   `Bash(agy-delegate*)`. Always verify files actually changed **in the workspace** with
-  `git status` (the wrapper maps BOTH denial shapes — 1.1.3's soft deny and 1.1.13's
-  hard error — to exit `15`, so you're not left guessing).
+  `git status` (the wrapper maps BOTH denial shapes — the soft deny, 1.1.3+ and again from
+  1.1.20, and 1.1.13's hard error — to exit `15`, so you're not left guessing).
 - Run it on a **dedicated git branch or worktree** so changes are isolated.
 - `--sandbox` is NOT execution containment. Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux. Contain by what you check
   out and by `permissions.allow`, not by the flag.
@@ -406,7 +407,8 @@ ONE delegation and let agy fan out internally — the coordination tokens land o
 cheap side, and you ingest a single digest.
 
 ```bash
-# Preferred form (agy >= 1.0.16). --yolo is required so the subagent tools aren't
+# Preferred form (agy >= 1.0.16). --yolo (the wrapper's flag; it reaches agy as
+# --dangerously-skip-permissions) is required so the subagent tools aren't
 # soft-denied headless (see below). Verified live on agy 1.1.5.
 agy-delegate --dir . --yolo --digest --timeout 10m \
   "ACTUALLY use your define_subagent and invoke_subagent tools (do NOT simulate).
@@ -420,8 +422,8 @@ agy-delegate --dir . --yolo --digest --timeout 10m \
 Verified behaviors (1.0.12 → 1.1.5):
 - **Pass `--yolo`.** On 1.1.3+ the subagent tools need permission that headless mode
   can't prompt for, so without `--yolo` the spawn is denied (wrapper exit 15). Whether
-  it is a soft deny or the hard error 1.1.13 introduced for writes has not been
-  measured for this tool — the grant and the exit code are the same either way.
+  it is a soft deny or the hard error 1.1.13 introduced for writes (and 1.1.20 took
+  back) has not been measured for this tool — the grant and the exit code are the same either way.
   (On 1.0.x spawning was ungated, but `--yolo` is the durable choice here: a
   `permissions.allow` `write_file(...)` rule covers file writes only, not
   `define_subagent`/`invoke_subagent`, and not web / Vertex AI Search.)

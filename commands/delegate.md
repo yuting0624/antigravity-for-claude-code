@@ -17,7 +17,7 @@ Do this:
    `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
    there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
    is what web / Vertex AI Search / terminal need. Without a grant,
-   headless agy leaves your workspace untouched, and only the newest versions admit it (it
+   headless agy leaves your workspace untouched, and since 1.1.3 the run says so on stderr (it
    describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
    accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
    at all, the write is denied exactly like one without it. Run
@@ -27,7 +27,8 @@ Do this:
    `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
    (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper
    returns exit `15`, that's exactly this: agy denied the write. Both shapes land here —
-   the soft deny on agy 1.1.3 and the hard error on 1.1.13 — and both take the same
+   the soft deny on agy 1.1.3+ (back again from 1.1.20, measured on 1.1.25) and the hard
+   error on 1.1.13–1.1.19 — and both take the same
    fix: a `permissions.allow` rule covering the target, or `--yolo`.)
 2. Run **synchronously** (you may be headless — do not background-and-wait):
    `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
