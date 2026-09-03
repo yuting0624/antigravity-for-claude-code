@@ -40,7 +40,7 @@ bash tests/run-tests.sh          # dependency-free; stubs `agy`, no network
 shellcheck scripts/*.sh tests/*.sh   # CI gates on --severity=error
 ```
 
-- **Tests pass** and shellcheck is clean (CI runs both — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+- **Tests pass** and shellcheck is clean (CI runs both — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)). CI runs the suite on Ubuntu **and** on macOS `/bin/bash` 3.2, so a bash-4-ism fails there even if it passed for you on Linux.
 - If you touch a manifest, `python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"` (and `marketplace.json`, `prices.json`) still parse.
 - **Keep the skill honest.** [`skills/antigravity/SKILL.md`](skills/antigravity/SKILL.md) is the plugin's brain — if behavior changes, update it. Don't claim a capability the code doesn't have.
 - **Cost numbers are estimates.** If you quote figures, say so and point at `prices.json`.
@@ -53,7 +53,8 @@ shellcheck scripts/*.sh tests/*.sh   # CI gates on --severity=error
 - **Target bash 3.2.** macOS still ships `/bin/bash` 3.2.57 (GPLv3 is why), and macOS is a
   supported platform, so `declare -A`, `readarray`/`mapfile`, `${var^^}` and friends are out.
   Same for GNU-only flags on `sed`, `date` and `grep` — BSD userland is the floor. Testing on
-  Linux only will not catch these.
+  Linux only will not catch these; CI's macOS job does, but run the suite on 3.2 locally when
+  you can.
 - New scripts get a `usage()` and a test in `tests/run-tests.sh`.
 
 ## Reporting bugs / ideas
