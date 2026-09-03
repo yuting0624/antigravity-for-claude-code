@@ -187,8 +187,8 @@ ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh
 
 | tier | model | use for |
 |------|-------|---------|
-| `flash` (default) | Gemini 3.7 Flash (High) | most bulk work |
-| `flash-lo` | Gemini 3.7 Flash (Low) | cheapest, trivial tasks |
+| `flash` (default) | Gemini 3.8 Flash (High) | most bulk work |
+| `flash-lo` | Gemini 3.8 Flash (Low) | cheapest, trivial tasks |
 | `pro` | Gemini 3.1 Pro (High) | harder reasoning / cross-checks |
 
 **agy is multi-model.** Tiers default to Gemini, but you can use any model `agy models` lists
@@ -197,7 +197,7 @@ via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_l
 (env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
 conductor — that's what gives both the cost saving and the cross-model verification.
 
-> **The `flash` tiers moved to Gemini 3.7 Flash in 0.24.0.** 3.6 and 3.7 are priced *identically* and both undercut 3.5 on every axis — input and cached-input are exactly **half** ($1.50 -> $0.75, $0.15 -> $0.075) and output is cheaper still, **$9.00 -> $3.75** (a 58% cut, not half) — under promotional pricing that **ends 2026-12-31**, after which they settle at $1.50 / $7.50 / $0.15 (still cheaper than 3.5 on output). Checked against two sources on 2026-08-17; [`prices.json`](prices.json) carries both sets. No quality claim is made here — the reason to move is price and currency, and this repo has retracted a model comparison before for being measured on a build where `--model` was ignored. **If your plan does not serve 3.7 yet** (newer models can lag on enterprise Vertex) you find out immediately, not silently: `agy-doctor` warns that the tier model is absent from `agy models`, and a delegation exits **14** naming the fix. Remap with the `tier_flash` / `tier_flash_lo` options to anything `agy models` lists — `Gemini 3.6 Flash (High)` costs exactly the same. (agy 1.1.5 switched `agy models` to slugs like `gemini-3.7-flash`; both slugs and display names work with `--model`, and `doctor` matches either.)
+> **The `flash` tiers moved to Gemini 3.8 Flash in 0.26.0** (3.7 in 0.24.0; 3.5 before that). 3.8, 3.7 and 3.6 carry *identical* list prices — $0.75 in / $3.75 out / $0.075 cached-in per 1M tokens — under promotional pricing that **ends 2026-12-31**, after which all three settle at $1.50 / $7.50 / $0.15 (3.5 is $1.50 / $9.00 / $0.15 throughout). Checked against two sources on 2026-09-03; [`prices.json`](prices.json) carries both sets. No quality claim is made here — the reason to move is currency at an unchanged list price, and this repo has retracted a model comparison before for being measured on a build where `--model` was ignored. An identical *per-token* price is not an identical *per-task* cost: thinking bills as output, nothing here has measured how much of it 3.8 does, so read the `AGY_USAGE` line. **If your plan does not serve 3.8 yet** (agy 1.1.25's release note lists it for `GEMINI_API_KEY` sign-in; `agy models` also lists it on the GCP-project sign-in this was measured on, but newer models can lag on enterprise plans) you find out immediately, not silently: `agy-doctor` warns that the tier model is absent from `agy models`, and a delegation exits **14** naming the fix. Remap with the `tier_flash` / `tier_flash_lo` options to anything `agy models` lists — `Gemini 3.7 Flash (High)` and `Gemini 3.6 Flash (High)` cost exactly the same. (agy 1.1.5 switched `agy models` to slugs like `gemini-3.8-flash-high`; both slugs and display names work with `--model`, and `doctor` matches either.)
 
 </details>
 

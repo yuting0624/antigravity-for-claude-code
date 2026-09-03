@@ -1,6 +1,11 @@
 {
-  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh picks this key by tier NAME, not by model. Today that is Gemini 3.7 Flash (High), so gemini_flash mirrors gemini_flash_37. IMPORTANT: 3.6 and 3.7 are on PROMOTIONAL pricing that ends 2026-12-31 — on 2027-01-01 input goes 0.75 -> 1.50, output 3.75 -> 7.50 and cached_in 0.075 -> 0.15. Leaving these as-is after that date understates the Gemini side by half. The _post_2026 entries carry the standard rates; copy them over then. Verified 2026-08-17 against ai.google.dev/gemini-api/docs/pricing and Google Cloud's Agent Platform pricing page.",
+  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh picks this key by tier NAME, not by model. Today that is Gemini 3.8 Flash (High), so gemini_flash mirrors gemini_flash_38 (3.8, 3.7 and 3.6 carry identical list prices). IMPORTANT: 3.6, 3.7 and 3.8 are on PROMOTIONAL pricing that ends 2026-12-31 — on 2027-01-01 input goes 0.75 -> 1.50, output 3.75 -> 7.50 and cached_in 0.075 -> 0.15. Leaving these as-is after that date understates the Gemini side by half. The _post_2026 entries carry the standard rates; copy them over then. Verified 2026-09-03 against ai.google.dev/gemini-api/docs/pricing and Google Cloud's Agent Platform pricing page (cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing; non-global endpoints are +10%).",
   "gemini_flash": {
+    "in": 0.75,
+    "out": 3.75,
+    "cached_in": 0.075
+  },
+  "gemini_flash_38": {
     "in": 0.75,
     "out": 3.75,
     "cached_in": 0.075
@@ -18,6 +23,11 @@
   "gemini_flash_35": {
     "in": 1.5,
     "out": 9.0,
+    "cached_in": 0.15
+  },
+  "gemini_flash_38_post_2026": {
+    "in": 1.5,
+    "out": 7.5,
     "cached_in": 0.15
   },
   "gemini_flash_37_post_2026": {

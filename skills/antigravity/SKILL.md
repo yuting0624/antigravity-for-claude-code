@@ -67,18 +67,22 @@ the cross-model verification value (Claude executing Claude loses both).
 > it would actually run. Below 1.1.11 it does not probe, because there the slash command
 > falls through as prompt text and the model answers as though it had run.
 >
-> The `flash` tiers default to **Gemini 3.7 Flash (High)** / **(Low)** since 0.24.0.
-> 3.6 and 3.7 are priced identically and undercut 3.5 on every axis today: input
-> and cached-input are exactly half ($1.50 -> $0.75, $0.15 -> $0.075) and output
-> is cheaper still, $9.00 -> $3.75 — a 58% cut, not a halving. Under a
-> promotion that **ends 2026-12-31** and then settles at $1.50 / $7.50 / $0.15.
-> Price a run with `prices.json`'s `gemini_flash`, which mirrors whatever the flash
-> tier resolves to; `agy-cost-compare` picks that key by tier NAME, not by model.
+> The `flash` tiers default to **Gemini 3.8 Flash (High)** / **(Low)** since 0.26.0
+> (3.7 from 0.24.0, 3.5 before). 3.8, 3.7 and 3.6 carry identical list prices —
+> $0.75 in / $3.75 out / $0.075 cached-in per 1M — under a promotion that **ends
+> 2026-12-31** and then settles at $1.50 / $7.50 / $0.15; 3.5 is $1.50 / $9.00 /
+> $0.15 throughout. Two sources, checked 2026-09-03. Price a run with
+> `prices.json`'s `gemini_flash`, which mirrors whatever the flash tier resolves to;
+> `agy-cost-compare` picks that key by tier NAME, not by model.
 >
-> **The move is justified on price and currency, not on quality** — no comparison
-> has been run between these models on a build where `--model` actually applies.
-> If a plan does not serve 3.7, `doctor` says so and a delegation exits 14 naming
-> the fix; remap `tier_flash` to a name from `agy models` (3.6 costs the same).
+> **The move is justified on currency at an unchanged list price, not on quality** —
+> no comparison has been run between these models on a build where `--model`
+> actually applies, and an identical per-token price is not an identical per-task
+> cost (thinking bills as output; read the `AGY_USAGE` line). If a plan does not
+> serve 3.8 — agy 1.1.25's note lists it for `GEMINI_API_KEY` sign-in; it is also
+> listed on the GCP-project sign-in this was measured on — `doctor` says so and a
+> delegation exits 14 naming the fix; remap `tier_flash` to a name from
+> `agy models` (3.7 and 3.6 cost the same).
 >
 > **Retracted:** earlier versions of this note quoted token-level comparisons between
 > 3.5 / 3.6 / `flash-medium` (−23% input, `cache_read` +43%, and so on). Those runs were
