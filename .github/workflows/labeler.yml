@@ -1,0 +1,21 @@
+# Labels pull requests by the paths they touch (map: .github/labeler.yml).
+# pull_request_target is what lets it label PRs from forks — and for exactly that
+# reason this workflow must never check out or execute PR code: no actions/checkout,
+# no run: steps, only the labeler reading the changed-file list through the API.
+# The labels must already exist (there is no issues: write here).
+name: labeler
+
+on:
+  pull_request_target:   # zizmor: ignore[dangerous-triggers] -- no checkout, no code execution
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read         # read .github/labeler.yml from the base branch
+      pull-requests: write   # add labels
+    steps:
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13  # v7.0.0
