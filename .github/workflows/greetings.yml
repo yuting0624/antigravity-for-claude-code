@@ -1,0 +1,43 @@
+# Greets first-time issue authors and first-time PR authors. pull_request_target is
+# needed so a fork PR can be commented on (a pull_request token is read-only there);
+# no checkout, no run: steps, so PR code is never executed. The messages point at the
+# three things every agy bug report needs and at CONTRIBUTING's pre-PR checklist.
+name: greetings
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:   # zizmor: ignore[dangerous-triggers] -- no checkout, no code execution
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d  # v3.1.0
+        with:
+          issue_message: |
+            Thanks for opening your first issue here.
+
+            agy changes behaviour every few releases, so to reproduce anything we need three things. If they are not in the report yet, please add them:
+
+            - `agy --version` and your OS (macOS / Linux / WSL — native Windows is not supported for headless delegation)
+            - the exact command you ran (for example `agy-delegate --tier flash --dir . "..."`) and its stderr — the `AGY_SIGNAL` and `AGY_USAGE` lines matter
+            - what you expected and what happened instead
+
+            `agy-doctor` output helps too. Thanks!
+          pr_message: |
+            Thanks for your first pull request.
+
+            Before review, please check the items from CONTRIBUTING.md:
+
+            - `bash tests/run-tests.sh` passes (it stubs `agy`, no network) and `shellcheck --severity=error scripts/*.sh tests/*.sh hooks/*.sh` is clean. CI runs both, on Ubuntu and on macOS `/bin/bash` 3.2.
+            - If behaviour changed, `README.md`, `skills/antigravity/SKILL.md` and `CHANGELOG.md` say so, and any claim about `agy` states what was measured and on which version.
+            - Target bash 3.2 and BSD userland: no `declare -A`, `mapfile`, `${var^^}` or GNU-only flags.
+
+            Automated review starts on its own for PRs from this repository. For PRs from forks a maintainer approves the run first, so a quiet check is not a rejection.
