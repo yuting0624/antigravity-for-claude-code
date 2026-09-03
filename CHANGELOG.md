@@ -45,6 +45,15 @@ verification was 1.1.13 (0.24.0); the last measurement of anything was 1.1.19 (0
   fact next to the 1.1.13 one (mutation: rewriting "1.1.20" in README fails it). The
   denied run still cost 23k input tokens, so a test pins that `AGY_USAGE` survives the
   exit-15 path; without it a measured PoC undercounts every denied attempt.
+- **Found while running it: 3.8 High under `--digest` goes looking when there is nothing
+  to look at.** The digest contract asks for findings; handed a bare "reply OK" ping, 3.8
+  High ran a command to produce some — 6 of 7 runs on agy 1.1.25, which headless without
+  a grant is exit 15 (the trajectory shows eight denied attempts and 55-77k input tokens
+  for a one-word prompt). 3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 Low 0 of 2, 3.8 High
+  without `--digest` 0 of 2; rewording the contract to scope tool use changed nothing
+  (3 of 3). Given a real task — a file behind `--dir`, code pasted into the prompt — 3.8
+  High answered 6 of 6, so the default stands and README, SKILL.md and TROUBLESHOOTING
+  say: give it a task, or drop `--digest` for a ping. Small n, one machine, stated as such.
 - **`--yolo` is the wrapper's flag, not agy's.** agy 1.1.25 answers a literal `--yolo` with
   `flags provided but not defined: -yolo`; only `--dangerously-skip-permissions` exists.
   The wrapper has translated it since 0.18.2, so nothing broke — but three documents

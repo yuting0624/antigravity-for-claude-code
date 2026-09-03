@@ -170,6 +170,20 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 
 ---
 
+## exit 15 on a read-only prompt (Gemini 3.8 Flash High + `--digest`)
+
+**Cause:** the digest contract asks for "findings / decisions / errors", and given a
+prompt with nothing to inspect — a bare "reply OK" ping — 3.8 High runs a *command* to
+find something to report. Headless without a grant that is a denial: measured on agy
+1.1.25, 6 of 7 runs (3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 High without `--digest`
+0 of 2; rewording the contract to scope tool use changed nothing, 3 of 3). Given a real
+task — a file behind `--dir`, or code pasted into the prompt — 3.8 High answered 6 of 6.
+
+**Fix:** give it a task, or drop `--digest` for a ping. `--yolo` here would grant a
+command the task never needed.
+
+---
+
 ## "tier model not in `agy models`" warning from doctor
 
 **Cause:** agy's model list is plan-dependent (Vertex plans are Gemini-only; some plans

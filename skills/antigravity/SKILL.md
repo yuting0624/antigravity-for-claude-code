@@ -78,7 +78,11 @@ the cross-model verification value (Claude executing Claude loses both).
 > **The move is justified on currency at an unchanged list price, not on quality** —
 > no comparison has been run between these models on a build where `--model`
 > actually applies, and an identical per-token price is not an identical per-task
-> cost (thinking bills as output; read the `AGY_USAGE` line). If a plan does not
+> cost (thinking bills as output; read the `AGY_USAGE` line). Measured quirk: under
+> `--digest`, a prompt with nothing to inspect (a bare "reply OK") makes 3.8 High run a
+> command to find something to report — 6 of 7 runs, exit 15 headless without a grant;
+> 3.7 High 0 of 3. With a real task (a file behind `--dir`, pasted code) 3.8 High
+> answered 6 of 6. Give it a task, or drop `--digest` for a ping. If a plan does not
 > serve 3.8 — agy 1.1.25's note lists it for `GEMINI_API_KEY` sign-in; it is also
 > listed on the GCP-project sign-in this was measured on — `doctor` says so and a
 > delegation exits 14 naming the fix; remap `tier_flash` to a name from
