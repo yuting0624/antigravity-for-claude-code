@@ -4,6 +4,12 @@ name: Claude review (internal)
 # Fork PRs are deliberately excluded here — on `pull_request` they get no secrets, so
 # the action can't authenticate anyway. They are handled by the label-gated workflow
 # in claude-review-external.yml, which requires an explicit human approval.
+#
+# A pull request that EDITS THIS FILE is not reviewed by it. The action refuses to run
+# a workflow whose content differs from the default branch's ("Workflow validation
+# failed ... identical content"), skips itself and still reports the job green — the
+# green check on such a PR says nothing about the change. Measured on #73: a change to
+# this file's pins and checkout options was first exercised by the next PR after merge.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
