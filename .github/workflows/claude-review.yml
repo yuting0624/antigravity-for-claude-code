@@ -13,10 +13,15 @@ permissions:
   pull-requests: write
   id-token: write   # the action mints an OIDC token even with token auth
 
-# One review per PR; a new push supersedes the previous run.
+# One review per PR; a new push supersedes the previous run — unless the push is
+# Dependabot's. `cancel-in-progress` is evaluated BEFORE the job's `if:`, so a run
+# the job will skip still enters the group and cancels a live one (#42, #53). A
+# Dependabot push would cancel a maintainer's in-flight review and then skip
+# itself, leaving the pull request with no review and nothing saying why. The
+# single term below mirrors the single term added to the job condition.
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.actor != 'dependabot[bot]' }}
 
 jobs:
   review:

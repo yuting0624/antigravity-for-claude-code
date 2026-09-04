@@ -60,9 +60,12 @@ permissions: {}
 # A label event never makes a running review obsolete: the head commit is unchanged. Only
 # a push does. And `false` does not DISCARD the second run, it queues it — so an unrelated
 # label waits its turn and then skips, costing a few seconds of a queue slot.
+#
+# And not when the push is Dependabot's: `authorise` skips that run, and a run that
+# skips must not cancel a live review (same term as the job condition).
 concurrency:
   group: claude-review-ext-${{ github.event.pull_request.number }}
-  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+  cancel-in-progress: ${{ github.event.action == 'synchronize' && github.actor != 'dependabot[bot]' }}
 
 jobs:
   # Cheap gate, separate job: nothing with secrets runs until this passes.

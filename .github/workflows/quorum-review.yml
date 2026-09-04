@@ -64,12 +64,17 @@ on:
 # and a run that turns out to be skippable costs a few seconds of a queue slot.
 #
 # One rule, nothing to keep in sync, and it subsumes both #42 and #53.
+#
+# One exception, added with the Dependabot skip on the job: a push BY Dependabot is
+# a run the job will skip, and a skipped run must not cancel anything — a human's
+# `@quorum /review` on a Dependabot pull request would otherwise be cancelled by the
+# bot's next rebase and never replaced. Same single term as the job's `if:`.
 concurrency:
   group: >-
     quorum-review-${{ github.event.pull_request.number
       || github.event.issue.number
       || github.event.inputs.pr }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
 
 permissions:
   contents: read
