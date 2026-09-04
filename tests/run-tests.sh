@@ -1717,10 +1717,21 @@ if grep -qE '^ +github_token: \$\{\{ *github\.token *\}\}' "$XW"; then
   echo "ok: external review uses the workflow-scoped GITHUB_TOKEN"; PASS=$((PASS+1));
 else echo "FAIL: external review has no explicit github_token — it will mint an App token"; FAIL=$((FAIL+1)); fi
 # ...and the permissions that token is scoped BY have to actually cover posting a review.
-XPERM="$(sed -n '/^permissions:/,/^concurrency:/p' "$XW")"
-if grep -q 'pull-requests: write' <<<"$XPERM"; then
-  echo "ok: the workflow grants pull-requests: write for the review comment"; PASS=$((PASS+1));
+# They live on the `review` JOB: the workflow-level block is `{}` since the zizmor
+# cleanup, so a read of that block would pass on nothing (or, worse, find the write it
+# is looking for in a block that no longer scopes the job). Read the job's block, from
+# `  review:` to its `steps:`, and refuse to pass on an empty read.
+XPERM="$(sed -n '/^  review:/,/^    steps:/p' "$XW")"
+if [ -z "${XPERM//[$' \t\n']/}" ]; then
+  echo "FAIL: could not read the external review job's block"; FAIL=$((FAIL+1));
+elif grep -q 'pull-requests: write' <<<"$XPERM"; then
+  echo "ok: the review job grants pull-requests: write for the review comment"; PASS=$((PASS+1));
 else echo "FAIL: GITHUB_TOKEN cannot post the review with these permissions"; FAIL=$((FAIL+1)); fi
+# And the workflow level stays empty, so a write permission cannot quietly come back for
+# every job at once (zizmor excessive-permissions, cleared in the same change).
+if grep -qE '^permissions: *\{\}' "$XW"; then
+  echo "ok: external workflow-level permissions are empty; jobs declare their own"; PASS=$((PASS+1));
+else echo "FAIL: external workflow grants permissions at workflow level again"; FAIL=$((FAIL+1)); fi
 
 # The fork guard runs before anything is cloned or any credential is minted.
 if [ "$(grep -n 'Refuse a fork' "$QW" | cut -d: -f1)" \
