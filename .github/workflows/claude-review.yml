@@ -20,14 +20,24 @@ concurrency:
 
 jobs:
   review:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Not on Dependabot's pull requests. A run Dependabot triggers gets Dependabot's
+    # secrets, not the repository's (the log says `Secret source: Dependabot`), so the
+    # action cannot authenticate and the check goes red on every weekly bump (#72).
+    # `github.actor` is the bot only when the bot's own push triggered the run.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # Pinned to a commit like every other action in this repository (zizmor
+      # unpinned-uses); Dependabot bumps it. No git credentials are left in the clone:
+      # the action authenticates on its own, and this job cannot push anyway.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
-      - uses: anthropics/claude-code-action@v1
+      - uses: anthropics/claude-code-action@ef8bb1e43bf303cff727a1dd0b8837029fe982a2  # v1.0.215
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Surfaces the real API error instead of a bare is_error:true (the action

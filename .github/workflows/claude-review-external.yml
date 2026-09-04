@@ -36,13 +36,16 @@ name: Claude review (external, gated)
 #     Without it a contributor gets one clean review and can then push anything: the
 #     review stays on the PR looking current while describing an older head.
 on:
-  pull_request_target:
+  # The trust model for this trigger is the comment above: the fork's tree never
+  # reaches the runner, and `authorise` checks that whoever applied the label has
+  # write access before anything with secrets runs. Hence the zizmor ignore.
+  pull_request_target:   # zizmor: ignore[dangerous-triggers]
     types: [labeled, synchronize]
 
-permissions:
-  contents: read
-  pull-requests: write
-  id-token: write   # the action mints an OIDC token even with token auth
+# Nothing at workflow level: each job asks for exactly what it uses (zizmor
+# excessive-permissions). `authorise` always did; `review` now carries what the
+# workflow used to grant to both jobs.
+permissions: {}
 
 # One review at a time per pull request. `cancel-in-progress` is evaluated BEFORE any job
 # condition, so a run that will be skipped still enters the group and can cancel a live
@@ -65,7 +68,10 @@ jobs:
   # Cheap gate, separate job: nothing with secrets runs until this passes.
   authorise:
     # Run when the label is applied, or on any push to a PR that already carries it.
+    # ... and never for a push by Dependabot to a labelled pull request: a run it
+    # triggers carries no repository secrets (#72), so the review could not authenticate.
     if: >-
+      github.actor != 'dependabot[bot]' &&
       contains(github.event.pull_request.labels.*.name, 'claude-review') &&
       (github.event.action == 'synchronize' || github.event.label.name == 'claude-review')
     runs-on: ubuntu-latest
@@ -132,13 +138,19 @@ jobs:
   review:
     needs: authorise
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write   # the action mints an OIDC token even with token auth
     steps:
       # Trusted: the base repo, at the workspace root (the action expects a git repo here).
+      # No credentials left in the clone: the action receives `github_token` explicitly below.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
-      - uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b  # v1
+      - uses: anthropics/claude-code-action@ef8bb1e43bf303cff727a1dd0b8837029fe982a2  # v1.0.215
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Pass the GitHub token explicitly instead of letting the action mint one.
@@ -148,9 +160,9 @@ jobs:
           # every run — and returned `401 Unauthorized - Invalid OIDC token` on all three
           # attempts here, the first time this workflow ever reached the action at all
           # (before that it died at the checkout guard, then at the concurrency bug
-          # above). The action version is not the difference: the 26 commits between this
-          # pin and the tag the internal workflow resolves touch `workflow_run` support,
-          # not the token exchange.
+          # above). The action version was not the difference: when this was measured the
+          # two workflows' pins were 26 commits apart, all in `workflow_run` support, not
+          # the token exchange. Both pin the same commit now.
           #
           # `github_token` is documented as "optional if using GitHub App", and upstream
           # recommends passing it for the analogous privileged context (`workflow_run`
