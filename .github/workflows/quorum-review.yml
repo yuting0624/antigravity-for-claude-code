@@ -64,12 +64,17 @@ on:
 # and a run that turns out to be skippable costs a few seconds of a queue slot.
 #
 # One rule, nothing to keep in sync, and it subsumes both #42 and #53.
+#
+# One exception, added with the Dependabot skip on the job: a push BY Dependabot is
+# a run the job will skip, and a skipped run must not cancel anything — a human's
+# `@quorum /review` on a Dependabot pull request would otherwise be cancelled by the
+# bot's next rebase and never replaced. Same single term as the job's `if:`.
 concurrency:
   group: >-
     quorum-review-${{ github.event.pull_request.number
       || github.event.issue.number
       || github.event.inputs.pr }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
 
 permissions:
   contents: read
@@ -80,7 +85,12 @@ permissions:
 
 jobs:
   review:
+    # Not on a run Dependabot triggered: it carries Dependabot's secrets, not the
+    # repository's (`Secret source: Dependabot` in the log), so the App private key is
+    # empty and the job dies at "Mint an App installation token" (#72). A human's
+    # `@quorum /review` on a Dependabot pull request still runs: the actor is the human.
     if: >-
+      github.actor != 'dependabot[bot]' &&
       github.event.pull_request.head.repo.fork != true &&
       (github.event_name == 'pull_request' ||
        github.event_name == 'workflow_dispatch' ||
@@ -187,6 +197,12 @@ jobs:
         with:
           app-id: ${{ vars.QUORUM_APP_ID }}
           private-key: ${{ secrets.QUORUM_APP_PRIVATE_KEY }}
+          # Requested explicitly, so the token is capped at what the review uses even
+          # if the installation is ever granted more (zizmor github-app). These are the
+          # three the App holds today; asking for one it lacks would fail the mint.
+          permission-metadata: read
+          permission-contents: read
+          permission-pull-requests: write
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093  # v3.0.0
