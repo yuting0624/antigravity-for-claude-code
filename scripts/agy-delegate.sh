@@ -547,7 +547,10 @@ fi
 # stderr line only; the reply is never scanned.
 if [ "$RC" -eq 0 ] && grep -qE 'print timeout after .*returning partial output' "$ERR" 2>/dev/null; then
   if [[ "$OUT" = *[!$' \t\n\r']* ]]; then printf '%s\n' "$OUT"; fi
-  echo "agy-delegate: agy's --print-timeout ($TIMEOUT) expired mid-turn — the output above is PARTIAL (agy 1.1.28+ returns it with rc 0, and reports no usage for the turn, so the AGY_USAGE line above undercounts). Raise --timeout or narrow the task; --continue resumes the same conversation." >&2
+  # The AGY_USAGE line exists only in JSON mode; do not point plain-text callers at a line
+  # that was never printed (review caught the unconditional wording).
+  usage_note=""; [ "$JSON_MODE" -eq 1 ] && usage_note=", so the AGY_USAGE line above undercounts"
+  echo "agy-delegate: agy's --print-timeout ($TIMEOUT) expired mid-turn — the output above is PARTIAL (agy 1.1.28+ returns it with rc 0 and reports no usage for the turn${usage_note}). Raise --timeout or narrow the task; --continue resumes the same conversation." >&2
   signal TIMEOUT "agy print-timeout ($TIMEOUT) expired mid-turn — partial output printed to stdout"
   exit 12
 fi

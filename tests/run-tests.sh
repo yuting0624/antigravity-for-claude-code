@@ -552,6 +552,10 @@ check "print-timeout expiry still prints the partial reply on stdout" 12 "$pt_rc
 check "print-timeout expiry says the output is partial" 12 "$pt_rc" "PARTIAL" "$(cat "$TMP/pt.err")"
 pt_out=$(STUB_MODE=partial_timeout_120 "$DELEGATE" --timeout 5s "write an essay" 2>"$TMP/pt.err"); pt_rc=$?
 check "agy 1.2.0 print-timeout expiry (plain) -> exit 12 with the partial reply" 12 "$pt_rc" "Cogwheels" "$pt_out"
+# Plain-text mode prints no AGY_USAGE line, so the note must not point at one.
+if has 'AGY_USAGE' "$(cat "$TMP/pt.err")"; then
+  echo "FAIL: plain-mode timeout note refers to an AGY_USAGE line that was never printed"; FAIL=$((FAIL+1));
+else echo "ok: plain-mode timeout note does not mention a nonexistent AGY_USAGE line"; PASS=$((PASS+1)); fi
 # Negative control: the same wording inside the reply with clean stderr is a success.
 nt_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_timeout "$DELEGATE" "review it" 2>/dev/null); nt_rc=$?
 check "timeout wording inside the reply alone never classifies" 0 "$nt_rc" "JSONBODY" "$nt_out"
