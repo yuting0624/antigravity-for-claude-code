@@ -11,12 +11,12 @@ Task: $ARGUMENTS
 Do this:
 1. Pick a tier (`flash` default; `pro` for hard reasoning). If the task needs the repo,
    add `--dir <repo-root>` so agy reads the real files (don't paste them into context).
-   **If the task WRITES files or uses tools** (web / Vertex AI Search / terminal), it needs
+   **If the task WRITES files or uses tools** (web search / URL reads / Vertex AI Search / terminal), it needs
    a grant. For a plain file write the narrower one is a `write_file(<dir>)` entry under
    `permissions.allow` in `~/.gemini/antigravity-cli/settings.json` (recursive beneath
    `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
    there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
-   is what web / Vertex AI Search / terminal need. Without a grant,
+   is what web search / URL reads (agy 1.1.28+) / Vertex AI Search / terminal need. Without a grant,
    headless agy leaves your workspace untouched, and since 1.1.3 the run says so on stderr (it
    describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
    accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
@@ -29,7 +29,8 @@ Do this:
    returns exit `15`, that's exactly this: agy denied the write. Both shapes land here —
    the soft deny on agy 1.1.3+ (back again from 1.1.20, measured on 1.1.25) and the hard
    error on 1.1.13–1.1.19 — and both take the same
-   fix: a `permissions.allow` rule covering the target, or `--yolo`.)
+   fix: a `permissions.allow` rule covering the target, or `--yolo`. Since agy 1.1.27 the
+   wrapper names the refused tool from the envelope's `denied_actions`.)
 2. Run **synchronously** (you may be headless — do not background-and-wait):
    `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
    For read/analysis tasks, add `--digest` — it appends a digest-only output contract so

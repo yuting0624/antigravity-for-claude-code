@@ -114,6 +114,11 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   write_file(<target>)). Alternatively, re-run with --dangerously-skip-permissions to
   auto-approve all tools.` The wrapper's soft-deny route catches it — **exit 15** in both
   structured and plain-text mode
+- **1.1.27 onward: the envelope names the tool.** `denied_actions: [{"action":"write_file",
+  "display_name":"WriteToFile"}]` alongside the same rc 0 / empty response / notice
+  (measured on 1.2.0). The wrapper reads that first and says `denied: write_file` in its
+  message and in `AGY_SIGNAL`. 1.1.28 also made URL reads ask first, so a fetch without a
+  grant is denied the same way (`read_url`; the narrow rule is `read_url(<target>)`)
 
 **Fix:**
 - **For a file write, add an allow-rule — the narrower fix.** In
@@ -132,8 +137,8 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   consequence that actually applies to yours.
 - **Or pass `--yolo`** — the wrapper's flag, sent to agy as `--dangerously-skip-permissions`
   (agy 1.1.25 rejects a literal `--yolo`) — works across all agy versions,
-  but auto-approves **all** tools, not just the write. Required anyway for web / Vertex AI
-  Search / terminal when no rule covers them. (`--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing.)
+  but auto-approves **all** tools, not just the write. Required anyway for web search / URL reads
+  (since agy 1.1.28; or a `read_url(<target>)` rule) / Vertex AI Search / terminal when no rule covers them. (`--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing.)
 - Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
   approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
 - Run write tasks on a **dedicated branch**. `--sandbox` is *not* containment: Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux.
@@ -160,10 +165,10 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 3 | agy returned empty output | retry; check model availability (`agy models`). Before agy 1.1.18 a dropped agent stream also landed here as a false clean success; from 1.1.18 it exits non-zero (exit 2 here) — per agy's changelog, not reproduced |
 | 10 | quota / rate limit | wait, then resume the same conversation with `--continue` |
 | 11 | not authenticated | run `agy` once interactively to sign in |
-| 12 | timeout (agy's own, or the wall-clock guard) | raise `--timeout`, narrow the task; on Windows see the hang section above |
+| 12 | timeout (agy's own, the wall-clock guard, or — agy 1.1.28+ — a `--print-timeout` that expired mid-turn: agy returns the **partial** reply with rc 0 and the wrapper prints it, then exits 12) | raise `--timeout`, narrow the task, or `--continue` the same conversation; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
 | 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
-| 15 | permission denied | a tool needed permission headless — **both** shapes: the soft deny (rc 0, empty stdout, `auto-denied` on stderr — agy 1.1.3+, and again from 1.1.20, measured on 1.1.25) and 1.1.13's hard error (rc 1, `user denied permission`). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
+| 15 | permission denied | a tool needed permission headless — **both** shapes: the soft deny (rc 0, empty stdout, `auto-denied` on stderr — agy 1.1.3+, and again from 1.1.20, measured on 1.1.25) and 1.1.13's hard error (rc 1, `user denied permission`); since 1.1.27 the tool is also named in the envelope's `denied_actions` (measured on 1.2.0). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
 | 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 | 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
 | 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir, or agy has never been run |

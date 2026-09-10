@@ -136,6 +136,18 @@ case "${STUB_MODE:-text}" in
   # is a successful run. The classifier reads agy's stderr and the envelope's error field
   # and never the reply — a code review that quotes "user denied permission" is not exit 15.
   json_reply_mentions_denial) printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY: the old build said user denied permission for write_file and auto-denied it\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'; exit 0 ;;
+  # agy 1.1.27+ names the refused tools in the envelope. Measured on 1.2.0: the same rc 0 /
+  # SUCCESS / empty response / notice as 1.1.25, plus denied_actions. Verbatim from a real run.
+  json_denied_actions_120) echo 'jetski: no output produced — a tool required the "write_file" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g. write_file(<target>)). Alternatively, re-run with --dangerously-skip-permissions to auto-approve all tools.' >&2; printf '{"conversation_id":"b13cec1d-55f6-482f-903b-e6b18a76afed","status":"SUCCESS","response":"","duration_seconds":2.88004,"num_turns":1,"usage":{"input_tokens":22670,"output_tokens":73,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":22743},"denied_actions":[{"action":"write_file","display_name":"WriteToFile"}]}'; exit 0 ;;
+  # 1.1.28 made URL reads ask first; headless that is a denial too. Verbatim from 1.2.0.
+  json_denied_readurl_120) echo 'jetski: no output produced — a tool required the "read_url" permission that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g. read_url(<target>)). Alternatively, re-run with --dangerously-skip-permissions to auto-approve all tools.' >&2; printf '{"conversation_id":"2913e1f7-ea83-43be-8f0b-86834c541b00","status":"SUCCESS","response":"","duration_seconds":2.78866,"num_turns":1,"usage":{"input_tokens":22681,"output_tokens":41,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":22722},"denied_actions":[{"action":"read_url","display_name":"ReadUrlContent"}]}'; exit 0 ;;
+  # agy 1.1.28: a --print-timeout that expires mid-turn returns the PARTIAL reply with rc 0,
+  # one stderr line, and an envelope with every usage counter at zero. Verbatim from 1.2.0
+  # (the reply shortened).
+  json_partial_timeout_120) echo '[agy] print timeout after 5s with turn in progress; returning partial output' >&2; printf '{"conversation_id":"5f164e4e-1d46-457b-8eac-40a36004bd1c","status":"SUCCESS","response":"# The Cosmos in Bronze: The History of the Antikythera Mechanism\n\n## 1. Introduction\n\nIn the spring of 1900, a violent storm compelled a crew of Greek sponge divers","duration_seconds":0,"num_turns":1,"usage":{"input_tokens":0,"output_tokens":0,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":0}}'; exit 0 ;;
+  partial_timeout_120) echo '[agy] print timeout after 5s with turn in progress; returning partial output' >&2; printf '# The Cogwheels of Antiquity\n\nIn the spring of 1900, a crew of Greek sponge divers'; exit 0 ;;
+  # Negative control: the timeout WORDING inside the reply, with clean stderr, is a success.
+  json_reply_mentions_timeout) printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY: agy logs print timeout after 5s with turn in progress; returning partial output when it gives up\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'; exit 0 ;;
   # Same denial without the JSON envelope, for older agy / the plain-text fallback path.
   harddeny) echo 'permission check failed for write_file "/tmp/x/probe.txt": user denied permission for write_file(/tmp/x/probe.txt)' >&2; exit 1 ;;
   json_err) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model X is not recognized as a known model","usage":{}}'; exit 1 ;;
@@ -522,6 +534,27 @@ check "agy 1.1.25 soft deny (plain-text mode) -> exit 15" 15 "$sd25_rc" "PERMISS
 # same anchor words inside the model's text, with clean diagnostics, are a success.
 nc_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_denial "$DELEGATE" "review it" 2>/dev/null); nc_rc=$?
 check "denial wording inside the reply alone never classifies (model text is not scanned)" 0 "$nc_rc" "JSONBODY" "$nc_out"
+# agy 1.1.27+: the envelope names the refused tool and the wrapper reads that first. The
+# soft route would still land this fixture on 15, so what separates the two paths is the
+# tool NAME in the signal — remove the denied_actions block and it disappears.
+da_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_denied_actions_120 "$DELEGATE" "write a file" 2>&1 >/dev/null); da_rc=$?
+check "agy 1.2.0 denied_actions (write_file) -> exit 15" 15 "$da_rc" "PERMISSION_DENIED" "$da_err"
+check "agy 1.2.0 denied_actions names the tool in the signal" 15 "$da_rc" "denied: write_file" "$da_err"
+check "agy 1.2.0 denied_actions still reports AGY_USAGE" 15 "$da_rc" "AGY_USAGE" "$da_err"
+da_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_denied_readurl_120 "$DELEGATE" "fetch a page" 2>&1 >/dev/null); da_rc=$?
+check "agy 1.2.0 denied read_url (1.1.28 asks first) -> exit 15" 15 "$da_rc" "denied: read_url" "$da_err"
+check "the denial message names the read_url(<target>) rule" 15 "$da_rc" "read_url(<target>)" "$da_err"
+# agy 1.1.28: an expired --print-timeout is rc 0 + the partial reply + one stderr line. The
+# wrapper must not pass that off as a finished reply: exit 12, with the partial text printed.
+pt_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_120 "$DELEGATE" --timeout 5s "write an essay" 2>"$TMP/pt.err"); pt_rc=$?
+check "agy 1.2.0 print-timeout expiry (json) -> exit 12" 12 "$pt_rc" "TIMEOUT" "$(cat "$TMP/pt.err")"
+check "print-timeout expiry still prints the partial reply on stdout" 12 "$pt_rc" "Cosmos in Bronze" "$pt_out"
+check "print-timeout expiry says the output is partial" 12 "$pt_rc" "PARTIAL" "$(cat "$TMP/pt.err")"
+pt_out=$(STUB_MODE=partial_timeout_120 "$DELEGATE" --timeout 5s "write an essay" 2>"$TMP/pt.err"); pt_rc=$?
+check "agy 1.2.0 print-timeout expiry (plain) -> exit 12 with the partial reply" 12 "$pt_rc" "Cogwheels" "$pt_out"
+# Negative control: the same wording inside the reply with clean stderr is a success.
+nt_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_timeout "$DELEGATE" "review it" 2>/dev/null); nt_rc=$?
+check "timeout wording inside the reply alone never classifies" 0 "$nt_rc" "JSONBODY" "$nt_out"
 
 check "exit-15 message offers the narrower grant first" 15 "$rc" "permissions.allow" "$out"
 # The message must not hand the pre-1.1.11 match-everything history to the placeholder it
@@ -1161,6 +1194,9 @@ for f in $E15_SURFACES; do
   # 1.1.20 reverted the hard error (measured on 1.1.25). A file that stops at 1.1.13 now
   # presents a shape two releases gone as the current one. Same file-level rule.
   grep -qE '1\.1\.20' "$ROOT/$f" || e15_bad="$e15_bad $f(no 1.1.20)"
+  # 1.1.27 gave the denial a structured form (denied_actions, measured on 1.2.0). A file
+  # that describes exit 15 without it presents the fallback route as the only one.
+  grep -qE 'denied_actions' "$ROOT/$f" || e15_bad="$e15_bad $f(no denied_actions)"
 done
 # Same shape for the other claim this release retracted: anything that mentions
 # accept-edits must say it is not a grant, or it is still selling it as one.

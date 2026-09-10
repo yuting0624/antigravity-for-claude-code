@@ -90,14 +90,14 @@ not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert unde
   `write_file(<dir>)` rule covering the target in `~/.gemini/antigravity-cli/settings.json`
   — that grants the write recursively beneath `<dir>` with no flag, and is narrower than
   `--yolo`, which approves every tool. If they say a rule is in place and the write is
-  still denied (soft on older agy, a hard error by 1.1.13, soft again from 1.1.20 — the wrapper reports exit 15
+  still denied (soft on older agy, a hard error by 1.1.13, soft again from 1.1.20 and named in `denied_actions` since 1.1.27 — the wrapper reports exit 15
   for both), have them run `agy-doctor` before anything else: an entry agy cannot
   parse grants nothing. (The "granted everything before 1.1.11" history belongs to a
   `command(...)` rule naming no command, not to a mistyped `write_file()`.) You cannot see that file, so `--yolo` stays the
   default; if a run comes back exit `15`, the allow-rule is the smaller fix. Either way tell
   the caller to run on a dedicated branch/worktree and review the diff before merging.
 - **Read-only** (analysis, first-pass review, search): no `--yolo` needed unless
-  the task uses tools (web / Vertex AI Search need `--yolo`). Ask agy to return
+  the task uses tools (web search, URL reads — agy 1.1.28 made those ask first — and Vertex AI Search need `--yolo`). Ask agy to return
   findings + `file:line` only.
 
 ## What to return to the caller

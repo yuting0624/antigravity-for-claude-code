@@ -40,11 +40,16 @@
 #   -h, --help                       Show this help
 #
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
+#             |    (agy's own, the wall-clock guard, or — agy 1.1.28+ — a --print-timeout that
+#             |    expired mid-turn: agy then returns the PARTIAL reply with rc 0 and one stderr
+#             |    line; the wrapper prints that partial reply and still exits 12)
 #             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
 #             | 15 permission denied — a tool needed permission headless. BOTH shapes:
 #             |    the soft deny (rc 0, empty stdout, "auto-denied" on stderr — agy 1.1.3+, and
-#             |    again from 1.1.20; measured on 1.1.25) and 1.1.13's hard error (rc 1, "user
-#             |    denied permission", 1.1.13-1.1.19). Add a permissions.allow rule, or --yolo
+#             |    again from 1.1.20; since 1.1.27 the envelope also names the tool in
+#             |    denied_actions, measured on 1.2.0) and 1.1.13's hard error (rc 1, "user
+#             |    denied permission", 1.1.13-1.1.19). Add a permissions.allow rule, or --yolo.
+#             |    URL reads need a grant too since 1.1.28 (read_url(<target>), or the flag).
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -75,6 +80,7 @@ PROMPT=""
 CONTINUE=0
 CONV_ID=""
 PRINT_CMD=0
+DENIED_ACTIONS=""   # tool names from the envelope's denied_actions (agy 1.1.27+), for the message
 
 die() { echo "agy-delegate: $*" >&2; exit 1; }
 # $1 = remaining argc ($#). Fail with a friendly message if an option has no value
@@ -137,7 +143,13 @@ signal() {
 # the write changes nothing: agy drops the reply and prints the notice. So the rc 0 +
 # empty route below is the CURRENT one, and the rc != 0 route covers 1.1.13-1.1.19.
 #
-# One function, called from both branches, so the two shapes cannot drift apart again.
+# 1.1.27 then gave the denial a structured form: the envelope carries
+# `denied_actions` naming the refused tools. Measured on 1.2.0 the rest is unchanged
+# (rc 0, SUCCESS, empty response, the notice), so the JSON path now reads that field
+# FIRST and names the tool here; the anchors stay for plain-text mode and older agy.
+# 1.1.28 also made URL reads ask first, so a fetch without a grant lands here too.
+#
+# One function, called from every branch, so the shapes cannot drift apart again.
 permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   # The rc != 0 path dumps $ERR before it classifies, so echoing it again here printed
   # agy's diagnostic twice on the plain-stderr shape. Both reviewers caught it.
@@ -152,8 +164,8 @@ permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   if [ "${1:-}" != shown ] && [ -s "$ERR" ]; then
     cat "$ERR" >&2
   fi
-  echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt) — no work was done. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. Other tools (web / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
-  signal PERMISSION_DENIED "agy denied a permissioned tool in headless — add a permissions.allow rule or pass --yolo"
+  echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt)${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — the denied action was not performed. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. For a URL READ the rule is read_url(<target>) — agy 1.1.28 made fetching URLs ask first, so headless it is denied without one. Other tools (web search / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
+  signal PERMISSION_DENIED "agy denied a permissioned tool in headless${DENIED_ACTIONS:+ (denied: $DENIED_ACTIONS)} — add a permissions.allow rule or pass --yolo"
   exit 15
 }
 
@@ -432,7 +444,7 @@ set -e
 # Replaces OUT with the model's text so the stdout contract is unchanged, exposes
 # the structured error for classification, and reports token usage on stderr.
 # Any parse failure falls back to treating OUT as plain text (never fatal).
-JSON_STATUS=""; JSON_ERROR=""
+JSON_STATUS=""; JSON_ERROR=""; JSON_DENIED=""
 # Glob, not ${OUT//[...]/}: stripping the whole string to test emptiness is minutes-to-
 # hours at tens of KB on macOS /bin/bash 3.2 (n^~2.6); the glob stops at the first hit.
 if [ "$JSON_MODE" -eq 1 ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
@@ -447,7 +459,10 @@ if [ "$JSON_MODE" -eq 1 ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
   # "agy failed" (exit 2) instead of MODEL_UNAVAILABLE (14). Let python, which already
   # has the parsed object, write the raw value out.
   JERR="$(mktemp "${TMPDIR:-/tmp}/agy-err.XXXXXX")"
-  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" python3 - <<'PY' 2>/dev/null || true
+  # agy 1.1.27+: `denied_actions` is a list of {action, display_name}; the tool names
+  # come out as one space-separated line, same file discipline as the error text.
+  JDEN="$(mktemp "${TMPDIR:-/tmp}/agy-den.XXXXXX")"
+  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" AGY_DEN_FILE="$JDEN" python3 - <<'PY' 2>/dev/null || true
 import json, os, sys
 raw = os.environ.get("AGY_JSON", "")
 try:
@@ -460,6 +475,13 @@ with open(os.environ["AGY_RESP_FILE"], "w", encoding="utf-8") as fh:
     fh.write(str(d.get("response", "") or ""))
 with open(os.environ["AGY_ERR_FILE"], "w", encoding="utf-8") as fh:
     fh.write(" ".join(str(d.get("error", "") or "").split()))
+den = d.get("denied_actions") or []
+names = []
+for a in den if isinstance(den, list) else []:
+    n = a.get("action") or a.get("display_name") if isinstance(a, dict) else a
+    if n: names.append(" ".join(str(n).split()))
+with open(os.environ["AGY_DEN_FILE"], "w", encoding="utf-8") as fh:
+    fh.write(" ".join(names))
 u = d.get("usage") or {}
 def n(k):
     v = u.get(k)
@@ -479,13 +501,14 @@ PY
     # `status` is a bare enum with no quotes inside it, so sed is safe there.
     JSON_STATUS="$(printf '%s' "$meta" | sed -n 's/.*"status": *"\([^"]*\)".*/\1/p')"
     JSON_ERROR="$(cat "$JERR" 2>/dev/null)"
+    JSON_DENIED="$(cat "$JDEN" 2>/dev/null)"
     OUT="$(cat "$RESP" 2>/dev/null)"
     printf 'AGY_USAGE %s\n' "$meta" >&2
     tee_usage "AGY_USAGE $meta"
     # A structured ERROR is authoritative even if agy exited 0.
     [ "$JSON_STATUS" = "ERROR" ] && [ "$RC" -eq 0 ] && RC=1
   fi
-  rm -f "$RESP" "$JERR"
+  rm -f "$RESP" "$JERR" "$JDEN"
 fi
 
 # `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had to
@@ -496,6 +519,36 @@ if [ -n "$TO_CMD" ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; }; then
     echo "agy-delegate:   native Windows: agy needs a console (ConPTY); run delegation from WSL/macOS/Linux." >&2
   fi
   signal TIMEOUT "agy wall-clock guard fired after ${TO_SECS}s (headless/no-TTY hang?)"
+  exit 12
+fi
+
+# agy 1.1.27+: the envelope names the tools it refused to run headless. Measured on
+# 1.2.0: rc 0, SUCCESS, an EMPTY response (also when the prompt asks for text around the
+# write — agy drops the reply), the old notice on stderr, and
+#   "denied_actions":[{"action":"write_file","display_name":"WriteToFile"}]
+# — `read_url` for a URL fetch, which 1.1.28 made ask first. This is the structured
+# signal the stderr anchors further down stood in for. It is checked before anything
+# else about the reply, so it holds whatever the reply looks like; a non-empty reply
+# (never measured) would be printed first so nothing is lost, with the exit code saying
+# the task was not done as asked.
+if [ -n "$JSON_DENIED" ]; then
+  DENIED_ACTIONS="$JSON_DENIED"
+  if [[ "$OUT" = *[!$' \t\n\r']* ]]; then printf '%s\n' "$OUT"; fi
+  permission_denied
+fi
+
+# agy 1.1.28 changed what --print-timeout does mid-turn: it returns the PARTIAL reply it
+# has and exits 0, with one line on stderr — measured on 1.2.0:
+#   [agy] print timeout after 5s with turn in progress; returning partial output
+# — and the envelope says SUCCESS with every usage counter at zero. Left alone, that is a
+# truncated reply handed to the conductor as a finished one, and the spend unrecorded.
+# Keep the contract (exit 12 = timeout) but print what agy returned first: a partial
+# reply is worth having as long as the exit code says what it is. Anchored on agy's
+# stderr line only; the reply is never scanned.
+if [ "$RC" -eq 0 ] && grep -qE 'print timeout after .*returning partial output' "$ERR" 2>/dev/null; then
+  if [[ "$OUT" = *[!$' \t\n\r']* ]]; then printf '%s\n' "$OUT"; fi
+  echo "agy-delegate: agy's --print-timeout ($TIMEOUT) expired mid-turn — the output above is PARTIAL (agy 1.1.28+ returns it with rc 0, and reports no usage for the turn, so the AGY_USAGE line above undercounts). Raise --timeout or narrow the task; --continue resumes the same conversation." >&2
+  signal TIMEOUT "agy print-timeout ($TIMEOUT) expired mid-turn — partial output printed to stdout"
   exit 12
 fi
 
@@ -548,7 +601,9 @@ if [[ "$OUT" != *[!$' \t\n\r']* ]]; then   # same glob as above, not the quadrat
   # hard-errored instead (handled above); 1.1.20 came back here, and on 1.1.25 the JSON
   # envelope says SUCCESS with an empty response, so OUT is empty at this point in both
   # modes. Detect it so the caller gets an actionable signal instead of a bare "empty
-  # output". (Before agy 1.1.18 a dropped agent stream ALSO landed here as rc 0 + empty —
+  # output". Since 1.1.27 the JSON path catches the same run earlier, from the
+  # envelope's denied_actions; this block is what plain-text mode and older agy have.
+  # (Before agy 1.1.18 a dropped agent stream ALSO landed here as rc 0 + empty —
   # a false clean success; 1.1.18 makes that rc != 0, so exit 3 is now a genuine empty.)
   eblob="$(cat "$ERR" 2>/dev/null)"
   shopt -s nocasematch

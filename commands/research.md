@@ -15,7 +15,7 @@ If the topic is empty, ask the user what to research (AskUserQuestion) before st
 
 Do this:
 1. **Plan (you).** Break the topic into 3–6 sub-questions and list the load-bearing claims that must be verified. You own scope and final synthesis.
-2. **Fan-out fetch (agy, cheap, one call per sub-question).** Web search needs `--yolo` in headless mode; force compact output so bulky pages stay on Gemini's side, not yours:
+2. **Fan-out fetch (agy, cheap, one call per sub-question).** Web search — and, since agy 1.1.28, any URL read — needs `--yolo` (or a `read_url(<target>)` allow-rule) in headless mode; force compact output so bulky pages stay on Gemini's side, not yours:
    `agy-delegate --tier flash --yolo "Web-search <sub-question>. Return 5–8 bullet findings, each with the exact source URL and publication date. Output ONLY findings + URLs + dates."`
 3. **Deepen on each load-bearing claim (agy).** Name the URL and have agy quote the supporting sentence(s), turning domain-level citations into verifiable quotes:
    `agy-delegate --tier pro --yolo "Open <URL> and quote the exact sentence(s) supporting: '<claim>'. If the page does not support it, reply NOT SUPPORTED."`

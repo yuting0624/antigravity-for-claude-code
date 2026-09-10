@@ -114,8 +114,10 @@ After each lever: rerun the task → rerun the gate → keep only if quality hel
     claim cannot carry.
   - **`--yolo`** — the wrapper's flag, sent to agy as `--dangerously-skip-permissions` (agy
     1.1.25 rejects a literal `--yolo`) — auto-approves **all** tools, not just
-    writes. Needed when no rule covers the target, and for web / Vertex AI Search / terminal
-    tools.
+    writes. Needed when no rule covers the target, and for web search / URL reads (agy 1.1.28
+    made fetching URLs ask first; the narrow rule is `read_url(<target>)`) / Vertex AI Search /
+    terminal tools. Since agy 1.1.27 the wrapper names the refused tool from the envelope's
+    `denied_actions` (measured on 1.2.0).
   
   Confirmed on **agy 1.1.9** by a controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)):
   a covered target wrote with no flag; an uncovered one came back `PERMISSION_DENIED` with
