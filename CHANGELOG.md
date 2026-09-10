@@ -38,10 +38,11 @@ finished one.
 - Tests: fixtures verbatim from 1.2.0 for the write and `read_url` denials and for the
   partial-timeout reply (JSON and plain), a negative control for the timeout wording, and
   the exit-15 file-level guard now requires `denied_actions` beside 1.1.13 and 1.1.20.
-  316 -> 326. Each new assertion killed by a mutation: disabling the `denied_actions`
+  316 -> 327. Each new assertion killed by a mutation: disabling the `denied_actions`
   block (the soft route still exits 15, but the tool name in the signal disappears),
   disabling the partial-timeout block, letting the timeout check read the reply, and
-  rewriting `denied_actions` in README.
+  rewriting `denied_actions` in README, and making the partial-timeout note mention
+  `AGY_USAGE` unconditionally again (plain-text mode prints no such line).
 
 ## 0.26.0
 
