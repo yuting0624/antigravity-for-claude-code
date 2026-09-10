@@ -233,7 +233,8 @@ commands** (`--yolo` grants write + terminal):
   with no flag at all — confirmed on agy 1.1.9 by a controlled A/B (#37): covered target
   wrote, uncovered target returned `PERMISSION_DENIED`, rule the only variable. agy's own
   denial text names the rule and offers `--yolo` as the *alternative*. `--yolo` auto-approves
-  **all** tools and is what you need when no rule covers the target, or for web / Vertex AI
+  **all** tools and is what you need when no rule covers the target, or for web search / URL
+  reads (agy 1.1.28 made those ask first; the narrow rule is `read_url(<target>)`) / Vertex AI
   Search / terminal. Not verified below 1.1.9; a glob form (`write_file(/path/**)`) was
   reported not to match. `<dir>` is a placeholder: left as written the rule grants nothing
   on any version — exit 15 with the rule visibly present in the file. Separately, and only
