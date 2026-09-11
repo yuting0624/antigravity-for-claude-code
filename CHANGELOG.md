@@ -3,6 +3,21 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.27.1
+
+- **`agy-migrate` runs on Windows**
+  ([#75](https://github.com/yuting0624/antigravity-for-claude-code/issues/75)): the drive
+  `:` collapses like any other separator, so projects resolve instead of every one of them
+  looking orphaned; the staged native import sets `USERPROFILE` / `HOMEDRIVE` / `HOMEPATH`
+  beside `HOME`, which is what a Go binary actually reads; and the report reconfigures its
+  streams to UTF-8, falling back to ASCII glyphs rather than dying on a console that cannot
+  encode them. Migrate suite 41 -> 44 checks.
+- CONTRIBUTING told contributors to file changelog lines under an "Unreleased" heading the
+  file has never had, which is how the line above first landed inside the already-released
+  0.27.0. It now says what actually happens: a fix takes the next `## x.y.z` heading and the
+  maintainer bumps the two version fields to match; a behaviour change bumps them in its own
+  PR. The suite already pins `plugin.json` and `SKILL.md` to the same version.
+
 ## 0.27.0
 
 Catch-up to agy **1.2.0** — 1.1.26 through 1.2.0 landed in the week after 0.26.0. Two of
@@ -43,13 +58,6 @@ finished one.
   disabling the partial-timeout block, letting the timeout check read the reply, and
   rewriting `denied_actions` in README, and making the partial-timeout note mention
   `AGY_USAGE` unconditionally again (plain-text mode prints no such line).
-- **`agy-migrate` runs on Windows**
-  ([#75](https://github.com/yuting0624/antigravity-for-claude-code/issues/75)): the drive
-  `:` collapses like any other separator, so projects resolve instead of every one of them
-  looking orphaned; the staged native import sets `USERPROFILE` / `HOMEDRIVE` / `HOMEPATH`
-  beside `HOME`, which is what a Go binary actually reads; and the report reconfigures its
-  streams to UTF-8, falling back to ASCII glyphs rather than dying on a console that cannot
-  encode them. Migrate suite 41 -> 44 checks.
 
 ## 0.26.0
 

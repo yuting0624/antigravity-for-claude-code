@@ -44,7 +44,10 @@ shellcheck scripts/*.sh tests/*.sh   # CI gates on --severity=error
 - If you touch a manifest, `python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"` (and `marketplace.json`, `prices.json`) still parse.
 - **Keep the skill honest.** [`skills/antigravity/SKILL.md`](skills/antigravity/SKILL.md) is the plugin's brain — if behavior changes, update it. Don't claim a capability the code doesn't have.
 - **Cost numbers are estimates.** If you quote figures, say so and point at `prices.json`.
-- Add a line to [`CHANGELOG.md`](CHANGELOG.md) under "Unreleased".
+- Add a line to [`CHANGELOG.md`](CHANGELOG.md). There is no "Unreleased" section: a fix goes
+  under a new `## x.y.z` heading for the next patch (the maintainer bumps
+  `.claude-plugin/plugin.json` and `skills/antigravity/SKILL.md` to match — the suite pins the
+  two together); a behaviour change bumps the version in its own PR.
 
 ## Conventions
 
