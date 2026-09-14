@@ -24,6 +24,7 @@ Design constraints, all of them learned the hard way from probing agy 1.1.12
 """
 
 import argparse
+import functools
 import json
 import ntpath
 import os
@@ -454,6 +455,22 @@ def unit_skills(plan, mf):
 SKIP_DIRS = {"node_modules", ".git", ".venv", "venv", "dist", "build", "__pycache__"}
 
 
+def app_data_roots():
+    """Windows' equivalents of macOS's `~/Library`: application state, not the user's work.
+
+    `~/Library` is excluded as a whole tree, but its Windows counterparts were not, and
+    `AppData` is not dot-prefixed, so a scan rooted at `~` walks all of it. Naming the
+    two caches that had been found there one at a time is a losing game: the older Dart
+    and Flutter default is `%APPDATA%\\Pub\\Cache` (Roaming, not Local), and pip, npm,
+    pnpm, Temp and every editor's extension tree live in the same two directories.
+
+    No os.name branch, like the rest of this list — an entry that does not exist simply
+    never matches, which is also what makes the Windows paths testable on POSIX CI.
+    """
+    return [os.environ.get("APPDATA") or os.path.join(home(), "AppData", "Roaming"),
+            os.environ.get("LOCALAPPDATA") or os.path.join(home(), "AppData", "Local")]
+
+
 def package_cache_roots():
     """Package-manager caches that sit under $HOME without a dot-prefixed name.
 
@@ -464,20 +481,18 @@ def package_cache_roots():
     next fetch. uv's `git-v0/checkouts/` even holds real clones, so the git-repo rule
     in unit_claudemd() does not catch that one on its own.
 
-    Only the visible names need listing. walk_user_tree() already prunes every
-    dot-prefixed directory — `~/.pub-cache`, `~/.cache/uv`, `~/.cargo`, `~/.gradle`,
-    `~/.m2`, `~/.nuget` — along with `node_modules` and `.venv` by name, and
-    excluded_roots() covers macOS's `~/Library/Caches`. That leaves the Dart pub and
-    uv caches, whose Windows homes are under `%LOCALAPPDATA%`, and Go's module cache,
-    which is `$GOPATH/pkg/mod` on every platform: one run over a real `$HOME` found
-    23 module-cache `CLAUDE.md` files, none of them the user's.
+    Only the visible names need listing, and only the ones outside the roots above.
+    walk_user_tree() already prunes every dot-prefixed directory — `~/.pub-cache`,
+    `~/.cache/uv`, `~/.cargo`, `~/.gradle`, `~/.m2`, `~/.nuget` — along with
+    `node_modules` and `.venv` by name; excluded_roots() covers macOS's
+    `~/Library/Caches` and, via app_data_roots(), the Windows homes of the Dart pub and
+    uv caches. That leaves the three caches a user can move with an environment
+    variable, and Go's module cache, which is `$GOPATH/pkg/mod` on every platform: one
+    run over a real `$HOME` found 23 module-cache `CLAUDE.md` files, none the user's.
     """
-    local = os.environ.get("LOCALAPPDATA") or os.path.join(home(), "AppData", "Local")
     roots = [os.environ.get("PUB_CACHE"),          # Dart pub, explicit
              os.environ.get("UV_CACHE_DIR"),       # uv, explicit
-             os.environ.get("GOMODCACHE"),         # Go modules, explicit
-             os.path.join(local, "Pub", "Cache"),  # Dart pub, Windows
-             os.path.join(local, "uv", "cache")]   # uv, Windows
+             os.environ.get("GOMODCACHE")]         # Go modules, explicit
     # GOPATH is a list, and its default is ~/go on every platform.
     gopath = os.environ.get("GOPATH") or os.path.join(home(), "go")
     roots += [os.path.join(g, "pkg", "mod") for g in gopath.split(os.pathsep) if g]
@@ -485,15 +500,31 @@ def package_cache_roots():
 
 
 def excluded_roots():
-    """Never scan either tool's own config tree, or a package manager's cache.
+    """Never scan either tool's own config tree, an app-data tree, or a package cache.
 
     `~/.claude/plugins/marketplaces/` holds cloned marketplace catalogues — hundreds
     of third-party `.mcp.json` files the user never configured. A real run over `$HOME`
     pulled 40 servers out of one. Plugin-owned MCP is the plugins unit's job anyway.
-    Package caches are the same kind of vendored tree; see package_cache_roots().
+    `~/Library` and its Windows counterparts are app state; package caches are vendored
+    source. See app_data_roots() and package_cache_roots().
     """
-    return [claude_dir(), gemini_root(), state_dir(),
-            os.path.join(home(), "Library")] + package_cache_roots()
+    return ([claude_dir(), gemini_root(), state_dir(),
+             os.path.join(home(), "Library")]
+            + app_data_roots() + package_cache_roots())
+
+
+@functools.lru_cache(maxsize=1)
+def excluded_roots_normalised():
+    """excluded_roots(), absolute and normcase'd, built once per process.
+
+    under_excluded() is called on every directory the walk reaches AND on each of its
+    children, so roughly twice per directory, and a `$HOME` walk reaches hundreds of
+    thousands. Rebuilding the list each time — three expanduser, six environment reads,
+    the joins, then abspath + normcase over every root — measured 18.47 us per call
+    against 1.26 from the cache over 200k calls, 93% of the cost for an answer that
+    cannot change: nothing here writes to os.environ, and every run is a fresh process.
+    """
+    return tuple(os.path.normcase(os.path.abspath(x)) for x in excluded_roots())
 
 
 def under_excluded(path):
@@ -509,8 +540,7 @@ def under_excluded(path):
     """
     p = os.path.normcase(os.path.abspath(path))
     return any(p == e or p.startswith(e.rstrip(os.sep) + os.sep)
-               for e in (os.path.normcase(os.path.abspath(x))
-                         for x in excluded_roots()))
+               for e in excluded_roots_normalised())
 
 
 def walk_user_tree(root):

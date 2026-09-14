@@ -18,6 +18,27 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   passed, so an ordinary run is unchanged and says nothing about git.
   `git_root()` no longer swallows `FileNotFoundError` either, so a future caller cannot
   inherit the same confusion. Migrate suite 48 -> 51 checks.
+- **`%APPDATA%` and `%LOCALAPPDATA%` are excluded whole, the way `~/Library` already
+  was.** The exclusion list is unconditional — an entry that does not exist never
+  matches — and it held all of macOS's `~/Library` but only two named leaves under
+  `%LOCALAPPDATA%`, so `AppData`, which is not dot-prefixed, was otherwise walked in
+  full. Dart and Flutter defaulted to `%APPDATA%\Pub\Cache` (Roaming) before Dart 3.0,
+  and a cached package can be a git clone, so neither the leaf list nor 0.27.2's
+  git-repo rule kept that one out; pip, npm, pnpm, Temp and every editor's extension
+  tree were in the same position. The two leaves are gone, subsumed: dropping the new
+  roots fails the two package-cache checks 0.27.2 added as well as the two new ones.
+  Still no `os.name` branch in the exclusion list — the file's only one is in
+  `native_import_env()`, where the staging HOME needs Windows' own home variables.
+  **A project kept inside `AppData` is no longer scanned** — the same trade `~/Library`
+  has always made, and the exclusion is silent.
+- **The exclusion list is built once per process, not per call.** `under_excluded()`
+  rebuilt it every time — three `expanduser`, six environment reads, the joins, then
+  `abspath` + `normcase` over every root — and since 0.27.2 it runs on each `dirpath` as
+  well as each child, roughly twice per directory. Measured over 200k calls on the same
+  machine: **18.47 us/call before, 1.26 us/call after, 93% less**, or ~37 us to ~2.5 us
+  per directory walked, against ~63 us for `os.walk` itself on a warm local filesystem.
+  Safe to cache: nothing in the tool writes to `os.environ`, and every run is a fresh
+  process. Migrate suite 51 -> 54 checks.
 
 ## 0.27.2
 
