@@ -1245,6 +1245,16 @@ cpc_case 'a suffixed heading is still the same released section' 0.27.1 1 \
   '## 0.27.1 — security' '' '- windows fix' '- NEW entry filed here' '' \
   '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
   '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# Rewording a shipped section fails even in release: form, and this pins it because the
+# docs first claimed otherwise — that a release: PR was the escape. It is not: rule (b)
+# exempts the NEWEST heading only, so the same base version that lets #84 above through
+# does nothing for a line under 0.26.0. There is no shape of PR that passes; the check is
+# advisory, so a deliberate history edit is merged over the red line and said out loud.
+cpc_case 'a release: PR still cannot reword a shipped section' 0.27.0 1 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25, reworded'
 
 # And the real thing, when there is a base to compare against. On a pull_request the
 # checkout is the merge commit, so its first parent IS the base tip GitHub merged onto —

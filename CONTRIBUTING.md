@@ -61,8 +61,10 @@ shellcheck scripts/*.sh tests/*.sh   # CI gates on --severity=error
     by itself once the other PR has merged — open the next `## x.y.z` heading and bump to
     match, which is what the bullet above asks for anyway.
   - **Rewording a section that has already shipped.** That is the same edit as the mistake
-    the check exists to catch, and nothing in the diff tells them apart. Do it from a
-    `release:` PR, where the heading is the newest one and the version is ahead.
+    the check exists to catch, and nothing in the diff tells them apart, so it fails and no
+    shape of PR makes it pass — a `release:` PR does not, because only the *newest* heading
+    is exempt. This is not a required status check: if the edit is deliberate, merge over
+    the red line and say so in the PR body.
 
 ## Conventions
 

@@ -20,7 +20,10 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   #76, #80, #81, #84 and #85 pass. **#87 fails too** — it added to `## 0.27.3` after #85
   had shipped that version, which is the stacked-PR limitation now written down in
   CONTRIBUTING: rebasing onto master is not enough once the other PR has merged, the
-  entry needs the next heading. Suite 327 -> 335 checks, plus the one skipped.
+  entry needs the next heading. Rewording a section that has already shipped fails too,
+  and no shape of PR makes it pass — a `release:` PR does not, because only the newest
+  heading is exempt; since this is not a required status check, a deliberate history edit
+  is merged over the red line and declared. Suite 327 -> 336 checks, plus the one skipped.
 
 ## 0.27.3
 

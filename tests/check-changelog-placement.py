@@ -34,10 +34,15 @@ enforced:
     base then carries both the heading and the matching plugin.json, which is why #87 —
     the rebase of #86 — still fails this check. The fix is to open the next `## x.y.z`
     heading and bump to match, which is what CONTRIBUTING asks for regardless.
-  * Correcting the text of a section that has already shipped fails too. That is the
-    same edit as the mistake this exists to catch, and nothing in the diff distinguishes
-    them; a maintainer who means it can say so in a `release:` PR, where the heading is
-    the topmost one and (b) applies.
+  * Correcting the text of a section that has already shipped fails, and no shape of PR
+    makes it pass. A `release:` PR does not: rule (b) exempts only the *newest* heading,
+    so a reworded line under anything below it is still "added to history". Measured —
+    base plugin.json 0.27.0, newest heading 0.27.1, one line reworded under `## 0.26.0`
+    is rc 1 — and pinned by a fixture, because an earlier draft of this docstring claimed
+    the `release:` escape existed. It does not, and nothing in the diff distinguishes a
+    deliberate correction from the mistake this exists to catch. The escape is social
+    rather than mechanical: this is not a required status check, so a maintainer who
+    means the edit merges over the red line and says in the PR body that it is deliberate.
 """
 import difflib
 import re
@@ -157,6 +162,9 @@ def main(argv):
     print("If that heading is already on the base because you branched off another PR, "
           "rebasing is not enough once it has merged — open the next version's heading "
           "and bump .claude-plugin/plugin.json and skills/antigravity/SKILL.md to match.")
+    print("If you are deliberately correcting a section that has already shipped, nothing "
+          "makes this pass, not even a release: PR. It is not a required check: merge over "
+          "it and say in the PR body that the history edit is intended.")
     return 1
 
 
