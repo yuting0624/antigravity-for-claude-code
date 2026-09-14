@@ -3,6 +3,24 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.28.0
+
+- **`AGY_USAGE` now names the model that ran, the tier it was picked from, and agy's own
+  `duration_seconds` / `num_turns`.** The line carried status, error, five token counters
+  and the conversation id, but not *which* model produced them — so pricing a mixed-tier
+  usage log meant joining every line back to the command that produced it: by conversation
+  id when the command's output had been kept, by order when it had not. Four keys are
+  appended and none of the existing ones move. `model` is the display name the wrapper
+  passed to `--model`; `tier` is the tier that name was derived from and is **empty** for
+  an explicit `--model` or a `default_model` remap — never guessed; `duration_seconds` and
+  `num_turns` pass through agy's 1.2.x envelope untouched and read `0` on an agy that does
+  not send them. Measured on agy 1.2.x with `--tier flash-lo`: `"model": "Gemini 3.8 Flash
+  (Low)", "tier": "flash-lo", "duration_seconds": 2.644133, "num_turns": 1`. Nine checks
+  pin the default tier, `--tier pro`, an explicit `--model` (tier empty), the zero
+  fallbacks and the 1.2.x passthrough; dropping the key, the tier bookkeeping or the
+  passthrough fails them. README, SKILL.md and the PoC playbook's measurement table say
+  so. Suite 336 -> 345.
+
 ## 0.27.4
 
 - **CI refuses a CHANGELOG entry filed under a section that has already shipped.** #77

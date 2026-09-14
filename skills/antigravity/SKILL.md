@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.27.4
+version: 0.28.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -124,7 +124,9 @@ internally: **stdout still gives you the model's text unchanged**, but failures 
 classified from the structured `error` instead of scraped prose, and the executor's real
 token usage (input / output / thinking / **cache_read**) is reported as an `AGY_USAGE
 {...}` line on stderr — so the Gemini side of a delegation can finally be *measured*, not
-estimated. Older agy (or no `python3`) transparently falls back to the plain-text path;
+estimated. The line also carries `model` and `tier` (the tier the model was derived from;
+empty for an explicit `--model`) and agy's `duration_seconds` / `num_turns` (1.2.x; 0 on
+older agy), so a log prices itself per tier without a join back to the command. Older agy (or no `python3`) transparently falls back to the plain-text path;
 force it with the `structured_output` option.
 
 > **Accounting semantics for `AGY_USAGE` (verified — get this wrong and your cost math

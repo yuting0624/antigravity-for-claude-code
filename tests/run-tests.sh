@@ -326,6 +326,18 @@ else echo "ok: json envelope does not leak to stdout"; PASS=$((PASS+1)); fi
 err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
 check "json mode: token usage reported as AGY_USAGE on stderr" 0 "$rc" "AGY_USAGE" "$err"
 check "json mode: usage includes cache_read" 0 "$rc" '"cache_read": 3' "$err"
+# 0.28.0: the line names the model and the tier it came from, so a usage log can be
+# priced per tier without joining it back to the command that produced it.
+check "json mode: AGY_USAGE names the model that ran" 0 "$rc" "\"model\": \"$DEF_FLASH\"" "$err"
+check "json mode: AGY_USAGE names the default tier" 0 "$rc" '"tier": "flash"' "$err"
+check "json mode: AGY_USAGE reports 0 for duration/turns an older agy does not send" 0 "$rc" '"duration_seconds": 0, "num_turns": 0' "$err"
+err_pro=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_pro=$?
+check "json mode: --tier pro shows as the pro model in AGY_USAGE" 0 "$rc_pro" "\"model\": \"$DEF_PRO\"" "$err_pro"
+check "json mode: --tier pro shows as tier pro in AGY_USAGE" 0 "$rc_pro" '"tier": "pro"' "$err_pro"
+# An explicit --model was not derived from any tier: say so (empty), never guess one.
+err_m=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$DELEGATE" --model "Gemini 3.6 Flash (Low)" "hi" 2>&1 >/dev/null); rc_m=$?
+check "json mode: explicit --model is named in AGY_USAGE" 0 "$rc_m" '"model": "Gemini 3.6 Flash (Low)"' "$err_m"
+check "json mode: explicit --model leaves tier empty in AGY_USAGE" 0 "$rc_m" '"tier": ""' "$err_m"
 # classification now comes from the structured error (stderr is empty in json mode)
 out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_err "$DELEGATE" "hi" 2>&1); rc=$?
 check "json mode: structured error -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
@@ -528,6 +540,9 @@ check "agy 1.1.25 soft deny relays agy's own notice" 15 "$sd25_rc" "auto-denied"
 # The denied run still cost ~23k input tokens on the real binary; the usage line must
 # survive the failure path, or a measured PoC undercounts every denied attempt.
 check "agy 1.1.25 soft deny still reports AGY_USAGE" 15 "$sd25_rc" "AGY_USAGE" "$sd25_err"
+# The 1.2.x envelope carries duration_seconds/num_turns; they pass through untouched.
+check "AGY_USAGE passes agy's duration_seconds through" 15 "$sd25_rc" '"duration_seconds": 3.483514' "$sd25_err"
+check "AGY_USAGE passes agy's num_turns through" 15 "$sd25_rc" '"num_turns": 1' "$sd25_err"
 if has 'AGY_FAILED' "$sd25_err" || has 'empty output' "$sd25_err"; then
   echo "FAIL: 1.1.25 soft deny fell through to a generic failure or exit 3"; FAIL=$((FAIL+1));
 else echo "ok: 1.1.25 soft deny is classified, not generic"; PASS=$((PASS+1)); fi

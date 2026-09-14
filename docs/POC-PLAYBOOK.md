@@ -143,7 +143,7 @@ produces a **confident wrong number**.
 |---|---|
 | **every trial cold** — 1 trial = 1 job, ≥5 min between | the prompt cache TTL is 5 min. On short tasks the *cache draw* is bigger than the arm difference: our "+46%" headline became "indistinguishable" once we forced cold, because one arm had happened to draw 2 warm starts and the other 1 |
 | **identical wall-clock and budget caps on both arms** | a cap on one arm is a second variable |
-| **executor usage to a file, not stderr** | set `AGY_USAGE_LOG=/path` (plugin ≥ 0.22.0). A conductor keeping its context lean writes `2>&1 \| tail -N`, and the usage line is precisely what `tail` drops — we lost most of a run's executor data that way |
+| **executor usage to a file, not stderr** | set `AGY_USAGE_LOG=/path` (plugin ≥ 0.22.0; ≥ 0.28.0 each line also names `model` and `tier`, so a mixed-tier log prices itself). A conductor keeping its context lean writes `2>&1 \| tail -N`, and the usage line is precisely what `tail` drops — we lost most of a run's executor data that way |
 | **delegation count per trial** | a trial with **0 delegations is the baseline arm wearing a hat**. Measured: the plugin merely installed delegated 0 times in 122 turns, and 0 times in 6 trials even with break-even guidance injected every turn. Verify it happened before believing any delta |
 | **n ≥ 3 per arm, and report ranges** | we were called out — fairly — for n=1. Report per-trial ranges, not just means: ours spanned 1.7–3.1× within an arm, which swallows most differences you would want to claim |
 

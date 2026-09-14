@@ -58,6 +58,10 @@
 # AGY_USAGE / AGY_SIGNAL go to stderr. If you are MEASURING cost, also set
 # AGY_USAGE_LOG=/path/to/log: stderr is easily lost (`2>&1 | tail -N` keeps the
 # digest and drops the usage line — see tee_usage below), a named file is not.
+# Since 0.28.0 the AGY_USAGE line also names the model that ran and the tier it was
+# picked from ("tier" is empty when --model or default_model chose the model), plus
+# agy's own duration_seconds and num_turns (1.2.x envelope; 0 on older agy) — so a
+# log can be priced per tier without joining it back to the command that produced it.
 #
 # agy is multi-model: tiers map to Gemini by default, but you can point delegation at any
 # model `agy models` lists (e.g. Claude/GPT on plans that expose them). Defaults via plugin
@@ -263,9 +267,11 @@ fi
 # Resolve the executor model. Precedence:
 #   --model > explicit --tier > userConfig default_model > default tier (mapped).
 # agy is multi-model; tiers default to Gemini but are remappable (see model_for_tier).
+USAGE_TIER=""   # the tier the model was derived from; empty when --model/default_model chose it
 if [ -z "$MODEL" ]; then
   if [ "$TIER_EXPLICIT" -eq 1 ]; then
     MODEL="$(model_for_tier "$TIER")"
+    USAGE_TIER="$TIER"
   elif [ -n "${CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL:-}" ]; then
     MODEL="$CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL"
   else
@@ -275,6 +281,7 @@ if [ -z "$MODEL" ]; then
       *) echo "agy-delegate: invalid default tier '$TIER' (set CLAUDE_PLUGIN_OPTION_DEFAULT_TIER to flash|flash-lo|pro); using flash" >&2; TIER="flash" ;;
     esac
     MODEL="$(model_for_tier "$TIER")"
+    USAGE_TIER="$TIER"
   fi
 fi
 
@@ -462,7 +469,8 @@ if [ "$JSON_MODE" -eq 1 ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
   # agy 1.1.27+: `denied_actions` is a list of {action, display_name}; the tool names
   # come out as one space-separated line, same file discipline as the error text.
   JDEN="$(mktemp "${TMPDIR:-/tmp}/agy-den.XXXXXX")"
-  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" AGY_DEN_FILE="$JDEN" python3 - <<'PY' 2>/dev/null || true
+  meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" AGY_DEN_FILE="$JDEN" \
+        AGY_MODEL="$MODEL" AGY_TIER="$USAGE_TIER" python3 - <<'PY' 2>/dev/null || true
 import json, os, sys
 raw = os.environ.get("AGY_JSON", "")
 try:
@@ -486,6 +494,9 @@ u = d.get("usage") or {}
 def n(k):
     v = u.get(k)
     return v if isinstance(v, int) else 0
+def top(k):  # agy 1.2.x: duration_seconds (float) and num_turns (int); 0 when absent
+    v = d.get(k)
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
 one_line = lambda s: " ".join(str(s or "").split())
 print(json.dumps({
     "status": str(d.get("status", "")),
@@ -494,6 +505,10 @@ print(json.dumps({
               "thinking": n("thinking_tokens"), "cache_read": n("cache_read_tokens"),
               "total": n("total_tokens")},
     "conversation_id": str(d.get("conversation_id", "") or ""),
+    "model": os.environ.get("AGY_MODEL", ""),
+    "tier": os.environ.get("AGY_TIER", ""),
+    "duration_seconds": top("duration_seconds"),
+    "num_turns": top("num_turns"),
 }))
 PY
 )"
