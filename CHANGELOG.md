@@ -14,6 +14,27 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
   README asset table says what becomes of them instead of leaving them out. No behaviour
   change.
 
+- **`--include-repos` no longer proposes `AGENTS.md` symlinks inside package caches**
+  ([#78](https://github.com/yuting0624/antigravity-for-claude-code/issues/78)): `~` is
+  routinely one of the directories `~/.claude.json` records, and the scan then walks the
+  whole home directory — so a real run offered 6 symlinks and 8 conflicts inside Dart pub
+  and uv caches, vendored source a package manager owns and replaces. The flag now writes
+  only inside a git repository, which is what its name and the docs already claimed, and a
+  `CLAUDE.md` outside one is reported as a `not-a-repo` skip rather than dropped in
+  silence. Git alone would not have covered uv's `git-v0/checkouts/`, which holds real
+  clones, so the pub, uv and Go module cache roots join the excluded trees beside
+  `node_modules` and each tool's own config dir — the same run had 23 more `CLAUDE.md`
+  files in `$GOPATH/pkg/mod`. Measured over one real `$HOME`, that run goes from 31
+  proposals and 17 conflicts, 25 and 12 of them vendored, to 6 and 5, none vendored.
+  Migrate suite 44 -> 47 checks (on top of 0.27.1).
+- **A root that is itself an excluded tree is no longer scanned** — found while measuring
+  the fix above. `walk_user_tree()` pruned excluded *children*, so `~/.claude`, a recorded
+  project on any machine where Claude Code has been run from the home directory and often
+  a git repository of its own, was walked as a root: `--include-repos` offered an
+  `AGENTS.md` symlink beside `~/.claude/CLAUDE.md`, inside the tree this tool treats as
+  read-only. The exclusion is tested on each `dirpath` now, not only on the names below
+  it. One more check, 48.
+
 ## 0.27.1
 
 - **`agy-migrate` runs on Windows**
@@ -69,27 +90,6 @@ finished one.
   disabling the partial-timeout block, letting the timeout check read the reply, and
   rewriting `denied_actions` in README, and making the partial-timeout note mention
   `AGY_USAGE` unconditionally again (plain-text mode prints no such line).
-
-- **`--include-repos` no longer proposes `AGENTS.md` symlinks inside package caches**
-  ([#78](https://github.com/yuting0624/antigravity-for-claude-code/issues/78)): `~` is
-  routinely one of the directories `~/.claude.json` records, and the scan then walks the
-  whole home directory — so a real run offered 6 symlinks and 8 conflicts inside Dart pub
-  and uv caches, vendored source a package manager owns and replaces. The flag now writes
-  only inside a git repository, which is what its name and the docs already claimed, and a
-  `CLAUDE.md` outside one is reported as a `not-a-repo` skip rather than dropped in
-  silence. Git alone would not have covered uv's `git-v0/checkouts/`, which holds real
-  clones, so the pub, uv and Go module cache roots join the excluded trees beside
-  `node_modules` and each tool's own config dir — the same run had 23 more `CLAUDE.md`
-  files in `$GOPATH/pkg/mod`. Measured over one real `$HOME`, that run goes from 31
-  proposals and 17 conflicts, 25 and 12 of them vendored, to 6 and 5, none vendored.
-  Migrate suite 41 -> 44 checks.
-- **A root that is itself an excluded tree is no longer scanned** — found while measuring
-  the fix above. `walk_user_tree()` pruned excluded *children*, so `~/.claude`, a recorded
-  project on any machine where Claude Code has been run from the home directory and often
-  a git repository of its own, was walked as a root: `--include-repos` offered an
-  `AGENTS.md` symlink beside `~/.claude/CLAUDE.md`, inside the tree this tool treats as
-  read-only. The exclusion is tested on each `dirpath` now, not only on the names below
-  it. One more check, 45.
 
 ## 0.26.0
 
