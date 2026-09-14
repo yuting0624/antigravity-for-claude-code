@@ -3,6 +3,22 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.27.3
+
+- **`--include-repos` without `git` on PATH now stops, instead of calling every
+  repository a non-repository.** `git_root()` caught every exception, so a missing git
+  binary was indistinguishable from "not a repository" — and both callers state that
+  second fact out loud. Measured on a HOME whose single recorded project *is* a git
+  repository, with git removed from PATH: the dry run reported its `CLAUDE.md` as
+  `not-a-repo` ("not in a git repository"), its memory as `out-of-reach` ("consider
+  global scope"), never proposed the `AGENTS.md` symlink, and exited **0** — 3 to
+  apply / 0 warnings / 0 skipped became 2 / 1 / 1, every difference a falsehood. The
+  flag now checks for git up front and exits **18**, the code already used for a
+  missing prerequisite, naming both ways out; git is asked for only when the flag is
+  passed, so an ordinary run is unchanged and says nothing about git.
+  `git_root()` no longer swallows `FileNotFoundError` either, so a future caller cannot
+  inherit the same confusion. Migrate suite 48 -> 51 checks.
+
 ## 0.27.2
 
 - **Docs: user-level Claude Code assets are no longer described as nonexistent**

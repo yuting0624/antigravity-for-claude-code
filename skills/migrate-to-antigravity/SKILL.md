@@ -128,7 +128,7 @@ Also not migrated, by design: `model` (no Gemini equivalent for a Claude model i
 | *(none)* | dry-run report |
 | `--apply` | perform it; backs up `~/.gemini/config` first |
 | `--only` / `--skip` | `plugins,skills,claudemd,memory,mcp,settings` |
-| `--include-repos` | write into git repos (`AGENTS.md`, `.agents/rules/`) — and only into those |
+| `--include-repos` | write into git repos (`AGENTS.md`, `.agents/rules/`) — and only into those. Needs `git` on PATH; without it the run exits 18 rather than calling every repository a non-repository |
 | `--include-orphan-memory` | fold memory whose source directory no longer exists into global rules |
 | `--apply-permissions` | actually write the translated allow-list |
 | `--no-register-projects` | skip agy project registration (workspace rules then stay inert) |

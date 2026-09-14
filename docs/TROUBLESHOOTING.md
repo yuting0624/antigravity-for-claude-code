@@ -171,7 +171,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 15 | permission denied | a tool needed permission headless — **both** shapes: the soft deny (rc 0, empty stdout, `auto-denied` on stderr — agy 1.1.3+, and again from 1.1.20, measured on 1.1.25) and 1.1.13's hard error (rc 1, `user denied permission`); since 1.1.27 the tool is also named in the envelope's `denied_actions` (measured on 1.2.0). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
 | 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 | 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
-| 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir, or agy has never been run |
+| 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir; agy has never been run; or `--include-repos` was passed with no `git` on PATH (git is what decides which directories are repositories — install it, or drop the flag) |
 
 ---
 

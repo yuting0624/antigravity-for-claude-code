@@ -223,11 +223,23 @@ def default_roots():
 
 
 def git_root(path):
+    """The repository `path` is in, or None when it is in none.
+
+    FileNotFoundError is deliberately NOT caught. "git is not installed" and "this is
+    not a repository" are different facts, and both callers state the second one out
+    loud — so swallowing the first makes the report lie. main() refuses to run with
+    --include-repos when git is absent, which is the only mode that calls this, so the
+    exception is a guard against a future caller rather than something a user meets.
+    The broad except stays for what it was for: a timeout, or a git that fails on its
+    own terms.
+    """
     try:
         out = subprocess.run(["git", "-C", path, "rev-parse", "--show-toplevel"],
                              capture_output=True, text=True, timeout=10)
         if out.returncode == 0:
             return out.stdout.strip()
+    except FileNotFoundError:
+        raise
     except Exception:
         pass
     return None
@@ -1501,6 +1513,18 @@ def main(argv=None):
     if not os.path.isdir(gemini_root()):
         print(f"{C['err']}No Antigravity install at {gemini_root()} "
               f"— run agy once first{C['off']}")
+        return 18
+    # git decides which directories are repositories, and both write paths behind
+    # --include-repos ask it. Without git, git_root() answers None for every path and
+    # the report states a falsehood: a real repository is announced as `not-a-repo`
+    # ("not in a git repository"), its memory as `out-of-reach` ("consider global
+    # scope"), and the CLAUDE.md symlink is quietly never proposed — all under a clean
+    # rc 0. Only this flag needs git, so an ordinary run is left alone.
+    if args.include_repos and shutil.which("git") is None:
+        print(f"{C['err']}--include-repos needs git on PATH: git is what decides "
+              f"which directories are repositories{C['off']}\n"
+              f"Install git, or drop --include-repos — without it the run reports "
+              f"repo-scoped work as skipped instead of guessing.")
         return 18
 
     only = {u for u in args.only.split(",") if u} or set(UNITS)

@@ -342,6 +342,48 @@ if ! has "$H/.claude/AGENTS.md" "$OUT" && [ ! -e "$H/.claude/AGENTS.md" ]; then
 else bad "proposed a symlink inside Claude Code's own config dir"; fi
 rm -rf "$H/.claude/.git" "$H/.claude/CLAUDE.md"
 
+# --- --include-repos without git on PATH ------------------------------------
+# git_root() caught every exception, so a missing git binary was indistinguishable
+# from "not a repository": measured on a HOME whose one project IS a git repo, the
+# report called it `not-a-repo`, called its memory `out-of-reach — consider global
+# scope`, never proposed the AGENTS.md symlink, and exited 0. Three false statements
+# under a clean success. A PATH with the usual utilities but no git, built the way
+# run-tests.sh builds $TMP/min, since a runner that ships git in /usr/bin would
+# otherwise still find it.
+NOGIT="$TMP/nogit"; mkdir -p "$NOGIT"
+for u in python3 bash sh env sed cat mktemp grep find sort head tail rm chmod ln; do
+  s="$(command -v "$u" 2>/dev/null)" && ln -sf "$s" "$NOGIT/$u"
+done
+OUT="$(PATH="$NOGIT" run --roots "$H" --only claudemd,memory --include-repos)"; rc=$?
+if [ "$rc" = 18 ] && has "git" "$OUT" && has "--include-repos" "$OUT"; then
+  ok "--include-repos without git exits 18 and names both ways out"
+else bad "no git + --include-repos: rc $rc (want 18), or the message does not say why"; fi
+
+# The flag is the only thing that needs git. An ordinary run must not acquire a new
+# prerequisite, nor mention one.
+OUT="$(PATH="$NOGIT" run --roots "$H" --only claudemd,memory)"; rc=$?
+if [ "$rc" = 0 ] && ! has "git" "$OUT"; then
+  ok "without --include-repos, a missing git changes nothing"
+else bad "no git without the flag: rc $rc (want 0), or the report brought git up"; fi
+
+# The guard above is what a user meets; this is the fact underneath it. git_root()
+# must not answer None — the same answer it gives for a plain directory — when the
+# binary is simply absent.
+if PATH="$NOGIT" python3 - "$MIG" "$REPO" <<'PY3'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("m", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+try:
+    r = m.git_root(sys.argv[2])
+except FileNotFoundError:
+    sys.exit(0)
+print("git_root returned %r instead of raising" % (r,))
+sys.exit(1)
+PY3
+then ok "git_root() raises rather than reporting a repo as no-repo"
+else bad "git_root() swallowed a missing git binary"; fi
+
+
 # --- a lossy-encoding collision must not misfile memory ----------------------
 # `a_b` and `a/b` both encode to `a-b`. Guessing would write one repo's memory into
 # the other's .agents/rules/, so the tool must decline to resolve it.
