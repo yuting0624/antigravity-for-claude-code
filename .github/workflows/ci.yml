@@ -13,6 +13,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          # The CHANGELOG-placement check compares against the base. On a pull_request
+          # this checkout is the MERGE commit, so its first parent is the base tip
+          # GitHub merged onto — depth 2 is the whole history that needs, and no extra
+          # fetch step or credential. On push there is no second parent, the suite says
+          # "skip", and depth 2 costs nothing. Only this job: the macOS one stays
+          # shallow, so the check runs once per PR rather than twice.
+          fetch-depth: 2
 
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck

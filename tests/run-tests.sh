@@ -13,7 +13,10 @@ DELEGATE="$ROOT/scripts/agy-delegate.sh"
 MEASURE="$ROOT/scripts/measure-session.py"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-PASS=0; FAIL=0
+# SKIP is separate from PASS on purpose: a check that could not run is not a check that
+# passed. The CHANGELOG-placement gate needs a PR base, so it is skipped on a local run
+# and on push, and counting it green there would hide the fact that nothing judged it.
+PASS=0; FAIL=0; SKIP=0
 
 # The shipped tier defaults, read from the wrapper — the single source of truth. Every
 # stub `agy models` list and every expectation below uses these, so changing a default is
@@ -1159,6 +1162,122 @@ if python3 "$HERE/check-embedded-python.py" "$ROOT"/scripts/*.sh "$ROOT"/hooks/*
   echo "ok: no embedded python is truncated by a stray quote"; PASS=$((PASS+1));
 else echo "FAIL: an embedded python block is cut short (it runs a partial program)"; FAIL=$((FAIL+1)); fi
 
+echo "== a CHANGELOG entry cannot land in a section that already shipped =="
+# #77 filed under the released 0.27.0; #82 did it again, branching before #81 opened
+# 0.27.2 and merging after. Neither is a git conflict — different lines of the same file
+# — and both cost a later release: commit that only moved paragraphs. The rule needs the
+# base's copy of CHANGELOG.md and of plugin.json, so it can only run where there is a
+# base: CI on pull_request. Everywhere else it reports SKIPPED rather than green.
+#
+# Fixtures first, because the checker is the guard: a shape it misses is a silent pass.
+# Each is the shape of a real PR, named for it.
+cpc_base() { printf '%s\n' \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25' ; }
+cpc_case() { # $1 = label, $2 = base version, $3 = expected rc, $4... = head file lines
+  local label="$1" bv="$2" want="$3"; shift 3
+  cpc_base > "$TMP/cpc-base.md"
+  printf '%s\n' "$@" > "$TMP/cpc-head.md"
+  python3 "$HERE/check-changelog-placement.py" "$TMP/cpc-base.md" "$TMP/cpc-head.md" "$bv" \
+    >/dev/null 2>&1; local rc=$?
+  if [ "$rc" = "$want" ]; then echo "ok: changelog placement — $label"; PASS=$((PASS+1));
+  else echo "FAIL: changelog placement — $label (rc=$rc, want $want)"; FAIL=$((FAIL+1)); fi
+}
+# #77: appended to the newest section, which IS the shipped version. The trap is that it
+# looks like every legitimate entry — only plugin.json says 0.27.1 has already gone out.
+cpc_case '#77 into the released newest section' 0.27.1 1 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1' '' '- windows fix' '- NEW entry filed here' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# #82: appended to an older section, the newest one having arrived while it was open.
+cpc_case '#82 into an older section' 0.27.1 1 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '- NEW entry filed here' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# #81: opens a heading of its own. This is the shape CONTRIBUTING asks for.
+cpc_case '#81 opens a new heading' 0.27.1 0 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.2' '' '- NEW entry filed here' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# #85: same, and bumps the version in the same PR. The bump is not what makes it pass —
+# the heading being absent from the base is.
+cpc_case '#85 opens a new heading and bumps' 0.27.1 0 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.2' '' '- NEW entry filed here' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# The only shape that needs rule (a) — a heading opened BELOW the newest one, a note
+# against an older line. Measured: with (a) deleted, #81 and #85 above both stay green,
+# because the heading they open is the topmost one and ahead of the base version, which
+# is rule (b). They pin the outcome, not the rule. This fixture is what pins (a).
+cpc_case 'a new heading opened below the newest one' 0.27.1 0 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.1' '' '- NEW entry filed here' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# #84, a release: PR — it adds to the newest heading, which already exists on the base,
+# and is right to: 0.27.1 is ahead of the base's 0.27.0. Without rule (b) the one PR
+# whose whole job is tidying the changelog could never be merged.
+cpc_case '#84 release: adds to a section ahead of the base version' 0.27.0 0 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1' '' '- windows fix' '- moved here from 0.27.0' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# The preamble is not an entry. Rewording it must not be mistaken for filing history.
+cpc_case 'an edit above the first heading is not an entry' 0.27.1 0 \
+  '# Changelog' '' 'Preamble, reworded.' '' \
+  '## 0.27.1' '' '- windows fix' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+# A heading can carry prose — `## 0.25.0 — security` is real. The version is the
+# identity; treating the whole line as one would read this as a brand-new section and
+# wave the entry under it straight through.
+cpc_case 'a suffixed heading is still the same released section' 0.27.1 1 \
+  '# Changelog' '' 'Preamble.' '' \
+  '## 0.27.1 — security' '' '- windows fix' '- NEW entry filed here' '' \
+  '## 0.27.0' '' '- catch-up to agy 1.2.0' '' \
+  '## 0.26.0' '' '- catch-up to agy 1.1.25'
+
+# And the real thing, when there is a base to compare against. On a pull_request the
+# checkout is the merge commit, so its first parent IS the base tip GitHub merged onto —
+# better than a branch ref, which moves. Fall back to the merge-base, then give up.
+cpc_real_base() {
+  [ -n "${GITHUB_BASE_REF:-}" ] || return 1
+  # The split IS the measurement: `rev-list --parents -n 1` prints the commit and its
+  # parents on one line, so three words means a merge commit and a PR checkout.
+  # shellcheck disable=SC2046
+  set -- $(git -C "$ROOT" rev-list --parents -n 1 HEAD 2>/dev/null)
+  if [ $# -eq 3 ]; then git -C "$ROOT" rev-parse HEAD^1; return 0; fi
+  git -C "$ROOT" merge-base "origin/$GITHUB_BASE_REF" HEAD 2>/dev/null && return 0
+  return 1
+}
+cpc_ref="$(cpc_real_base || true)"
+if [ -n "$cpc_ref" ] \
+   && git -C "$ROOT" show "$cpc_ref:CHANGELOG.md" > "$TMP/cpc-realbase.md" 2>/dev/null \
+   && git -C "$ROOT" show "$cpc_ref:.claude-plugin/plugin.json" > "$TMP/cpc-realplugin.json" 2>/dev/null; then
+  cpc_bv="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+            "$TMP/cpc-realplugin.json" 2>/dev/null)"
+  if [ -z "$cpc_bv" ]; then
+    echo "skip: CHANGELOG placement — base plugin.json unreadable at $cpc_ref"; SKIP=$((SKIP+1))
+  elif python3 "$HERE/check-changelog-placement.py" \
+         "$TMP/cpc-realbase.md" "$ROOT/CHANGELOG.md" "$cpc_bv"; then
+    echo "ok: this PR's CHANGELOG lines are in an unreleased section"; PASS=$((PASS+1))
+  else
+    echo "FAIL: a CHANGELOG line lands in a released section (see above)"; FAIL=$((FAIL+1))
+  fi
+else
+  echo "skip: CHANGELOG placement — no PR base in this context (CI runs it on pull_request)"
+  SKIP=$((SKIP+1))
+fi
+
 echo "== exit 15 is described consistently across the user-facing surfaces =="
 # Three separate sweeps in 0.24.0 updated some files and missed others: POC-PLAYBOOK.md,
 # commands/delegate.md and agents/antigravity-delegate.md each kept describing exit 15 as
@@ -1878,5 +1997,9 @@ else
 fi
 
 echo ""
-echo "PASS=$PASS FAIL=$FAIL"
+if [ "$SKIP" -gt 0 ]; then
+  echo "PASS=$PASS FAIL=$FAIL SKIP=$SKIP"
+else
+  echo "PASS=$PASS FAIL=$FAIL"
+fi
 [ "$FAIL" -eq 0 ]

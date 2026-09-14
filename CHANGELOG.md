@@ -3,6 +3,25 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.27.4
+
+- **CI refuses a CHANGELOG entry filed under a section that has already shipped.** #77
+  put its line inside the released 0.27.0, and #82 did it again — branched before #81
+  opened `## 0.27.2`, merged after. Neither is a git conflict, because the two PRs touch
+  different lines of the same file, so both were caught by eye after merging and both
+  cost a later `release:` commit that only moved paragraphs. No rule over one file can
+  see this: which lines are new is not in the file. So on `pull_request` the suite reads
+  the base's `CHANGELOG.md` and `plugin.json` and judges only the added lines — they may
+  sit under a heading this PR opens, or under the newest heading when its version is
+  ahead of the base's, which is what a `release:` PR needs. Where there is no base, on a
+  local run or a push, it reports **skipped** and the summary line grows a `SKIP=` field;
+  a check that could not run is not one that passed.
+  Measured against the real merge commits rather than only fixtures: #77 and #82 fail,
+  #76, #80, #81, #84 and #85 pass. **#87 fails too** — it added to `## 0.27.3` after #85
+  had shipped that version, which is the stacked-PR limitation now written down in
+  CONTRIBUTING: rebasing onto master is not enough once the other PR has merged, the
+  entry needs the next heading. Suite 327 -> 335 checks, plus the one skipped.
+
 ## 0.27.3
 
 - **`--include-repos` without `git` on PATH now stops, instead of calling every

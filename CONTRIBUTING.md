@@ -48,6 +48,21 @@ shellcheck scripts/*.sh tests/*.sh   # CI gates on --severity=error
   under a new `## x.y.z` heading for the next patch (the maintainer bumps
   `.claude-plugin/plugin.json` and `skills/antigravity/SKILL.md` to match — the suite pins the
   two together); a behaviour change bumps the version in its own PR.
+- **CI enforces where that line goes.** #77 filed its entry inside the already-released
+  0.27.0, and #82 did it again a fortnight later; neither is a git conflict, because the two
+  PRs touch different lines of the same file, so both were found by eye after merging. On
+  `pull_request` the suite now compares your `CHANGELOG.md` against the base's and fails if a
+  line you *added* sits under a section that has shipped. A line may sit under a heading your
+  PR opens, or under the newest heading when its version is ahead of the base's `plugin.json`
+  — that second case is what a `release:` PR needs. Locally and on push there is no base, and
+  the check reports **skipped** rather than green. Two shapes it refuses on purpose:
+  - **A PR stacked on another PR's branch.** Its base already carries the new heading *and*
+    the matching `plugin.json`, so neither case applies. Rebasing onto master does not fix it
+    by itself once the other PR has merged — open the next `## x.y.z` heading and bump to
+    match, which is what the bullet above asks for anyway.
+  - **Rewording a section that has already shipped.** That is the same edit as the mistake
+    the check exists to catch, and nothing in the diff tells them apart. Do it from a
+    `release:` PR, where the heading is the newest one and the version is ahead.
 
 ## Conventions
 
