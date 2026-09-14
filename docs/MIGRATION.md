@@ -197,6 +197,16 @@ the directory holding `hooks.json`, so it is rewritten to `./`.
 | `tasks/`, `plans/`, `file-history/`, `jobs/`, `paste-cache/` | — | no counterpart |
 | credentials | — | different auth; never copy |
 
+**What the `CLAUDE.md` / `.mcp.json` walk never enters.** `~` is routinely one of the
+recorded projects, so the scan can reach the whole home directory. Excluded as whole
+trees: both tools' own config dirs (`~/.claude`, `~/.gemini`), macOS's `~/Library`, and
+its Windows counterparts `%APPDATA%` and `%LOCALAPPDATA%` — app state, not your work,
+and the home of the Dart pub cache both before and after Dart 3.0 moved it from Roaming
+to Local. Also excluded: the caches an environment variable can move (`PUB_CACHE`,
+`UV_CACHE_DIR`, `GOMODCACHE`) and `$GOPATH/pkg/mod`, plus `node_modules`, `.venv`,
+`dist`, `build` and every dot-prefixed directory by name. The exclusion is silent, so a
+project you keep inside one of those trees will not appear in the plan.
+
 ### Why sessions cannot be migrated
 
 Claude Code writes newline-delimited JSON, one object per turn, linked by
