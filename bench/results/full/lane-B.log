@@ -1,0 +1,34 @@
+2026-09-15T02:44:01+00:00 lane B start (gap 300s)
+2026-09-15T02:44:01+00:00 lane B -> zoekt-1105__hybrid-inst__r1 (attempt 1)
+2026-09-15T03:46:36+00:00 lane B: zoekt-1105__hybrid-inst__r1 done pass=True $10.507703249999999 in 3755s
+2026-09-15T03:46:36+00:00 lane B -> caddy-7995__solo-opus__r1 (attempt 1)
+2026-09-15T03:56:13+00:00 lane B: caddy-7995__solo-opus__r1 done pass=True $3.3309022500000003 in 577s
+2026-09-15T03:56:13+00:00 lane B -> caddy-7888__hybrid-inst__r1 (attempt 1)
+2026-09-15T05:07:58+00:00 lane B: caddy-7888__hybrid-inst__r1 done pass=True $2.7200305 in 4306s
+2026-09-15T05:07:58+00:00 lane B -> caddy-7995__solo-sonnet__r1 (attempt 1)
+2026-09-15T05:16:16+00:00 lane B: caddy-7995__solo-sonnet__r1 done pass=True $2.0279027000000003 in 498s
+2026-09-15T05:16:16+00:00 lane B -> caddy-7877__hybrid-inst__r1 (attempt 1)
+2026-09-15T05:25:02+00:00 lane B: caddy-7877__hybrid-inst__r1 done pass=True $1.3240444999999998 in 526s
+2026-09-15T05:25:02+00:00 STOP present; lane B exits
+2026-09-15T05:47:20+00:00 lane B start (gap 300s)
+2026-09-15T05:47:20+00:00 lane B -> zoekt-1105__solo-opus__r1 (attempt 1)
+2026-09-15T06:02:19+00:00 lane B: zoekt-1105__solo-opus__r1 done pass=True $5.567030750000001 in 899s
+2026-09-15T06:02:19+00:00 lane B -> caddy-7888__hybrid-forced__r1 (attempt 1)
+2026-09-15T06:18:47+00:00 lane B: caddy-7888__hybrid-forced__r1 done pass=True $2.361497 in 988s
+2026-09-15T06:18:47+00:00 lane B -> zoekt-1105__solo-sonnet__r1 (attempt 1)
+2026-09-15T06:32:11+00:00 lane B: zoekt-1105__solo-sonnet__r1 done pass=True $2.2091622 in 804s
+2026-09-15T06:32:11+00:00 lane B -> caddy-7995__hybrid-inst__r1 (attempt 1)
+2026-09-15T07:00:46+00:00 lane B: caddy-7995__hybrid-inst__r1 infra failure (success); will retry
+2026-09-15T07:05:46+00:00 lane B -> caddy-7913__solo-opus__r1 (attempt 1)
+2026-09-15T07:25:54+00:00 lane B: caddy-7913__solo-opus__r1 done pass=True $6.97586125 in 1208s
+2026-09-15T07:25:54+00:00 lane B -> cli-14136__solo-sonnet__r1 (attempt 1)
+2026-09-15T07:37:13+00:00 lane B: cli-14136__solo-sonnet__r1 done pass=True $2.953146700000001 in 680s
+2026-09-15T07:37:13+00:00 lane B -> k6-6169__solo-opus__r1 (attempt 1)
+2026-09-15T08:44:05+00:00 lane B: k6-6169__solo-opus__r1 done pass=False $12.602867750000001 in 4012s
+2026-09-15T08:44:05+00:00 STOP present; lane B exits
+2026-09-15T08:45:36+00:00 lane B start (gap 300s)
+2026-09-15T08:45:36+00:00 lane B -> cli-14136__hybrid-inst__r1 (attempt 1)
+2026-09-15T09:51:56+00:00 lane B: cli-14136__hybrid-inst__r1 interrupted by machine sleep (431s asleep); will retry
+2026-09-15T09:52:56+00:00 STOP present; lane B exits
+2026-09-15T09:54:02+00:00 lane B start (gap 300s)
+2026-09-15T09:54:02+00:00 lane B -> cli-attach__solo-opus__r1 (attempt 1)

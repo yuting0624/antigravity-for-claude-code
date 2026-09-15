@@ -1,0 +1,133 @@
+{
+  "schema": "bench.task/1",
+  "task_id": "caddy-7913",
+  "repo": "caddyserver/caddy",
+  "repo_url": "https://github.com/caddyserver/caddy",
+  "license": "Apache-2.0",
+  "prs": [
+    {
+      "number": 7913,
+      "url": "https://github.com/caddyserver/caddy/pull/7913",
+      "title": "caddyhttp: mitigate slowloris via idle read/write deadlines",
+      "merged_at": "2026-08-22T03:17:26Z",
+      "author": "dunglas",
+      "merge_commit": "0cf03d32f7d99cf160d5375e8a40fbe3d910d515",
+      "head_sha": "84cf9be5d1cbcb65bc1b39872fc3b3baa00d2e2d",
+      "commits": 10
+    }
+  ],
+  "merge_method_first": "squash",
+  "base_sha": "45ba3278b5822f6fa6107a44ca41669b6e722482",
+  "target_sha": "0cf03d32f7d99cf160d5375e8a40fbe3d910d515",
+  "go_directive": "1.25.1",
+  "size_class": "medium",
+  "author_patch": {
+    "code_added": 570,
+    "code_removed": 59,
+    "test_added": 483,
+    "test_removed": 0,
+    "files_code": [
+      "caddyconfig/httpcaddyfile/directives.go",
+      "caddyconfig/httpcaddyfile/serveroptions.go",
+      "modules/caddyhttp/app.go",
+      "modules/caddyhttp/idletimeout.go",
+      "modules/caddyhttp/requestbody/caddyfile.go",
+      "modules/caddyhttp/requestbody/requestbody.go",
+      "modules/caddyhttp/server.go",
+      "modules/caddyhttp/standard/imports.go",
+      "modules/caddyhttp/timeouts/caddyfile.go",
+      "modules/caddyhttp/timeouts/timeouts.go"
+    ],
+    "files_generated": [],
+    "files_test": [
+      "modules/caddyhttp/idletimeout_test.go",
+      "modules/caddyhttp/timeouts/timeouts_test.go"
+    ],
+    "files_other": []
+  },
+  "hidden_tests": {
+    "files": [
+      "modules/caddyhttp/idletimeout_test.go",
+      "modules/caddyhttp/timeouts/timeouts_test.go"
+    ],
+    "funcs": [
+      "TestIdleTimeoutReader",
+      "TestIdleTimeoutReader_HardDeadlineCapsIdleReset",
+      "TestIdleTimeoutReader_MinRateAllowsSustainedRate",
+      "TestIdleTimeoutReader_MinRateCatchesTrickle",
+      "TestIdleTimeoutWriter",
+      "TestIdleTimeoutWriter_HardDeadlineCapsIdleReset",
+      "TestIdleTimeoutWriter_MaxChunkOverride",
+      "TestIdleTimeoutWriter_ReadFromChunksLargeTransfer",
+      "TestIdleTimeoutWriter_WriteChunksLargePayload",
+      "TestTimeouts_ReadTimeoutIsIdleReset",
+      "TestTimeouts_WriteMaxChunkOverride"
+    ],
+    "packages": [
+      "./modules/caddyhttp",
+      "./modules/caddyhttp/timeouts"
+    ],
+    "run_regex": "^(TestIdleTimeoutReader|TestIdleTimeoutReader_HardDeadlineCapsIdleReset|TestIdleTimeoutReader_MinRateAllowsSustainedRate|TestIdleTimeoutReader_MinRateCatchesTrickle|TestIdleTimeoutWriter|TestIdleTimeoutWriter_HardDeadlineCapsIdleReset|TestIdleTimeoutWriter_MaxChunkOverride|TestIdleTimeoutWriter_ReadFromChunksLargeTransfer|TestIdleTimeoutWriter_WriteChunksLargePayload|TestTimeouts_ReadTimeoutIsIdleReset|TestTimeouts_WriteMaxChunkOverride)$",
+    "base_status": "compile_fail"
+  },
+  "verify": {
+    "status": "ok",
+    "prewarm": {
+      "base": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 27.3,
+        "errors": ""
+      },
+      "target": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 11.8,
+        "errors": ""
+      }
+    },
+    "checked_at": "2026-09-14T14:13:56+00:00",
+    "base": {
+      "status": "compile_fail",
+      "failed_tests": [],
+      "passed_tests": 0,
+      "seconds": 1.7
+    },
+    "target_hidden": {
+      "pass": true,
+      "failed_tests": [],
+      "passed_tests": 13
+    },
+    "target_suite": {
+      "runs": 3,
+      "median_s": 7.0,
+      "flaky": [],
+      "always_failing": [],
+      "packages": 48
+    },
+    "ok": true,
+    "reasons": [],
+    "skip_regex": null,
+    "vet_base_findings": [],
+    "vet_base_rc": 0
+  },
+  "deps": {
+    "go_mod_changed": false
+  },
+  "range_vs_pr_files_mismatch": [],
+  "prompt": {
+    "sha256": "3072e18ca52b3917281555742e9988a023a182f8fad7faeae3993fb97d1da77b",
+    "lines": 40,
+    "lint": {
+      "ok": true,
+      "reasons": [],
+      "identifiers_checked": 33,
+      "visible_in_tests": 22
+    }
+  },
+  "curated_at": "2026-09-14T14:08:43+00:00"
+}

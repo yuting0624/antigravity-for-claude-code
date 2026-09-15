@@ -1,0 +1,6 @@
+Bash(agy-delegate:*)
+Bash(agy-job:*)
+Bash(agy-trace:*)
+Bash(agy-delegate)
+Bash(agy-job)
+Bash(agy-trace)

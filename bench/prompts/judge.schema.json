@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "required": ["scores", "rationale", "flags"],
+  "additionalProperties": false,
+  "properties": {
+    "scores": {
+      "type": "object",
+      "required": ["consistency", "edge_cases", "scope", "readability", "robustness", "maintainability"],
+      "additionalProperties": false,
+      "properties": {
+        "consistency": {"type": "integer", "minimum": 1, "maximum": 5},
+        "edge_cases": {"type": "integer", "minimum": 1, "maximum": 5},
+        "scope": {"type": "integer", "minimum": 1, "maximum": 5},
+        "readability": {"type": "integer", "minimum": 1, "maximum": 5},
+        "robustness": {"type": "integer", "minimum": 1, "maximum": 5},
+        "maintainability": {"type": "integer", "minimum": 1, "maximum": 5}
+      }
+    },
+    "rationale": {
+      "type": "object",
+      "required": ["consistency", "edge_cases", "scope", "readability", "robustness", "maintainability"],
+      "additionalProperties": false,
+      "properties": {
+        "consistency": {"type": "string", "maxLength": 300},
+        "edge_cases": {"type": "string", "maxLength": 300},
+        "scope": {"type": "string", "maxLength": 300},
+        "readability": {"type": "string", "maxLength": 300},
+        "robustness": {"type": "string", "maxLength": 300},
+        "maintainability": {"type": "string", "maxLength": 300}
+      }
+    },
+    "flags": {"type": "array", "items": {"type": "string", "enum": ["unrelated_changes", "incomplete", "suspicious_test_workaround", "generated_code_smell", "empty_diff"]}}
+  }
+}

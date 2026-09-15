@@ -1,0 +1,139 @@
+{
+  "schema": "bench.task/1",
+  "task_id": "caddy-7888",
+  "repo": "caddyserver/caddy",
+  "repo_url": "https://github.com/caddyserver/caddy",
+  "license": "Apache-2.0",
+  "prs": [
+    {
+      "number": 7888,
+      "url": "https://github.com/caddyserver/caddy/pull/7888",
+      "title": "logging: add set_cookie log filter for Set-Cookie response headers",
+      "merged_at": "2026-08-13T04:59:32Z",
+      "author": "steffenbusch",
+      "merge_commit": "50e54ee279aa1e504fe218ca49ab6ae16c100410",
+      "head_sha": "898bc0e8e9200728442b259416152f58d032765c",
+      "commits": 2
+    }
+  ],
+  "merge_method_first": "squash",
+  "base_sha": "6584c75999996c71f154a04f4e41f1ebce65a9c3",
+  "target_sha": "50e54ee279aa1e504fe218ca49ab6ae16c100410",
+  "go_directive": "1.25.1",
+  "size_class": "medium",
+  "author_patch": {
+    "code_added": 176,
+    "code_removed": 0,
+    "test_added": 119,
+    "test_removed": 0,
+    "files_code": [
+      "modules/logging/filters.go"
+    ],
+    "files_generated": [],
+    "files_test": [
+      "modules/logging/filters_test.go"
+    ],
+    "files_other": []
+  },
+  "hidden_tests": {
+    "files": [
+      "modules/logging/filters_test.go"
+    ],
+    "funcs": [
+      "TestCookieFilter",
+      "TestHashFilterMultiValue",
+      "TestHashFilterSingleValue",
+      "TestIPMaskCommaValue",
+      "TestIPMaskMultiValue",
+      "TestIPMaskSingleValue",
+      "TestMultiRegexpFilterAddOperation",
+      "TestMultiRegexpFilterInputSizeLimit",
+      "TestMultiRegexpFilterMultiValue",
+      "TestMultiRegexpFilterMultipleOperations",
+      "TestMultiRegexpFilterOverlappingPatterns",
+      "TestMultiRegexpFilterSecurityLimits",
+      "TestMultiRegexpFilterSingleOperation",
+      "TestMultiRegexpFilterValidation",
+      "TestQueryFilterMultiValue",
+      "TestQueryFilterSingleValue",
+      "TestRegexpFilterMultiValue",
+      "TestRegexpFilterSingleValue",
+      "TestSetCookieFilter",
+      "TestSetCookieFilterCookieNameMatchingIsCaseSensitive",
+      "TestSetCookieFilterFirstMatchWins",
+      "TestSetCookieFilterHashEmptyValue",
+      "TestSetCookieFilterHashWithoutAttributes",
+      "TestSetCookieFilterInvalidHeaderPassesThrough",
+      "TestValidateCookieFilter",
+      "TestValidateQueryFilter",
+      "TestValidateSetCookieFilter"
+    ],
+    "packages": [
+      "./modules/logging"
+    ],
+    "run_regex": "^(TestCookieFilter|TestHashFilterMultiValue|TestHashFilterSingleValue|TestIPMaskCommaValue|TestIPMaskMultiValue|TestIPMaskSingleValue|TestMultiRegexpFilterAddOperation|TestMultiRegexpFilterInputSizeLimit|TestMultiRegexpFilterMultiValue|TestMultiRegexpFilterMultipleOperations|TestMultiRegexpFilterOverlappingPatterns|TestMultiRegexpFilterSecurityLimits|TestMultiRegexpFilterSingleOperation|TestMultiRegexpFilterValidation|TestQueryFilterMultiValue|TestQueryFilterSingleValue|TestRegexpFilterMultiValue|TestRegexpFilterSingleValue|TestSetCookieFilter|TestSetCookieFilterCookieNameMatchingIsCaseSensitive|TestSetCookieFilterFirstMatchWins|TestSetCookieFilterHashEmptyValue|TestSetCookieFilterHashWithoutAttributes|TestSetCookieFilterInvalidHeaderPassesThrough|TestValidateCookieFilter|TestValidateQueryFilter|TestValidateSetCookieFilter)$",
+    "base_status": "compile_fail"
+  },
+  "verify": {
+    "status": "ok",
+    "prewarm": {
+      "base": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 13.4,
+        "errors": ""
+      },
+      "target": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 12.1,
+        "errors": ""
+      }
+    },
+    "checked_at": "2026-09-14T14:35:15+00:00",
+    "base": {
+      "status": "compile_fail",
+      "failed_tests": [],
+      "passed_tests": 0,
+      "seconds": 0.7
+    },
+    "target_hidden": {
+      "pass": true,
+      "failed_tests": [],
+      "passed_tests": 27
+    },
+    "target_suite": {
+      "runs": 3,
+      "median_s": 4.3,
+      "flaky": [],
+      "always_failing": [],
+      "packages": 47
+    },
+    "ok": true,
+    "environment_failures": [],
+    "hidden_dropped_flaky": [],
+    "reasons": [],
+    "skip_regex": null,
+    "vet_base_findings": [],
+    "vet_base_rc": 0
+  },
+  "deps": {
+    "go_mod_changed": false
+  },
+  "range_vs_pr_files_mismatch": [],
+  "prompt": {
+    "sha256": "12ba74ef9a4667169627270f8f848bdade1373f524a8b7a24bbc1a0c1f0d3fa9",
+    "lines": 28,
+    "lint": {
+      "ok": true,
+      "reasons": [],
+      "identifiers_checked": 8,
+      "visible_in_tests": 4
+    }
+  },
+  "curated_at": "2026-09-14T14:30:24+00:00"
+}

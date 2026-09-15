@@ -2006,6 +2006,49 @@ else
   echo "FAIL: agy-migrate suite"; sed 's/^/    /' "$TMP/migrate.log" | tail -20; FAIL=$((FAIL+1))
 fi
 
+# Benchmark numbers quoted in docs must be regenerated from the aggregate behind them.
+# check-bench-claims.py re-renders every <!-- bench:table --> block; the fixtures below
+# prove it passes a matching block, fails a changed digit, and fails an unclosed block.
+echo "== bench:table blocks in docs match their aggregate =="
+BCC="$HERE/check-bench-claims.py"
+BCCR="$TMP/bcc-results"; mkdir -p "$BCCR/fx/runs"
+python3 - "$BCCR/fx/aggregate.json" <<'PY2'
+import json, sys
+json.dump({"schema": "bench.aggregate/1", "run_id": "fx", "arms": {"solo": {"runs_ok": 3, "pass": 2, "cost_of_pass_usd": 6.5,
+  "cost_pass_median": 6.0, "cost_pass_min": 5.0, "cost_pass_max": 7.0, "claude_usd": 13.0, "gemini_usd": 0.0, "wall_median_s": 100.0,
+  "turns_median": 10.0, "delegations_median": 0.0, "delegations_zero_runs": 3, "denials_median": 0.0, "warm_starts": 0, "caps_hit": 0,
+  "by_size": {}}}, "paired": {}, "judge": {"present": False}}, open(sys.argv[1], "w"))
+PY2
+bcc_block="$(HERE="$HERE" AGY_BENCH_RESULTS_DIR="$BCCR" python3 - <<'PY2'
+import json, os, sys
+sys.path.insert(0, os.path.join(os.environ["HERE"], "..", "bench", "harness"))
+import analyze
+print(analyze.render_block(json.load(open(os.path.join(os.environ["AGY_BENCH_RESULTS_DIR"], "fx", "aggregate.json"))), "arms"), end="")
+PY2
+)"
+bcc_case() { # $1 = label, $2 = expected rc, $3 = doc body
+  printf '%b' "$3" > "$TMP/bcc-doc.md"
+  AGY_BENCH_RESULTS_DIR="$BCCR" python3 "$BCC" "$TMP/bcc-doc.md" >/dev/null 2>&1; rc=$?
+  if [ "$rc" = "$2" ]; then echo "ok: bench claims guard: $1"; PASS=$((PASS+1));
+  else echo "FAIL: bench claims guard: $1 (rc want $2 got $rc)"; FAIL=$((FAIL+1)); fi
+}
+bcc_case "matching block passes" 0 "intro\n<!-- bench:table run=fx kind=arms -->\n${bcc_block}<!-- /bench:table -->\nafter\n"
+bcc_case "a changed digit fails" 1 "<!-- bench:table run=fx kind=arms -->\n$(printf '%s' "$bcc_block" | sed 's/6\.50/6\.40/')<!-- /bench:table -->\n"
+bcc_case "an unclosed block fails" 1 "<!-- bench:table run=fx kind=arms -->\n${bcc_block}\n"
+bcc_case "a missing aggregate fails" 1 "<!-- bench:table run=nope kind=arms -->\nx\n<!-- /bench:table -->\n"
+bcc_case "a doc without markers passes" 0 "just prose, no numbers quoted\n"
+if AGY_BENCH_RESULTS_DIR="$HERE/../bench/results" python3 "$BCC" "$HERE/../README.md" "$HERE/../docs/BENCHMARK.md" >/dev/null 2>&1 || [ ! -f "$HERE/../docs/BENCHMARK.md" ]; then
+  echo "ok: README/BENCHMARK bench:table blocks match their aggregates"; PASS=$((PASS+1));
+else echo "FAIL: a bench:table block in README or docs/BENCHMARK.md differs from its aggregate"; FAIL=$((FAIL+1)); fi
+
+# The benchmark harness (bench/) is python and has its own unittest suite; it runs as a
+# child and reports one line here, the same way the migration suite does.
+if python3 -m unittest discover -s "$HERE/../bench/tests" -t "$HERE/../bench" > "$TMP/bench.log" 2>&1; then
+  echo "ok: bench harness suite ($(sed -n 's/^Ran \([0-9]*\) tests.*/\1/p' "$TMP/bench.log") checks)"; PASS=$((PASS+1))
+else
+  echo "FAIL: bench harness suite"; sed 's/^/    /' "$TMP/bench.log" | tail -20; FAIL=$((FAIL+1))
+fi
+
 echo ""
 if [ "$SKIP" -gt 0 ]; then
   echo "PASS=$PASS FAIL=$FAIL SKIP=$SKIP"

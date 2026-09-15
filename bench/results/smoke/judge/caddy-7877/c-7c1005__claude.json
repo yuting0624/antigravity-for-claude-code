@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-7c1005",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:11:23+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1229f073b86d4ff19d225eebb8f728502cf4451980acf4bfcd73359806a27eb5",
+  "wall_s": 71.7,
+  "cost_usd": 0.39816425000000005,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Keeps the existing reverse-then-trimPathPrefix design and byte-wise comparison style; helper naming and placement fit the file.",
+    "edge_cases": "Handles decoded-vs-encoded suffix, literal %xx patterns, case-insensitive hex, trailing lone '%', empty strings; byte-wise reversal actually aligns better with trimPathPrefix than the old rune reversal.",
+    "scope": "Only the suffix path and the reversal helper change; prefix, query and other ops untouched, no extra files.",
+    "readability": "Clear helper with a good explanatory comment; the double-reverse trick remains somewhat indirect but is documented.",
+    "robustness": "Bounds check is correct, no panics on malformed escapes; per-request []string allocation plus Join is heavier than needed for a hot path.",
+    "maintainability": "Relies on trimPathPrefix semantics holding in reversed space (an implicit coupling); a dedicated trimPathSuffix would be more direct, and the atom slice could be a simple byte builder."
+  },
+  "flags": []
+}

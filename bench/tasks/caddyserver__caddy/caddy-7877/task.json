@@ -1,0 +1,115 @@
+{
+  "schema": "bench.task/1",
+  "task_id": "caddy-7877",
+  "repo": "caddyserver/caddy",
+  "repo_url": "https://github.com/caddyserver/caddy",
+  "license": "Apache-2.0",
+  "prs": [
+    {
+      "number": 7877,
+      "url": "https://github.com/caddyserver/caddy/pull/7877",
+      "title": "rewrite: fix strip_path_suffix ignoring percent-encoding",
+      "merged_at": "2026-08-28T09:44:05Z",
+      "author": "TowyTowy",
+      "merge_commit": "7bf1b9057b29903efef451440e4664efd8775ec5",
+      "head_sha": "c681f6a73fe0197a19903a16db0638e283b84817",
+      "commits": 1
+    }
+  ],
+  "merge_method_first": "squash",
+  "base_sha": "3244ef4105227e7882a95db0f6feb51dc59f10ae",
+  "target_sha": "7bf1b9057b29903efef451440e4664efd8775ec5",
+  "go_directive": "1.25.1",
+  "size_class": "small",
+  "author_patch": {
+    "code_added": 52,
+    "code_removed": 6,
+    "test_added": 21,
+    "test_removed": 0,
+    "files_code": [
+      "modules/caddyhttp/rewrite/rewrite.go"
+    ],
+    "files_generated": [],
+    "files_test": [
+      "modules/caddyhttp/rewrite/rewrite_test.go"
+    ],
+    "files_other": []
+  },
+  "hidden_tests": {
+    "files": [
+      "modules/caddyhttp/rewrite/rewrite_test.go"
+    ],
+    "funcs": [
+      "TestQueryOpsRenameNoOpCases",
+      "TestQueryOpsReplaceScopedToKey",
+      "TestRewrite"
+    ],
+    "packages": [
+      "./modules/caddyhttp/rewrite"
+    ],
+    "run_regex": "^(TestQueryOpsRenameNoOpCases|TestQueryOpsReplaceScopedToKey|TestRewrite)$",
+    "base_status": "fail"
+  },
+  "verify": {
+    "status": "ok",
+    "prewarm": {
+      "base": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 12.0,
+        "errors": ""
+      },
+      "target": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 11.7,
+        "errors": ""
+      }
+    },
+    "checked_at": "2026-09-14T14:12:51+00:00",
+    "base": {
+      "status": "fail",
+      "failed_tests": [
+        "github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite.TestRewrite"
+      ],
+      "passed_tests": 2,
+      "seconds": 3.4
+    },
+    "target_hidden": {
+      "pass": true,
+      "failed_tests": [],
+      "passed_tests": 3
+    },
+    "target_suite": {
+      "runs": 3,
+      "median_s": 7.2,
+      "flaky": [],
+      "always_failing": [],
+      "packages": 48
+    },
+    "ok": true,
+    "reasons": [],
+    "skip_regex": null,
+    "vet_base_findings": [],
+    "vet_base_rc": 0
+  },
+  "deps": {
+    "go_mod_changed": false
+  },
+  "range_vs_pr_files_mismatch": [],
+  "prompt": {
+    "sha256": "c3ec44ac44ebe1bf22c41b0a93f30cd21f9d98d834954966b436b0b8bba2a8c1",
+    "lines": 30,
+    "lint": {
+      "ok": true,
+      "reasons": [],
+      "identifiers_checked": 1,
+      "visible_in_tests": 0
+    }
+  },
+  "curated_at": "2026-09-14T14:09:40+00:00"
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-deae4d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:16:42+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "76a295d800f13c94b83be64c1c5726aa13061e606034268a55b630140bcb84a0",
+  "wall_s": 64.0,
+  "cost_usd": 0.36388675000000004,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix's doc-comment style, EqualFold byte comparison, url.PathUnescape error path and 'should be impossible' comment; idiomatic Go switch.",
+    "edge_cases": "Handles decoded-vs-escaped, escaped-vs-escaped (case-insensitive hex), escape-required-but-absent, empty suffix and partial matches; %25xx sequences resolve correctly backwards. Multi-byte UTF-8 chars compared byte-wise share the prefix version's weakness.",
+    "scope": "Replaces the broken reverse() trick, removes the now-dead reverse helper, touches nothing else; no prefix/query changes.",
+    "readability": "Clear lock-step backward scan with a four-case switch, each case commented once; names (iPath/iSuffix, pathEsc/suffixEsc) are self-explanatory.",
+    "robustness": "All index accesses guarded (iPath>=3, loop bounds), no panics on malformed input; unescape error returns path unchanged rather than failing loudly.",
+    "maintainability": "Self-contained pure function; some conceptual duplication with trimPathPrefix (two separate matchers rather than a shared core), but each is short and readable."
+  },
+  "flags": []
+}

@@ -1,0 +1,314 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "zoekt-1105__solo-sonnet__r1",
+  "task_id": "zoekt-1105",
+  "arm": "solo-sonnet",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "B",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T06:18:48+00:00",
+  "ended_at": "2026-09-15T06:31:56+00:00",
+  "agent_wall_s": 788.1,
+  "agent_active_s": 788.1,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": null,
+    "plugin_sha": null
+  },
+  "conductor": {
+    "model_alias": "sonnet",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-sonnet-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400
+  },
+  "prompt": {
+    "task_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352",
+    "appendix": null,
+    "appendix_sha256": null,
+    "sent_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352"
+  },
+  "claude": {
+    "session_id": "1fe79d2d-5d72-4e87-9f95-63af7a7226db",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 44,
+    "num_turns_source": "result",
+    "duration_ms": 787853,
+    "duration_api_ms": 741117,
+    "total_cost_usd": 2.2091622,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 76,
+      "cache_creation_input_tokens": 230914,
+      "cache_read_input_tokens": 4465736,
+      "output_tokens": 73709,
+      "output_tokens_details": {
+        "thinking_tokens": 56524
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 230914
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1363,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0014880000000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-sonnet-5[1m]": {
+        "inputTokens": 76,
+        "outputTokens": 73709,
+        "cacheReadInputTokens": 4465736,
+        "cacheCreationInputTokens": 230914,
+        "webSearchRequests": 0,
+        "costUSD": 2.2076742,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 56524,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 3.311511,
+    "recomputed_vs_reported_gap": 0.499,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 38,
+      "input": 76,
+      "output": 73709,
+      "cache_creation": 230914,
+      "cache_read": 4465736,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-sonnet-5": {
+          "turns": 38,
+          "input": 76,
+          "output": 73709,
+          "cache_creation": 230914,
+          "cache_read": 4465736
+        }
+      },
+      "tool_calls": {
+        "Bash": 27,
+        "Read": 10,
+        "Edit": 3,
+        "Write": 3
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 6,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 76,
+        "transcript": 76,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 73709,
+        "transcript": 73709,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 230914,
+        "transcript": 230914,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 4465736,
+        "transcript": 4465736,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 2,
+    "denied_tools": {
+      "Bash:grep": 1,
+      "Bash:go": 1
+    },
+    "result_head": "That command is restricted in this environment (only build/vet/test/gofmt allowed), which is fine since `go build`, `go vet`, and `go test ./...` already passed cleanly and the `TestHelpIncludesDefaultOptionsAndSubcommands` test exercises the exact help output.\n\n## Summary\n\nImplemented `cmd/zoekt-local-sync`, a new command that discovers git repositories under root directories and keeps a local zo",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 0,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 6,
+    "claude_bash": 0,
+    "agy": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 91,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "go": 1
+    },
+    "gate_allows": 26,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [],
+    "claude_tool_files": [
+      "gitindex/index.go",
+      "cmd/zoekt-local-sync/discover.go",
+      "cmd/zoekt-local-sync/index.go",
+      "cmd/zoekt-local-sync/main.go"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 3.0,
+      "passed_tests": 100,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 2,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 8.1,
+      "passed_tests": 1123,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 56,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 4,
+    "code_added": 678,
+    "code_removed": 2,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "a3082493cec0a9d59ff3ec0e48972b1d5dcf15baa76c3dd2fea2fd2de370a678"
+  },
+  "diff_files": {
+    "cmd/zoekt-local-sync/discover.go": {
+      "added": 138,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/index.go": {
+      "added": 123,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/main.go": {
+      "added": 403,
+      "removed": 0,
+      "class": "code"
+    },
+    "gitindex/index.go": {
+      "added": 14,
+      "removed": 2,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 2.2091622,
+    "gemini_usd": 0.0,
+    "total_usd": 2.2091622
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

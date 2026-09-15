@@ -1,0 +1,11 @@
+2026-09-15T09:56:23+00:00 lane C start (gap 300s)
+2026-09-15T09:56:23+00:00 lane C -> k6-6169__solo-sonnet__r1 (attempt 1)
+2026-09-15T10:20:08+00:00 lane C: k6-6169__solo-sonnet__r1 done pass=True $5.8610924 in 1425s
+2026-09-15T10:20:08+00:00 lane C -> caddy-7995__hybrid-forced__r2 (attempt 1)
+2026-09-15T10:20:08+00:00 lane C: caddy-7995__hybrid-forced__r2 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+2026-09-15T10:25:08+00:00 lane C -> k6-6169__hybrid-forced__r1 (attempt 1)
+2026-09-15T10:25:08+00:00 lane C: k6-6169__hybrid-forced__r1 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+2026-09-15T13:26:48+00:00 lane C -> k6-6169__hybrid-forced__r1 (attempt 3)
+2026-09-15T13:26:49+00:00 lane C: k6-6169__hybrid-forced__r1 gave up after 3 attempts (infra)

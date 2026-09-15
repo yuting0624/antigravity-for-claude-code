@@ -1,0 +1,15 @@
+{
+  "repo": "caddyserver/caddy",
+  "_note": "CI (.github/workflows/ci.yml): GOFLAGS=-tags=nobadger,nomysql,nopgx; go test -short -race ./...; no services. Race omitted here (2-4x slower, CGO).",
+  "go_env": {
+    "GOFLAGS": "-mod=readonly -tags=nobadger,nomysql,nopgx"
+  },
+  "test_extra_args": [
+    "-short"
+  ],
+  "exclude_pkg_regex": null,
+  "parallel_p": null,
+  "hidden_timeout_s": 600,
+  "suite_timeout_s": 1200,
+  "build_timeout_s": 900
+}

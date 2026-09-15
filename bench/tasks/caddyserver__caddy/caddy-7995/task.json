@@ -1,0 +1,127 @@
+{
+  "schema": "bench.task/1",
+  "task_id": "caddy-7995",
+  "repo": "caddyserver/caddy",
+  "repo_url": "https://github.com/caddyserver/caddy",
+  "license": "Apache-2.0",
+  "prs": [
+    {
+      "number": 7995,
+      "url": "https://github.com/caddyserver/caddy/pull/7995",
+      "title": "httpcaddyfile: give each adaptation its own directive order",
+      "merged_at": "2026-09-06T13:20:45Z",
+      "author": "faiyazrahmann",
+      "merge_commit": "9dd286c5e49e2173406e7b2828820b29262a754c",
+      "head_sha": "e137cb02e31cca6337b185ec72902e7a49f5e253",
+      "commits": 1
+    }
+  ],
+  "merge_method_first": "squash",
+  "base_sha": "8626fa370382d9b37c9732cb15730ed29d5f7168",
+  "target_sha": "9dd286c5e49e2173406e7b2828820b29262a754c",
+  "go_directive": "1.25.1",
+  "size_class": "small",
+  "author_patch": {
+    "code_added": 57,
+    "code_removed": 30,
+    "test_added": 234,
+    "test_removed": 0,
+    "files_code": [
+      "caddyconfig/httpcaddyfile/builtins.go",
+      "caddyconfig/httpcaddyfile/directives.go",
+      "caddyconfig/httpcaddyfile/httptype.go",
+      "caddyconfig/httpcaddyfile/options.go"
+    ],
+    "files_generated": [],
+    "files_test": [
+      "caddyconfig/httpcaddyfile/directives_test.go"
+    ],
+    "files_other": []
+  },
+  "hidden_tests": {
+    "files": [
+      "caddyconfig/httpcaddyfile/directives_test.go"
+    ],
+    "funcs": [
+      "TestAdaptDirectiveOrderAfterError",
+      "TestAdaptDirectiveOrderIsolation",
+      "TestAdaptDirectiveOrderWithReusedOptions",
+      "TestConcurrentAdaptDirectiveOrder",
+      "TestConcurrentAdaptDirectiveOrderWithReusedOptions",
+      "TestHostsFromKeys",
+      "TestRegisterDirectiveOrderWithOrderOption"
+    ],
+    "packages": [
+      "./caddyconfig/httpcaddyfile"
+    ],
+    "run_regex": "^(TestAdaptDirectiveOrderAfterError|TestAdaptDirectiveOrderIsolation|TestAdaptDirectiveOrderWithReusedOptions|TestConcurrentAdaptDirectiveOrder|TestConcurrentAdaptDirectiveOrderWithReusedOptions|TestHostsFromKeys|TestRegisterDirectiveOrderWithOrderOption)$",
+    "base_status": "fail"
+  },
+  "verify": {
+    "status": "ok",
+    "prewarm": {
+      "base": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 12.3,
+        "errors": ""
+      },
+      "target": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 11.7,
+        "errors": ""
+      }
+    },
+    "checked_at": "2026-09-14T14:13:22+00:00",
+    "base": {
+      "status": "fail",
+      "failed_tests": [
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderIsolation",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderAfterError",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderWithReusedOptions",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrder",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrderWithReusedOptions",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestRegisterDirectiveOrderWithOrderOption"
+      ],
+      "passed_tests": 1,
+      "seconds": 3.2
+    },
+    "target_hidden": {
+      "pass": true,
+      "failed_tests": [],
+      "passed_tests": 7
+    },
+    "target_suite": {
+      "runs": 3,
+      "median_s": 7.8,
+      "flaky": [],
+      "always_failing": [],
+      "packages": 48
+    },
+    "ok": true,
+    "reasons": [],
+    "skip_regex": null,
+    "vet_base_findings": [],
+    "vet_base_rc": 0
+  },
+  "deps": {
+    "go_mod_changed": false
+  },
+  "range_vs_pr_files_mismatch": [],
+  "prompt": {
+    "sha256": "5759194aa07a5afe5182428dd1a810afc1e5000bc59b35dccac1ea5a8f104c2d",
+    "lines": 29,
+    "lint": {
+      "ok": true,
+      "reasons": [],
+      "identifiers_checked": 4,
+      "visible_in_tests": 0
+    }
+  },
+  "curated_at": "2026-09-14T14:09:44+00:00"
+}

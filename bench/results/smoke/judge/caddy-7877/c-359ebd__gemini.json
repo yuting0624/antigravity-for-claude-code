@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-359ebd",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:07:33+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "03b1ffcb8343962f288f9485f1b81a6a281c90b84cacc4a65def0845e1a39c77",
+  "wall_s": 83.8,
+  "cost_usd": null,
+  "usage": {
+    "input": 27982,
+    "output": 10161,
+    "thinking": 9958,
+    "cache_read": 0,
+    "total": 38143
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches the codebase's conventions and repurposes the existing byte-level comparison logic.",
+    "edge_cases": "Flawlessly handles percent-encoding discrepancies and empty suffixes by enforcing exact-remainder matches.",
+    "scope": "Strictly addresses the suffix stripping requirement and cleans up the now-dead 'reverse' function without unrelated changes.",
+    "readability": "Extracting the matching logic into 'pathPrefixMatchLen' makes both the prefix and suffix operations very easy to understand.",
+    "robustness": "Safely handles byte slicing and bounds checking; the worst-case O(N*M) loop is completely safe for bounded URI path lengths.",
+    "maintainability": "Brilliantly avoids the high complexity of parsing percent-encodings backwards, resulting in a clean and easy-to-maintain design."
+  },
+  "flags": []
+}

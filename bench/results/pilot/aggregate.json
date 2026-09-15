@@ -1,0 +1,260 @@
+{
+  "schema": "bench.aggregate/1",
+  "run_id": "pilot",
+  "generated_at": "2026-09-14T18:37:49+00:00",
+  "n_runs": 4,
+  "tasks": [
+    "caddy-7913",
+    "k6-6169"
+  ],
+  "arms": {
+    "hybrid-forced": {
+      "n": 2,
+      "runs_ok": 1,
+      "excluded": 1,
+      "pass": 0,
+      "pass_rate": 0.0,
+      "hidden_pass": 1,
+      "cost_total_usd": 8.9585,
+      "cost_of_pass_usd": null,
+      "cost_pass_median": null,
+      "cost_pass_min": null,
+      "cost_pass_max": null,
+      "cost_all_median": 8.9585,
+      "claude_usd": 5.7221,
+      "gemini_usd": 3.2364,
+      "wall_median_s": 3600.2,
+      "turns_median": 40,
+      "delegations_median": 8,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 1,
+      "claude_bash_writes": 0,
+      "denials_median": 0,
+      "warm_starts": 0,
+      "caps_hit": 1,
+      "tampered": 0,
+      "usage_reconciles": 0,
+      "violations": {
+        "claude_side_write_in_forced_arm": 1
+      },
+      "by_size": {
+        "medium": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 0,
+          "pass_rate": 0.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 8.9585,
+          "cost_of_pass_usd": null,
+          "cost_pass_median": null,
+          "cost_pass_min": null,
+          "cost_pass_max": null,
+          "cost_all_median": 8.9585,
+          "claude_usd": 5.7221,
+          "gemini_usd": 3.2364,
+          "wall_median_s": 3600.2,
+          "turns_median": 40,
+          "delegations_median": 8,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 1,
+          "claude_bash_writes": 0,
+          "denials_median": 0,
+          "warm_starts": 0,
+          "caps_hit": 1,
+          "tampered": 0,
+          "usage_reconciles": 0,
+          "violations": {}
+        },
+        "large": {
+          "n": 1,
+          "runs_ok": 0,
+          "excluded": 1,
+          "pass": 0,
+          "pass_rate": null,
+          "hidden_pass": 0,
+          "cost_total_usd": 0.0,
+          "cost_of_pass_usd": null,
+          "cost_pass_median": null,
+          "cost_pass_min": null,
+          "cost_pass_max": null,
+          "cost_all_median": null,
+          "claude_usd": 0,
+          "gemini_usd": 0,
+          "wall_median_s": null,
+          "turns_median": null,
+          "delegations_median": null,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": null,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 0,
+          "violations": {
+            "claude_side_write_in_forced_arm": 1
+          }
+        }
+      }
+    },
+    "solo-opus": {
+      "n": 2,
+      "runs_ok": 2,
+      "excluded": 0,
+      "pass": 2,
+      "pass_rate": 1.0,
+      "hidden_pass": 2,
+      "cost_total_usd": 17.4492,
+      "cost_of_pass_usd": 8.7246,
+      "cost_pass_median": 8.7246,
+      "cost_pass_min": 4.7643,
+      "cost_pass_max": 12.6849,
+      "cost_all_median": 8.7246,
+      "claude_usd": 17.4492,
+      "gemini_usd": 0,
+      "wall_median_s": 1302.85,
+      "turns_median": 85.5,
+      "delegations_median": 0.0,
+      "delegations_zero_runs": 2,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 0,
+      "denials_median": 4.5,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 2,
+      "violations": {},
+      "by_size": {
+        "medium": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 1,
+          "pass_rate": 1.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 4.7643,
+          "cost_of_pass_usd": 4.7643,
+          "cost_pass_median": 4.7643,
+          "cost_pass_min": 4.7643,
+          "cost_pass_max": 4.7643,
+          "cost_all_median": 4.7643,
+          "claude_usd": 4.7643,
+          "gemini_usd": 0,
+          "wall_median_s": 797.7,
+          "turns_median": 62,
+          "delegations_median": 0,
+          "delegations_zero_runs": 1,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 6,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 1,
+          "violations": {}
+        },
+        "large": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 1,
+          "pass_rate": 1.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 12.6849,
+          "cost_of_pass_usd": 12.6849,
+          "cost_pass_median": 12.6849,
+          "cost_pass_min": 12.6849,
+          "cost_pass_max": 12.6849,
+          "cost_all_median": 12.6849,
+          "claude_usd": 12.6849,
+          "gemini_usd": 0,
+          "wall_median_s": 1808.0,
+          "turns_median": 109,
+          "delegations_median": 0,
+          "delegations_zero_runs": 1,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 3,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 1,
+          "violations": {}
+        }
+      }
+    }
+  },
+  "paired": {
+    "hybrid-forced_vs_solo-opus": {
+      "arm": "hybrid-forced",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": null,
+      "ci95": null,
+      "boot": 10000,
+      "undefined_draws": 10000,
+      "seed": 20260914,
+      "pass_rate_diff": -1.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": null,
+          "ref_cop": 4.764253499999998,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-forced_vs_solo-opus@medium": {
+      "arm": "hybrid-forced",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": null,
+      "ci95": null,
+      "boot": 10000,
+      "undefined_draws": 10000,
+      "seed": 20260914,
+      "pass_rate_diff": -1.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": null,
+          "ref_cop": 4.764253499999998,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-forced_vs_solo-opus@large": {
+      "arm": "hybrid-forced",
+      "ref": "solo-opus",
+      "n_tasks": 0,
+      "point": null,
+      "ci95": null,
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": null,
+      "per_task": []
+    }
+  },
+  "by_size": {},
+  "judge": {
+    "present": false
+  },
+  "versions": {
+    "claude": "2.1.270 (Claude Code)",
+    "agy": "1.2.2",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "exclusions": [
+    {
+      "run_key": "k6-6169__hybrid-forced__r1",
+      "violations": [
+        "claude_side_write_in_forced_arm"
+      ]
+    }
+  ]
+}

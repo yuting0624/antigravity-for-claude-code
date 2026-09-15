@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:13:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 69.1,
+  "cost_usd": 0.45449800000000007,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix's shape, naming, EqualFold case-folding, PathUnescape error comment, and placement right after it; gofmt-clean.",
+    "edge_cases": "Handles decoded-vs-encoded, escape-in-pattern, both-escaped, empty suffix, suffix longer than path; inherits prefix's non-ASCII byte quirk but that's pre-existing.",
+    "scope": "Only touches the suffix call site, adds trimPathSuffix, and removes the now-dead reverse helper; no other operations affected.",
+    "readability": "Clear lock-step backward walk with named booleans; doc comment is a bit long but the reverse-defeats-escape-detection note is genuinely useful.",
+    "robustness": "All index accesses are bounds-guarded (iPath>0, iPath>=3, iSuffix>=3); unescape error returns path unchanged; no panics possible.",
+    "maintainability": "Escape-detection logic is duplicated in spirit with trimPathPrefix rather than shared, but each is small and self-contained."
+  },
+  "flags": []
+}

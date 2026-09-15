@@ -1,0 +1,483 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "caddy-7995__hybrid-forced__r1",
+  "task_id": "caddy-7995",
+  "arm": "hybrid-forced",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "small",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T08:45:23+00:00",
+  "ended_at": "2026-09-15T09:31:31+00:00",
+  "agent_wall_s": 2764.2,
+  "agent_active_s": 2333.1,
+  "suspended_s": 431.1,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 8,
+    "max_turns": 80,
+    "wall_s": 2700
+  },
+  "prompt": {
+    "task_sha256": "5759194aa07a5afe5182428dd1a810afc1e5000bc59b35dccac1ea5a8f104c2d",
+    "appendix": "hybrid-forced-appendix.md",
+    "appendix_sha256": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "sent_sha256": "ca295c05237e9e2fa41b24f55dbb7c673f1168917a7bbaa99922192753a38548"
+  },
+  "claude": {
+    "session_id": "bc2986ec-0956-4020-b711-6467e06128d6",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 43,
+    "num_turns_source": "result",
+    "duration_ms": 2332517,
+    "duration_api_ms": 417990,
+    "total_cost_usd": 4.225789250000001,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 70,
+      "cache_creation_input_tokens": 403513,
+      "cache_read_input_tokens": 1814206,
+      "output_tokens": 31791,
+      "output_tokens_details": {
+        "thinking_tokens": 10381
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 403513
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1475,
+        "outputTokens": 26,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0016049999999999999,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 70,
+        "outputTokens": 31791,
+        "cacheReadInputTokens": 1814206,
+        "cacheCreationInputTokens": 403513,
+        "webSearchRequests": 0,
+        "costUSD": 4.22418425,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 10381,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 4.224184,
+    "recomputed_vs_reported_gap": -0.0004,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 35,
+      "input": 70,
+      "output": 31791,
+      "cache_creation": 403513,
+      "cache_read": 1814206,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 35,
+          "input": 70,
+          "output": 31791,
+          "cache_creation": 403513,
+          "cache_read": 1814206
+        }
+      },
+      "tool_calls": {
+        "Bash": 42
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 70,
+        "transcript": 70,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 31791,
+        "transcript": 31791,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 403513,
+        "transcript": 403513,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 1814206,
+        "transcript": 1814206,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 3,
+    "denied_tools": {
+      "Bash:cat": 2,
+      "Bash:git": 1
+    },
+    "result_head": "Done. Changes are uncommitted in the working tree across four files.\n\n## What was wrong\n\n`order` took effect by assigning to the package-global `directiveOrder`, and `slices.DeleteFunc(directiveOrder, ...)` mutated its backing array in place. Since `directiveOrder` was declared as `var directiveOrder = defaultDirectiveOrder` (an alias, not a copy), that also corrupted `defaultDirectiveOrder` — as ",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 10,
+    "usage_lines": 7,
+    "signal_only": 3,
+    "succeeded": 4,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 3
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 7,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 7,
+        "input": 1247201,
+        "output": 117340,
+        "thinking": 85709,
+        "cache_read": 8355706,
+        "usd": 2.002104
+      }
+    },
+    "totals": {
+      "input": 1247201,
+      "output": 117340,
+      "thinking": 85709,
+      "cache_read": 8355706,
+      "total": 1364541
+    },
+    "invariant_ok": true,
+    "shadow_usd": 2.002104,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "4c8193e6-59b2-41a2-a131-c285ea0e28f9",
+      "788b4f47-5847-4e39-abf5-18635cae8d3e",
+      "40aac693-b067-40f8-a0f7-8cfdd5978ff7",
+      "ed3bee01-a209-4986-8400-c094ec1bccf3",
+      "73c3d989-563c-4509-9f23-865abdce0175",
+      "0a291dad-ec77-462c-ae83-7dff95370f99",
+      "df735c22-631a-4f03-b4f1-f5ded11e2c0f"
+    ],
+    "agy_duration_s_sum": 2289.915,
+    "wrapper_calls_in_transcript": 7,
+    "trace_audit": {
+      "4c8193e6-59b2-41a2-a131-c285ea0e28f9": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 41,
+          "GENERIC": 38,
+          "ERROR_MESSAGE": 1,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 14,
+          "view_file": 15,
+          "grep_search": 4,
+          "replace_file_content": 5
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 5,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T08:49:29Z",
+        "last_step_at": "2026-09-15T08:54:48Z"
+      },
+      "788b4f47-5847-4e39-abf5-18635cae8d3e": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 33,
+          "GENERIC": 31,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 9,
+          "manage_task": 3,
+          "view_file": 15,
+          "grep_search": 1,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T08:55:32Z",
+        "last_step_at": "2026-09-15T09:00:14Z"
+      },
+      "40aac693-b067-40f8-a0f7-8cfdd5978ff7": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 49,
+          "GENERIC": 45,
+          "SYSTEM_MESSAGE": 2,
+          "ERROR_MESSAGE": 1
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 11,
+          "manage_task": 2,
+          "view_file": 10,
+          "grep_search": 20,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T09:10:16Z",
+        "last_step_at": "2026-09-15T09:15:03Z"
+      },
+      "ed3bee01-a209-4986-8400-c094ec1bccf3": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 15,
+          "GENERIC": 14
+        },
+        "tool_calls": {
+          "run_command": 5,
+          "grep_search": 2,
+          "view_file": 5,
+          "replace_file_content": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T09:16:04Z",
+        "last_step_at": "2026-09-15T09:17:51Z"
+      },
+      "73c3d989-563c-4509-9f23-865abdce0175": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 41,
+          "GENERIC": 40,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 14,
+          "find_by_name": 2,
+          "manage_task": 1,
+          "grep_search": 14,
+          "view_file": 7,
+          "replace_file_content": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T09:18:01Z",
+        "last_step_at": "2026-09-15T09:21:29Z"
+      },
+      "0a291dad-ec77-462c-ae83-7dff95370f99": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 18,
+          "GENERIC": 17
+        },
+        "tool_calls": {
+          "grep_search": 2,
+          "view_file": 6,
+          "replace_file_content": 6,
+          "run_command": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T09:22:34Z",
+        "last_step_at": "2026-09-15T09:24:31Z"
+      },
+      "df735c22-631a-4f03-b4f1-f5ded11e2c0f": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 38,
+          "GENERIC": 37
+        },
+        "tool_calls": {
+          "grep_search": 15,
+          "view_file": 11,
+          "run_command": 6,
+          "replace_file_content": 5
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 5,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T09:25:00Z",
+        "last_step_at": "2026-09-15T09:29:32Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 27
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 2,
+    "toolchain_gomod": 0,
+    "between_calls": 2,
+    "events": 119,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "cat": 2
+    },
+    "gate_allows": 40,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "caddyconfig/httpcaddyfile/directives.go",
+      "caddyconfig/httpcaddyfile/options.go",
+      "caddyconfig/httpcaddyfile/builtins.go",
+      "caddyconfig/httpcaddyfile/httptype.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 1.6,
+      "passed_tests": 7,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 1,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 8.1,
+      "passed_tests": 1287,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 48,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 4,
+    "code_added": 59,
+    "code_removed": 24,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "2524411dd193df61ab98ace04c0257824b63c450cf41a9f740aad9268aa1dc53"
+  },
+  "diff_files": {
+    "caddyconfig/httpcaddyfile/builtins.go": {
+      "added": 1,
+      "removed": 1,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/directives.go": {
+      "added": 30,
+      "removed": 13,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/httptype.go": {
+      "added": 18,
+      "removed": 4,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/options.go": {
+      "added": 10,
+      "removed": 6,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 4.225789250000001,
+    "gemini_usd": 2.002104,
+    "total_usd": 6.227893250000001
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

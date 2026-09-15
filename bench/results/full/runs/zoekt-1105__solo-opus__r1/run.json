@@ -1,0 +1,335 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "zoekt-1105__solo-opus__r1",
+  "task_id": "zoekt-1105",
+  "arm": "solo-opus",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "B",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T05:47:21+00:00",
+  "ended_at": "2026-09-15T06:02:05+00:00",
+  "agent_wall_s": 884.5,
+  "agent_active_s": 884.5,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": null,
+    "plugin_sha": null
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400
+  },
+  "prompt": {
+    "task_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352",
+    "appendix": null,
+    "appendix_sha256": null,
+    "sent_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352"
+  },
+  "claude": {
+    "session_id": "8c8df3fb-d998-4331-8bef-7ceeaf0bd3fa",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 65,
+    "num_turns_source": "result",
+    "duration_ms": 884150,
+    "duration_api_ms": 808027,
+    "total_cost_usd": 5.567030750000001,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 118,
+      "cache_creation_input_tokens": 177845,
+      "cache_read_input_tokens": 5665843,
+      "output_tokens": 64820,
+      "output_tokens_details": {
+        "thinking_tokens": 41614
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 177845
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1363,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0014880000000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 118,
+        "outputTokens": 64820,
+        "cacheReadInputTokens": 5665843,
+        "cacheCreationInputTokens": 177845,
+        "webSearchRequests": 0,
+        "costUSD": 5.5655427500000005,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 41614,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 5.565543,
+    "recomputed_vs_reported_gap": -0.0003,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 59,
+      "input": 118,
+      "output": 64820,
+      "cache_creation": 177845,
+      "cache_read": 5665843,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 59,
+          "input": 118,
+          "output": 64820,
+          "cache_creation": 177845,
+          "cache_read": 5665843
+        }
+      },
+      "tool_calls": {
+        "Bash": 42,
+        "Read": 6,
+        "Edit": 11,
+        "Write": 5
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 16,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 118,
+        "transcript": 118,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 64820,
+        "transcript": 64820,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 177845,
+        "transcript": 177845,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 5665843,
+        "transcript": 5665843,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 2,
+    "denied_tools": {
+      "Bash:cd": 1,
+      "Bash:go": 1
+    },
+    "result_head": "Done. Everything is green: `go test ./...`, `go vet ./...`, `gofmt` clean, and the changes are uncommitted in the working tree.\n\n## What I added\n\n**`cmd/zoekt-local-sync/`** — a self-contained command, three files:\n\n- **`discover.go`** — `discoverRepositories` walks each root (a root that is itself a repo counts), detecting working trees (`.git` dir *or* file, so linked worktrees/submodules work) ",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 0,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 16,
+    "claude_bash": 0,
+    "agy": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 151,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "cd": 1,
+      "go": 1
+    },
+    "gate_allows": 40,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [],
+    "claude_tool_files": [
+      "gitindex/index.go",
+      "cmd/zoekt-git-index/main.go",
+      "cmd/zoekt-local-sync/discover.go",
+      "cmd/zoekt-local-sync/index.go",
+      "cmd/zoekt-local-sync/main.go",
+      "cmd/zoekt-local-sync/sync_test.go",
+      "README.md"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 3.1,
+      "passed_tests": 100,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 2,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 7.0,
+      "passed_tests": 1126,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 56,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 7,
+    "code_added": 811,
+    "code_removed": 0,
+    "test_added": 82,
+    "test_removed": 0,
+    "doc_added": 12,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "cmd/zoekt-git-index/main.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "72dfdc93e0a5c1a22f6a2dd1a8605a17db06afd2fa12079d956c87fccb4d7dcb"
+  },
+  "diff_files": {
+    "README.md": {
+      "added": 12,
+      "removed": 0,
+      "class": "doc"
+    },
+    "cmd/zoekt-git-index/main.go": {
+      "added": 3,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/discover.go": {
+      "added": 149,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/index.go": {
+      "added": 371,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/main.go": {
+      "added": 273,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/sync_test.go": {
+      "added": 82,
+      "removed": 0,
+      "class": "test"
+    },
+    "gitindex/index.go": {
+      "added": 15,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 5.567030750000001,
+    "gemini_usd": 0.0,
+    "total_usd": 5.567030750000001
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

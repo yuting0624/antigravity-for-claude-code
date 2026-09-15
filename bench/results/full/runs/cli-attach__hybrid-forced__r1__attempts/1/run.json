@@ -1,0 +1,360 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-attach__hybrid-forced__r1",
+  "task_id": "cli-attach",
+  "arm": "hybrid-forced",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T06:33:19+00:00",
+  "ended_at": "2026-09-15T07:00:20+00:00",
+  "agent_wall_s": 1619.3,
+  "agent_active_s": 454.6,
+  "suspended_s": 1164.6,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400
+  },
+  "prompt": {
+    "task_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d",
+    "appendix": "hybrid-forced-appendix.md",
+    "appendix_sha256": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "sent_sha256": "c8a2a5211d3b4c3365ab99324634860fd4edc58f9d25f10c12fed49239cec3d2"
+  },
+  "claude": {
+    "session_id": "67852eb4-0cc4-4ad1-9e38-f9f96a6ec5dd",
+    "subtype": "success",
+    "is_error": true,
+    "num_turns": 30,
+    "num_turns_source": "result",
+    "duration_ms": 449069,
+    "duration_api_ms": 155015,
+    "total_cost_usd": 2.19786125,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 46,
+      "cache_creation_input_tokens": 170405,
+      "cache_read_input_tokens": 1721654,
+      "output_tokens": 10781,
+      "output_tokens_details": {
+        "thinking_tokens": 5391
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 170405
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2113,
+        "outputTokens": 27,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002248,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 46,
+        "outputTokens": 10781,
+        "cacheReadInputTokens": 1721654,
+        "cacheCreationInputTokens": 170405,
+        "webSearchRequests": 0,
+        "costUSD": 2.19561325,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 5391,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 2.195613,
+    "recomputed_vs_reported_gap": -0.001,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 24,
+      "input": 46,
+      "output": 10781,
+      "cache_creation": 170405,
+      "cache_read": 1721654,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 23,
+          "input": 46,
+          "output": 10781,
+          "cache_creation": 170405,
+          "cache_read": 1721654
+        },
+        "<synthetic>": {
+          "turns": 1,
+          "input": 0,
+          "output": 0,
+          "cache_creation": 0,
+          "cache_read": 0
+        }
+      },
+      "tool_calls": {
+        "Bash": 27,
+        "Read": 2
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 46,
+        "transcript": 46,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 10781,
+        "transcript": 10781,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 170405,
+        "transcript": 170405,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 1721654,
+        "transcript": 1721654,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 1,
+    "denied_tools": {
+      "Bash:git": 1
+    },
+    "result_head": "API Error: getaddrinfo ENOTFOUND oauth2.googleapis.com",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 1,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 80,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "git": 1
+    },
+    "gate_allows": 26,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "github.com/cli/cli/v2/internal/attachments: no non-test Go files in /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-forced__r1/internal/attachments\n# github.com/cli/cli/v2/api\n# [github.com/cli/cli/v2/api]\nvet: api/queries_issue_test.go:17:43: unknown field DatabaseID in struct literal of type PRRepository\n# github.com/cli/cli/v2/internal/config\n# [github.com/cli/cli/v2/internal/config]\nvet: internal/config/auth_config_test.go:956:12: undefined: gh.TokenType\n# github.com/cli/cli/v2/internal/attachments\n# [github.com/cli/cli/v2/internal/attachments]\nvet: internal/attachments/attach_test.go:26:44: undefined: Uploader\n# github.com/cli/cli/v2/internal/ghinstance\n# [github.com/cli/cli/v2/internal/ghinstance]\nvet: internal/ghinstance/host_test.go:181:29: undefined: UserAssetUploadPrefix\n# github.com/cli/cli/v2/pkg/cmd/issue/comment\n# [github.com/cli/cli/v2/pkg/cmd/issue/comment]\nvet: pkg/cmd/issue/comment/comment_test.go:85:5: unknown field BodyProvided in struct literal of type \"github.com/cli/cli/v2/pkg/cmd/pr/shared\".CommentableOptions\n# github.com/cli/cli/v2/pkg/cmd/pr/comment\n# [github.com/cli/cli/v2/pkg/cmd/pr/comment]\nvet: pkg/cmd/pr/comment/comment_test.go:107:5: unknown field BodyProvided in struct literal of type shared.CommentableOptions\n",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 0.7,
+      "passed_tests": 0,
+      "failed_tests": [],
+      "failed_packages": [
+        "github.com/cli/cli/v2/api",
+        "github.com/cli/cli/v2/internal/attachments",
+        "github.com/cli/cli/v2/internal/config",
+        "github.com/cli/cli/v2/internal/ghinstance",
+        "github.com/cli/cli/v2/pkg/cmd/issue/comment",
+        "github.com/cli/cli/v2/pkg/cmd/issue/create",
+        "github.com/cli/cli/v2/pkg/cmd/issue/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/comment",
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "build_failed_packages": [
+        "github.com/cli/cli/v2/api",
+        "github.com/cli/cli/v2/internal/attachments",
+        "github.com/cli/cli/v2/internal/config",
+        "github.com/cli/cli/v2/internal/ghinstance",
+        "github.com/cli/cli/v2/pkg/cmd/issue/comment",
+        "github.com/cli/cli/v2/pkg/cmd/issue/create",
+        "github.com/cli/cli/v2/pkg/cmd/issue/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/comment",
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "packages": 11,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 36.0,
+      "passed_tests": 6504,
+      "failed_tests": [
+        "github.com/cli/cli/v2/pkg/cmd/attestation/inspect.TestNewInspectCmd_PrintOutputJSONFormat/Print_output_in_JSON_format",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/inspect.TestNewInspectCmd_PrintOutputJSONFormat",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyAttestations",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_invalid_signature",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_valid_artifact_and_JSON_lines_file_containing_multiple_Sigstore_bundles",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegration",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationCustomIssuer",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_invalid_bundle_version",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_no_attestations",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflowSignerWorkflow",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_2/3_verified_attestations",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/fail_with_0/2_verified_attestations",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_GitHub_Sigstore_artifact",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/returns_an_error_instead_of_panicking_when_the_GitHub_verifier_failed_to_initialize",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier"
+      ],
+      "failed_packages": [
+        "github.com/cli/cli/v2/api",
+        "github.com/cli/cli/v2/internal/attachments",
+        "github.com/cli/cli/v2/internal/config",
+        "github.com/cli/cli/v2/internal/ghinstance",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/inspect",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify",
+        "github.com/cli/cli/v2/pkg/cmd/issue/comment",
+        "github.com/cli/cli/v2/pkg/cmd/issue/create",
+        "github.com/cli/cli/v2/pkg/cmd/issue/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/comment",
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "build_failed_packages": [
+        "github.com/cli/cli/v2/api",
+        "github.com/cli/cli/v2/internal/attachments",
+        "github.com/cli/cli/v2/internal/config",
+        "github.com/cli/cli/v2/internal/ghinstance",
+        "github.com/cli/cli/v2/pkg/cmd/issue/comment",
+        "github.com/cli/cli/v2/pkg/cmd/issue/create",
+        "github.com/cli/cli/v2/pkg/cmd/issue/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/comment",
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "packages": 309,
+      "stderr_tail": ""
+    },
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 0,
+    "code_added": 0,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "diff_files": {},
+  "cost": {
+    "claude_usd": 2.19786125,
+    "gemini_usd": 0.0,
+    "total_usd": 2.19786125
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

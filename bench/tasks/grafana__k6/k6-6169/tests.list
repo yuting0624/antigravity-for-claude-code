@@ -1,0 +1,13 @@
+cloudapi/config_test.go
+internal/cloudapi/provisioning/api_test.go
+internal/cloudapi/provisioning/client_test.go
+internal/cloudapi/provisioning/errors_test.go
+internal/cloudapi/provisioning/http_client_test.go
+internal/cloudapi/provisioning/notify_test.go
+internal/cloudapi/provisioning/provision_test.go
+internal/cloudapi/v6/api_test.go
+internal/cmd/outputs_cloud_test.go
+internal/cmd/tests/cmd_cloud_run_test.go
+internal/output/cloud/output_test.go
+output/cloud/expv2/metrics_client_test.go
+output/cloud/expv2/output_test.go

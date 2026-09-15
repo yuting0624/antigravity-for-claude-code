@@ -1,0 +1,150 @@
+{
+  "schema": "bench.task/1",
+  "task_id": "zoekt-1105",
+  "repo": "sourcegraph/zoekt",
+  "repo_url": "https://github.com/sourcegraph/zoekt",
+  "license": "Apache-2.0",
+  "prs": [
+    {
+      "number": 1105,
+      "url": "https://github.com/sourcegraph/zoekt/pull/1105",
+      "title": "local: add zoekt-local-sync for maintaining local indexes",
+      "merged_at": "2026-07-29T13:59:38Z",
+      "author": "keegancsmith",
+      "merge_commit": "2cb19912a4073e5a9895658b7cb135ee4b35733b",
+      "head_sha": "6d9399eae85b42360629d617e73c0fb60805c3f5",
+      "commits": 1
+    }
+  ],
+  "merge_method_first": "squash",
+  "base_sha": "0e022b711109b47d4f9a0932ed7bd3d8ca524b90",
+  "target_sha": "2cb19912a4073e5a9895658b7cb135ee4b35733b",
+  "go_directive": "1.25.9",
+  "size_class": "large",
+  "author_patch": {
+    "code_added": 749,
+    "code_removed": 4,
+    "test_added": 515,
+    "test_removed": 0,
+    "files_code": [
+      "cmd/zoekt-local-sync/discover.go",
+      "cmd/zoekt-local-sync/index.go",
+      "cmd/zoekt-local-sync/main.go",
+      "gitindex/index.go"
+    ],
+    "files_generated": [],
+    "files_test": [
+      "cmd/zoekt-local-sync/discover_test.go",
+      "cmd/zoekt-local-sync/index_test.go",
+      "cmd/zoekt-local-sync/main_test.go",
+      "gitindex/index_test.go"
+    ],
+    "files_other": [
+      "README.md"
+    ]
+  },
+  "hidden_tests": {
+    "files": [
+      "cmd/zoekt-local-sync/discover_test.go",
+      "cmd/zoekt-local-sync/index_test.go",
+      "cmd/zoekt-local-sync/main_test.go",
+      "gitindex/index_test.go"
+    ],
+    "funcs": [
+      "BenchmarkPrepareNormalBuild",
+      "TestCatfileFilterSpec",
+      "TestDirectoryLock",
+      "TestDiscoverRepositories",
+      "TestDiscoverRepositoriesRejectsDuplicateNames",
+      "TestDiscoverRootRepository",
+      "TestHelpIncludesDefaultOptionsAndSubcommands",
+      "TestIndexDeltaBasic",
+      "TestIndexEmptyRepo",
+      "TestIndexGitRepoPreservesRepositoryName",
+      "TestIndexGitRepo_BareRepo_LegacyRepoOpen",
+      "TestIndexGitRepo_CatfileFilterUnsupportedFallsBack",
+      "TestIndexGitRepo_Worktree",
+      "TestIndexNonexistentRepo",
+      "TestIndexTinyRepo",
+      "TestListAndRemove",
+      "TestOpenRepoVariants",
+      "TestSetTemplates",
+      "TestSetTemplates_Worktree",
+      "TestSetTemplates_e2e",
+      "TestSyncDefaultsToPreview",
+      "TestSyncDryRunAndForcePrune",
+      "TestSyncHelpUsesSyncCommandName",
+      "TestSyncIndexesWithRootRelativeName",
+      "TestSyncPrunesRepositoriesOutsideSelectedRoots",
+      "TestSyncRequiresRoot"
+    ],
+    "packages": [
+      "./cmd/zoekt-local-sync",
+      "./gitindex"
+    ],
+    "run_regex": "^(BenchmarkPrepareNormalBuild|TestCatfileFilterSpec|TestDirectoryLock|TestDiscoverRepositories|TestDiscoverRepositoriesRejectsDuplicateNames|TestDiscoverRootRepository|TestHelpIncludesDefaultOptionsAndSubcommands|TestIndexDeltaBasic|TestIndexEmptyRepo|TestIndexGitRepoPreservesRepositoryName|TestIndexGitRepo_BareRepo_LegacyRepoOpen|TestIndexGitRepo_CatfileFilterUnsupportedFallsBack|TestIndexGitRepo_Worktree|TestIndexNonexistentRepo|TestIndexTinyRepo|TestListAndRemove|TestOpenRepoVariants|TestSetTemplates|TestSetTemplates_Worktree|TestSetTemplates_e2e|TestSyncDefaultsToPreview|TestSyncDryRunAndForcePrune|TestSyncHelpUsesSyncCommandName|TestSyncIndexesWithRootRelativeName|TestSyncPrunesRepositoriesOutsideSelectedRoots|TestSyncRequiresRoot)$",
+    "base_status": "compile_fail"
+  },
+  "verify": {
+    "status": "ok",
+    "prewarm": {
+      "base": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 44.1,
+        "errors": ""
+      },
+      "target": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 16.5,
+        "errors": ""
+      }
+    },
+    "checked_at": "2026-09-14T14:42:59+00:00",
+    "base": {
+      "status": "compile_fail",
+      "failed_tests": [
+        "github.com/sourcegraph/zoekt/gitindex.TestIndexGitRepoPreservesRepositoryName"
+      ],
+      "passed_tests": 82,
+      "seconds": 3.1
+    },
+    "target_hidden": {
+      "pass": true,
+      "failed_tests": [],
+      "passed_tests": 100
+    },
+    "target_suite": {
+      "runs": 3,
+      "median_s": 6.7,
+      "flaky": [
+        "github.com/sourcegraph/zoekt/cmd/zoekt-dynamic-indexserver.TestLoggedRunFailure",
+        "pkg:github.com/sourcegraph/zoekt/cmd/zoekt-dynamic-indexserver"
+      ],
+      "always_failing": [],
+      "packages": 56
+    },
+    "ok": true,
+    "environment_failures": [],
+    "hidden_dropped_flaky": [],
+    "reasons": [],
+    "skip_regex": "^(TestLoggedRunFailure)$",
+    "vet_base_findings": [],
+    "vet_base_rc": 0
+  },
+  "deps": {
+    "go_mod_changed": false
+  },
+  "range_vs_pr_files_mismatch": [],
+  "prompt": {
+    "sha256": null,
+    "lines": null,
+    "lint": null
+  },
+  "curated_at": "2026-09-14T14:39:40+00:00"
+}

@@ -1,0 +1,34 @@
+lane B start (gap 300s)
+lane B -> zoekt-1105__hybrid-inst__r1 (attempt 1)
+lane B: zoekt-1105__hybrid-inst__r1 done pass=True $10.507703249999999 in 3755s
+lane B -> caddy-7995__solo-opus__r1 (attempt 1)
+lane B: caddy-7995__solo-opus__r1 done pass=True $3.3309022500000003 in 577s
+lane B -> caddy-7888__hybrid-inst__r1 (attempt 1)
+lane B: caddy-7888__hybrid-inst__r1 done pass=True $2.7200305 in 4306s
+lane B -> caddy-7995__solo-sonnet__r1 (attempt 1)
+lane B: caddy-7995__solo-sonnet__r1 done pass=True $2.0279027000000003 in 498s
+lane B -> caddy-7877__hybrid-inst__r1 (attempt 1)
+lane B: caddy-7877__hybrid-inst__r1 done pass=True $1.3240444999999998 in 526s
+STOP present; lane B exits
+lane B start (gap 300s)
+lane B -> zoekt-1105__solo-opus__r1 (attempt 1)
+lane B: zoekt-1105__solo-opus__r1 done pass=True $5.567030750000001 in 899s
+lane B -> caddy-7888__hybrid-forced__r1 (attempt 1)
+lane B: caddy-7888__hybrid-forced__r1 done pass=True $2.361497 in 988s
+lane B -> zoekt-1105__solo-sonnet__r1 (attempt 1)
+lane B: zoekt-1105__solo-sonnet__r1 done pass=True $2.2091622 in 804s
+lane B -> caddy-7995__hybrid-inst__r1 (attempt 1)
+lane B: caddy-7995__hybrid-inst__r1 infra failure (success); will retry
+lane B -> caddy-7913__solo-opus__r1 (attempt 1)
+lane B: caddy-7913__solo-opus__r1 done pass=True $6.97586125 in 1208s
+lane B -> cli-14136__solo-sonnet__r1 (attempt 1)
+lane B: cli-14136__solo-sonnet__r1 done pass=True $2.953146700000001 in 680s
+lane B -> k6-6169__solo-opus__r1 (attempt 1)
+lane B: k6-6169__solo-opus__r1 done pass=False $12.602867750000001 in 4012s
+STOP present; lane B exits
+lane B start (gap 300s)
+lane B -> cli-14136__hybrid-inst__r1 (attempt 1)
+lane B: cli-14136__hybrid-inst__r1 interrupted by machine sleep (431s asleep); will retry
+STOP present; lane B exits
+lane B start (gap 300s)
+lane B -> cli-attach__solo-opus__r1 (attempt 1)

@@ -1,0 +1,553 @@
+{
+  "schema": "bench.aggregate/1",
+  "run_id": "smoke",
+  "generated_at": "2026-09-14T18:37:49+00:00",
+  "n_runs": 4,
+  "tasks": [
+    "caddy-7877"
+  ],
+  "arms": {
+    "hybrid-forced": {
+      "n": 1,
+      "runs_ok": 1,
+      "excluded": 0,
+      "pass": 1,
+      "pass_rate": 1.0,
+      "hidden_pass": 1,
+      "cost_total_usd": 1.3424,
+      "cost_of_pass_usd": 1.3424,
+      "cost_pass_median": 1.3424,
+      "cost_pass_min": 1.3424,
+      "cost_pass_max": 1.3424,
+      "cost_all_median": 1.3424,
+      "claude_usd": 1.0622,
+      "gemini_usd": 0.2802,
+      "wall_median_s": 478.8,
+      "turns_median": 19,
+      "delegations_median": 2,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 1,
+      "claude_bash_writes": 0,
+      "denials_median": 2,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 1,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 1,
+          "pass_rate": 1.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 1.3424,
+          "cost_of_pass_usd": 1.3424,
+          "cost_pass_median": 1.3424,
+          "cost_pass_min": 1.3424,
+          "cost_pass_max": 1.3424,
+          "cost_all_median": 1.3424,
+          "claude_usd": 1.0622,
+          "gemini_usd": 0.2802,
+          "wall_median_s": 478.8,
+          "turns_median": 19,
+          "delegations_median": 2,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 1,
+          "claude_bash_writes": 0,
+          "denials_median": 2,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 1,
+          "violations": {}
+        }
+      }
+    },
+    "hybrid-inst": {
+      "n": 1,
+      "runs_ok": 1,
+      "excluded": 0,
+      "pass": 1,
+      "pass_rate": 1.0,
+      "hidden_pass": 1,
+      "cost_total_usd": 1.4072,
+      "cost_of_pass_usd": 1.4072,
+      "cost_pass_median": 1.4072,
+      "cost_pass_min": 1.4072,
+      "cost_pass_max": 1.4072,
+      "cost_all_median": 1.4072,
+      "claude_usd": 1.0467,
+      "gemini_usd": 0.3605,
+      "wall_median_s": 594.7,
+      "turns_median": 23,
+      "delegations_median": 1,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 1,
+      "claude_bash_writes": 0,
+      "denials_median": 2,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 1,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 1,
+          "pass_rate": 1.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 1.4072,
+          "cost_of_pass_usd": 1.4072,
+          "cost_pass_median": 1.4072,
+          "cost_pass_min": 1.4072,
+          "cost_pass_max": 1.4072,
+          "cost_all_median": 1.4072,
+          "claude_usd": 1.0467,
+          "gemini_usd": 0.3605,
+          "wall_median_s": 594.7,
+          "turns_median": 23,
+          "delegations_median": 1,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 1,
+          "claude_bash_writes": 0,
+          "denials_median": 2,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 1,
+          "violations": {}
+        }
+      }
+    },
+    "solo-opus": {
+      "n": 1,
+      "runs_ok": 1,
+      "excluded": 0,
+      "pass": 1,
+      "pass_rate": 1.0,
+      "hidden_pass": 1,
+      "cost_total_usd": 0.9297,
+      "cost_of_pass_usd": 0.9297,
+      "cost_pass_median": 0.9297,
+      "cost_pass_min": 0.9297,
+      "cost_pass_max": 0.9297,
+      "cost_all_median": 0.9297,
+      "claude_usd": 0.9297,
+      "gemini_usd": 0,
+      "wall_median_s": 241.9,
+      "turns_median": 15,
+      "delegations_median": 0,
+      "delegations_zero_runs": 1,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 0,
+      "denials_median": 0,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 1,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 1,
+          "pass_rate": 1.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 0.9297,
+          "cost_of_pass_usd": 0.9297,
+          "cost_pass_median": 0.9297,
+          "cost_pass_min": 0.9297,
+          "cost_pass_max": 0.9297,
+          "cost_all_median": 0.9297,
+          "claude_usd": 0.9297,
+          "gemini_usd": 0,
+          "wall_median_s": 241.9,
+          "turns_median": 15,
+          "delegations_median": 0,
+          "delegations_zero_runs": 1,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 0,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 1,
+          "violations": {}
+        }
+      }
+    },
+    "solo-sonnet": {
+      "n": 1,
+      "runs_ok": 1,
+      "excluded": 0,
+      "pass": 1,
+      "pass_rate": 1.0,
+      "hidden_pass": 1,
+      "cost_total_usd": 0.7211,
+      "cost_of_pass_usd": 0.7211,
+      "cost_pass_median": 0.7211,
+      "cost_pass_min": 0.7211,
+      "cost_pass_max": 0.7211,
+      "cost_all_median": 0.7211,
+      "claude_usd": 0.7211,
+      "gemini_usd": 0,
+      "wall_median_s": 339.6,
+      "turns_median": 14,
+      "delegations_median": 0,
+      "delegations_zero_runs": 1,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 0,
+      "denials_median": 1,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 1,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 1,
+          "runs_ok": 1,
+          "excluded": 0,
+          "pass": 1,
+          "pass_rate": 1.0,
+          "hidden_pass": 1,
+          "cost_total_usd": 0.7211,
+          "cost_of_pass_usd": 0.7211,
+          "cost_pass_median": 0.7211,
+          "cost_pass_min": 0.7211,
+          "cost_pass_max": 0.7211,
+          "cost_all_median": 0.7211,
+          "claude_usd": 0.7211,
+          "gemini_usd": 0,
+          "wall_median_s": 339.6,
+          "turns_median": 14,
+          "delegations_median": 0,
+          "delegations_zero_runs": 1,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 1,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 1,
+          "violations": {}
+        }
+      }
+    }
+  },
+  "paired": {
+    "hybrid-forced_vs_solo-opus": {
+      "arm": "hybrid-forced",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": 1.4439,
+      "ci95": [
+        1.4439,
+        1.4439
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 1.34239925,
+          "ref_cop": 0.9297062500000001,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-forced_vs_solo-opus@small": {
+      "arm": "hybrid-forced",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": 1.4439,
+      "ci95": [
+        1.4439,
+        1.4439
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 1.34239925,
+          "ref_cop": 0.9297062500000001,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-inst_vs_solo-opus": {
+      "arm": "hybrid-inst",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": 1.5136,
+      "ci95": [
+        1.5136,
+        1.5136
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 1.40723225,
+          "ref_cop": 0.9297062500000001,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-inst_vs_solo-opus@small": {
+      "arm": "hybrid-inst",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": 1.5136,
+      "ci95": [
+        1.5136,
+        1.5136
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 1.40723225,
+          "ref_cop": 0.9297062500000001,
+          "size_class": "small"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": 0.7756,
+      "ci95": [
+        0.7756,
+        0.7756
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.7210818000000001,
+          "ref_cop": 0.9297062500000001,
+          "size_class": "small"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@small": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 1,
+      "point": 0.7756,
+      "ci95": [
+        0.7756,
+        0.7756
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.7210818000000001,
+          "ref_cop": 0.9297062500000001,
+          "size_class": "small"
+        }
+      ]
+    }
+  },
+  "by_size": {},
+  "judge": {
+    "present": true,
+    "records_ok": 12,
+    "records_failed": 0,
+    "by_arm": {
+      "author": {
+        "gemini": {
+          "n": 1,
+          "mean": 3.0,
+          "consistency": 2.0,
+          "edge_cases": 1.0,
+          "scope": 5.0,
+          "readability": 4.0,
+          "robustness": 3.0,
+          "maintainability": 3.0
+        },
+        "claude": {
+          "n": 1,
+          "mean": 4.5,
+          "consistency": 5.0,
+          "edge_cases": 4.0,
+          "scope": 5.0,
+          "readability": 4.0,
+          "robustness": 5.0,
+          "maintainability": 4.0
+        }
+      },
+      "hybrid-inst": {
+        "claude": {
+          "n": 1,
+          "mean": 3.333,
+          "consistency": 4.0,
+          "edge_cases": 3.0,
+          "scope": 4.0,
+          "readability": 3.0,
+          "robustness": 3.0,
+          "maintainability": 3.0
+        },
+        "gemini": {
+          "n": 1,
+          "mean": 5.0,
+          "consistency": 5.0,
+          "edge_cases": 5.0,
+          "scope": 5.0,
+          "readability": 5.0,
+          "robustness": 5.0,
+          "maintainability": 5.0
+        }
+      },
+      "null": {
+        "claude": {
+          "n": 1,
+          "mean": 1.0,
+          "consistency": 1.0,
+          "edge_cases": 1.0,
+          "scope": 1.0,
+          "readability": 1.0,
+          "robustness": 1.0,
+          "maintainability": 1.0
+        },
+        "gemini": {
+          "n": 1,
+          "mean": 1.0,
+          "consistency": 1.0,
+          "edge_cases": 1.0,
+          "scope": 1.0,
+          "readability": 1.0,
+          "robustness": 1.0,
+          "maintainability": 1.0
+        }
+      },
+      "hybrid-forced": {
+        "claude": {
+          "n": 1,
+          "mean": 4.667,
+          "consistency": 5.0,
+          "edge_cases": 4.0,
+          "scope": 5.0,
+          "readability": 5.0,
+          "robustness": 5.0,
+          "maintainability": 4.0
+        },
+        "gemini": {
+          "n": 1,
+          "mean": 2.667,
+          "consistency": 1.0,
+          "edge_cases": 1.0,
+          "scope": 5.0,
+          "readability": 4.0,
+          "robustness": 3.0,
+          "maintainability": 2.0
+        }
+      },
+      "solo-sonnet": {
+        "gemini": {
+          "n": 1,
+          "mean": 4.833,
+          "consistency": 5.0,
+          "edge_cases": 5.0,
+          "scope": 5.0,
+          "readability": 5.0,
+          "robustness": 4.0,
+          "maintainability": 5.0
+        },
+        "claude": {
+          "n": 1,
+          "mean": 4.0,
+          "consistency": 4.0,
+          "edge_cases": 4.0,
+          "scope": 5.0,
+          "readability": 4.0,
+          "robustness": 4.0,
+          "maintainability": 3.0
+        }
+      },
+      "solo-opus": {
+        "gemini": {
+          "n": 1,
+          "mean": 4.5,
+          "consistency": 4.0,
+          "edge_cases": 4.0,
+          "scope": 5.0,
+          "readability": 5.0,
+          "robustness": 5.0,
+          "maintainability": 4.0
+        },
+        "claude": {
+          "n": 1,
+          "mean": 4.333,
+          "consistency": 4.0,
+          "edge_cases": 4.0,
+          "scope": 5.0,
+          "readability": 4.0,
+          "robustness": 5.0,
+          "maintainability": 4.0
+        }
+      }
+    },
+    "anchors": {
+      "null_mean_by_judge": {
+        "claude": 1.0,
+        "gemini": 1.0
+      },
+      "null_max_by_judge": {
+        "claude": 1.0,
+        "gemini": 1.0
+      },
+      "author_rank_by_task": {
+        "gemini": {
+          "caddy-7877": "4/6"
+        },
+        "claude": {
+          "caddy-7877": "2/6"
+        }
+      }
+    },
+    "agreement": {
+      "n_candidates_both": 6,
+      "spearman_mean": -0.1429,
+      "within1_pct": 0.5
+    },
+    "judge_vs_pass_pointbiserial": {
+      "claude": null,
+      "gemini": null
+    }
+  },
+  "versions": {
+    "claude": "2.1.270 (Claude Code)",
+    "agy": "1.2.2",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "exclusions": []
+}

@@ -1,0 +1,4 @@
+cmd/zoekt-local-sync/discover_test.go
+cmd/zoekt-local-sync/index_test.go
+cmd/zoekt-local-sync/main_test.go
+gitindex/index_test.go

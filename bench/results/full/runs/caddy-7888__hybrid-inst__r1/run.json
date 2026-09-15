@@ -1,0 +1,369 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "caddy-7888__hybrid-inst__r1",
+  "task_id": "caddy-7888",
+  "arm": "hybrid-inst",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "B",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T03:56:16+00:00",
+  "ended_at": "2026-09-15T05:07:50+00:00",
+  "agent_wall_s": 4290.8,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 30,
+    "max_turns": 150,
+    "wall_s": 9000
+  },
+  "prompt": {
+    "task_sha256": "12ba74ef9a4667169627270f8f848bdade1373f524a8b7a24bbc1a0c1f0d3fa9",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "514def2fc893ae3b5ff96df43054e94e9139a983700e1c262a827260f60b2d75"
+  },
+  "claude": {
+    "session_id": "018b5a21-6931-4034-9582-023901b57c51",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 32,
+    "num_turns_source": "result",
+    "duration_ms": 868472,
+    "duration_api_ms": 310950,
+    "total_cost_usd": 2.0593865,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 52,
+      "cache_creation_input_tokens": 183198,
+      "cache_read_input_tokens": 909408,
+      "output_tokens": 18313,
+      "output_tokens_details": {
+        "thinking_tokens": 5758
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 183198
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1490,
+        "outputTokens": 24,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.00161,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 52,
+        "outputTokens": 18313,
+        "cacheReadInputTokens": 909408,
+        "cacheCreationInputTokens": 183198,
+        "webSearchRequests": 0,
+        "costUSD": 2.0577765,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 5758,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 2.057777,
+    "recomputed_vs_reported_gap": -0.0008,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 26,
+      "input": 52,
+      "output": 18313,
+      "cache_creation": 183198,
+      "cache_read": 909408,
+      "first_turn_cache_read": 9760,
+      "models": {
+        "claude-opus-5": {
+          "turns": 26,
+          "input": 52,
+          "output": 18313,
+          "cache_creation": 183198,
+          "cache_read": 909408
+        }
+      },
+      "tool_calls": {
+        "Bash": 24,
+        "Read": 4,
+        "Edit": 2,
+        "Write": 1
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 3,
+      "sidechain_turns": 0
+    },
+    "warm_start": true,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 52,
+        "transcript": 52,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 18313,
+        "transcript": 18313,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 183198,
+        "transcript": 183198,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 909408,
+        "transcript": 909408,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 2,
+    "denied_tools": {
+      "Bash:agy-delegate": 1,
+      "Write": 1
+    },
+    "result_head": "Done. `go test ./...` is green, `go vet ./...` clean, `gofmt` clean, and the only working-tree change is `modules/logging/filters.go` (uncommitted, +~150 lines).\n\n**What was added** (all in `modules/logging/filters.go`, beside the existing cookie filter):\n\n- `SetCookieFilter` struct reusing the existing `cookieFilterAction` type, registered as `caddy.logging.encoders.filter.set_cookie` in `init()`",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 4,
+    "usage_lines": 3,
+    "signal_only": 1,
+    "succeeded": 2,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 1
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 3,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 3,
+        "input": 622578,
+        "output": 27575,
+        "thinking": 20956,
+        "cache_read": 1204050,
+        "usd": 0.660644
+      }
+    },
+    "totals": {
+      "input": 622578,
+      "output": 27575,
+      "thinking": 20956,
+      "cache_read": 1204050,
+      "total": 650153
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.660644,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "c10319e1-b323-4629-a5c5-93430b930148",
+      "76ed16d7-789f-4854-b07f-dc674067f778",
+      "99152e5d-976f-438e-9fbf-fc286b683775"
+    ],
+    "agy_duration_s_sum": 3977.709,
+    "wrapper_calls_in_transcript": 4,
+    "trace_audit": {
+      "c10319e1-b323-4629-a5c5-93430b930148": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 23,
+          "GENERIC": 22
+        },
+        "tool_calls": {
+          "run_command": 8,
+          "grep_search": 3,
+          "view_file": 8,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T03:58:20Z",
+        "last_step_at": "2026-09-15T04:01:49Z"
+      },
+      "76ed16d7-789f-4854-b07f-dc674067f778": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 11,
+          "GENERIC": 11,
+          "SYSTEM_MESSAGE": 1
+        },
+        "tool_calls": {
+          "run_command": 10,
+          "manage_task": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T04:04:07Z",
+        "last_step_at": "2026-09-15T04:05:30Z"
+      },
+      "99152e5d-976f-438e-9fbf-fc286b683775": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 16,
+          "GENERIC": 15
+        },
+        "tool_calls": {
+          "run_command": 14,
+          "view_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T05:05:43Z",
+        "last_step_at": "2026-09-15T05:07:24Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 3
+  },
+  "writes": {
+    "claude_tool": 2,
+    "claude_bash": 0,
+    "agy": 1,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 76,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "agy-delegate": 1
+    },
+    "gate_allows": 23,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "modules/logging/filters.go"
+    ],
+    "claude_tool_files": [
+      "modules/logging/filters.go"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 1.0,
+      "passed_tests": 27,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 1,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 5.0,
+      "passed_tests": 1178,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 47,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 1,
+    "code_added": 146,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "aaa80d3faa736c070025db162bf0cafc3aca51117ca948a269ab253255cd4f1f"
+  },
+  "diff_files": {
+    "modules/logging/filters.go": {
+      "added": 146,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 2.0593865,
+    "gemini_usd": 0.660644,
+    "total_usd": 2.7200305
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

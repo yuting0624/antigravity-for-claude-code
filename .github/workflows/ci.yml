@@ -31,7 +31,7 @@ jobs:
         run: shellcheck --severity=warning scripts/*.sh tests/*.sh hooks/*.sh || true
 
       - name: Python compile
-        run: python3 -m py_compile scripts/measure-session.py
+        run: python3 -m py_compile scripts/measure-session.py bench/bench.py bench/harness/*.py bench/hooks/*.py
 
       - name: Validate JSON manifests
         run: |

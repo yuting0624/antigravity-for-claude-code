@@ -1,0 +1,462 @@
+diff --git a/caddyconfig/httpcaddyfile/builtins.go b/caddyconfig/httpcaddyfile/builtins.go
+index 34965d1d6..f9ad013ee 100644
+--- a/caddyconfig/httpcaddyfile/builtins.go
++++ b/caddyconfig/httpcaddyfile/builtins.go
+@@ -818,7 +818,7 @@ func parseRoute(h Helper) (caddyhttp.MiddlewareHandler, error) {
+ 		}
+ 	}
+ 
+-	return buildSubroute(allResults, h.groupCounter, false)
++	return buildSubroute(allResults, h.groupCounter, nil)
+ }
+ 
+ func parseHandle(h Helper) (caddyhttp.MiddlewareHandler, error) {
+diff --git a/caddyconfig/httpcaddyfile/directives.go b/caddyconfig/httpcaddyfile/directives.go
+index cdf1ef3aa..f411aabe3 100644
+--- a/caddyconfig/httpcaddyfile/directives.go
++++ b/caddyconfig/httpcaddyfile/directives.go
+@@ -99,10 +99,24 @@ var defaultDirectiveOrder = []string{
+ }
+ 
+ // directiveOrder specifies the order to apply directives
+-// in HTTP routes, after being modified by either the
+-// plugins or by the user via the "order" global option.
++// in HTTP routes, after being modified by the plugins.
++// It is only written during plugin registration, i.e.
++// before any adaptation runs; adaptations only read it,
++// since the user's "order" global option is kept per
++// adaptation in options["order"] instead.
+ var directiveOrder = defaultDirectiveOrder
+ 
++// directiveOrderFor returns the directive order to use for the
++// adaptation these options belong to. That's whatever the "order"
++// global option built up, or the plugin-registered order if the
++// Caddyfile didn't use it.
++func directiveOrderFor(options map[string]any) []string {
++	if order, ok := options["order"].([]string); ok {
++		return order
++	}
++	return directiveOrder
++}
++
+ // RegisterDirective registers a unique directive dir with an
+ // associated unmarshaling (setup) function. When directive dir
+ // is encountered in a Caddyfile, setupFunc will be called to
+@@ -169,20 +183,14 @@ func RegisterDirectiveOrder(dir string, position Positional, standardDir string)
+ 		panic("the 3rd argument '" + standardDir + "' must be a directive that exists in the standard distribution of Caddy")
+ 	}
+ 
+-	// insert directive into proper position
+-	newOrder := directiveOrder
+-	for i, d := range newOrder {
+-		if d != standardDir {
+-			continue
+-		}
+-		switch position {
+-		case Before:
+-			newOrder = append(newOrder[:i], append([]string{dir}, newOrder[i:]...)...)
+-		case After:
+-			newOrder = append(newOrder[:i+1], append([]string{dir}, newOrder[i+1:]...)...)
+-		case First, Last:
++	// insert directive into proper position, into a copy so that we
++	// never write into the array backing defaultDirectiveOrder
++	newOrder := slices.Clone(directiveOrder)
++	if i := slices.Index(newOrder, standardDir); i >= 0 {
++		if position == After {
++			i++
+ 		}
+-		break
++		newOrder = slices.Insert(newOrder, i, dir)
+ 	}
+ 	directiveOrder = newOrder
+ }
+@@ -348,7 +356,7 @@ func ParseSegmentAsSubroute(h Helper) (caddyhttp.MiddlewareHandler, error) {
+ 		return nil, err
+ 	}
+ 
+-	return buildSubroute(allResults, h.groupCounter, true)
++	return buildSubroute(allResults, h.groupCounter, directiveOrderFor(h.options))
+ }
+ 
+ // parseSegmentAsConfig parses the segment such that its subdirectives
+@@ -444,9 +452,9 @@ type ConfigValue struct {
+ 	directive string
+ }
+ 
+-func sortRoutes(routes []ConfigValue) {
++func sortRoutes(routes []ConfigValue, order []string) {
+ 	dirPositions := make(map[string]int)
+-	for i, dir := range directiveOrder {
++	for i, dir := range order {
+ 		dirPositions[dir] = i
+ 	}
+ 
+diff --git a/caddyconfig/httpcaddyfile/directives_test.go b/caddyconfig/httpcaddyfile/directives_test.go
+index 2b4d3e6c3..9adf0c041 100644
+--- a/caddyconfig/httpcaddyfile/directives_test.go
++++ b/caddyconfig/httpcaddyfile/directives_test.go
+@@ -2,8 +2,14 @@ package httpcaddyfile
+ 
+ import (
+ 	"reflect"
++	"slices"
+ 	"sort"
++	"strings"
++	"sync"
+ 	"testing"
++
++	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
++	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+ )
+ 
+ func TestHostsFromKeys(t *testing.T) {
+@@ -95,3 +101,231 @@ func TestHostsFromKeys(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// test_ordered_plugin stands in for a plugin directive in the tests below.
++// it registers from init() like a real plugin would, which also keeps it to
++// once per process, since registering twice panics.
++func init() {
++	RegisterHandlerDirective("test_ordered_plugin", func(h Helper) (caddyhttp.MiddlewareHandler, error) {
++		h.Next()
++		return caddyhttp.StaticError{StatusCode: "500"}, nil
++	})
++	RegisterDirectiveOrder("test_ordered_plugin", Before, "respond")
++}
++
++// caddyfiles shared by the directive order tests below. the handle block in
++// orderTestPlain is there so that the subroute path gets covered too, not
++// just the top level of the site block, and orderTestReordered moves respond
++// ahead of root so it has to adapt to something different.
++const (
++	orderTestPlain = `:8080 {
++	root * /srv
++	handle /foo {
++		respond 200
++		root * /other
++	}
++}
++`
++	orderTestReordered = "{\n\torder respond first\n}\n" + orderTestPlain
++
++	// covers every positional, since first and last build the new order in
++	// their own way and last can append in place
++	orderTestConcurrent = `{
++	order redir before respond
++	order vars after root
++	order root first
++	order respond last
++}
++:8080 {
++	respond 200
++}
++`
++)
++
++// adaptCaddyfile adapts the given Caddyfile with a fresh options map.
++func adaptCaddyfile(t *testing.T, input string) string {
++	t.Helper()
++	return adaptWithOptions(t, input, nil)
++}
++
++// adaptWithOptions adapts the given Caddyfile with the caller's options map.
++func adaptWithOptions(t *testing.T, input string, options map[string]any) string {
++	t.Helper()
++	adapter := caddyfile.Adapter{ServerType: ServerType{}}
++	out, _, err := adapter.Adapt([]byte(input), options)
++	if err != nil {
++		t.Fatalf("adapting: %v", err)
++	}
++	return string(out)
++}
++
++// adaptConcurrently adapts a Caddyfile using the order global option from
++// several goroutines at once. A non-nil options map is shared by all of
++// them; nil gives each adaptation its own. Run with -race.
++func adaptConcurrently(t *testing.T, options map[string]any) {
++	t.Helper()
++
++	var wg sync.WaitGroup
++	for range 8 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			for range 200 {
++				adapter := caddyfile.Adapter{ServerType: ServerType{}}
++				if _, _, err := adapter.Adapt([]byte(orderTestConcurrent), options); err != nil {
++					t.Errorf("adapting concurrently: %v", err)
++					return
++				}
++			}
++		}()
++	}
++	wg.Wait()
++}
++
++// handlerComesFirst reports whether handler a appears before handler b in
++// the adapted JSON.
++func handlerComesFirst(adapted, a, b string) bool {
++	ai := strings.Index(adapted, `"handler":"`+a+`"`)
++	bi := strings.Index(adapted, `"handler":"`+b+`"`)
++	return ai >= 0 && bi >= 0 && ai < bi
++}
++
++// TestAdaptDirectiveOrderIsolation makes sure the order global option only
++// applies to the adaptation it was written in.
++func TestAdaptDirectiveOrderIsolation(t *testing.T) {
++	baseline := adaptCaddyfile(t, orderTestPlain)
++
++	// this one moves respond to the front, so it has to produce something
++	// different than the default order does
++	if out := adaptCaddyfile(t, orderTestReordered); out == baseline {
++		t.Fatal("the order option had no effect, so this test proves nothing")
++	}
++
++	if out := adaptCaddyfile(t, orderTestPlain); out != baseline {
++		t.Errorf("order option leaked into the next adaptation:\nExpected: %s\nActual:   %s", baseline, out)
++	}
++}
++
++// TestAdaptDirectiveOrderAfterError makes sure a failed adaptation leaves
++// nothing behind for the next one.
++func TestAdaptDirectiveOrderAfterError(t *testing.T) {
++	baseline := adaptCaddyfile(t, orderTestPlain)
++
++	const broken = `{
++	order respond before not_a_directive
++}
++:8080 {
++	respond 200
++}
++`
++	adapter := caddyfile.Adapter{ServerType: ServerType{}}
++	if _, _, err := adapter.Adapt([]byte(broken), nil); err == nil {
++		t.Fatal("expected an error for an order option pointing at an unknown directive")
++	}
++
++	if out := adaptCaddyfile(t, orderTestPlain); out != baseline {
++		t.Errorf("failed adaptation left the order broken:\nExpected: %s\nActual:   %s", baseline, out)
++	}
++}
++
++// TestAdaptDirectiveOrderWithReusedOptions makes sure that handing the same
++// options map to one adaptation after another doesn't carry the first one's
++// order into the second, and that the caller's map is left alone.
++func TestAdaptDirectiveOrderWithReusedOptions(t *testing.T) {
++	baseline := adaptCaddyfile(t, orderTestPlain)
++
++	options := map[string]any{}
++
++	if out := adaptWithOptions(t, orderTestReordered, options); out == baseline {
++		t.Fatal("the order option had no effect, so this test proves nothing")
++	}
++	if out := adaptWithOptions(t, orderTestPlain, options); out != baseline {
++		t.Errorf("reused options map carried the order into the next adaptation:\nExpected: %s\nActual:   %s", baseline, out)
++	}
++	if len(options) > 0 {
++		t.Errorf("adapting wrote into the caller's options map: %v", options)
++	}
++
++	// an order the caller put in the map itself is ignored as well, and the
++	// slice behind it is never written to; if it were used here, root would
++	// not be an ordered handler and adapting would fail
++	callerOrder := []string{"respond"}
++	options["order"] = callerOrder
++	if out := adaptWithOptions(t, orderTestPlain, options); out != baseline {
++		t.Errorf("an order from the caller's map was used:\nExpected: %s\nActual:   %s", baseline, out)
++	}
++	if !slices.Equal(callerOrder, []string{"respond"}) {
++		t.Errorf("adapting modified the caller's order: %v", callerOrder)
++	}
++}
++
++// TestConcurrentAdaptDirectiveOrder makes sure that adapting several
++// Caddyfiles at once, all of them using the order global option, doesn't
++// race or corrupt the order shared by the whole process.
++// See https://github.com/caddyserver/caddy/issues/7994
++func TestConcurrentAdaptDirectiveOrder(t *testing.T) {
++	baseline := slices.Clone(directiveOrder)
++	defaultBaseline := slices.Clone(defaultDirectiveOrder)
++
++	adaptConcurrently(t, nil)
++
++	if !slices.Equal(directiveOrder, baseline) {
++		t.Errorf("adaptation changed the process-wide order:\nExpected: %v\nActual:   %v", baseline, directiveOrder)
++	}
++	if !slices.Equal(defaultDirectiveOrder, defaultBaseline) {
++		t.Errorf("adaptation changed the default order:\nExpected: %v\nActual:   %v", defaultBaseline, defaultDirectiveOrder)
++	}
++}
++
++// TestConcurrentAdaptDirectiveOrderWithReusedOptions is the same, except
++// every goroutine is handed the same options map.
++func TestConcurrentAdaptDirectiveOrderWithReusedOptions(t *testing.T) {
++	baseline := slices.Clone(directiveOrder)
++	defaultBaseline := slices.Clone(defaultDirectiveOrder)
++	options := map[string]any{}
++
++	adaptConcurrently(t, options)
++
++	if !slices.Equal(directiveOrder, baseline) {
++		t.Errorf("adaptation changed the process-wide order:\nExpected: %v\nActual:   %v", baseline, directiveOrder)
++	}
++	if !slices.Equal(defaultDirectiveOrder, defaultBaseline) {
++		t.Errorf("adaptation changed the default order:\nExpected: %v\nActual:   %v", defaultBaseline, defaultDirectiveOrder)
++	}
++	if len(options) > 0 {
++		t.Errorf("adapting wrote into the caller's options map: %v", options)
++	}
++}
++
++// TestRegisterDirectiveOrderWithOrderOption makes sure an order registered
++// by a plugin is still honored, and can still be overridden by the order
++// global option without the override sticking around afterwards.
++func TestRegisterDirectiveOrderWithOrderOption(t *testing.T) {
++	if !slices.Contains(directiveOrder, "test_ordered_plugin") {
++		t.Fatal("plugin directive was not added to the order")
++	}
++	if !slices.Contains(defaultDirectiveOrder, "respond") || slices.Contains(defaultDirectiveOrder, "test_ordered_plugin") {
++		t.Errorf("registering a plugin order corrupted the default order: %v", defaultDirectiveOrder)
++	}
++
++	const site = `:8080 {
++	respond 200
++	test_ordered_plugin
++}
++`
++	// with no order option, the registered position wins
++	if out := adaptCaddyfile(t, site); !handlerComesFirst(out, "error", "static_response") {
++		t.Errorf("expected the plugin directive before respond, got: %s", out)
++	}
++
++	// the order option overrides it
++	overridden := adaptCaddyfile(t, "{\n\torder test_ordered_plugin after respond\n}\n"+site)
++	if !handlerComesFirst(overridden, "static_response", "error") {
++		t.Errorf("expected respond before the plugin directive, got: %s", overridden)
++	}
++
++	// and the override is gone again
++	if out := adaptCaddyfile(t, site); !handlerComesFirst(out, "error", "static_response") {
++		t.Errorf("the order option leaked past its own adaptation, got: %s", out)
++	}
++}
+diff --git a/caddyconfig/httpcaddyfile/httptype.go b/caddyconfig/httpcaddyfile/httptype.go
+index 60d851fec..ac6f78e3b 100644
+--- a/caddyconfig/httpcaddyfile/httptype.go
++++ b/caddyconfig/httpcaddyfile/httptype.go
+@@ -18,6 +18,7 @@ import (
+ 	"cmp"
+ 	"encoding/json"
+ 	"fmt"
++	"maps"
+ 	"net"
+ 	"reflect"
+ 	"slices"
+@@ -63,6 +64,18 @@ func (st ServerType) Setup(
+ 	gc := counter{new(int)}
+ 	state := make(map[string]any)
+ 
++	// adaptation fills the options in as it goes, so work on our own copy;
++	// the caller may reuse or share the map they gave us
++	options = maps.Clone(options)
++	if options == nil {
++		options = make(map[string]any)
++	}
++
++	// an order accumulated by a previous adaptation must not carry into
++	// this one, so drop it and let the first "order" option start over
++	// from the order the plugins registered
++	delete(options, "order")
++
+ 	// load all the server blocks and associate them with a "pile" of config values
+ 	originalServerBlocks := make([]serverBlock, 0, len(inputServerBlocks))
+ 	for _, sblock := range inputServerBlocks {
+@@ -918,7 +931,7 @@ func (st *ServerType) serversFromPairings(
+ 
+ 			// set up each handler directive, making sure to honor directive order
+ 			dirRoutes := sblock.pile["route"]
+-			siteSubroute, err := buildSubroute(dirRoutes, groupCounter, true)
++			siteSubroute, err := buildSubroute(dirRoutes, groupCounter, directiveOrderFor(options))
+ 			if err != nil {
+ 				return nil, err
+ 			}
+@@ -1421,15 +1434,17 @@ func appendSubrouteToRouteList(routeList caddyhttp.RouteList,
+ 
+ // buildSubroute turns the config values, which are expected to be routes
+ // into a clean and orderly subroute that has all the routes within it.
+-func buildSubroute(routes []ConfigValue, groupCounter counter, needsSorting bool) (*caddyhttp.Subroute, error) {
+-	if needsSorting {
++// The order is the one belonging to the current adaptation; pass nil to
++// keep the routes in the order they were written in.
++func buildSubroute(routes []ConfigValue, groupCounter counter, order []string) (*caddyhttp.Subroute, error) {
++	if order != nil {
+ 		for _, val := range routes {
+-			if !slices.Contains(directiveOrder, val.directive) {
++			if !slices.Contains(order, val.directive) {
+ 				return nil, fmt.Errorf("directive '%s' is not an ordered HTTP handler, so it cannot be used here - try placing within a route block or using the order global option", val.directive)
+ 			}
+ 		}
+ 
+-		sortRoutes(routes)
++		sortRoutes(routes, order)
+ 	}
+ 
+ 	subroute := new(caddyhttp.Subroute)
+diff --git a/caddyconfig/httpcaddyfile/options.go b/caddyconfig/httpcaddyfile/options.go
+index 0b4ee5402..dd35d13a3 100644
+--- a/caddyconfig/httpcaddyfile/options.go
++++ b/caddyconfig/httpcaddyfile/options.go
+@@ -101,7 +101,7 @@ func parseOptHTTPSPort(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	return httpsPort, nil
+ }
+ 
+-func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
++func parseOptOrder(d *caddyfile.Dispenser, existing any) (any, error) {
+ 	d.Next() // consume option name
+ 
+ 	// get directive name
+@@ -119,8 +119,16 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	}
+ 	pos := Positional(d.Val())
+ 
++	// build on what an earlier order option in this same Caddyfile produced;
++	// the first one starts from a clone of the order the plugins registered,
++	// so from here on we're only ever editing a slice this adaptation owns
++	order, ok := existing.([]string)
++	if !ok {
++		order = slices.Clone(directiveOrder)
++	}
++
+ 	// if directive already had an order, drop it
+-	newOrder := slices.DeleteFunc(directiveOrder, func(d string) bool {
++	newOrder := slices.DeleteFunc(order, func(d string) bool {
+ 		return d == dirName
+ 	})
+ 
+@@ -131,7 +139,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 		if d.NextArg() {
+ 			return nil, d.ArgErr()
+ 		}
+-		directiveOrder = newOrder
+ 		return newOrder, nil
+ 
+ 	case Last:
+@@ -139,7 +146,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 		if d.NextArg() {
+ 			return nil, d.ArgErr()
+ 		}
+-		directiveOrder = newOrder
+ 		return newOrder, nil
+ 
+ 	// if it's Before or After, continue
+@@ -171,8 +177,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	// insert the directive into the new order
+ 	newOrder = slices.Insert(newOrder, targetIndex, dirName)
+ 
+-	directiveOrder = newOrder
+-
+ 	return newOrder, nil
+ }
+ 

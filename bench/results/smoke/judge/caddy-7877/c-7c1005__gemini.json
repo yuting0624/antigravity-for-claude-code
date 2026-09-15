@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-7c1005",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:12:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1229f073b86d4ff19d225eebb8f728502cf4451980acf4bfcd73359806a27eb5",
+  "wall_s": 52.1,
+  "cost_usd": null,
+  "usage": {
+    "input": 27117,
+    "output": 6088,
+    "thinking": 5911,
+    "cache_read": 0,
+    "total": 33205
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Follows standard Go idioms and integrates seamlessly with the existing codebase.",
+    "edge_cases": "Correctly identifies and groups '%xx' sequences, preserving escapes while safely handling malformed inputs.",
+    "scope": "Strictly solves the requested suffix stripping issue without any unrelated refactors or changes.",
+    "readability": "Excellent comments and straightforward logic make the atom-reversal strategy very easy to understand.",
+    "robustness": "Safe against bounds errors, though splitting the string into an array of single-byte strings is allocation-heavy.",
+    "maintainability": "Helper functions are logically separated, well-scoped, and completely decouple the reversal logic from path mutation."
+  },
+  "flags": []
+}

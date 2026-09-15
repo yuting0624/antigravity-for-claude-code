@@ -1,0 +1,75 @@
+{
+  "_comment": "Arm definitions. Every arm shares the verification-only Bash policy (bench/policy), WebFetch/WebSearch disallowed, identical caps per size class, identical task prompt. conductor_alias resolves through ANTHROPIC_DEFAULT_<ALIAS>_MODEL in the generated settings; the resolved id is recorded from the transcript.",
+  "arms": {
+    "solo-opus": {
+      "conductor_alias": "opus",
+      "plugin": false,
+      "appendix": null,
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch"
+      ]
+    },
+    "solo-sonnet": {
+      "conductor_alias": "sonnet",
+      "plugin": false,
+      "appendix": null,
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch"
+      ]
+    },
+    "hybrid-inst": {
+      "conductor_alias": "opus",
+      "plugin": true,
+      "appendix": "hybrid-appendix.md",
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch"
+      ]
+    },
+    "hybrid-forced": {
+      "conductor_alias": "opus",
+      "plugin": true,
+      "appendix": "hybrid-forced-appendix.md",
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "NotebookEdit"
+      ]
+    },
+    "hybrid-natural": {
+      "conductor_alias": "opus",
+      "plugin": true,
+      "appendix": null,
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch"
+      ]
+    }
+  },
+  "effort": "high",
+  "caps": {
+    "small": {
+      "max_budget_usd": 8,
+      "max_turns": 80,
+      "wall_s": 2700
+    },
+    "medium": {
+      "max_budget_usd": 30,
+      "max_turns": 150,
+      "wall_s": 9000
+    },
+    "large": {
+      "max_budget_usd": 75,
+      "max_turns": 250,
+      "wall_s": 14400
+    }
+  },
+  "agy_timeout": "10m",
+  "cold_gap_s": 300,
+  "_caps_note": "Set from the pilot on 2026-09-15 so that no cap binds in practice: observed small runs <= $1.41 / 23 turns / 10 min; medium solo $4.76 / 62 turns / 13 min and hybrid-forced killed at 60 min with $8.96 spent; large solo $12.68 / 109 turns / 30 min and hybrid-forced killed at 100 min with $20.60 spent. Identical across arms; a run that hits one counts as a failure."
+}

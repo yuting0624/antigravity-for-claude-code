@@ -1,0 +1,5 @@
+acceptance/testdata/issue/issue-develop-worktree-cross-repo.txtar
+acceptance/testdata/issue/issue-develop-worktree.txtar
+pkg/cmd/issue/develop/develop_test.go
+pkg/cmd/pr/checkout/checkout_test.go
+pkg/cmd/pr/shared/worktree_test.go

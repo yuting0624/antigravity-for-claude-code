@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-359ebd",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:06:09+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "03b1ffcb8343962f288f9485f1b81a6a281c90b84cacc4a65def0845e1a39c77",
+  "wall_s": 32.9,
+  "cost_usd": 0.30583049999999995,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Follows surrounding style; keeps trimPathPrefix API, reuses url.PathUnescape/EqualFold idioms, removes now-dead reverse helper.",
+    "edge_cases": "Handles decoded/escaped patterns, case-folded hex, non-match; but split loop can start inside an escape (path /a%2Fc, suffix Fc yields /a%2), producing a broken raw path.",
+    "scope": "Targeted change plus a justified extraction of the shared matcher; no unrelated edits, dead reverse() removed.",
+    "readability": "Names are clear, but the doc comment is copy-pasted verbatim onto both pathPrefixMatchLen and trimPathPrefix, and the brute-force scan lacks a note on why it is safe/cheap.",
+    "robustness": "No panics (slice bounds safe); however mid-escape false positives can emit an invalid %-sequence into RawPath. O(n*m) scan per request is acceptable for short paths.",
+    "maintainability": "Single shared matcher avoids logic duplication, but the try-every-offset approach hides the escape-boundary flaw and is less direct than a reverse lock-step walk."
+  },
+  "flags": []
+}

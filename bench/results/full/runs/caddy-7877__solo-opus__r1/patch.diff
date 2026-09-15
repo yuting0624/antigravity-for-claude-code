@@ -1,0 +1,96 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..5b1abc311 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -430,6 +430,18 @@ func buildQueryString(qs string, repl *caddy.Replacer) string {
+ // same escape at that position. Otherwise, all character comparisons are
+ // performed in normalized/unescaped space.
+ func trimPathPrefix(escapedPath, prefix string) string {
++	if n := matchPathPrefix(escapedPath, prefix); n >= 0 {
++		return escapedPath[n:]
++	}
++
++	// we did not find the prefix
++	return escapedPath
++}
++
++// matchPathPrefix returns the number of bytes at the beginning of escapedPath
++// that are matched by prefix, using the comparison rules documented on
++// trimPathPrefix, or -1 if prefix does not match.
++func matchPathPrefix(escapedPath, prefix string) int {
+ 	var iPath, iPrefix int
+ 	for iPath < len(escapedPath) && iPrefix < len(prefix) {
+ 		prefixCh := prefix[iPrefix]
+@@ -440,7 +452,7 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 			ch, err = url.PathUnescape(escapedPath[iPath : iPath+3])
+ 			if err != nil {
+ 				// should be impossible unless EscapedPath() is returning invalid values!
+-				return escapedPath
++				return -1
+ 			}
+ 			iPath += 2
+ 		}
+@@ -448,28 +460,44 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 		// prefix comparisons are case-insensitive to consistency with
+ 		// path matcher, which is case-insensitive for good reasons
+ 		if !strings.EqualFold(ch, string(prefixCh)) {
+-			return escapedPath
++			return -1
+ 		}
+ 
+ 		iPath++
+ 		iPrefix++
+ 	}
+ 
+-	// if we iterated through the entire prefix, we found it, so trim it
++	// if we iterated through the entire prefix, we found it
+ 	if iPrefix >= len(prefix) {
+-		return escapedPath[iPath:]
++		return iPath
+ 	}
+ 
+-	// otherwise we did not find the prefix
+-	return escapedPath
++	return -1
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// trimPathSuffix is the counterpart of trimPathPrefix for the end of the path:
++// the suffix is trimmed from the end of escapedPath using the same comparison
++// rules, so that a suffix written in normalized (unescaped) form matches an
++// escaped path, while an escape in the suffix requires the path to use that
++// same escape at that position. Because escape sequences make the length of a
++// match vary, each possible starting position in escapedPath is tried until
++// one matches the suffix exactly up to the end of the path; positions within
++// an escape sequence are skipped so the digits of an escape are never mistaken
++// for path characters.
++func trimPathSuffix(escapedPath, suffix string) string {
++	for i := 0; i < len(escapedPath); {
++		if matchPathPrefix(escapedPath[i:], suffix) == len(escapedPath)-i {
++			return escapedPath[:i]
++		}
++		if escapedPath[i] == '%' && len(escapedPath) >= i+3 {
++			i += 3 // an escape sequence is a single character
++		} else {
++			i++
++		}
+ 	}
+-	return string(r)
++
++	// we did not find the suffix
++	return escapedPath
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

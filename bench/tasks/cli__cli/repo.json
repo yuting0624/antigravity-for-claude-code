@@ -1,0 +1,13 @@
+{
+  "repo": "cli/cli",
+  "_note": "CI (.github/workflows/go.yml): go test -race -tags=integration ./...; acceptance/ needs a live GitHub token and is excluded. #14128 (2026-08-11) isolated tests from host auth/git config.",
+  "go_env": {
+    "GOFLAGS": "-mod=readonly -tags=integration"
+  },
+  "test_extra_args": [],
+  "exclude_pkg_regex": "github.com/cli/cli/v2/acceptance",
+  "parallel_p": null,
+  "hidden_timeout_s": 600,
+  "suite_timeout_s": 1500,
+  "build_timeout_s": 900
+}

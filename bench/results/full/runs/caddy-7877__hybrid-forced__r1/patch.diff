@@ -1,0 +1,68 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..0cb96e513 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -464,12 +464,49 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 	return escapedPath
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// trimPathSuffix is like strings.TrimSuffix, but customized for advanced URI
++// path suffix matching, and is the mirror image of trimPathPrefix: both
++// strings are iterated backwards in lock-step, and if suffix has a '%'
++// encoding at a particular position, escapedPath must literally use the same
++// escape there; otherwise comparisons are performed in normalized/unescaped
++// space.
++func trimPathSuffix(escapedPath, suffix string) string {
++	iPath, iSuffix := len(escapedPath), len(suffix)
++	for iPath > 0 && iSuffix > 0 {
++		suffixCh := suffix[iSuffix-1]
++		ch := string(escapedPath[iPath-1])
++
++		// a '%xx' sequence ending at this position in the suffix must be
++		// matched literally, byte for byte (case-insensitively)
++		suffixEscaped := iSuffix >= 3 && suffix[iSuffix-3] == '%'
++
++		if !suffixEscaped && iPath >= 3 && escapedPath[iPath-3] == '%' {
++			var err error
++			ch, err = url.PathUnescape(escapedPath[iPath-3 : iPath])
++			if err != nil {
++				// should be impossible unless EscapedPath() is returning invalid values!
++				return escapedPath
++			}
++			iPath -= 2
++		}
++
++		// suffix comparisons are case-insensitive for consistency with
++		// trimPathPrefix and the path matcher
++		if !strings.EqualFold(ch, string(suffixCh)) {
++			return escapedPath
++		}
++
++		iPath--
++		iSuffix--
+ 	}
+-	return string(r)
++
++	// if we iterated through the entire suffix, we found it, so trim it
++	if iSuffix <= 0 {
++		return escapedPath[:iPath]
++	}
++
++	// otherwise we did not find the suffix
++	return escapedPath
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

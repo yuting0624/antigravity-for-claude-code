@@ -1,0 +1,520 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "zoekt-1105__hybrid-inst__r1",
+  "task_id": "zoekt-1105",
+  "arm": "hybrid-inst",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "B",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T02:44:03+00:00",
+  "ended_at": "2026-09-15T03:46:23+00:00",
+  "agent_wall_s": 3737.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400
+  },
+  "prompt": {
+    "task_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "bc6cb53e479427332ec15fb6d5aca5d3e257082d90416fa00645b4c3858261c6"
+  },
+  "claude": {
+    "session_id": "3f2cf396-b28b-4242-b84e-b63e70ac2a6b",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 71,
+    "num_turns_source": "result",
+    "duration_ms": 3736508,
+    "duration_api_ms": 771911,
+    "total_cost_usd": 6.822384249999998,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 94,
+      "cache_creation_input_tokens": 532617,
+      "cache_read_input_tokens": 3856056,
+      "output_tokens": 62533,
+      "output_tokens_details": {
+        "thinking_tokens": 24903
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 532617
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1580,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001705,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 94,
+        "outputTokens": 62533,
+        "cacheReadInputTokens": 3856056,
+        "cacheCreationInputTokens": 532617,
+        "webSearchRequests": 0,
+        "costUSD": 6.820679249999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 24903,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 6.820679,
+    "recomputed_vs_reported_gap": -0.0002,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 47,
+      "input": 94,
+      "output": 62533,
+      "cache_creation": 532617,
+      "cache_read": 3856056,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 47,
+          "input": 94,
+          "output": 62533,
+          "cache_creation": 532617,
+          "cache_read": 3856056
+        }
+      },
+      "tool_calls": {
+        "Bash": 44,
+        "Read": 13,
+        "Write": 3,
+        "Edit": 10
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 13,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 94,
+        "transcript": 94,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 62533,
+        "transcript": 62533,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 532617,
+        "transcript": 532617,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 3856056,
+        "transcript": 3856056,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 5,
+    "denied_tools": {
+      "Bash:agy-delegate": 4,
+      "Write": 1
+    },
+    "result_head": "Done. `zoekt-local-sync` is implemented and everything is green.\n\n**What's in the tree (uncommitted, no commits/branches/tags created):**\n\nNew command — `cmd/zoekt-local-sync/`:\n- `discover.go` — `discoverRepositories` walks each root (a root that is itself a repo counts), recognising normal worktrees (`.git` dir), linked worktrees/submodules (`.git` file) and bare repos (`*.git` with `objects/`, ",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 8,
+    "usage_lines": 7,
+    "signal_only": 1,
+    "succeeded": 6,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 1,
+      "TIMEOUT": 2
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 7,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 6,
+        "input": 2226097,
+        "output": 261566,
+        "thinking": 222219,
+        "cache_read": 13439631,
+        "usd": 3.658418
+      },
+      "flash-lo": {
+        "calls": 1,
+        "input": 29944,
+        "output": 426,
+        "thinking": 185,
+        "cache_read": 37943,
+        "usd": 0.026901
+      }
+    },
+    "totals": {
+      "input": 2256041,
+      "output": 261992,
+      "thinking": 222404,
+      "cache_read": 13477574,
+      "total": 2518033
+    },
+    "invariant_ok": true,
+    "shadow_usd": 3.685319,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "8160e15c-0af9-4204-ab19-42cde5c6f664",
+      "a12ec637-c624-44ce-9d86-cdbc84aded0f",
+      "34f75a7e-6ebb-4a73-8202-9111fbcbbbad",
+      "1d6c45d7-8ebc-469c-9fc3-76c4ec88e8fa",
+      "1bb4bbc4-9011-4767-b90d-b3779a9cf45b",
+      "674e2e69-bffc-4998-b91a-5faf91198874",
+      "aa19fb49-c00e-4f4d-baf4-bfb35a99045f"
+    ],
+    "agy_duration_s_sum": 2920.411,
+    "wrapper_calls_in_transcript": 11,
+    "trace_audit": {
+      "8160e15c-0af9-4204-ab19-42cde5c6f664": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 75,
+          "GENERIC": 74,
+          "SYSTEM_MESSAGE": 2,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 26,
+          "view_file": 30,
+          "manage_task": 1,
+          "grep_search": 10,
+          "list_dir": 1,
+          "replace_file_content": 6
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T02:49:48Z",
+        "last_step_at": "2026-09-15T02:59:03Z"
+      },
+      "a12ec637-c624-44ce-9d86-cdbc84aded0f": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 37,
+          "GENERIC": 35,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 13,
+          "list_dir": 3,
+          "view_file": 10,
+          "find_by_name": 2,
+          "grep_search": 6,
+          "write_to_file": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T02:59:13Z",
+        "last_step_at": "2026-09-15T03:06:43Z"
+      },
+      "34f75a7e-6ebb-4a73-8202-9111fbcbbbad": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 34,
+          "GENERIC": 33,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 11,
+          "list_dir": 1,
+          "view_file": 11,
+          "grep_search": 9,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T03:07:48Z",
+        "last_step_at": "2026-09-15T03:12:56Z"
+      },
+      "1d6c45d7-8ebc-469c-9fc3-76c4ec88e8fa": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 40,
+          "GENERIC": 38,
+          "SYSTEM_MESSAGE": 2,
+          "ERROR_MESSAGE": 1,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 29,
+          "manage_task": 3,
+          "view_file": 5,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T03:14:29Z",
+        "last_step_at": "2026-09-15T03:20:55Z"
+      },
+      "1bb4bbc4-9011-4767-b90d-b3779a9cf45b": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 51,
+          "GENERIC": 51,
+          "SYSTEM_MESSAGE": 3,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "run_command": 16,
+          "manage_task": 3,
+          "view_file": 16,
+          "grep_search": 15,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T03:21:04Z",
+        "last_step_at": "2026-09-15T03:30:37Z"
+      },
+      "674e2e69-bffc-4998-b91a-5faf91198874": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 49,
+          "GENERIC": 49,
+          "SYSTEM_MESSAGE": 7,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 30,
+          "manage_task": 7,
+          "view_file": 9,
+          "grep_search": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T03:33:20Z",
+        "last_step_at": "2026-09-15T03:42:31Z"
+      },
+      "aa19fb49-c00e-4f4d-baf4-bfb35a99045f": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 3,
+          "GENERIC": 2
+        },
+        "tool_calls": {
+          "run_command": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T03:44:42Z",
+        "last_step_at": "2026-09-15T03:45:24Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 11
+  },
+  "writes": {
+    "claude_tool": 10,
+    "claude_bash": 0,
+    "agy": 4,
+    "toolchain_gomod": 0,
+    "between_calls": 2,
+    "events": 150,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "agy-delegate": 2
+    },
+    "gate_allows": 42,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "cmd/zoekt-git-index/main.go",
+      "gitindex/index.go",
+      "cmd/zoekt-local-sync/discover.go",
+      "cmd/zoekt-local-sync/inventory.go",
+      "zoekt-local-sync"
+    ],
+    "claude_tool_files": [
+      "gitindex/index.go",
+      "cmd/zoekt-local-sync/main.go",
+      "cmd/zoekt-local-sync/discover.go",
+      "README.md"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 2.6,
+      "passed_tests": 100,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 2,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 6.6,
+      "passed_tests": 1123,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 56,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 7,
+    "code_added": 793,
+    "code_removed": 49,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 10,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "cmd/zoekt-git-index/main.go",
+      "cmd/zoekt-local-sync/inventory.go",
+      "cmd/zoekt-local-sync/sync.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "737bd44adc1f35229bbc27cbdc2cc59053ddf7718c09316f1612bd890d9875b4"
+  },
+  "diff_files": {
+    "README.md": {
+      "added": 10,
+      "removed": 0,
+      "class": "doc"
+    },
+    "cmd/zoekt-git-index/main.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/discover.go": {
+      "added": 138,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/inventory.go": {
+      "added": 119,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/main.go": {
+      "added": 121,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/sync.go": {
+      "added": 323,
+      "removed": 0,
+      "class": "code"
+    },
+    "gitindex/index.go": {
+      "added": 90,
+      "removed": 49,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 6.822384249999998,
+    "gemini_usd": 3.685319,
+    "total_usd": 10.507703249999999
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

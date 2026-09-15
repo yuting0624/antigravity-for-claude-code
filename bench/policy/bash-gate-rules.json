@@ -1,0 +1,228 @@
+{
+  "_comment": "Verification-only shell policy applied to EVERY arm by bench/hooks/bash-gate.py (PreToolUse on Bash). Heads not listed are blocked. Per-head argument rules live in bench/harness/gates.py; this file is the inspectable, hashable part. Plugin heads are allowed only in arms that load the plugin.",
+  "heads": [
+    "go",
+    "gofmt",
+    "git",
+    "sed",
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "grep",
+    "rg",
+    "find",
+    "tree",
+    "pwd",
+    "which",
+    "type",
+    "echo",
+    "printf",
+    "sort",
+    "uniq",
+    "cut",
+    "tr",
+    "diff",
+    "stat",
+    "file",
+    "true",
+    "false",
+    "sleep",
+    "date",
+    "basename",
+    "dirname",
+    "realpath",
+    "nl",
+    "column",
+    "paste",
+    "comm",
+    "seq",
+    "expr",
+    "test",
+    "[",
+    ":",
+    "jq",
+    "shasum",
+    "md5",
+    "strings",
+    "od",
+    "du",
+    "df",
+    "uname",
+    "nproc",
+    "sw_vers",
+    "ps",
+    "cd",
+    "set",
+    "timeout",
+    "time",
+    "command"
+  ],
+  "plugin_heads": [
+    "agy-delegate",
+    "agy-job",
+    "agy-trace"
+  ],
+  "env_assignments": [
+    "GOFLAGS",
+    "GOOS",
+    "GOARCH",
+    "CGO_ENABLED",
+    "GORACE",
+    "GOMAXPROCS",
+    "TZ",
+    "LANG",
+    "LC_ALL",
+    "COLUMNS",
+    "TERM",
+    "NO_COLOR",
+    "PAGER",
+    "GIT_PAGER"
+  ],
+  "set_flags": [
+    "-e",
+    "-u",
+    "-x",
+    "+x",
+    "-o",
+    "pipefail",
+    "+e",
+    "-eu",
+    "-ue",
+    "-euo",
+    "-eo"
+  ],
+  "go": {
+    "subcommands": [
+      "build",
+      "vet",
+      "test",
+      "list",
+      "doc",
+      "env",
+      "version",
+      "mod"
+    ],
+    "mod_subcommands": [
+      "why",
+      "graph",
+      "verify"
+    ],
+    "blocked_flags": [
+      "exec",
+      "toolexec",
+      "c",
+      "coverprofile",
+      "cpuprofile",
+      "memprofile",
+      "blockprofile",
+      "mutexprofile",
+      "trace",
+      "outputdir",
+      "vettool",
+      "w",
+      "u",
+      "modfile",
+      "overlay",
+      "pgo",
+      "cover"
+    ],
+    "o_allowed_values": [
+      "/dev/null"
+    ]
+  },
+  "gofmt": {
+    "blocked_flags": [
+      "w"
+    ]
+  },
+  "git": {
+    "global_opts_allowed": [
+      "--no-pager",
+      "-C"
+    ],
+    "subcommands": [
+      "status",
+      "diff",
+      "log",
+      "show",
+      "grep",
+      "ls-files",
+      "blame",
+      "rev-parse",
+      "describe",
+      "shortlog",
+      "rev-list",
+      "cat-file",
+      "diff-tree",
+      "branch"
+    ],
+    "branch_allowed_flags": [
+      "--show-current",
+      "-a",
+      "--all",
+      "-v",
+      "-vv",
+      "--list",
+      "-r",
+      "--no-color"
+    ],
+    "blocked_flags": [
+      "--output",
+      "--ext-diff",
+      "--exec-path",
+      "-c",
+      "-O",
+      "--open-files-in-pager",
+      "--git-dir",
+      "--work-tree",
+      "--config-env",
+      "--namespace"
+    ]
+  },
+  "find": {
+    "blocked_flags": [
+      "-exec",
+      "-execdir",
+      "-ok",
+      "-okdir",
+      "-delete",
+      "-fprint",
+      "-fprint0",
+      "-fprintf",
+      "-fls"
+    ]
+  },
+  "rg": {
+    "blocked_flags": [
+      "--pre",
+      "--pre-glob"
+    ]
+  },
+  "sort": {
+    "blocked_flags": [
+      "-o",
+      "--output"
+    ]
+  },
+  "tree": {
+    "blocked_flags": [
+      "-o"
+    ]
+  },
+  "uniq": {
+    "max_positionals": 1
+  },
+  "timeout": {
+    "value_flags": [
+      "-k",
+      "--kill-after",
+      "-s",
+      "--signal"
+    ]
+  },
+  "sed": {
+    "_note": "read-only: -n plus print-only scripts; everything else blocked in gates._rule_sed"
+  }
+}

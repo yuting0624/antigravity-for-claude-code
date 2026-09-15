@@ -1,0 +1,414 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-14136__hybrid-forced__r1",
+  "task_id": "cli-14136",
+  "arm": "hybrid-forced",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T05:10:20+00:00",
+  "ended_at": "2026-09-15T05:45:37+00:00",
+  "agent_wall_s": 2113.9,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 30,
+    "max_turns": 150,
+    "wall_s": 9000
+  },
+  "prompt": {
+    "task_sha256": "878ec79131936101a7c822ed364755f664c0191cd2e27b82963d81b2eab23e89",
+    "appendix": "hybrid-forced-appendix.md",
+    "appendix_sha256": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "sent_sha256": "e5be191c6651c3821e80d9c47e4d48087d154f2b86e62fd96a2969ac551b3957"
+  },
+  "claude": {
+    "session_id": "bf20923b-39ad-4868-8b40-6e4caf24b0b5",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 34,
+    "num_turns_source": "result",
+    "duration_ms": 2113430,
+    "duration_api_ms": 416309,
+    "total_cost_usd": 4.4982447500000005,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 56,
+      "cache_creation_input_tokens": 436511,
+      "cache_read_input_tokens": 1858990,
+      "output_tokens": 33539,
+      "output_tokens_details": {
+        "thinking_tokens": 19555
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 436511
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1676,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001801,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 56,
+        "outputTokens": 33539,
+        "cacheReadInputTokens": 1858990,
+        "cacheCreationInputTokens": 436511,
+        "webSearchRequests": 0,
+        "costUSD": 4.49644375,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 19555,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 4.496444,
+    "recomputed_vs_reported_gap": -0.0004,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 28,
+      "input": 56,
+      "output": 33539,
+      "cache_creation": 436511,
+      "cache_read": 1858990,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 28,
+          "input": 56,
+          "output": 33539,
+          "cache_creation": 436511,
+          "cache_read": 1858990
+        }
+      },
+      "tool_calls": {
+        "Bash": 33
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 56,
+        "transcript": 56,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 33539,
+        "transcript": 33539,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 436511,
+        "transcript": 436511,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 1858990,
+        "transcript": 1858990,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 2,
+    "denied_tools": {
+      "Bash:agy-delegate": 1,
+      "Bash:go": 1
+    },
+    "result_head": "Done. All three given test files pass unmodified, and the full suite, `go vet ./...`, and `gofmt` are clean.\n\n**What changed** (4 files, uncommitted, no commits/branches/tags created):\n\n`git/client.go` — new `WorktreeAdd(ctx, path, branch, remote)` next to the existing `WorktreeRemove`. Empty `remote` → `git worktree add -- <path> <branch>`; otherwise `git worktree add --track -b <branch> -- <path",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 4,
+    "usage_lines": 4,
+    "signal_only": 0,
+    "succeeded": 4,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 4,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 4,
+        "input": 1329799,
+        "output": 96590,
+        "thinking": 63060,
+        "cache_read": 10452449,
+        "usd": 2.143495
+      }
+    },
+    "totals": {
+      "input": 1329799,
+      "output": 96590,
+      "thinking": 63060,
+      "cache_read": 10452449,
+      "total": 1426389
+    },
+    "invariant_ok": true,
+    "shadow_usd": 2.143495,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "0d7c5efb-f98d-455b-88e0-6a50d1d49ba3",
+      "4be433e6-e0d6-4c1e-90a7-67cecd61ac35",
+      "42db1569-b49c-4208-8193-a90f968c5a2e",
+      "60a8b548-fc75-477b-b439-4251463cc478"
+    ],
+    "agy_duration_s_sum": 1613.029,
+    "wrapper_calls_in_transcript": 5,
+    "trace_audit": {
+      "0d7c5efb-f98d-455b-88e0-6a50d1d49ba3": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 23,
+          "GENERIC": 21,
+          "SYSTEM_MESSAGE": 4
+        },
+        "tool_calls": {
+          "run_command": 15,
+          "manage_task": 3,
+          "view_file": 3,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T05:14:53Z",
+        "last_step_at": "2026-09-15T05:19:22Z"
+      },
+      "4be433e6-e0d6-4c1e-90a7-67cecd61ac35": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 70,
+          "GENERIC": 69,
+          "SYSTEM_MESSAGE": 5,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 45,
+          "manage_task": 9,
+          "view_file": 9,
+          "write_to_file": 1,
+          "replace_file_content": 5
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T05:19:33Z",
+        "last_step_at": "2026-09-15T05:27:55Z"
+      },
+      "42db1569-b49c-4208-8193-a90f968c5a2e": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 35,
+          "GENERIC": 34,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 13,
+          "view_file": 10,
+          "grep_search": 7,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T05:29:09Z",
+        "last_step_at": "2026-09-15T05:34:11Z"
+      },
+      "60a8b548-fc75-477b-b439-4251463cc478": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 73,
+          "GENERIC": 70,
+          "SYSTEM_MESSAGE": 6,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "find_by_name": 2,
+          "run_command": 49,
+          "manage_task": 7,
+          "view_file": 10,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T05:35:54Z",
+        "last_step_at": "2026-09-15T05:44:24Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 14
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 4,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 96,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "go": 1
+    },
+    "gate_allows": 32,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "git/client.go",
+      "pkg/cmd/pr/checkout/checkout.go",
+      "pkg/cmd/pr/shared/worktree.go",
+      "pkg/cmd/issue/develop/develop.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 0.8,
+      "passed_tests": 109,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 3,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 30.5,
+      "passed_tests": 7384,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 308,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 4,
+    "code_added": 235,
+    "code_removed": 121,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "git/client.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "1855d4432466a7ce275fbf6e147407532ed9b2e8bf250d4b5778d20abf0466f2"
+  },
+  "diff_files": {
+    "git/client.go": {
+      "added": 18,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/develop/develop.go": {
+      "added": 78,
+      "removed": 2,
+      "class": "code"
+    },
+    "pkg/cmd/pr/checkout/checkout.go": {
+      "added": 14,
+      "removed": 119,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/worktree.go": {
+      "added": 125,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 4.4982447500000005,
+    "gemini_usd": 2.143495,
+    "total_usd": 6.641739750000001
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

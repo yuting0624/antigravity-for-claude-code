@@ -1,0 +1,269 @@
+{
+  "run_id": "pilot",
+  "table": "data-agent-bq.billing_export.gcp_billing_export_v1_01F395_17E646_FF0C82",
+  "window_utc": [
+    "2026-09-14 14:05:02",
+    "2026-09-14 19:30:17"
+  ],
+  "slack_h": 1.0,
+  "runs": 4,
+  "families": {
+    "claude_fable": {
+      "computed_usd": 0.0,
+      "billed_usd": 29.301,
+      "gap_pct": null,
+      "skus": [
+        {
+          "sku": "Claude Fable 5 1 — Input Cache Write Tokens (TTL 300 seconds) — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 21.666,
+          "usage_amount": 1733280.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Input Cache Read Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 3.2828,
+          "usage_amount": 13131002.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Output Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 2.4217,
+          "usage_amount": 48435.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Output Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 1.223,
+          "usage_amount": 24460.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Input Cache Write Tokens (TTL 300 seconds) — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 0.6955,
+          "usage_amount": 55640.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Input Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 0.0084,
+          "usage_amount": 844.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Input Cache Read Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 0.0035,
+          "usage_amount": 13899.0
+        },
+        {
+          "sku": "Claude Fable 5 1 — Input Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 0.0001,
+          "usage_amount": 12.0
+        }
+      ]
+    },
+    "claude_opus": {
+      "computed_usd": 17.4456,
+      "billed_usd": 39.4635,
+      "gap_pct": 126.2,
+      "skus": [
+        {
+          "sku": "Claude Opus 5 — Input Cache Write Tokens (TTL 300 seconds) — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 14.2267,
+          "usage_amount": 2276266.0
+        },
+        {
+          "sku": "Claude Opus 5 — Input Cache Read Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 10.4444,
+          "usage_amount": 20888760.0
+        },
+        {
+          "sku": "Claude Opus 5 — Output Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 5.542,
+          "usage_amount": 221682.0
+        },
+        {
+          "sku": "Claude Opus 5 — Input Cache Read Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 5.3626,
+          "usage_amount": 10725158.0
+        },
+        {
+          "sku": "Claude Opus 5 — Input Cache Write Tokens (TTL 300 seconds) — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 3.1099,
+          "usage_amount": 497578.0
+        },
+        {
+          "sku": "Claude Opus 5 — Output Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 0.7753,
+          "usage_amount": 31014.0
+        },
+        {
+          "sku": "Claude Opus 5 — Input Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 0.0021,
+          "usage_amount": 428.0
+        },
+        {
+          "sku": "Claude Opus 5 — Input Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 0.0005,
+          "usage_amount": 102.0
+        }
+      ]
+    },
+    "claude_sonnet": {
+      "computed_usd": 0.0,
+      "billed_usd": 3.5538,
+      "gap_pct": null,
+      "skus": [
+        {
+          "sku": "Claude Sonnet 5 — Input Cache Write Tokens (TTL 300 seconds) — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 2.4463,
+          "usage_amount": 978523.0
+        },
+        {
+          "sku": "Claude Sonnet 5 — Input Cache Read Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 1.1021,
+          "usage_amount": 5510301.0
+        },
+        {
+          "sku": "Claude Sonnet 5 — Input Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 0.0036,
+          "usage_amount": 1800.0
+        },
+        {
+          "sku": "Claude Sonnet 5 — Output Tokens — global — Context Window Size from 200001 to 1000000 Tokens",
+          "cost_usd": 0.0018,
+          "usage_amount": 180.0
+        }
+      ]
+    },
+    "gemini_flash_38": {
+      "computed_usd": 7.7818,
+      "billed_usd": 17.4531,
+      "gap_pct": 124.3,
+      "skus": [
+        {
+          "sku": "Gemini 3.8 Flash Global Text Input - Predictions",
+          "cost_usd": 9.3576,
+          "usage_amount": 6238425.0
+        },
+        {
+          "sku": "Gemini 3.8 Flash Global Text Input Caching",
+          "cost_usd": 4.9744,
+          "usage_amount": 33163161.0
+        },
+        {
+          "sku": "Gemini 3.8 Flash Global Text Output - Predictions",
+          "cost_usd": 3.1211,
+          "usage_amount": 416154.0
+        }
+      ]
+    },
+    "gemini_pro_31": {
+      "computed_usd": 0.0,
+      "billed_usd": null,
+      "gap_pct": null,
+      "skus": []
+    },
+    "other": {
+      "computed_usd": 0.0,
+      "billed_usd": 1.8902,
+      "gap_pct": null,
+      "skus": [
+        {
+          "sku": "Gemini 3.0 / 3.1 Pro Text Output - Predictions",
+          "cost_usd": 0.7727,
+          "usage_amount": 64393.0
+        },
+        {
+          "sku": "Gemini 3.0 / 3.1 Pro Text Input - Predictions",
+          "cost_usd": 0.3454,
+          "usage_amount": 172690.0
+        },
+        {
+          "sku": "CodeMender Gemini 3.7 Flash Global Text Input",
+          "cost_usd": 0.2044,
+          "usage_amount": 136282.0
+        },
+        {
+          "sku": "Gemini 3.7 Flash Global Text Input - Predictions",
+          "cost_usd": 0.2044,
+          "usage_amount": 136282.0
+        },
+        {
+          "sku": "Generate content input token count gemini 3.6 flash text",
+          "cost_usd": 0.0804,
+          "usage_amount": 107227.0
+        },
+        {
+          "sku": "Gemini 3.7 Flash Global Text Output - Predictions",
+          "cost_usd": 0.0781,
+          "usage_amount": 10415.0
+        },
+        {
+          "sku": "CodeMender Gemini 3.7 Flash Global Text Output",
+          "cost_usd": 0.0781,
+          "usage_amount": 10415.0
+        },
+        {
+          "sku": "Claude Haiku 4 5 — Input Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 0.0389,
+          "usage_amount": 38909.0
+        },
+        {
+          "sku": "CodeMender Gemini 3.7 Flash Global Text Input Caching",
+          "cost_usd": 0.0231,
+          "usage_amount": 153976.0
+        },
+        {
+          "sku": "Gemini 3.7 Flash Global Text Input Caching",
+          "cost_usd": 0.0231,
+          "usage_amount": 153976.0
+        },
+        {
+          "sku": "Gemini 3.5 Flash Lite Global Text Input - Predictions",
+          "cost_usd": 0.0156,
+          "usage_amount": 51958.0
+        },
+        {
+          "sku": "Generate content cached input token count gemini 3.6 flash text",
+          "cost_usd": 0.011,
+          "usage_amount": 146678.0
+        },
+        {
+          "sku": "Generate content output token count gemini 3.6 flash text",
+          "cost_usd": 0.0067,
+          "usage_amount": 1783.0
+        },
+        {
+          "sku": "Gemini 3.0 / 3.1 Pro Text Input Caching",
+          "cost_usd": 0.0031,
+          "usage_amount": 15359.0
+        },
+        {
+          "sku": "Gemini 3.5 Flash Lite Global Text Output - Predictions",
+          "cost_usd": 0.0023,
+          "usage_amount": 915.0
+        },
+        {
+          "sku": "Claude Haiku 4 5 — Output Tokens — global — Context Window Size from 0 to 200000 Tokens",
+          "cost_usd": 0.0013,
+          "usage_amount": 265.0
+        },
+        {
+          "sku": "Gemini 3.1 Flash Lite Global Text Input - Predictions",
+          "cost_usd": 0.0012,
+          "usage_amount": 4798.0
+        },
+        {
+          "sku": "Gemini 3 Flash Text Input - Predictions",
+          "cost_usd": 0.0003,
+          "usage_amount": 618.0
+        },
+        {
+          "sku": "Gemini 3 Flash Text Output - Predictions",
+          "cost_usd": 0.0001,
+          "usage_amount": 42.0
+        },
+        {
+          "sku": "Gemini 3.1 Flash Lite Global Text Output - Predictions",
+          "cost_usd": 0.0,
+          "usage_amount": 4.0
+        }
+      ]
+    }
+  },
+  "note": "billed includes every use of these SKUs on the project inside the window, not only the benchmark; a positive gap is other activity or export bucketing, a negative gap means the harness over-counted and must be investigated."
+}
