@@ -3,6 +3,78 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 1.0.0
+
+**The transport is now an MCP server, and the delegation is reading, not execution.**
+The Antigravity CLI (`agy`) subprocess path is gone; in its place the plugin ships a local
+stdio MCP server (`server/index.js`, built from
+[gemini-studio-mcp](https://github.com/yuting0624/gemini-studio-mcp) 0.3.0) that Claude
+Code starts itself. Breaking — see `docs/MIGRATION-1.0.md`. The 0.27 line is preserved as
+tag `v0.27.4-agy-final` and branch `legacy/agy`.
+
+- **Why the verb flipped.** Measured across the 0.x line: delegating *execution* moved
+  work rather than removing it (~2.8× the token volume for the same result), needed grants
+  and had to be re-verified against the filesystem; delegating *reading* paid every turn
+  (62k-token corpus → 4.4k carried; on this repository's own source 173k tokens → a
+  1.5k-token digest in five seconds with every reference resolving to a real line). So the
+  server **never writes**; writing, running and judging stay with Claude.
+- **Tools.** `digest_codebase` (a question about, or orientation in, a selection of
+  files), `delegate_task` (a read-only deliverable: inventory, extraction, comparison,
+  summary — with a *Verify this* list), `review_diff` (an independent second read from a
+  different model family, findings anchored to `path:line` in an annotated diff),
+  `digest` (recordings, video, images, PDFs), `job_status` / `job_result` / `job_cancel`,
+  `health_check`, `savings_report`.
+- **What comes back is bounded by construction**: a schema with no field for content, an
+  output token budget with a condense pass and trimming behind it, hard caps on every
+  string and array, a detector that elides runs of source reproduced verbatim, a second
+  redaction pass, no MCP resource that exposes files. `stats.refs_valid_ratio` reports the
+  share of references that point at a real line.
+- **Where requests go is a setting, not a guess.** Tools name a logical alias
+  (`ingest` / `review` / `cheap`); the alias table is configuration. Drivers: Vertex AI
+  directly (default), Vertex through a transparent passthrough proxy the organisation
+  runs (`gateway.baseUrl`, full Vertex request path preserved), or an OpenAI-compatible
+  gateway in compatibility mode. Every outbound request is checked against an **egress
+  allowlist** (`DELEGATION_ALLOWED_HOSTS`, default `*.googleapis.com`, `*.gateway.dev`)
+  — the outbound twin of the selection root. Refusal is per request, with the host named.
+- **Footprint.** Every response ends with `usage`, `offload` and one factual
+  `endpoint: geap|external (host)` line; the server keeps a local ledger, adds billing
+  labels and a product `User-Agent` on Vertex requests, and writes usage to Cloud Logging in
+  the project when talking to Vertex directly. A `PostToolUse` hook joins Claude's session
+  id with the server's usage into `~/.antigravity-usage.jsonl`;
+  `measure-session.py --join` prints both sides of a session together.
+- **Background jobs** are poll-type (`async: true` → job id). In-process jobs live as
+  long as the server; **Vertex batch** jobs (`batch: true`, or automatically above the
+  interactive size limit) live in Vertex, survive a restart, stage the redacted selection
+  in the project's bucket for the life of the job and delete it afterwards. The registry
+  keeps the 0.x layout and `rc` vocabulary under `~/.antigravity-jobs/`.
+- **Context cache, lazily.** A repeated selection gets a Vertex context cache on the second
+  request within an hour (`cache: "on"` to create it up front); a cached call measured at
+  about a tenth of the inline cost.
+- **Conductor side.** `antigravity-delegate` subagent now has only the server's tools
+  (no Bash, no Read) — so the bulky read cannot land in its context and the PreToolUse
+  bash gate has nothing to gate (the gate script stays on disk, unreferenced, until
+  advisory #61 is published). Policy text and the prompt nudge point at the tools; the
+  nudge learns bulk *reading* shapes (tracing, inventories, questions with repository scope; threshold 0.6, `CLAUDE_PLUGIN_OPTION_NUDGE_THRESHOLD`) and the policy states the break-even as "3 files or
+  ~20k tokens; not under ~6k". `/antigravity:media` is `digest`; `/antigravity:setup` is
+  `delegation-doctor`; `/antigravity:cloud-run-debug` digests through `delegate_task`.
+- **`search_web`** replaces the agy web search: Google Search grounding on Vertex AI
+  returns dated, URL-cited findings and the sources actually used; `/antigravity:research`
+  fans out one call per sub-question and Claude corroborates. Vertex driver only.
+- **Claude on Vertex behind the alias table.** An alias model written `anthropic/<model>`
+  is served by Claude on Vertex AI through the same project, proxy and allowlist — so
+  `review` can be a different model family from the author without leaving the platform.
+  Verified live: it reviewed the passthrough proxy and found eight real issues.
+- **Not carried across.** Write/scaffold delegation (by design), internal fan-out,
+  `agy-trace` (the server reports `stats` instead), `agy-cost-compare`.
+- **Kept from the AlphaEvolve work** (previously unreleased): the prompt-nudge classifier,
+  `agy-tier` (a Conductor-side hint, alias names), `agy-condense`, and the Cloud Logging
+  clusterer behind `cloud-run-debug --cluster`. The `experiments/` tree (40 MB) is not in
+  this line; it lives on branch `experiments/alphaevolve`.
+- **Prerequisites changed.** Node.js 20+ and Google Cloud credentials (ADC), or the
+  organisation's gateway credential. No CLI to install; the server is inside the plugin.
+  Plugin options shrink to `coding_policy`, `delegation_nudge`, `usage_log`; server
+  settings live in `~/.gemini-mcp/config.json` or a managed `managed-mcp.json`.
+
 ## 0.27.4
 
 - **CI refuses a CHANGELOG entry filed under a section that has already shipped.** #77

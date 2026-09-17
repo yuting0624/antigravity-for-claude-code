@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# PATH shim: the delegation server's tools without an MCP client.
+#   delegation-cli digest_codebase '{"paths":["src"],"question":"..."}'
+exec node "$(cd "$(dirname "$0")/.." && pwd)/server/index.js" --cli "$@"

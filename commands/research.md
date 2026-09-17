@@ -1,25 +1,37 @@
 ---
-description: Claude-orchestrated deep research — Antigravity (agy/Gemini) does the grounded web legwork; Claude plans, verifies the citations, and synthesizes.
+description: Claude-orchestrated deep research — the delegation server's `search_web` (Google Search grounding on Vertex AI) does the grounded legwork; Claude plans, verifies the citations across independent sources, and synthesizes.
 argument-hint: "<what to research>"
 ---
 
 Run a multi-source research pass on the topic below, following the `antigravity`
-skill's **Deep-research recipe** and **Verification gates**. Antigravity (`agy` / Gemini)
-is the cheap, grounded search worker; **you (Claude) own the plan, the verification, and
-the synthesis**. agy's print-mode citations are coarse (often domain-level) and it can
-present parametric "knowledge" as a sourced fact — so never ship its citations unchecked.
+skill's **Deep-research recipe** and **Verification gates**. `search_web` is the cheap,
+grounded worker: it returns dated, URL-cited findings and the sources it actually used,
+while the pages stay on the cheap side. **You (Claude) own the plan, the verification,
+and the synthesis.** Grounded citations can still be coarse or beside the point, so never
+ship them unchecked.
 
 Topic: $ARGUMENTS
 
 If the topic is empty, ask the user what to research (AskUserQuestion) before starting.
 
 Do this:
-1. **Plan (you).** Break the topic into 3–6 sub-questions and list the load-bearing claims that must be verified. You own scope and final synthesis.
-2. **Fan-out fetch (agy, cheap, one call per sub-question).** Web search — and, since agy 1.1.28, any URL read — needs `--yolo` (or a `read_url(<target>)` allow-rule) in headless mode; force compact output so bulky pages stay on Gemini's side, not yours:
-   `agy-delegate --tier flash --yolo "Web-search <sub-question>. Return 5–8 bullet findings, each with the exact source URL and publication date. Output ONLY findings + URLs + dates."`
-3. **Deepen on each load-bearing claim (agy).** Name the URL and have agy quote the supporting sentence(s), turning domain-level citations into verifiable quotes:
-   `agy-delegate --tier pro --yolo "Open <URL> and quote the exact sentence(s) supporting: '<claim>'. If the page does not support it, reply NOT SUPPORTED."`
-4. **Adversarially verify (you).** Corroborate each key claim across ≥2 independent domains; treat any single / vague / domain-only citation as unverified; sanity-check dates; watch for Gemini parametric knowledge posing as a sourced fact.
-5. **Synthesize (you).** Write a cited report from verified findings only; explicitly mark anything uncorroborated as "unverified".
+1. **Plan.** Break the topic into 3–6 sub-questions and list the load-bearing claims that
+   must be verified. You own scope and final synthesis.
+2. **Fan-out fetch.** One `search_web({ query: <sub-question> })` per sub-question. Keep
+   the bullet findings and the source list; do not ask for whole pages.
+3. **Deepen on each load-bearing claim.** `search_web({ query: <source or topic>,
+   question: "Quote the exact sentence(s) supporting: '<claim>'. If nothing supports it,
+   say NOT SUPPORTED." })`, or open the URL yourself with WebFetch when a quote is needed
+   verbatim.
+4. **Adversarially verify.** Corroborate each key claim across ≥2 independent domains;
+   treat any single, vague or domain-only citation as unverified; sanity-check dates;
+   watch for general knowledge posing as a sourced fact ("Not covered:" lines are honest
+   signals — use them).
+5. **Synthesize.** Write a cited report from verified findings only; mark anything
+   uncorroborated as "unverified".
 
-Keep your own context lean — ingest agy's bullet digests, not the raw pages (that's where the cost savings come from). `--print` does one agentic pass per call, so re-dispatch follow-up agy calls to close gaps rather than expecting it to auto-iterate. In an interactive session a long fetch can be backgrounded with `agy-job`; when **you** are headless (`claude -p`), delegate synchronously.
+Keep your own context lean — ingest the findings, not the pages. Each `search_web` call
+is one grounded pass; re-dispatch follow-up calls to close gaps rather than expecting it
+to iterate. If the research needs the *code* read, use `digest_codebase` /
+`delegate_task` for that part. `search_web` needs the vertex driver (Vertex AI mode);
+behind a compatibility-mode gateway, run the searches with your own tools.

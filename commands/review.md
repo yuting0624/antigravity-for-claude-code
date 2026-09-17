@@ -1,26 +1,25 @@
 ---
-description: Get an independent cross-model review of the current diff from Antigravity (Gemini), then reconcile as the final judge.
-argument-hint: "[--adversarial] [scope: paths or git range]"
+description: Independent second review of a change by a different model (review_diff), then reconcile as the final judge.
+argument-hint: "[--adversarial] [git range, e.g. main...HEAD] [paths...]"
 ---
 
-Use Antigravity (`agy` / Gemini) as an **independent, different-model reviewer** of the
-current changes, then reconcile the findings yourself (you are the final judge).
+Have the `delegation` server's `review_diff` tool read the change with a **different
+model family** and report findings anchored to `path:line`; then reconcile the findings
+yourself. You are the final judge.
 
 Scope/flags: $ARGUMENTS
 
 Do this:
-1. Capture the diff: `git diff` (or the range/paths in the scope above; default to
-   uncommitted + last commit if unspecified).
-2. Delegate the review to agy (pro tier) — pipe the diff in on stdin:
-   `git diff | agy-delegate --tier pro -`
-   (This runs as YOU, the conductor. The `antigravity-delegate` subagent cannot pipe —
-   its PreToolUse gate refuses every pipeline since GHSA-hwv2-vjgj-8rcv, because `git`
-   with arbitrary arguments executes arbitrary commands and `cat` feeding the wrapper
-   ships any file to the external model. If you delegate this step, pass `--dir`.)
-   with an instruction to find correctness/security/performance bugs, be skeptical, and
-   list each as `file:line — issue`. If `--adversarial` is set, also have it challenge the
-   design decisions and tradeoffs, not just line bugs.
-3. **Reconcile**: for each finding, corroborate it against the actual code. Drop false
-   positives; keep what's real. Agreement across two model families is a stronger signal;
-   disagreement is a prompt to look closer.
-4. Report the reconciled findings (most severe first) and your verdict.
+1. **Choose the scope.** Default: the working tree against `HEAD`. Otherwise pass the git
+   `range` (e.g. `HEAD~1`, `main...HEAD`) and optional `paths`. The server runs `git diff`
+   itself in `root`; the diff never enters this conversation.
+2. **Call** `review_diff({ root, range?, paths?, adversarial?, rubric? })`. If
+   `--adversarial` is set, pass `adversarial: true` so it challenges the design decisions
+   and trade-offs, not just line bugs. Put the intent of the change, or the team's
+   checklist, in `rubric` — a reviewer who knows what the change is for finds more.
+3. **Reconcile.** For each finding, open the referenced line and corroborate it against
+   the actual code. Drop false positives; keep what is real. Agreement across two model
+   families is a stronger signal; disagreement is a prompt to look closer. Note
+   `stats.refs_valid_ratio`: findings that do not point at a line shown in the diff are
+   suspect by construction.
+4. **Report** the reconciled findings, most severe first, and your verdict.

@@ -2,70 +2,79 @@
 
 # 🛰️ Antigravity for Claude Code
 
-**Run the Antigravity CLI (Gemini) as a collaborating sub-agent, right inside Claude Code.**
-![Antigravity for Claude Code — Claude directs, Gemini executes](docs/hero.png)
-Claude conducts the judgement; Gemini does the heavy lifting — intelligent model routing across the SDLC.
+**Delegate the reading to Gemini. Keep the judgement on Claude.**
+![Antigravity for Claude Code — Claude directs, Gemini reads](docs/hero.png)
+A local MCP server, shipped in the plugin, reads your codebase, your diffs, your recordings and long documents — and only a digest with `file:line` references comes back.
 
 [![CI](https://github.com/yuting0624/antigravity-for-claude-code/actions/workflows/ci.yml/badge.svg)](https://github.com/yuting0624/antigravity-for-claude-code/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF?logo=claudecode&logoColor=#D97757)
-[![Antigravity CLI](https://img.shields.io/badge/Antigravity%20CLI-agy-4285F4?logo=googlegemini&logoColor=white)](https://antigravity.google/docs/cli-using)
+[![Vertex AI](https://img.shields.io/badge/Vertex%20AI-Gemini-4285F4?logo=googlegemini&logoColor=white)](https://cloud.google.com/vertex-ai)
 
 </div>
 
 ---
 
-## ⚡ Quick look
-
-![Antigravity for Claude Code demo](docs/demo.gif)
-
-Claude stays the conductor; the bulk, token-heavy read ran on cheaper Gemini, and Claude verified the result.
-
----
-
 ## 💡 Why
 
-| | Claude (conductor) | Gemini / `agy` (executor) |
+Claude Code's cost in a long session is Claude re-reading its own growing context on
+every turn. The lever is not a cheaper model for Claude — it is **what Claude never has to
+read**. This plugin hands the bulky reading to a long-context model on Vertex AI and
+carries a digest instead of the corpus.
+
+| | Claude (conductor) | the delegation server (reader) |
 |---|---|---|
-| **Owns** | requirements · architecture · the hard 20% · **verification** · review | scaffold · implementation · test generation · search |
-| **Strength** | judgement | cheap, fast throughput |
+| **Owns** | requirements · design · edits · running the gate · **verification** · review | digesting a codebase · read-only tasks over files · second review of a diff · recordings and long documents |
+| **Strength** | judgement | cheap, long context |
+| **Writes files** | yes | **never** |
 
 ```
-you → Claude Code (conduct: design / verify / review)
-         └── agy → Gemini (execute: implement / test / search)
+you → Claude Code (conduct: design / edit / verify / review)
+         └── delegation MCP server (read: digest / extract / review)
+                  └── Gemini on Vertex AI, or your organisation's gateway
 ```
 
 > *Generation is solved; verification, judgement, and direction are the craft.*
 
 ## ✨ What it does
 
-- **Routes work across the SDLC** — Claude keeps the judgement calls; Antigravity handles scaffolding, **test generation**, **first-pass review**, and **migrations** under a shared `AGENTS.md`.
-- **Adds tools Claude lacks natively** — live **Google/web search**, **Vertex AI Search** over your internal data, deep research, Cloud Logging. Claude reviews and re-checks the results.
-- **Hears audio, watches video** — `/antigravity:media` delegates the perception to Gemini (natively multimodal, **no local ffmpeg/Whisper stack**): you get a **timestamped digest** while the full transcript is written to a file, so a 1-hour recording never lands in Claude's context.
-- **Cross-model verification** — an independent, different-model opinion on your code.
-- **Background jobs** — fire a long delegation, keep working, collect later.
-- **Internal fan-out** — one delegation, and agy spawns its own subagents on the cheap side (dynamic `define_subagent` on agy ≥ 1.0.16; `TypeName "self"` + Role on any version); each leaves a **readable trajectory** you audit with `agy-trace`.
-- **Built-in cost discipline** — measured, not guessed (see below).
-- **Drops in with the discipline on** — a `SessionStart` hook injects the *cost-aware*
-  routing policy automatically (toggle in plugin settings), and the `antigravity-delegate`
-  subagent does file **writing** on Gemini, so Claude spends **no tokens generating file contents**.
-- **No slash command required** — the delegate subagent is picked up **proactively** for bulk
-  work, and a prompt-level nudge flags bulk-looking requests as delegation candidates.
-  Both are advisory: **the break-even judgment stays with Claude** (full auto-routing is a
-  measured net loss below the break-even), and the nudge is toggleable (`delegation_nudge`).
+- **`digest_codebase`** — a question about, or orientation in, a selection of files. Respects
+  `.gitignore`, skips binaries, media and lockfiles, redacts credential-shaped strings, and
+  returns a digest with `file:line` references under a token budget.
+- **`delegate_task`** — a read-only deliverable: an inventory, an extraction, a comparison,
+  a migration list — with a *Verify this* list. It never modifies files.
+- **`review_diff`** — an independent second read of a change from a **different model
+  family**, each finding anchored to a line shown in the diff, with a verdict.
+- **`digest`** — recordings, video, images, PDFs and long documents, with timestamps or
+  page citations. Claude can't hear or watch; this can.
+- **`search_web`** — grounded web research (Google Search on Vertex AI): dated, URL-cited
+  findings and the sources actually used, one call per research sub-question.
+- **Background jobs** — `async: true` returns a job id; very large selections run as
+  Vertex **batch** jobs that survive a restart.
+- **Drops in with the discipline on** — a `SessionStart` hook injects the cost-aware
+  routing policy, a prompt-level nudge flags bulk reads, and the `antigravity-delegate`
+  subagent has *only* the server's tools, so a delegated read cannot inflate its context.
+  All advisory: **the break-even judgment stays with Claude.**
+- **Nothing to install besides the plugin.** The server is `server/index.js`; Claude Code
+  starts it. Node.js 20+ and Google Cloud credentials are the prerequisites.
 
 ## 📊 Measured results
 
-On a **large** ADK multi-agent build (+ `adk eval`), same task / same model, 3 ways:
+Numbers from this repository's own verification (`gemini-studio-mcp`, criteria 8–13, live
+against Vertex AI, 2026-09-15):
 
-| | Claude solo @high | solo @max | **hybrid** |
+| what | in | out | notes |
 |---|---|---|---|
-| frontier cost (COST-WEIGHTED) | 2.62M | 5.34M | **1.91M** |
-| quality (`adk eval`) | ✅ 3/3 | ✅ 3/3 | ✅ **3/3** |
+| digest of this plugin's server source | **173,239 tokens** | **1,471 tokens** | 100% of references resolve to a real line; 5 s; one request |
+| the same selection, forced through 5 chunks + merge | 183k | 2,133 | map-reduce keeps the budget and the references |
+| the same question a third time | cached | — | **$0.024 vs $0.206** inline — a Vertex context cache created lazily on the second request |
+| 62k-token corpus (0.x measurement, same pattern) | 62k | 4.4k carried | every later turn re-sent 4.4k instead of 62k |
 
-→ **−27% vs solo@high, −64% vs solo@max, at equal quality** — and the cheap Gemini work isn't even counted. Savings scale with task size; tiny one-off tasks are cheaper to just run on Claude. Full A/B: [`docs/AB-RESULTS.md`](docs/AB-RESULTS.md).
-
-> **Note on cost figures:** numbers are **estimates** — token counts are approximated and rates live in [`prices.json`](prices.json). **Set your real Vertex rates there before quoting any figure.**
+And the caveat that has held since 0.x: **below the break-even the hybrid costs more.**
+Roughly: three files or ~20k tokens is worth a digest; under ~6k tokens it is not.
+`savings_report` totals what has been kept out of context; `measure-session.py --join`
+shows both sides of a session. Older execution-delegation A/Bs are in
+[`docs/AB-RESULTS.md`](docs/AB-RESULTS.md) — they are why 1.0 delegates reading, not execution.
 
 ## 🚀 Install
 
@@ -73,133 +82,99 @@ In Claude Code:
 ```
 /plugin marketplace add yuting0624/antigravity-for-claude-code
 /plugin install antigravity@antigravity-for-claude-code
-/antigravity:setup        # verifies agy is installed + authenticated
+/antigravity:setup        # node, the server bundle, credentials, where requests go
 ```
 
-**Prerequisites:** the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`) installed & authenticated (`agy models` lists Gemini models), and Claude Code. For the same-bill cost benefit, run Claude Code on Vertex too.
+**Prerequisites:** Node.js 20+ on PATH, and Google Cloud credentials for a project with
+Vertex AI enabled (`gcloud auth application-default login`) — or the credential your
+organisation's gateway expects. The server's settings (project, driver, aliases, allowed
+hosts) live in `~/.gemini-mcp/config.json` or in a managed `managed-mcp.json`; the plugin
+itself has three options (`coding_policy`, `delegation_nudge`, `usage_log`).
 
-**Platform support:** macOS, Linux, and **WSL** are the supported targets for headless delegation. **Native Windows (Git Bash/MSYS) is not recommended** — `agy -p` can hang with a 0-byte log when run without a real console (ConPTY); see [issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6). The wrapper now bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`, returning a clean TIMEOUT instead of hanging), and `doctor` distinguishes a hang from an auth failure — but for reliable headless use, run from **WSL/macOS/Linux**.
+**Platform support:** macOS, Linux, WSL. Native Windows works for the server; `git`
+must be on PATH for `digest_codebase` selections inside repositories.
+
+## 🔒 Where requests go — and where they cannot
+
+This server reads your files and sends their text to a model endpoint, so **which hosts
+may receive that text is an allowlist the organisation controls**
+(`DELEGATION_ALLOWED_HOSTS`, default `*.googleapis.com`, `*.gateway.dev`), the outbound
+twin of the selection `root`. To use your organisation's gateway or another provider, add
+its hostname; a request to anything else is refused with `PERMISSION (15)` and the host
+named. Every response ends with one factual line: `endpoint: geap (aiplatform.googleapis.com)`
+or `endpoint: external (host)`. `/antigravity:setup` shows the allowlist and flags any
+external destination in the current configuration.
+
+Three ways the server can be pointed, all through the same alias table (`ingest` /
+`review` / `cheap` — tools never name a model; an alias written `anthropic/<model>` is
+Claude on Vertex AI, so a role can change model family without leaving the platform):
+
+| Mode | Who resolves the alias | What travels |
+|---|---|---|
+| **Vertex AI, direct** (default) | the server, from its config | billing labels, context cache, fallback chain |
+| **Vertex passthrough gateway** (recommended for organisations) | the server; the proxy adds IAM, quota, logging | the full Vertex request, unchanged |
+| **Compatibility mode** (OpenAI-style gateway) | the gateway: the alias is sent as `model` | `chat/completions`; no cache, batch or media |
+
+Details, every setting, and the reasons some features are Vertex-only are in the server's
+README: [gemini-studio-mcp](https://github.com/yuting0624/gemini-studio-mcp).
+Organisation samples are in [`deploy/`](deploy/).
 
 ## 🧩 Slash commands
 
-<img src="docs/image.png" alt="The /antigravity slash commands in a Claude Code terminal session" width="720">
-
-*The plugin's commands show up natively in Claude Code's `/` menu.*
-
 | command | what it does |
 |---|---|
-| `/antigravity:setup` | health check — `agy` installed + authenticated, scripts ready |
-| `/antigravity:delegate [--tier flash\|pro] <task>` | delegate a subtask to agy under cost discipline, then verify |
-| `/antigravity:review [--adversarial]` | independent cross-model review of the current diff; Claude reconciles |
-| `/antigravity:research <topic>` | Claude-orchestrated deep research — agy does grounded web legwork, Claude verifies citations across ≥2 sources |
-| `/antigravity:media <file> [focus] [--convert]` | understand audio / video / images — agy transcribes + analyzes, returns a **timestamped digest**; full transcript goes to a file, not your context |
-| `/antigravity:cloud-run-debug [--service <s>] [--region <r>] [--project <id>] [--since 1h] [--apply]` | diagnose a failing Cloud Run service — agy digests the error logs, Claude infers the root cause + fix; read-only by default (`--apply` writes to a branch) |
-| `/antigravity:status [id]` · `:result <id>` · `:cancel <id>` | manage background delegation jobs |
-| `/antigravity:migrate [--apply] [--include-repos]` | move an existing Claude Code setup onto agy — skills, CLAUDE.md, memory, MCP, plugins, permissions; dry-run by default, `--uninstall` reverses it |
+| `/antigravity:setup` | node, the shipped server, credentials, gateway, egress allowlist, which model each alias answers with |
+| `/antigravity:delegate <question or task> [paths]` | digest a selection (`digest_codebase`) or run a read-only task (`delegate_task`), then verify the references |
+| `/antigravity:review [--adversarial] [range] [paths]` | independent second review of a change (`review_diff`); Claude reconciles |
+| `/antigravity:media <file> [focus]` | recordings, video, images, PDFs → timestamped / cited digest (`digest`) |
+| `/antigravity:cloud-run-debug [--service <s>] [--region <r>] [--since 1h] [--cluster] [--apply]` | diagnose a failing Cloud Run service — logs digested on the cheap side, Claude infers the root cause; read-only by default |
+| `/antigravity:status [id]` · `:result <id>` · `:cancel <id>` | background jobs (in-process and Vertex batch) |
+| `/antigravity:research <topic>` | multi-source research: `search_web` (Google Search grounding on Vertex AI) fans out per sub-question, Claude verifies citations across ≥2 sources and synthesizes |
+| `/antigravity:migrate [--apply] [--include-repos]` | move an existing Claude Code setup onto the Antigravity CLI — unrelated to the transport, still shipped |
 
-> Background jobs are for **interactive** sessions (fire-and-collect). In headless `claude -p` (one-shot), delegate **synchronously** — there's no later turn to collect a result.
+> Background jobs are for **interactive** sessions. In headless `claude -p` (one-shot),
+> call synchronously — there is no later turn to collect a result.
 
----
+## 🧾 What each call leaves behind
 
-## 📦 Bringing your Claude Code setup across
+Counts only — never file names, prompts or content:
 
-`/antigravity:migrate` moves an existing Claude Code configuration onto `agy`. Dry-run
-by default; `--apply` backs up first and `--uninstall --apply` reverses it. Your
-`~/.claude` is never written to.
+1. **The response footer**: `usage: {…}`, `offload: {…}` (what was kept out of Claude's
+   context and what that was worth), `endpoint: …`.
+2. **The server's ledger** (`~/.gemini-mcp/ledger.jsonl`) and, when talking to Vertex
+   directly, **Cloud Logging** in your project (`delegation.usage`). Vertex requests carry
+   billing labels (`delegation-tool`, `delegation-alias`) and a `User-Agent:
+   delegation-mcp/<version>`, so the billing export breaks cost down by tool.
+3. **The plugin's usage log** (`~/.antigravity-usage.jsonl`, `usage_log` option): a
+   `PostToolUse` hook joins Claude's session id with the server's per-call usage.
+   `scripts/measure-session.py <session> --join` prints the Claude side and the
+   delegation side of one session together.
 
-```
-/antigravity:migrate                             # see the plan
-/antigravity:migrate --apply                     # global assets
-/antigravity:migrate --apply --include-repos     # also AGENTS.md + per-repo memory
-```
-
-| your Claude Code asset | becomes |
-|---|---|
-| `~/.claude/skills/` | read **in place** — a `skills.json` entry, not a copy, so one edit serves both tools |
-| installed plugins | `~/.gemini/config/plugins/` via the native importer, with its output repaired |
-| `CLAUDE.md` | an `AGENTS.md` symlink beside it |
-| auto-memory | always-on rules — global ones in a plugin, per-repo ones in `<repo>/.agents/rules/` |
-| MCP servers (project + desktop app) | merged into `~/.gemini/config/mcp_config.json` |
-| trusted projects | `trustedWorkspaces` |
-| `permissions.allow` | a **proposal file** — see below |
-| `~/.claude/agents/` | nothing. A user subagent's `model:` names a Claude tier (`opus` / `sonnet` / `haiku`) and its `tools:` lists Claude tool names, so there is no honest mapping; subagents shipped *inside a plugin* come across with the plugin |
-| `~/.claude/CLAUDE.md`, `~/.claude/commands/`, `hooks` in `settings.json` | nothing — only the copies that ship inside a plugin are carried across |
-| session history | nothing. Antigravity stores conversations as protobuf blobs inside per-conversation SQLite files; there is no writer |
-
-Two things are deliberately not automatic. **Permissions widen when translated** —
-Claude's allow-list holds whole command *lines*, while agy's `command()` matches a
-prefix — so the result is written out for review and merged only with
-`--apply-permissions`. **`model` / `effortLevel` / `env`** are reported and never
-written, because no honest mapping exists.
-
-Worth knowing if you would rather do it by hand: an Antigravity rule without
-`trigger: always_on` in its frontmatter is ignored with no error and no warning,
-workspace `.agents/` is ignored entirely unless the session is bound to an agy project,
-and `agy plugin import claude` finds nothing on a current Claude Code because it only
-looks one directory deep. [`docs/MIGRATION.md`](docs/MIGRATION.md) has the full layout
-reference, the compatibility matrix, and how each of these was measured.
-
----
-
-## 🗳️ The same two models, arranged differently
-
-This plugin is one shape of Claude and Gemini working together: **conductor and executor** — judgement on one side, throughput on the other, one workflow. It is also the shape for people who live in a terminal.
-
-[**gemini-studio-mcp**](https://github.com/yuting0624/gemini-studio-mcp) is the same thesis on the other surface: **Claude Desktop**, for the colleagues who will never open one. An MCP server rather than a CLI delegation, and the verb flips from *execute* to *ingest* — Gemini reads the recording, the PDF corpus, the internal search index, and only the digest reaches Claude. The split is not cosmetic: you can hand a developer a `--tier` flag and an `AGENTS.md`, but a business user drags a PDF into a chat window, so the routing that is explicit here is automatic there, and the cost discipline that is a documented practice here is a number printed on every response there. They also fail differently — delegated *writing* can silently not happen and has to be checked against the filesystem; delegated *reading* can quietly summarise away the one paragraph that mattered and has to be checked against citations. Same author as this plugin.
-
-[**quorum-review**](https://github.com/yuting0624/quorum-review) is the third shape: the two as **peers**. Both read the same pull request independently, neither sees the other's output, and where they agree independently *that is the result* — only the disagreements are worth a second opinion. Both run on **one** Google Cloud credential, so no vendor API keys live in the repository. Same author as this plugin.
-
-**This repo is its client zero.** It runs on every pull request opened here, alongside a Claude review — including the ones that change this plugin. Keeping the habit of not quoting numbers we haven't measured, here is what that has actually been worth:
-
-- On a fixture holding three known bugs it found **two, with no false positives**, and reached the correct root cause on one that the single-model review took two rounds to get right.
-- Reviewing this repo's own CI, both of its models **independently** caught a fork-guard hole in the review workflow itself — one that would have put an outside contributor's code on the runner next to live credentials.
-- It has also produced a confident **false positive that both models agreed on** — the code disproving it lived outside the checkout either model could read.
-
-That last one is the useful lesson, and it cuts against the obvious pitch: two independent scans insure you against *one model's* blind spot. They do not insure you against a gap in what you handed **both** of them.
-
----
+Nothing is reported to anyone but your project or your gateway.
 
 <details>
-<summary><b>🛠️ Direct script usage &amp; tiers</b></summary>
+<summary><b>🏢 Deploying for an organisation</b></summary>
 
-```bash
-# one-shot delegation (plain text on stdout)
-scripts/agy-delegate.sh --tier flash "Summarize this changelog in 3 bullets: ..."
+Ship the same bundle two ways and control both from managed settings:
 
-# give Antigravity a workspace for multi-file agentic work
-scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
+- **`managed-mcp.json`** (macOS `/Library/Application Support/ClaudeCode/managed-mcp.json`,
+  Linux `/etc/claude-code/managed-mcp.json`) declares the server with its driver,
+  gateway, allowed hosts and allowed roots — developers cannot change these.
+- **Managed settings** force-enable the plugin for the Conductor side (skill, hooks,
+  commands, subagent) and pre-approve the tools:
+  `permissions.allow: ["mcp__delegation__*"]` for a server named `delegation` in
+  `managed-mcp.json`, or `mcp__plugin_antigravity_delegation__*` for the plugin-bundled one.
 
-# bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
-scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
+For an InfoSec review, three lines: **what is read** — text files under the selection
+`root` (and, when set, `DELEGATION_ALLOWED_ROOTS`), after `.gitignore`, a built-in ignore
+list and credential redaction; **where it is sent** — only hosts on
+`DELEGATION_ALLOWED_HOSTS`, Google's managed endpoints by default; **who controls it** —
+the managed configuration, not the developer's machine.
 
-# write task: needs a grant — a permissions.allow write_file(<dir>) rule, or --yolo (run on a branch)
-scripts/agy-delegate.sh --yolo --dir ./app "Implement X per SPEC.md"
-
-# live web / Google search — and, since agy 1.1.28, any URL read — need --yolo (or a read_url(<target>) rule) headless
-scripts/agy-delegate.sh --tier pro --yolo "Web-search <X>. Give URLs + dates."
-
-# Vertex AI Search over internal data
-scripts/agy-delegate.sh --tier pro --yolo "List Vertex AI Search engines (list_engines)."
-
-# cross-model review / stdin / background job
-scripts/agy-delegate.sh --tier pro "Review for bugs, be skeptical: <paste>"
-cat big-prompt.txt | scripts/agy-delegate.sh -
-ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh result "$ID"
-```
-
-| tier | model | use for |
-|------|-------|---------|
-| `flash` (default) | Gemini 3.8 Flash (High) | most bulk work |
-| `flash-lo` | Gemini 3.8 Flash (Low) | cheapest, trivial tasks |
-| `pro` | Gemini 3.1 Pro (High) | harder reasoning / cross-checks |
-
-**agy is multi-model.** Tiers default to Gemini, but you can use any model `agy models` lists
-(Claude / GPT on plans that expose them): pass `--model "<exact name>"`, or set it persistently
-via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_lo` / `tier_pro`
-(env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
-conductor — that's what gives both the cost saving and the cross-model verification.
-
-> **The `flash` tiers moved to Gemini 3.8 Flash in 0.26.0** (3.7 in 0.24.0; 3.5 before that). 3.8, 3.7 and 3.6 carry *identical* list prices — $0.75 in / $3.75 out / $0.075 cached-in per 1M tokens — under promotional pricing that **ends 2026-12-31**, after which all three settle at $1.50 / $7.50 / $0.15 (3.5 is $1.50 / $9.00 / $0.15 throughout). Checked against two sources on 2026-09-03; [`prices.json`](prices.json) carries both sets. No quality claim is made here — the reason to move is currency at an unchanged list price, and this repo has retracted a model comparison before for being measured on a build where `--model` was ignored. An identical *per-token* price is not an identical *per-task* cost: thinking bills as output, nothing here has measured how much of it 3.8 does, so read the `AGY_USAGE` line. One quirk was measured while checking this release: under `--digest`, a prompt that gives agy nothing to inspect (a bare "reply OK" ping) makes 3.8 High run a *command* to find something to report — 6 of 7 runs here, which headless without a grant is exit 15 (3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 High without `--digest` 0 of 2). Given a real task — a file behind `--dir`, or code pasted into the prompt — 3.8 High answered 6 of 6. Give it a task, or drop `--digest` for a ping. **If your plan does not serve 3.8 yet** (agy 1.1.25's release note lists it for `GEMINI_API_KEY` sign-in; `agy models` also lists it on the GCP-project sign-in this was measured on, but newer models can lag on enterprise plans) you find out immediately, not silently: `agy-doctor` warns that the tier model is absent from `agy models`, and a delegation exits **14** naming the fix. Remap with the `tier_flash` / `tier_flash_lo` options to anything `agy models` lists — `Gemini 3.7 Flash (High)` and `Gemini 3.6 Flash (High)` cost exactly the same. (agy 1.1.5 switched `agy models` to slugs like `gemini-3.8-flash-high`; both slugs and display names work with `--model`, and `doctor` matches either.)
+Samples: [`deploy/managed-mcp.json`](deploy/managed-mcp.json),
+[`deploy/managed-settings.json`](deploy/managed-settings.json), and the Vertex passthrough
+proxy (Cloud Run + Terraform) in the server repository under
+`deploy/gateway-vertex-passthrough/`.
 
 </details>
 
@@ -208,71 +183,38 @@ conductor — that's what gives both the cost saving and the cross-model verific
 
 Delegation doesn't save money by itself — these do (also in the skill):
 
-1. **Delegate above the break-even** — bulk/parallel/repetitive work, not tiny tasks.
-2. **Keep Claude's context lean** — don't re-read what agy already handled; take a **digest**, not raw output. (Biggest lever — it collapses `cache_read`.) Enforced in code: `--digest` appends a digest-only output contract, and the wrapper **warns when a reply comes back dump-sized** (tune via the `digest_warn_chars` plugin option).
-3. **Batch** — one big delegation beats many round-trips.
-4. **Review the diff, not the whole tree.**
+1. **Delegate above the break-even** — three files or ~20k tokens and up; not tiny reads.
+2. **Ingest the digest, never the corpus** — open only the `file:line` references you
+   must verify. This is the lever; it is what collapses per-turn `cache_read`.
+3. **One call per selection** — ask both questions in one call. A repeated selection gets
+   a context cache on the second request (`cache: "on"` to create it up front).
+4. **Keep `token_budget` honest** — the default 4000 is what you carry on every later turn.
+5. **Review the diff, not the tree.**
 
-`scripts/measure-session.py <session-id>` prints the COST-WEIGHTED + est. USD breakdown for a session (Claude side; Gemini side priced separately). `scripts/agy-cost-compare.sh` shows the per-token gap for a task — **estimates from char-count, so verify `prices.json` first.**
-
-**Running a PoC in your org?** [`docs/POC-PLAYBOOK.md`](docs/POC-PLAYBOOK.md) is the step-by-step method — quality gate first, baseline, one lever at a time, break-even reporting, and org-level rollout/enforcement (incl. Windows/WSL requirements).
+**Running a PoC in your org?** [`docs/POC-PLAYBOOK.md`](docs/POC-PLAYBOOK.md) is the
+method — quality gate first, baseline, one lever at a time, break-even reporting.
 
 </details>
 
 <details>
 <summary><b>🚧 Guardrails &amp; known limits</b></summary>
 
-> **Something broken?** See **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — symptom-first fixes for Windows/WSL, writes that silently don't happen, quota/auth/timeout codes, and updating.
+> **Something broken?** See **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**.
 
-**Guardrails**
-- Always **verify** agy's output (it can be wrong, and may even alter its environment to make a check pass — re-run gates yourself in a clean state).
-- `--yolo` auto-approves every tool call — a grant over your whole machine, not over `--dir`.
-  **`--sandbox` does not contain it.** Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux. Use a throwaway checkout, or a
-  `permissions.allow` rule instead of the flag.
-- Write tasks: run on a dedicated branch/worktree, review the diff before merging.
-
-**Known limits (agy v1.0.x)**
-- `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
-- `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`). **Structured output arrived in agy 1.1.8** (`--output-format json`): the wrapper now uses it internally on ≥1.1.8 to classify failures from the structured error and to report the executor's real token usage (incl. `cache_read`) as an `AGY_USAGE` line on stderr — stdout is unchanged. Older agy falls back to plain text (toggle with the `structured_output` option). **If you're measuring, set `AGY_USAGE_LOG=/path`** (or the `usage_log` option): stderr is easily lost — `2>&1 | tail -N`, the natural way to keep Claude's context lean, keeps the digest and drops the usage line.
-- **Pipe hang and empty-output semantics moved upstream.** agy 1.1.24 fixed the cause of the issue-#37 hang (its MCP children kept the caller's pipes open); the wrapper keeps routing agy's output through files, which costs nothing and still covers older builds. Since agy 1.1.18 a dropped agent stream exits non-zero instead of rc 0 + empty, so the wrapper's exit `3` now means agy genuinely returned nothing (from agy's changelog; not reproduced here).
-- **An expired `--print-timeout` is no longer a failure on agy's side (1.1.28).** agy returns the partial reply with rc 0 and one stderr line (`[agy] print timeout after 5s with turn in progress; returning partial output`, measured on 1.2.0) and reports no usage for the turn. The wrapper prints that partial reply and still exits `12`, so a truncated answer never passes as a finished one; `--continue` resumes the conversation.
-- **The executor's trajectory is auditable.** Every agy run writes a step-by-step `transcript.jsonl`, and the `conversationId` in `AGY_USAGE` joins it to the cost 1:1. `agy-trace --audit <id>` (or `--audit --last`) shows step-type counts and every non-zero exit — a delegation can report SUCCESS while commands inside it failed. The command **strings** are recorded nowhere, so to attribute a filesystem change you must diff the tree.
-- **Two write grants, and the narrow one is not `--yolo`.** Headless agy's
-  no-permission behavior has shifted every few releases (describe-only pre-1.1.0 ·
-  scratch-divert 1.1.0–1.1.2 · soft-deny 1.1.3+ · **hard error by 1.1.13** · soft again
-  from **1.1.20**, measured on 1.1.25: rc 0, empty output, the `auto-denied` notice on
-  stderr). An ungranted write always **leaves your workspace untouched**; what changed is
-  how the run admits it — a stderr notice from 1.1.3, a failed run on 1.1.13–1.1.19, the
-  notice again since 1.1.20
-  ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)). Two things
-  grant it:
-  
-  - **`permissions.allow` in `~/.gemini/antigravity-cli/settings.json`** — a
-    `write_file(<dir>)` entry allows writes **recursively beneath `<dir>`** and needs no
-    flag. This is the narrower grant and usually the right one.
-    **`<dir>` is a placeholder — substitute a real path.** Left as written it grants
-    nothing on any agy version, and the write is denied with the rule sitting visibly
-    in the file. A *different* mistake is the version-sensitive one: a `command(...)` rule
-    that names no command (`command(time)`, a comment-only entry, `()`) matched **every**
-    command before agy 1.1.11 and silently auto-approved anything the agent ran — broader
-    than the `--yolo` it was chosen instead of. 1.1.11 makes that entry match nothing too.
-    `agy-doctor` checks your entries and reports the consequence that actually applies.
-  - **`--yolo`** — the wrapper's flag, sent to agy as `--dangerously-skip-permissions` (agy
-    1.1.25 rejects a literal `--yolo`) — auto-approves **all** tools, not just
-    writes. Needed when no rule covers the target, and for web search / URL reads (agy 1.1.28
-    made fetching URLs ask first; the narrow rule is `read_url(<target>)`) / Vertex AI Search /
-    terminal tools. Since agy 1.1.27 the wrapper names the refused tool from the envelope's
-    `denied_actions` (measured on 1.2.0).
-  
-  Confirmed on **agy 1.1.9** by a controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)):
-  a covered target wrote with no flag; an uncovered one came back `PERMISSION_DENIED` with
-  the rule as the only variable. agy's own denial text names the rule and offers `--yolo` as
-  the alternative. Not verified on other versions, and a glob form (`write_file(/path/**)`)
-  was reported *not* to match. Either way: run write tasks on a branch and verify with
-  `git status`; the wrapper maps both denial shapes — the soft one (agy 1.1.3+, and again
-  from 1.1.20; re-measured on 1.1.25) and 1.1.13's hard error — to exit `15`.
-- **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected ([issue #6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)). The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging; `doctor` reports the likely hang instead of a misleading "not authenticated". Without `timeout` on PATH there's no safety net — use **WSL/macOS/Linux** for headless delegation.
-- **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow — agy reads the workspace over a 9p bridge, so even trivial calls can take 20s+. Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor` warn about this.
+- **A digest is a claim, not evidence.** The server checks that every reference points at
+  a real line (`stats.refs_valid_ratio`), not that the claim is true. Open the references
+  behind anything load-bearing; run the gate yourself.
+- **The server only reads**, only under `root`. What comes back is bounded by
+  construction — a schema with no content field, a token budget, hard caps, a verbatim-run
+  detector, a second redaction pass — and every guard that fired is in `stats`.
+- **Redaction is a net, not a guarantee.** Credential-shaped strings are removed by
+  pattern before sending; review what a selection contains before pointing the server at
+  a tree with secrets in plain files.
+- **Batch jobs** stage the redacted selection as JSONL in the project's Cloud Storage
+  bucket for the life of the job and delete it afterwards.
+- **Selections are bounded:** 400 files, 512 KB per file, ~2M tokens interactive.
+- **Not carried from 0.x:** write/scaffold delegation (by design), internal fan-out,
+  `agy-trace`, `agy-cost-compare`. See [`docs/MIGRATION-1.0.md`](docs/MIGRATION-1.0.md).
 
 </details>
 
@@ -280,42 +222,65 @@ Delegation doesn't save money by itself — these do (also in the skill):
 <summary><b>📦 What's inside · local dev · tests</b></summary>
 
 ```
-.claude-plugin/   plugin (+ userConfig: default_tier, timeout, coding_policy) + marketplace manifests
-skills/antigravity/SKILL.md   WHEN + HOW Claude collaborates with agy
-agents/           antigravity-delegate subagent (file work runs on Gemini, not Claude)
-commands/         slash commands (delegate, review, research, media, cloud-run-debug, setup, status, result, cancel)
-hooks/            SessionStart: agy health check + auto-inject the cost-aware policy
-bin/              PATH shims (bare names): agy-delegate · agy-job · agy-cost-compare · agy-doctor · cloud-debug · agy-trace · agy-media · measure-session · agy-migrate
-scripts/          agy-delegate · agy-job · agy-cost-compare · cloud-debug · agy-trace · agy-media · measure-session · doctor · agy-migrate
-docs/             AB-RESULTS (measured A/B) · POC-PLAYBOOK · TROUBLESHOOTING · DEMO-KIT
-prices.json       Vertex rate config (verify before quoting)
+.claude-plugin/   plugin manifest: the delegation MCP server + 3 options
+server/           the delegation server bundle (index.js, prices.json, VERSION) — scripts/sync-server.sh refreshes it
+skills/antigravity/SKILL.md   WHEN + HOW Claude delegates reading, and verifies
+agents/           antigravity-delegate subagent (only the server's tools)
+commands/         delegate, review, media, cloud-run-debug, setup, status, result, cancel, research, migrate
+hooks/            SessionStart (server check, policy), UserPromptSubmit (nudge), PostToolUse (usage join)
+bin/              delegation-cli · delegation-doctor · cloud-debug · measure-session · agy-tier · agy-condense · agy-migrate
+scripts/          the above, plus sync-server.sh and agy-log-cluster.py (cloud-run-debug --cluster)
+deploy/           managed-mcp.json / managed-settings.json samples for organisations
+docs/             MIGRATION-1.0 · TROUBLESHOOTING · POC-PLAYBOOK · AB-RESULTS · DEMO-KIT
 ```
 
-**Local development** (hack on the plugin — loads live files, `$CLAUDE_PLUGIN_ROOT` resolves):
+**Local development** (loads live files, `$CLAUDE_PLUGIN_ROOT` resolves):
 ```bash
 git clone https://github.com/yuting0624/antigravity-for-claude-code ~/antigravity-for-claude-code
 claude --plugin-dir ~/antigravity-for-claude-code
 ```
 
-**Tests** (no dependencies; stubs `agy`):
+**Tests** (bash, python3, node; no network):
 ```bash
 bash tests/run-tests.sh
 ```
+The server has its own suite in its repository (`scripts/verify.sh`), offline and live.
 
 </details>
 
 ---
 
+## 🗳️ The same two models, arranged differently
+
+This plugin is one shape of Claude and Gemini working together — **conductor and
+reader** — for people who live in a terminal. The server it ships,
+[**gemini-studio-mcp**](https://github.com/yuting0624/gemini-studio-mcp), is the same
+thesis on the other surface, **Claude Desktop**: the verb has been *ingest* there from the
+start — Gemini reads the recording, the PDF corpus, the internal search index, and only the
+digest reaches Claude. 1.0 brings that verb here.
+
+[**quorum-review**](https://github.com/yuting0624/quorum-review) is the third shape: the
+two as **peers**. Both read the same pull request independently; where they agree
+independently *that is the result*. It runs on every pull request opened here. Its
+lesson also applies to `review_diff`: two independent scans insure you against *one
+model's* blind spot — not against a gap in what you handed **both** of them.
+
+---
+
 ## 🤝 Contributing
 
-Early-stage and MIT — issues, PRs, and ⭐ all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [`good first issue`](https://github.com/yuting0624/antigravity-for-claude-code/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) list.
+MIT — issues, PRs, and ⭐ welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Automated review:** PRs get two reviews in CI on top of the usual tests/shellcheck — a Claude review carrying this repo's own contracts, and [quorum-review](https://github.com/yuting0624/quorum-review) — see the section above.
-
-**From a fork:** quorum doesn't run at all. The Claude review runs only once a maintainer **with write access** applies the `claude-review` label — the label alone isn't authorisation, since triage collaborators can apply labels too — and it re-runs on every later push, so an approved review can't go stale behind new commits. Your code never reaches the runner at all — the reviewer sees it as a diff (`gh pr diff`), with this repository's base checkout for context. Nothing of yours is fetched or executed.
+**Automated review:** PRs get a Claude review carrying this repo's own contracts, and
+quorum-review. From a fork, the Claude review runs only once a maintainer with write
+access applies the `claude-review` label; the reviewer sees your code as a diff and
+nothing of yours is executed.
 
 ---
 
 ## ⚠️ Disclaimer
 
-Community project. **Not affiliated with, endorsed by, or supported by Google or Anthropic.** "Antigravity", "Gemini", "Claude", and "Claude Code" are trademarks of their respective owners. This plugin orchestrates the third-party `agy` CLI; you are responsible for your own API/cloud costs, credentials, and data-sharing choices. MIT licensed — see [LICENSE](LICENSE).
+Community project. **Not affiliated with, endorsed by, or supported by Google or
+Anthropic.** "Gemini", "Vertex AI", "Claude", and "Claude Code" are trademarks of their
+respective owners. You are responsible for your own cloud costs, credentials, and
+data-sharing choices. MIT licensed — see [LICENSE](LICENSE).

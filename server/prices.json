@@ -1,0 +1,37 @@
+{
+  "_comment": "USD per 1M tokens (text/image/audio input as billed by Vertex AI). Image/video entries are per-unit, not per-token. Rates change; verify against https://cloud.google.com/vertex-ai/generative-ai/pricing before quoting cost to a customer.",
+  "_verified": "2026-08-03 (text tiers inherited from antigravity-for-claude-code prices.json; image/video rates NOT yet verified)",
+  "currency": "USD",
+  "text": {
+    "gemini-3.6-flash": { "input": 1.5, "output": 7.5, "cached_input": 0.15 },
+    "gemini-3.5-flash": { "input": 1.5, "output": 9.0, "cached_input": 0.15 },
+    "gemini-3.5-flash-lite": { "input": 0.5, "output": 3.0, "cached_input": 0.05 },
+    "gemini-3.1-pro-preview": { "input": 2.0, "output": 12.0, "cached_input": 0.2 },
+    "gemini-3.5-pro": { "input": 2.0, "output": 12.0, "cached_input": 0.2 }
+  },
+  "image": {
+    "_unit": "USD per generated image",
+    "gemini-3.1-flash-image": 0.039,
+    "gemini-3-pro-image": 0.134
+  },
+  "video": {
+    "_unit": "USD per second of generated video",
+    "veo-3.1-generate-001": 0.4,
+    "veo-3.1-fast-generate-001": 0.15
+  },
+  "destination": {
+    "_comment": "Rates for the model this MCP feeds. Used ONLY to estimate what was avoided by digesting material here instead of pasting it into the host model's context. Anthropic first-party list rates; Claude on Vertex AI is partner-operated and priced separately, so verify against https://cloud.google.com/vertex-ai/generative-ai/pricing#claude-models before quoting a customer.",
+    "_verified": "2026-08-10 (Anthropic first-party list rates)",
+    "_unit": "USD per 1M tokens",
+    "_cache_read_note": "Fraction of the input rate charged to re-read cached context. Used to price what carrying the raw material would cost on every later turn.",
+    "cache_read_multiplier": 0.1,
+    "default": "claude-opus-5",
+    "models": {
+      "claude-opus-5": { "input": 5.0, "output": 25.0 },
+      "claude-opus-4-8": { "input": 5.0, "output": 25.0 },
+      "claude-sonnet-5": { "input": 3.0, "output": 15.0 },
+      "claude-haiku-4-5": { "input": 1.0, "output": 5.0 },
+      "claude-fable-5": { "input": 10.0, "output": 50.0 }
+    }
+  }
+}

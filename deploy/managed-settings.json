@@ -1,0 +1,12 @@
+{
+  "enabledPlugins": { "antigravity@antigravity-for-claude-code": true },
+  "allowManagedMcpServersOnly": true,
+  "strictPluginOnlyCustomization": ["mcp"],
+  "permissions": {
+    "allow": [
+      "mcp__delegation__*",
+      "mcp__plugin_antigravity_delegation__*"
+    ]
+  },
+  "env": { "MCP_TIMEOUT": "600000" }
+}

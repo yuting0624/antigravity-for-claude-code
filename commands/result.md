@@ -1,13 +1,16 @@
 ---
-description: Fetch the output of a finished background Antigravity (agy) job, then verify it.
+description: Fetch the result of a finished background delegation job, then verify it.
 argument-hint: "<job-id>"
 ---
 
-Fetch and act on a background agy job's result.
+Fetch and act on a background job's result.
 
-Run: `agy-job result $ARGUMENTS`
+Call `job_result({ job_id: "$ARGUMENTS" })`.
 
-- If it reports "still running", tell the user and stop.
-- If finished: treat the output as a delegated result under the `antigravity` skill's
-  **Verification gates** — do NOT trust it blindly. Verify (run/inspect) before using,
-  ingest only the digest into your context, and report your verification.
+- If it reports that the job is still running, tell the user the state and stop.
+- If finished: the text is the same digest a synchronous call would have returned. Treat
+  it under the `antigravity` skill's **Verification gates** — do NOT trust it blindly.
+  Open the `file:line` references behind anything you will act on, run or grep to confirm
+  load-bearing claims, and report your verification.
+- If failed: relay the message and the `error:` envelope; `retry: true` means the same
+  call can simply be repeated later.

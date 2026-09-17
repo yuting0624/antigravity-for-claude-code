@@ -15,7 +15,7 @@
 # Cloud Run (cloud_run_revision); `--resource-type` is parameterized so the
 # same engine can back a future gke-debug / functions-debug without a rewrite.
 #
-# The agy digest step reuses scripts/agy-delegate.sh (the plugin's one
+# The digest step calls the delegation server this plugin ships (server/index.js --cli;
 # delegation wrapper) — no new delegation logic here.
 #
 # Usage:
@@ -29,8 +29,8 @@
 #       --severity <SEV>         Minimum severity (default: ERROR)
 #       --resource-type <type>    GCP resource.type (default: cloud_run_revision)
 #   -p, --project <id>           GCP project (default: gcloud config's project)
-#   -t, --tier <flash|flash-lo|pro>  agy tier for the digest (default: flash)
-#       --print-command          Print the resolved gcloud + agy commands and exit (dry run)
+#   -t, --tier <flash|flash-lo|pro>  model alias for the digest: flash=ingest, flash-lo=cheap, pro=review (default: flash)
+#       --print-command          Print the resolved gcloud + delegation commands and exit (dry run)
 #   -h, --help                   Show this help
 #
 # Environment:
@@ -43,12 +43,12 @@
 #   2  gcloud read failed (generic)
 #   3  permission denied — needs roles/logging.viewer (guidance printed)
 #   4  gcloud not on PATH
-#   5  agy digest step failed (agy-delegate stderr is surfaced)
+#   5  digest step failed (delegation server stderr is surfaced)
 #
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-DELEGATE="$HERE/agy-delegate.sh"
+SERVER="$(cd "$HERE/.." && pwd)/server/index.js"
 
 SERVICE=""
 REGION=""
@@ -62,11 +62,11 @@ PRINT_CMD=0
 
 die() { echo "cloud-debug: $*" >&2; exit 1; }
 # $1 = remaining argc ($#). Fail clearly when an option is missing its value
-# (mirrors agy-delegate.sh so `shift 2` never aborts cryptically under set -e).
+# (so `shift 2` never aborts cryptically under set -e).
 need() { [ "$1" -ge 2 ] || die "option '$2' needs a value"; }
 
 # Print the header comment between "# Usage:" and "# Exit codes:" (anchored to
-# content, not line numbers — same trick as agy-delegate.sh).
+# content, not line numbers).
 usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
 
 while [ $# -gt 0 ]; do
@@ -136,7 +136,7 @@ GCLOUD_ARGS=(logging read "$FILTER"
   "--project=$PROJECT")
 
 # --- the digest instruction handed to agy alongside the logs ---
-# Worded as a summary task (no implement/scaffold/migrate words) so agy-delegate's
+# Worded as a summary task so the read-only delegation contract is unambiguous;
 # write-task heuristic doesn't fire — this stage only reads and reports.
 read -r -d '' INSTRUCTION <<'PROMPT' || true
 You are a log-analysis assistant. Below is a JSON array of GCP log entries at
@@ -167,7 +167,7 @@ PROMPT
 # --- dry run: show the resolved pipeline and exit (no gcloud / agy call) ---
 if [ "$PRINT_CMD" -eq 1 ]; then
   { printf 'gcloud'; printf ' %q' "${GCLOUD_ARGS[@]}"; printf '\n'; }
-  printf '  | %s --tier %q -\n' "$DELEGATE" "$TIER"
+  printf '  | node %s --cli delegate_task {spec,paths:[logs.json],alias:%s}\n' "$SERVER" "$(case "$TIER" in pro) echo review;; flash-lo) echo cheap;; *) echo ingest;; esac)"
   exit 0
 fi
 
@@ -243,15 +243,26 @@ if [ "$(LC_ALL=C; printf '%s' "${#LOGS}")" -gt "$MAX_BYTES" ]; then
 NOTE: the JSON array below was clipped to ${MAX_BYTES} bytes and is no longer valid JSON — parse it leniently; the digest may be partial."
 fi
 
-# --- delegate the digest to agy (cheap tier; lean output back to Claude) ---
+# --- delegate the digest to the delegation server (lean output back to Claude) ---
+# The logs go to a private temp directory the server reads as `root`; the request is
+# a read-only delegate_task on the cheap side. Nothing here inherits our stdout.
+case "$TIER" in pro) ALIAS=review ;; flash-lo) ALIAS=cheap ;; *) ALIAS=ingest ;; esac
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+printf '%s\n' "$LOGS" > "$WORK/logs.json"
+ARGS_JSON="$(python3 - "$INSTRUCTION" "$WORK" "$ALIAS" <<'PYARGS'
+import json, sys
+print(json.dumps({"spec": sys.argv[1], "paths": ["logs.json"], "root": sys.argv[2], "alias": sys.argv[3], "cache": "off", "token_budget": 2500}))
+PYARGS
+)"
 set +e
-DIGEST="$(printf '%s\n%s\n' "$INSTRUCTION" "$LOGS" | "$DELEGATE" --tier "$TIER" - 2>"$ERR")"
+DIGEST="$(node "$SERVER" --cli delegate_task "$ARGS_JSON" 2>"$ERR")"
 RC=$?
 set -e
 
 if [ "$RC" -ne 0 ]; then
-  echo "cloud-debug: agy digest step failed (agy-delegate exit $RC)" >&2
-  [ -s "$ERR" ] && cat "$ERR" >&2
+  echo "cloud-debug: digest step failed (delegation server exit $RC)" >&2
+  [ -s "$ERR" ] && grep -v MetadataLookup "$ERR" >&2
   exit 5
 fi
 

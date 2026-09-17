@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "delegation": {
+      "command": "/usr/local/bin/node",
+      "args": ["/opt/delegation-mcp/server/index.js"],
+      "env": {
+        "GEMINI_MCP_MODE": "vertex",
+        "GEMINI_MCP_PROJECT_ID": "<org-project>",
+        "DELEGATION_GATEWAY_DRIVER": "vertex",
+        "DELEGATION_GATEWAY_BASE_URL": "https://<gateway-host>",
+        "DELEGATION_GATEWAY_AUTH": "adc-id-token",
+        "DELEGATION_GATEWAY_AUDIENCE": "https://<gateway-host>",
+        "DELEGATION_ALLOWED_HOSTS": "*.googleapis.com,*.gateway.dev,<gateway-host>",
+        "DELEGATION_ALLOWED_ROOTS": "${HOME}/src",
+        "DELEGATION_ALIAS_INGEST": "gemini-3.6-flash",
+        "DELEGATION_ALIAS_REVIEW": "gemini-3.1-pro-preview",
+        "DELEGATION_ALIAS_CHEAP": "gemini-3.5-flash-lite"
+      },
+      "timeout": 600000
+    }
+  }
+}

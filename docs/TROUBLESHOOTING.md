@@ -1,232 +1,101 @@
 # Troubleshooting
 
-Symptom-first guide to every problem reported so far. **Start by running `agy-doctor`**
-(or `/antigravity:setup` inside Claude Code) — it diagnoses most of the below and prints
-the plugin version, agy version/auth state, and platform warnings.
+Symptom first. Everything below is for the 1.0 line (the delegation MCP server); the
+0.27 notes about the `agy` CLI live on tag `v0.27.4-agy-final`.
 
----
+## The delegation tools are not offered at all
 
-## "`/scripts/agy-delegate.sh: No such file or directory`" or `$CLAUDE_PLUGIN_ROOT` is empty
+`/mcp` in Claude Code should list a server for this plugin. If it does not:
 
-**Cause:** you're on a plugin version < 0.14.0. `$CLAUDE_PLUGIN_ROOT` is only substituted
-inside structured config (hooks/MCP) — it is **not** exported to the shell commands the
-model runs, so marketplace installs saw an empty path ([#11](https://github.com/yuting0624/antigravity-for-claude-code/issues/11),
-[#15](https://github.com/yuting0624/antigravity-for-claude-code/issues/15)).
+- **Node.js is missing or old.** The `SessionStart` hook prints
+  `[antigravity] node is not on PATH` / `is older than 20`. Install Node.js 20+ and restart
+  the session.
+- **The bundle is missing.** `server/index.js` should be ~5 MB inside the plugin
+  directory. `scripts/sync-server.sh --from <gemini-studio-mcp checkout>` or reinstall the
+  plugin. `/antigravity:setup` (`delegation-doctor`) reports both.
+- **Managed install restricts MCP servers.** With `allowManagedMcpServersOnly`, only the
+  server in `managed-mcp.json` starts; the plugin's bundled copy is expected not to. The
+  tool names then begin with `mcp__delegation__`, not `mcp__plugin_antigravity_delegation__`.
 
-**Fix:** update — since 0.14.0 everything is invoked by bare names (`agy-delegate`,
-`agy-job`, `agy-doctor`, `agy-cost-compare`) on the plugin's `bin/` PATH:
+## `error: {"code":11,"kind":"AUTH",…}`
 
-```
-/plugin marketplace update antigravity-for-claude-code
-/reload-plugins
-```
+No usable credential. Direct mode needs Application Default Credentials:
+`gcloud auth application-default login`, then `/antigravity:setup`. Behind a gateway,
+`DELEGATION_GATEWAY_AUTH` names the credential source (`adc-id-token` needs
+`DELEGATION_GATEWAY_AUDIENCE`; `bearer-env` names an environment **variable**, which
+must be set where Claude Code is launched).
 
----
+## `error: {"code":15,"kind":"PERMISSION","host":"…"}`
 
-## Windows: delegation hangs, or exits 12 (TIMEOUT) with a 0-byte log
+The destination host is not on the egress allowlist. This is a setting, not a flag:
+`DELEGATION_ALLOWED_HOSTS` (or `egress.allowedHosts` in `~/.gemini-mcp/config.json`),
+managed by the organisation on managed installs. `/antigravity:setup` prints the current
+allowlist. A `PERMISSION` without a `host` and with a `root` means the selection root is
+outside `DELEGATION_ALLOWED_ROOTS`.
 
-**Cause (upstream, not the plugin):** on native Windows, headless `agy` needs a real
-console (ConPTY). When the plugin runs it as a child process with redirected stdio there
-is no console, and agy v1.0.x can hard-hang before producing any output
-([#6](https://github.com/yuting0624/antigravity-for-claude-code/issues/6)).
+## `error: {"code":14,"kind":"MODEL",…}`
 
-**"But agy works when I type it in my terminal!"** — yes: typed directly, agy has a real
-console (interactive mode). Invoked by the plugin, it runs headless (no console). That's
-the difference, not Windows vs the plugin.
+The alias's model is not served to this project (or the gateway does not know the alias).
+`/antigravity:setup` shows what each alias resolves to and whether it answered. Change the
+alias table (`DELEGATION_ALIAS_INGEST` etc., or `aliases` in the config), not the tool call.
 
-What the plugin does about it: a wall-clock guard (`timeout`/`gtimeout`) turns the hang
-into a clean **TIMEOUT (exit 12)** instead of a freeze, and `agy-doctor` reports "headless
-hang" instead of the misleading "not authenticated".
+## The digest is truncated / "cut to the token budget"
 
-**Fix: use WSL** (fully supported):
-1. `wsl --install` (one-time; reboot)
-2. Install Claude Code **and** the Antigravity CLI *inside* WSL; authenticate agy there
-   (`agy models` should list models)
-3. Keep your repo on the WSL Linux filesystem (`~/project`), **not** `/mnt/c/...`
-4. Run `/antigravity:setup` from WSL — it should go green
+`token_budget` defaults to 4000 tokens on purpose (it is what Claude carries on every later
+turn). Ask a narrower question, split the selection, or raise `token_budget` deliberately
+(max 8000). `stats.truncated: true` tells you it happened.
 
----
+## `refs_valid_ratio` is low
 
-## Everything hangs forever, and `/antigravity:setup` says the CLI is broken
+The model produced references that do not point at lines in the selection. Narrow `paths`,
+ask a more specific question, or use `alias: "review"`. Do not act on a digest with a
+ratio below ~0.9 without opening the references.
 
-**Symptom:** `agy models` and every delegation never return. `agy-doctor` reports a hung or
-unauthenticated CLI — but typing `agy models` yourself works fine. macOS and Linux, not just
-Windows.
+## A `digest_codebase` selection is empty or missing files
 
-**Cause:** you have **stdio MCP servers configured** and a plugin build older than 0.22.1
-([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37)). agy's stdio MCP
-children **inherit its stdout and outlive agy**. A shell command substitution only returns
-once *every* holder of the pipe's write end closes it, so `OUT="$(agy ...)"` waits forever on
-children that are still alive. The wall-clock guard cannot rescue this: `timeout` kills
-`agy`, not the grandchildren.
+Inside a git repository the selection is `git ls-files` (tracked + untracked, minus
+ignored). Files under `dist/`, `node_modules/`, lockfiles, `.env*`, keys, and files over
+512 KB are excluded by the built-in list; binaries and media are listed under
+`stats.skipped`. Use `include` / `exclude` patterns, or `digest` for media and PDFs.
 
-The one-line test, from the original report — same machine, only the config changed:
+## Background job stuck or gone
 
-```bash
-# stdout to a FILE — returns in ~6s
-timeout 60 agy -p "Reply with exactly: PONG" > /tmp/out.txt 2>/dev/null </dev/null
+- `job_status` with no id lists jobs for the **current directory**; `all: true` lists
+  every directory.
+- An in-process job from a previous server process cannot be resumed: after a restart it is
+  marked `failed` with `"server restarted"`. Re-run it.
+- A **batch** job lives in Vertex; `job_status` polls it. Minutes to hours is normal.
+  `job_cancel` cancels it on Vertex and removes the staged input.
+- Registry: `~/.antigravity-jobs/<id>/` (`DELEGATION_JOBS_DIR`).
 
-# stdout to a PIPE (what the wrappers used to do) — hangs
-timeout 90 bash -c 'O="$(timeout 60 agy -p "Reply with exactly: PONG" 2>/dev/null)"' </dev/null
-```
+## `endpoint: external (…)` on every response
 
-**Fix: update to 0.22.1 or later.** agy's stdout now goes to a temp file, which children
-inherit harmlessly. Check with `agy-doctor` (it prints the plugin version).
+Your configuration points at a passthrough proxy or a gateway; the line names its host.
+It is a statement of fact, not a warning. `endpoint: geap (…)` means a Google-managed
+endpoint.
 
-### It still hangs on 0.22.1+
+## Cloud Logging says `off (no permission to write logs…)`
 
-Then it is a **different mechanism**, and one the plugin cannot fix: agy waits on its MCP
-servers at startup, so a server that never finishes connecting blocks `agy` itself — this
-reproduces even with stdout on a file. `agy-doctor` now tells you how many stdio MCP servers
-you have when `agy models` times out.
+Direct mode writes per-call usage to Cloud Logging in the project when the credential has
+`roles/logging.logWriter`. Without it the server keeps the local ledger only; nothing else
+changes. Behind a gateway the gateway records instead (`off (a gateway is configured…)`).
 
-To confirm, check agy's log (`~/.gemini/antigravity-cli/log/cli-*.log`) for a server that
-never reports ready, or move `~/.gemini/config/mcp_config.json` aside temporarily. Note agy
-loads MCP servers from **two** places — that file and `~/.gemini/config/plugins/*/mcp_config.json`.
+## Measuring
 
-## WSL: delegation works but is absurdly slow (20s+ for trivial calls)
+`scripts/measure-session.py <session-id> --join` prints the Claude side (exact, from the
+transcript) and the delegation side (from `~/.antigravity-usage.jsonl`, written by the
+`PostToolUse` hook) of one session together. If the delegation side is empty, check the
+`usage_log` plugin option and that the hook is wired (`hooks/hooks.json`).
 
-**Cause:** your repo lives on a Windows mount (`/mnt/c/...`). agy reads `--dir` workspaces
-over WSL's 9p bridge, which is ~10x slower than native FS.
-
-**Fix:** move the repo into the WSL Linux filesystem (e.g. `~/projects/...`). Both the
-wrapper and `agy-doctor` warn when they detect this.
-
----
-
-## agy says "done" but wrote no files (or wrote them somewhere else)
-
-**Cause:** write tasks need write permission, and headless agy's no-permission behavior
-has changed across versions. **Your workspace stays untouched every time**; what varies is
-whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-claude-code/issues/10)):
-- pre-1.1.0: only *describes* the edits
-- 1.1.0–1.1.2: writes to its **own scratch dir** (`~/.gemini/antigravity-cli/scratch/`)
-- 1.1.3–1.1.1x: **soft-denies** — rc 0, empty stdout, a stderr notice naming the allow-rule
-- by **1.1.13** (through 1.1.19): **hard error** — the run fails (rc 1) with `permission check failed for
-  write_file "...": user denied permission for write_file(...)`. Same cause, different
-  shape, and none of the older wording. The wrapper classifies both as **exit 15**; a
-  plugin before 0.24.0 reports the hard one as a bare `agy exited 1` instead
-- **1.1.20 onward: soft again.** agy's changelog stops counting permission denials as run
-  failures. Measured on 1.1.25: rc 0, an empty response (even when the prompt asks for
-  text around the write — agy drops the reply), and on stderr `jetski: no output produced
-  — a tool required the "write_file" permission that headless mode cannot prompt for, so
-  it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g.
-  write_file(<target>)). Alternatively, re-run with --dangerously-skip-permissions to
-  auto-approve all tools.` The wrapper's soft-deny route catches it — **exit 15** in both
-  structured and plain-text mode
-- **1.1.27 onward: the envelope names the tool.** `denied_actions: [{"action":"write_file",
-  "display_name":"WriteToFile"}]` alongside the same rc 0 / empty response / notice
-  (measured on 1.2.0). The wrapper reads that first and says `denied: write_file` in its
-  message and in `AGY_SIGNAL`. 1.1.28 also made URL reads ask first, so a fetch without a
-  grant is denied the same way (`read_url`; the narrow rule is `read_url(<target>)`)
-
-**Fix:**
-- **For a file write, add an allow-rule — the narrower fix.** In
-  `~/.gemini/antigravity-cli/settings.json`, under `permissions.allow`, add
-  `write_file(<dir>)`. It matches **recursively beneath `<dir>`** and needs no flag.
-  This is the rule agy's own denial message is naming. Confirmed on agy 1.1.9 by a
-  controlled A/B ([#37](https://github.com/yuting0624/antigravity-for-claude-code/issues/37));
-  a glob form (`write_file(/path/**)`) was reported *not* to match.
-  **Substitute a real path for `<dir>`** — and if the rule is in place and the write is
-  *still* denied, suspect the rule before suspecting agy. An entry agy cannot parse
-  grants nothing on any version, which is exactly this exit 15 with the rule sitting
-  right there in the file. Only one shape of mistake is version-sensitive, and it is not
-  this one: a `command(...)` rule naming no command — `command(time)`, a comment-only
-  entry, `()` — matched **every** command before **1.1.11** and silently auto-approved
-  anything the agent ran. Run `agy-doctor`: it validates each entry and reports the
-  consequence that actually applies to yours.
-- **Or pass `--yolo`** — the wrapper's flag, sent to agy as `--dangerously-skip-permissions`
-  (agy 1.1.25 rejects a literal `--yolo`) — works across all agy versions,
-  but auto-approves **all** tools, not just the write. Required anyway for web search / URL reads
-  (since agy 1.1.28; or a `read_url(<target>)` rule) / Vertex AI Search / terminal when no rule covers them. (`--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing.)
-- Claude Code may prompt for (or in auto-mode, block) `--dangerously-skip-permissions` —
-  approve it, or pre-allow `Bash(agy-delegate*)` in your permission settings.
-- Run write tasks on a **dedicated branch**. `--sandbox` is *not* containment: Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux.
-- **Always verify files actually changed in your workspace** (`git status`) — never trust
-  the self-report. The wrapper maps BOTH denial shapes — the soft deny (1.1.3+, and again
-  from 1.1.20; measured on 1.1.25) and the 1.1.13 hard error — to **exit 15**, so you get
-  an actionable message instead of a bare "empty output" or "agy exited 1".
-- Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
-  background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
-  `/antigravity:status` / `/antigravity:result <id>` (interactive sessions only).
-
----
-
-## Exit codes & `AGY_SIGNAL`
-
-On classifiable failures the wrapper prints a machine-readable line to stderr:
-`AGY_SIGNAL {"status":"...","reason":"...","model":"...","retry":"..."}`
-
-| exit | meaning | what to do |
-|---|---|---|
-| 0 | success | — |
-| 1 | usage error | check flags (`agy-delegate --help`) |
-| 2 | agy failed (unclassified) | read the stderr it relayed |
-| 3 | agy returned empty output | retry; check model availability (`agy models`). Before agy 1.1.18 a dropped agent stream also landed here as a false clean success; from 1.1.18 it exits non-zero (exit 2 here) — per agy's changelog, not reproduced |
-| 10 | quota / rate limit | wait, then resume the same conversation with `--continue` |
-| 11 | not authenticated | run `agy` once interactively to sign in |
-| 12 | timeout (agy's own, the wall-clock guard, or — agy 1.1.28+ — a `--print-timeout` that expired mid-turn: agy returns the **partial** reply with rc 0 and the wrapper prints it, then exits 12) | raise `--timeout`, narrow the task, or `--continue` the same conversation; on Windows see the hang section above |
-| 13 | agy not on PATH | install the Antigravity CLI |
-| 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` (agy ≥ 1.1.2 hard-fails instead of silently downgrading) — run `agy models` and fix the name |
-| 15 | permission denied | a tool needed permission headless — **both** shapes: the soft deny (rc 0, empty stdout, `auto-denied` on stderr — agy 1.1.3+, and again from 1.1.20, measured on 1.1.25) and 1.1.13's hard error (rc 1, `user denied permission`); since 1.1.27 the tool is also named in the envelope's `denied_actions` (measured on 1.2.0). Add a `permissions.allow` rule covering the target, or pass `--yolo`; run on a branch |
-| 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
-| 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
-| 18 | prerequisite missing (`agy-migrate` only) | no Claude Code config dir; agy has never been run; or `--include-repos` was passed with no `git` on PATH (git is what decides which directories are repositories — install it, or drop the flag) |
-
----
-
-## exit 15 on a read-only prompt (Gemini 3.8 Flash High + `--digest`)
-
-**Cause:** the digest contract asks for "findings / decisions / errors", and given a
-prompt with nothing to inspect — a bare "reply OK" ping — 3.8 High runs a *command* to
-find something to report. Headless without a grant that is a denial: measured on agy
-1.1.25, 6 of 7 runs (3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 High without `--digest`
-0 of 2; rewording the contract to scope tool use changed nothing, 3 of 3). Given a real
-task — a file behind `--dir`, or code pasted into the prompt — 3.8 High answered 6 of 6.
-
-**Fix:** give it a task, or drop `--digest` for a ping. `--yolo` here would grant a
-command the task never needed.
-
----
-
-## "tier model not in `agy models`" warning from doctor
-
-**Cause:** agy's model list is plan-dependent (Vertex plans are Gemini-only; some plans
-expose Claude/GPT). The default tier mappings may not match your plan.
-
-**Fix:** remap tiers to models you actually have — plugin options `tier_flash` /
-`tier_flash_lo` / `tier_pro` or `default_model` (exact names from `agy models`), or pass
-`--model "<exact name>"` per call.
-
----
-
-## Output is huge / "looks like a raw dump, not a digest"
-
-**Cause:** the wrapper warns (stderr) when a reply exceeds `digest_warn_chars` (default
-8000). Ingesting raw dumps into the conductor's context is where the cost savings die.
-
-**Fix:** re-run with `--digest` (appends a digest-only output contract to the prompt), or
-have agy summarize before you ingest. Tune the threshold via the `digest_warn_chars`
-plugin option; `0` disables the warning.
-
----
-
-## Updating / checking your version
-
-Third-party marketplace plugins do **not** auto-update by default:
+## Updating
 
 ```
-/plugin marketplace update antigravity-for-claude-code
-/reload-plugins
+/plugin update antigravity@antigravity-for-claude-code
+/antigravity:setup
 ```
-
-`agy-doctor` prints the installed plugin version (last line of its checks). Fixes land as
-version bumps — see [CHANGELOG.md](../CHANGELOG.md).
-
----
+The doctor reports the shipped server version against `serverVersion` in `plugin.json`.
 
 ## Still stuck?
 
-[Open a bug report](https://github.com/yuting0624/antigravity-for-claude-code/issues/new/choose)
-— the template asks for your `agy-doctor` output, OS, and install method, which is
-usually everything needed to diagnose in one round-trip.
+Open an issue with the output of `/antigravity:setup` and the `error:` envelope line —
+never the digest text of anything confidential.

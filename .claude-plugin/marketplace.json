@@ -1,17 +1,25 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "antigravity-for-claude-code",
-  "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC.",
+  "description": "Delegate the reading to Gemini on Vertex AI through a local MCP server, keep the judgement on Claude: codebase digests, read-only tasks, second-model review, recordings and documents — the files never enter Claude's context.",
   "owner": {
     "name": "linyuting"
   },
   "plugins": [
     {
       "name": "antigravity",
-      "description": "Hybrid Claude Code + Antigravity (Gemini) workflow: Claude conducts requirements/architecture/the hard 20%/verification, and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Lower token cost as a financial lever.",
+      "description": "Claude conducts; a long-context model reads. digest_codebase, delegate_task, review_diff and digest return file:line digests under a token budget; model choice lives in an organisation-controlled alias table and requests leave the machine only to allowlisted hosts (Vertex AI by default).",
       "source": "./",
       "category": "ai",
-      "keywords": ["antigravity", "gemini", "multi-agent", "sdlc", "model-routing"]
+      "keywords": [
+        "gemini",
+        "vertex-ai",
+        "mcp",
+        "delegation",
+        "context-offload",
+        "cross-model-review",
+        "sdlc"
+      ]
     }
   ]
 }

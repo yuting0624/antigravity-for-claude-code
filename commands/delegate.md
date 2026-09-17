@@ -1,54 +1,33 @@
 ---
-description: Delegate a well-scoped subtask to Antigravity (agy/Gemini) under cost discipline, then verify.
-argument-hint: "[--tier flash|pro] <task>"
+description: Delegate a well-scoped READ of the codebase to the delegation server (digest_codebase / delegate_task) under cost discipline, then verify.
+argument-hint: "<question or task> [paths...]"
 ---
 
-Delegate the following task to Antigravity (`agy` / Gemini) via the plugin wrapper,
-following the `antigravity` skill's **Cost discipline** and **Verification gates**.
+Delegate the following to the `delegation` MCP server, following the `antigravity`
+skill's **Cost discipline** and **Verification gates**. The server reads the files with a
+long-context model and returns a digest with `file:line` references; the files never
+enter this conversation.
 
-Task: $ARGUMENTS
+Request: $ARGUMENTS
 
 Do this:
-1. Pick a tier (`flash` default; `pro` for hard reasoning). If the task needs the repo,
-   add `--dir <repo-root>` so agy reads the real files (don't paste them into context).
-   **If the task WRITES files or uses tools** (web search / URL reads / Vertex AI Search / terminal), it needs
-   a grant. For a plain file write the narrower one is a `write_file(<dir>)` entry under
-   `permissions.allow` in `~/.gemini/antigravity-cli/settings.json` (recursive beneath
-   `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
-   there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
-   is what web search / URL reads (agy 1.1.28+) / Vertex AI Search / terminal need. Without a grant,
-   headless agy leaves your workspace untouched, and since 1.1.3 the run says so on stderr (it
-   describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
-   accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
-   at all, the write is denied exactly like one without it. Run
-   write tasks on a dedicated branch — `--sandbox` is not containment, it was measured
-   doing nothing under `--yolo` — and
-   **verify files actually changed** with `git status`. Claude Code may prompt for or block
-   `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
-   (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper
-   returns exit `15`, that's exactly this: agy denied the write. Both shapes land here —
-   the soft deny on agy 1.1.3+ (back again from 1.1.20, measured on 1.1.25) and the hard
-   error on 1.1.13–1.1.19 — and both take the same
-   fix: a `permissions.allow` rule covering the target, or `--yolo`. Since agy 1.1.27 the
-   wrapper names the refused tool from the envelope's `denied_actions`.)
-2. Run **synchronously** (you may be headless — do not background-and-wait):
-   `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
-   For read/analysis tasks, add `--digest` — it appends a digest-only output contract so
-   agy returns compact bullets instead of raw content.
-3. Ingest only the **result/digest** — do NOT re-read the files agy already handled
-   (keeps your context lean; that's where the cost savings come from). If the wrapper
-   prints a *"looks like a raw dump"* note on stderr, do NOT ingest the raw output —
-   re-run with `--digest` or ask agy to summarize it first.
-4. **Verify**: actually run/check the output; never trust a self-reported "done".
-   Report what you delegated and how you verified it.
+1. **Decide the tool.** A question about the code, or orientation in it →
+   `digest_codebase({ paths, root, question })`. A deliverable — an inventory, an
+   extraction, a comparison, a summary with a defined shape → `delegate_task({ spec,
+   paths, root })`. Pass `root` (the repository directory) and the narrowest `paths` that
+   contain the answer. If the request would need files *written*, do that part yourself:
+   the server never writes.
+2. **Run it synchronously** unless the selection is very large or you do not need the
+   result before your next step — then pass `async: true`, note the job id, and collect
+   with `/antigravity:result <id>` (interactive sessions only; in headless `claude -p`
+   there is no later turn, so stay synchronous).
+3. **Ingest only the digest.** Do not open the files it already read except the specific
+   `file:line` references you need to verify. Keeping the digest and not the corpus in
+   context is where the saving comes from.
+4. **Verify.** Read `stats.refs_valid_ratio`; open the references behind any claim you
+   are about to act on; run or grep to confirm anything load-bearing. Never treat a
+   digest as ground truth. Report what you delegated and how you verified it.
 
-Remember the break-even: only delegate if the offloaded volume clearly exceeds the
-spec + round-trip + verification overhead. Tiny tasks are cheaper to just do yourself.
-
-**Long task, interactive session?** A sync delegation can also hit Claude Code's ~2-min
-Bash-tool limit — start it in the background and keep working (this also keeps the prompt
-cache warm and frees you to do other turns):
-`ID=$(agy-job start --tier pro --dir . "<task>")`
-then check `/antigravity:status` and collect with `/antigravity:result <id>`.
-(Don't do this when YOU are headless `claude -p` — one-shot, no later turn to collect;
-delegate synchronously there.)
+Remember the break-even: delegate when the material clearly exceeds the spec +
+round-trip + verification overhead — three files or more, or roughly 20k tokens or more.
+Small, self-contained or judgement-heavy work is cheaper to do yourself.

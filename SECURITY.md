@@ -1,8 +1,8 @@
 # Security policy
 
-This is a community project (MIT, not affiliated with Google or Anthropic). It
-orchestrates the third-party `agy` CLI and runs shell commands on your machine, so
-security reports are genuinely appreciated.
+This is a community project (MIT, not affiliated with Google or Anthropic). It ships a
+local MCP server that reads files on your machine and sends their text to a model
+endpoint, so security reports are genuinely appreciated.
 
 ## Reporting a vulnerability
 
@@ -21,13 +21,20 @@ do), and a **non-destructive** proof-of-concept (exit codes / policy decisions, 
 
 ## Scope — what matters most here
 
-- **`hooks/validate-delegate-bash.sh`** — the PreToolUse gate that is the *only* thing
-  restricting what the `antigravity-delegate` subagent may run via Bash. Bypasses here
-  (arbitrary command execution under prompt injection) are the highest-value reports.
-- **`scripts/agy-delegate.sh` / `agy-job.sh`** — the wrappers that invoke `agy`.
-- **`hooks/`** — anything injected into the model's context or run at session start.
-- Trust boundary reminder: `agy` output and repo contents are **untrusted** — the plugin
-  treats agy as a tool whose results Claude must verify, never as a trusted authority.
+- **The delegation server's containment** (`server/index.js`, built from
+  [gemini-studio-mcp](https://github.com/yuting0624/gemini-studio-mcp)): a way to read
+  outside the selection `root` / `DELEGATION_ALLOWED_ROOTS`, to send to a host outside
+  `DELEGATION_ALLOWED_HOSTS`, to get file contents back past the output guards, or to make
+  the server write. These are the highest-value reports; report them in either repository.
+- **`agents/antigravity-delegate.md`** — the subagent's tool list is the reason a delegated
+  read cannot inflate Claude's context; it has no Bash, Read, Write or Edit.
+- **`hooks/`** — anything injected into the model's context or run at session start, and the
+  `PostToolUse` usage log (counts only, never content).
+- **`hooks/validate-delegate-bash.sh`** — the 0.x PreToolUse gate. No longer referenced by
+  the subagent in 1.0; it stays on disk until the pending advisory is published, and reports
+  against it are still welcome for the 0.27 line (tag `v0.27.4-agy-final`).
+- Trust boundary reminder: model output and repository contents are **untrusted** — a
+  digest is a claim Claude must verify, never a trusted authority.
 
 ## Not in scope
 

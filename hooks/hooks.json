@@ -4,7 +4,7 @@
       {
         "matcher": "startup",
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-agy.sh\"" }
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-server.sh\"" }
         ]
       },
       {
@@ -24,6 +24,14 @@
       {
         "hooks": [
           { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/nudge-delegation.sh\"" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^mcp__.*delegation.*__(digest_codebase|delegate_task|review_diff|digest|job_result)$",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/log-delegation.sh\"" }
         ]
       }
     ]
