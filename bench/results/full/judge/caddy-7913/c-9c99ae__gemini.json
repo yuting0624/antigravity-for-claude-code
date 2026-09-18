@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-9c99ae",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:47:44+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "468062709d8d120abcd60441fddb00b549f90fd02e67e212ba3e4309e5ebc133",
+  "wall_s": 37.8,
+  "cost_usd": 0.145976,
+  "usage": {
+    "input": 48352,
+    "output": 4106,
+    "thinking": 3855,
+    "cache_read": 0,
+    "total": 52458
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Integrates perfectly with Caddy's module registration, configuration patterns, and ResponseWriterWrapper idioms.",
+    "edge_cases": "Chunked ReadFrom via io.LimitReader, Hijack deadline clearing, and safe rate math cover all edge cases flawlessly.",
+    "scope": "Implements all requested idle timeouts, rate floors, and chunking at both the server and per-route levels without overstepping.",
+    "readability": "Cleanly encapsulated deadline math, well-documented structs, and clear control flow make the logic easy to follow.",
+    "robustness": "Safe integer overflow checks, defensive ResponseController usage, and EOF deadline resetting ensure exceptional stability.",
+    "maintainability": "Decoupled deadline calculations and clean middleware abstractions make the module highly extensible and easy to test."
+  },
+  "flags": []
+}

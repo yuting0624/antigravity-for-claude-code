@@ -1,0 +1,15 @@
+diff --git a/gitindex/index.go b/gitindex/index.go
+index 268d5df8..dc14c1cb 100644
+--- a/gitindex/index.go
++++ b/gitindex/index.go
+@@ -364,7 +364,9 @@ func normalizeSubmoduleRemoteURL(cfg *config.Config) (string, error) {
+ 
+ // SetTemplatesFromOrigin fills in templates based on the origin URL.
+ func SetTemplatesFromOrigin(desc *zoekt.Repository, u *url.URL) error {
+-	desc.Name = filepath.Join(u.Host, strings.TrimSuffix(u.Path, ".git"))
++	if desc.Name == "" {
++		desc.Name = filepath.Join(u.Host, strings.TrimSuffix(u.Path, ".git"))
++	}
+ 
+ 	if strings.HasSuffix(u.Host, ".googlesource.com") {
+ 		return setTemplates(desc, u, "gitiles")

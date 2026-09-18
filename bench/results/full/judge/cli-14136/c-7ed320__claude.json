@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-7ed320",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:22:03+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290c82693690a2ba331ef6b28f654d8532f662ac9c002cd5f78464eda226c822",
+  "wall_s": 60.2,
+  "cost_usd": 0.66351875,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Git client helpers mirror WorktreeRemove; prShared alias, cmdutil.FlagErrorf/MutuallyExclusive, and heredoc docs follow surrounding packages.",
+    "edge_cases": "Blank path, --checkout requirement, --list exclusivity, Abs normalisation, symlink/non-dir guards, existing-worktree reuse and ff-only pull scoped via RepoDir are all covered.",
+    "scope": "Core feature and shared-package move are on target, but it also swaps pr checkout's localBranchExists (show-ref) for HasLocalBranch (rev-parse) in non-worktree paths and adds WorktreeCheckoutCommands beyond the ask.",
+    "readability": "Clear names and comments; checkoutBranch's checkoutClient/addWorktree branching with an if/else-if chain is slightly dense but followable.",
+    "robustness": "Errors propagated, worktree validated before the API creates a branch, Copy() keeps command stubs; the show-ref to rev-parse swap silently changes existing git invocations.",
+    "maintainability": "Path rules and rev-parse logic live once in pr/shared; develop and WorktreeCheckoutCommands duplicate the exists/reuse decision matrix in two styles (client calls vs arg lists)."
+  },
+  "flags": []
+}

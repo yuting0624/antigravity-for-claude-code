@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-05d988",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:28:32+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1c501e193962cb4396ba07e0cf5b5dae93271a518ff099b4054180604faa981a",
+  "wall_s": 78.9,
+  "cost_usd": 0.8134362500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Follows sibling patterns: Apache header, RegisterModule/RegisterHandlerDirective, interface guards, humanize for sizes, defaults beside defaultReadHeaderTimeout. Handler struct uses time.Duration in JSON fields instead of caddy.Duration, unlike the rest of the codebase.",
+    "edge_cases": "Hard cap applied, credit overflow clamped, zero-length writes, ErrNotSupported disables further attempts, nesting tightens rather than double-wraps. But MinRate is silently ignored when Timeout<=0 despite applyRead/readOn gating on it, and disable-via-negative is non-obvious.",
+    "scope": "Delivers all required pieces; extra nesting API (Restrict, SetDeadline, SetMaxChunk, FindIdleTimeoutWriter) is justified by the per-route handler but widens surface somewhat.",
+    "readability": "Clear names, concise comments explaining non-obvious choices (why nesting tightens, why deadlines are cleared). next() is a bit dense but readable.",
+    "robustness": "No panics, errors logged at debug. However the deferred SetRead/WriteDeadline(time.Time{}) in Server.ServeHTTP also clears net/http's own hard ReadTimeout/WriteTimeout before post-handler body drain and final flush, weakening existing hard timeouts now that idle is on by default.",
+    "maintainability": "Policy logic centralized in IdleDeadline; wrapper mutation for nesting is a bit of hidden coupling; the wrap/defer-clear block is duplicated between server.go and timeouts.go rather than shared."
+  },
+  "flags": []
+}

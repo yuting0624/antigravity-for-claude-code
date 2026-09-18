@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-75db7b",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:17:56+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7bf6fb9e4c10406d226e07888bb5db8dac78699310df64978d1002721e68b4a7",
+  "wall_s": 44.5,
+  "cost_usd": 0.59591375,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses Copy()/RepoDir scoping, cmdutil.FlagErrorf, MutuallyExclusive, heredoc help and the WorktreeRemove style for WorktreeAdd; fits surrounding packages well.",
+    "edge_cases": "Blank path, missing --checkout, --list exclusivity, relative->abs, branch-repo remote selection, reuse-existing-worktree, symlink/non-dir guard and ff-only pull warning all covered; no worktree success hint unlike pr checkout.",
+    "scope": "Beyond the asked move of path rules to shared, it also relocates worktreeCheckoutCmds into shared, swaps localBranchExists (show-ref) for HasLocalBranch, and changes pr checkout to use abs paths in -C and messages; unrequested behaviour shifts.",
+    "readability": "checkoutWorktree is short and clear; WorktreeCheckoutCommands returns a [][]string that is documented to always hold one command, an awkward shape; help text sentence is slightly ungrammatical.",
+    "robustness": "Errors propagated, pull failure downgraded to a warning as in the existing flow, nil baseRemote handled by the pre-existing early return; no panics or resource issues.",
+    "maintainability": "Two parallel implementations of the same git worktree commands now exist (git.WorktreeAdd used by develop, shared.WorktreeCheckoutCommands used by pr checkout), so a future change must be made twice; WorktreeAdd's empty-remoteBranch mode switch is a magic-parameter API."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

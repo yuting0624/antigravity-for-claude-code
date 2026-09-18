@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-d34562",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:31:15+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "842de9d22798ec91b16bd7cb1e38f121b549b099109dc8e8f56f6fc6f371f945",
+  "wall_s": 87.2,
+  "cost_usd": 0.189236,
+  "usage": {
+    "input": 41464,
+    "output": 8859,
+    "thinking": 8670,
+    "cache_read": 0,
+    "total": 50323
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Code style, abstractions, and CLI patterns perfectly match the repository's conventions.",
+    "edge_cases": "Correctly handles absolute path normalization, mutual exclusivity, existing branches, and blank path rejections.",
+    "scope": "Implements all requirements but introduces unused dead code (WorktreeCheckoutCommands) in the shared package.",
+    "readability": "Logic is well-structured, methods are cleanly separated, and the intent is clear.",
+    "robustness": "Validates and resolves paths before API mutations, safely copies the git client to scope commands, and correctly falls back on fast-forward failures.",
+    "maintainability": "Cleanly abstracts worktree logic, but slightly docked due to the maintenance burden of the abandoned helper function."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

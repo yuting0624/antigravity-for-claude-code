@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-fa157d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:22:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2e9009fd45de3a12a1dc8988d8df6f127b0990a864784e9f6150b7aa9c5ea7c4",
+  "wall_s": 61.9,
+  "cost_usd": 0.7824457499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Module registration, Caddyfile parsing, license headers, zap Check-logging and standard/imports all follow sibling handlers; handler uses time.Duration like requestbody rather than caddy.Duration.",
+    "edge_cases": "Hard-deadline cap, nil body, zero/negative values, unsupported controller and chunk boundaries are handled; but per-route subdirective is named max_write_chunk instead of the required write_max_chunk, and rate credit multiplies transferred*1e9 which overflows past ~9 GB.",
+    "scope": "Deletes request_body's read_timeout/write_timeout options and Provision, a breaking change to existing configs that the requirement neither asked for nor permits; server Caddyfile options also grow an unrequested rate argument.",
+    "readability": "Structure is clear and names are descriptive; comments are thorough though somewhat editorial (nginx/Apache comparisons) and long.",
+    "robustness": "Deadline errors are handled once and disable further attempts; no panics on bad input; overflow in the MinRate credit computation can kill large legitimate transfers; per-route wrapper ignores server hard deadlines.",
+    "maintainability": "Single shared IdleDeadline/reader/writer reused by server and handler avoids duplication; exported struct fields widen the public API surface but keep coupling explicit."
+  },
+  "flags": [
+    "unrelated_changes",
+    "incomplete"
+  ]
+}

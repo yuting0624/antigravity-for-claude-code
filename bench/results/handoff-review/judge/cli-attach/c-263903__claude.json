@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-263903",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:37:08+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a534fab413db7e5860b79905e154603273b0e2f2b9c3cd9738384ec7fa56e418",
+  "wall_s": 53.8,
+  "cost_usd": 1.21358725,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Uses cmdutil.MutuallyExclusive/FlagErrorf, heredoc.Docf, api field conventions, httpmock helpers; oddities are a testing-importing test.go in the prod package and a 'TODO kw' referencing an external PR.",
+    "edge_cases": "Very thorough: SameFile dedupe, '#' in filenames, escaped alt re-parsed, code spans/fences, reference defs, blockquote continuation, video degrade; but partial-failure writes the body when >0 uploaded, contradicting 'if one upload fails nothing is written'.",
+    "scope": "Core ask delivered, but adds documented partial-success semantics beyond spec, a hasDeferredEdits refactor in issue edit, an apparently unused UploadStub type, and very long duplicated help prose.",
+    "readability": "Good names and staged structure, yet comments are heavy and essayistic; references.go at 810 lines of hand-rolled source-position scanning is hard to follow despite the explanations.",
+    "robustness": "Bounds-checked edits, GetBody for redirects, files closed, allowlists for token/permission, empty-URL guard; rewrite failure after uploads returns original md leaving assets unreferenced.",
+    "maintainability": "Uploader construction and upload/errors.Join handling are copy-pasted across five commands; KeepExistingBody is always true yet a field; custom markdown scanner is a large bespoke surface."
+  },
+  "flags": []
+}

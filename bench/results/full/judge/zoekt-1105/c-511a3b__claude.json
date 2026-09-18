@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-511a3b",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:44:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c5c5a1db593bdb4d901da6390e037387d9eda21328dae3bdcd3be6d6eb29b923",
+  "wall_s": 111.5,
+  "cost_usd": 0.7204457500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Mirrors zoekt-git-index flag names and index.Options.Flags; testable execute() is fine. But lock.go has a unix-only build tag with no _other.go fallback, unlike the repo's indexfile_unix/other pattern, so the package won't build elsewhere.",
+    "edge_cases": "Duplicates, root-as-repo and .git suffix handled. Missing: no usage printed when no root given; unmatched remove names silently ignored; zoekt.name git config still overrides discovery name; SetTemplatesFromOrigin change alters zoekt-git-index naming when it pre-sets base name.",
+    "scope": "Delivers all pieces; gitindex refactor into prepareIndexOptions/PlanIndexGitRepo is larger than minimal and adds exported API, plus an undocumented 'sync' alias, but nothing unrelated.",
+    "readability": "Small, well-named functions and files with useful comments. Minor warts: doubled 'zoekt-local-sync:' error prefix, 'Pass -f' reminder printed even with nothing to remove.",
+    "robustness": "flock guard is correct and closed properly. Dry run still MkdirAll's index dir and creates a lock file; PlanIndexGitRepo ignores opts.Incremental so -incremental=false is ineffective; unreadable shards skipped silently; compound shards removed wholesale.",
+    "maintainability": "Clean split (discover/inventory/lock/sync) and shared flag-set builder; some hidden coupling (removeRecords owns UI text used by sync, plan vs index opens repo twice) but easy to extend."
+  },
+  "flags": []
+}

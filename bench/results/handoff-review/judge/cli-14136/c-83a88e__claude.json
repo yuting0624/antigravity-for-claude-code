@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-83a88e",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:28:42+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e3b7533ab5411107bc614418faf704f25ad7dfc36566e7f3e39887423dcf9c84",
+  "wall_s": 56.3,
+  "cost_usd": 0.54126425,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Uses cmdutil.MutuallyExclusive/FlagErrorf, prShared alias, WithRepoDir on Pull; but the requested reusable helper on git.Client is absent, replaced by a command-slice builder in pr/shared plus an ad-hoc runGitCommands loop in develop.",
+    "edge_cases": "Blank path, --checkout requirement, --list exclusivity, Abs normalisation, symlink/other-repo/same-repo/nested-worktree rejection and ff-only pull with warning are all handled; reuse-existing-worktree case also covered.",
+    "scope": "Feature and shared-package resolution delivered, but no git client helper as specified, and help text does not state the flag's constraints; checkout.go refactor is behaviour-preserving.",
+    "readability": "Structure is clear, but doc comments on ensureWorktreePathSafe, revParseFacts and the reuse branch were dropped in the move; WorktreeCheckoutCommands returns an unnamed bool that callers must interpret.",
+    "robustness": "Errors from worktree add/checkout propagate; pull failure degrades to a warning like the existing flow; validation runs before any API calls; no panics.",
+    "maintainability": "Dedupes worktree logic between commands, yet WorktreeCheckoutCommands mixes a git query with command generation, checkout.go rebuilds WorktreeTarget instead of reusing it, and develop grows its own command runner."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

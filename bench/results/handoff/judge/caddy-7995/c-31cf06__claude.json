@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-31cf06",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:48:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2495f0a8c3b08083a74730e75fc424a0ea8f6e98b2feb4c1e4732acbebcc1e74",
+  "wall_s": 56.1,
+  "cost_usd": 0.51978125,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Threads order as a plain param alongside options/warnings/gc and as an unexported Helper field, matching how the package already passes per-adaptation state; parseOptOrder uses existingVal like other fold-together options.",
+    "edge_cases": "Multiple order lines chain via existingVal; invalid order returns before any state changes; options map is copied so reuse is safe; buildSubroute/sortRoutes fall back to global order when empty. Silently deleting a caller-supplied options[\"order\"] is an odd, unexplained choice.",
+    "scope": "Focused on the order state; slices.Clone of the default order and reordering the arg check in parseOptOrder are small but defensible; no unrelated refactors.",
+    "readability": "Names are clear, but the options copy plus delete(\"order\") at the top of Setup has no comment explaining why, and the fallback-to-directiveOrder logic is repeated in Setup, buildSubroute and sortRoutes.",
+    "robustness": "No writes to directiveOrder after init, so concurrent adaptations share only immutable state; clone before DeleteFunc avoids aliasing; failure paths leave nothing behind. Caller's options map is no longer populated by Setup, a quiet behaviour change.",
+    "maintainability": "Order now has three sources (param, Helper field, global fallback) which future callers must keep aligned; the delete of a specific key from the copied map is hidden coupling. Otherwise the parameter threading is straightforward to extend."
+  },
+  "flags": []
+}

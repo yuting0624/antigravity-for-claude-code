@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-4d0009",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:21:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "011d1add109594bc19ae1a65d1222bdd620f38572f52cf252dc6a6118dbc375d",
+  "wall_s": 109.9,
+  "cost_usd": 1.021327,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "License headers, module registration, nolint:bodyclose, interface guards, adapt test all match Caddy idioms; handler uses time.Duration JSON fields where siblings use caddy.Duration.",
+    "edge_cases": "Handles NoBody, negative-disables, Upgrade/CONNECT skip, hijack clearing, rate overflow cap, short writes; but nested per-route wrapper is overridden by the server-default wrapper (inner arm wins), and final flush after Done is unbounded.",
+    "scope": "Only requested surface plus a conventional adapt test; no refactors or dead code.",
+    "readability": "Clear names, well-placed comments explaining deadline math and design choices; deadlineAfter is compact and documented.",
+    "robustness": "Deadline errors disable further attempts and are logged; but per-route timeouts silently become ineffective under default server idle timeouts, and Flush bypasses intermediate wrappers via Ctrl.",
+    "maintainability": "Shared IdleDeadline type reused by server and handler; minor duplication of arm/setDeadline between reader and writer; layering interaction between nested wrappers is an undocumented coupling."
+  },
+  "flags": []
+}

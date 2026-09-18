@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-3a6726",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:17:21+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "404522340833c055275f60357eacab92764854ea35b94cacf09941ff7017d18a",
+  "wall_s": 31.9,
+  "cost_usd": 0.23526325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: reuses cookieFilterAction, same receiver kinds, OUTER label idiom, module ID naming, registered beside cookie, interface assertions added in all three blocks.",
+    "edge_cases": "Unparseable lines pass through via stdlib Cookies(); exact case-sensitive name match; quoting preserved via Cookie.Quoted; attributes taken verbatim from first ';'. Leading whitespace before name is dropped on rewrite (minor).",
+    "scope": "Does what was asked; only extra is a one-line compile-time Validator assertion for the pre-existing CookieFilter, harmless but not requested.",
+    "readability": "Clear names, concise doc comments explaining the Set-Cookie shape and first-match semantics; helper replaceSetCookieValue isolates the rewrite logic.",
+    "robustness": "No panics: len(cookies)==0 guarded, non-array fields returned unchanged, stdlib parser handles malformed input; per-value http.Response allocation is acceptable overhead.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's rather than a shared helper, though that duplication matches the existing filter pattern; rewrite logic is cleanly factored."
+  },
+  "flags": []
+}

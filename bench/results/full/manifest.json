@@ -1,0 +1,63 @@
+{
+  "run_id": "full",
+  "created_at": "2026-09-15T02:42:05+00:00",
+  "protocol_tag": "bench/protocol-v1",
+  "protocol_sha": "2e3fb4873dcd0209a082055c045f5fe6c113fbdf",
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy"
+  },
+  "plugin_dir": "/Users/linyuting/.cache/agy-bench/plugin",
+  "caps": {
+    "small": {
+      "max_budget_usd": 8,
+      "max_turns": 80,
+      "wall_s": 2700
+    },
+    "medium": {
+      "max_budget_usd": 30,
+      "max_turns": 150,
+      "wall_s": 9000
+    },
+    "large": {
+      "max_budget_usd": 75,
+      "max_turns": 250,
+      "wall_s": 14400
+    }
+  },
+  "cold_gap_s": 300,
+  "effort": "high",
+  "hashes": {
+    "prices.lock.json": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+    "arms.json": "dd20bf6d5bf75a0c362e908b9eaf62b5735c9b4be338c6fa5a40fbcda8e3ca60",
+    "allow-common.txt": "27f75f6ef04ed81a0e53842f1ff95c9c53b1ce813b5bb259569ff8d6f6f2043a",
+    "allow-plugin.txt": "2105adc142ecdc94987db63f9255e40ece89c1bc38d69f10a1aca119e453c4d0",
+    "bash-gate-rules.json": "c93823a741ceb61604dfcb7ed64021c905ddce99ef748c2be471922efe9e8863",
+    "hybrid-appendix.md": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "hybrid-forced-appendix.md": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "judge.md": "7a6dfc73a58439cb64e2b9cfaf0e94f190edefc8293227e192d39c370bea3176"
+  },
+  "lanes": [
+    "A",
+    "B"
+  ],
+  "queue_seed": 20260914,
+  "notes": [
+    "operator's other interactive Claude sessions were running on the same GCP project during the run; billing reconciliation gap is reported, not corrected",
+    "agy pinned to a copy of the 1.2.3 binary in ~/.cache/agy-bench/bin (agy self-updates; 1.2.2 -> 1.2.3 happened during the pilot)"
+  ],
+  "raw_archive": {
+    "file": "full-raw-transcripts.tgz (kept by the operator; offered as a release asset)",
+    "sha256": "79158b85e4d1894c5afb301255ed81ddf437415ddfde87af61065062c431e5fa",
+    "bytes": 23861620,
+    "contents": "results/full/runs/**/raw (transcripts, result.json, agy_usage.log, tool_trace.jsonl) and judge/raw"
+  },
+  "finished_at": "2026-09-16T18:21:00Z",
+  "counted_runs": 75,
+  "skipped_items": 21
+}

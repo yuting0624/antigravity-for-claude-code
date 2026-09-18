@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-e13202",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:33:01+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b9907ffa2606a6fb7af62d24fab2c120c091cb98356e367eeca60437261cd6ed",
+  "wall_s": 67.0,
+  "cost_usd": 0.16097,
+  "usage": {
+    "input": 40387,
+    "output": 6683,
+    "thinking": 6497,
+    "cache_read": 0,
+    "total": 47070
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Minor redundancy with filepath.Abs in develop.go when ResolveWorktreeTarget already handles it; otherwise aligns well with repo idioms.",
+    "edge_cases": "Correctly implements flag validation, mutually exclusive checks, and handles both new and existing local branches.",
+    "scope": "Placed worktree command generation in pr/shared instead of adding reusable helpers directly to the git client package as requested.",
+    "readability": "Clean, well-structured logic with good variable names and clear extraction of the target resolution.",
+    "robustness": "Safely executes commands and handles fast-forward scenarios in worktrees appropriately.",
+    "maintainability": "Excellent extraction of WorktreeTarget and command generation into a shared package for reuse across PR and Issue commands."
+  },
+  "flags": []
+}

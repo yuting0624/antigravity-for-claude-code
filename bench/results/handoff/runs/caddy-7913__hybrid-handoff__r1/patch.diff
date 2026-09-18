@@ -1,0 +1,742 @@
+diff --git a/caddyconfig/httpcaddyfile/directives.go b/caddyconfig/httpcaddyfile/directives.go
+index fa911b09e..b6832f796 100644
+--- a/caddyconfig/httpcaddyfile/directives.go
++++ b/caddyconfig/httpcaddyfile/directives.go
+@@ -59,6 +59,7 @@ var defaultDirectiveOrder = []string{
+ 
+ 	"header",
+ 	"copy_response_headers", // only in reverse_proxy's handle_response
++	"timeouts",
+ 	"request_body",
+ 
+ 	"redir",
+diff --git a/caddyconfig/httpcaddyfile/serveroptions.go b/caddyconfig/httpcaddyfile/serveroptions.go
+index be0bc2b51..be0ef3fa5 100644
+--- a/caddyconfig/httpcaddyfile/serveroptions.go
++++ b/caddyconfig/httpcaddyfile/serveroptions.go
+@@ -43,6 +43,9 @@ type serverOptions struct {
+ 	ReadHeaderTimeout         caddy.Duration
+ 	WriteTimeout              caddy.Duration
+ 	IdleTimeout               caddy.Duration
++	ReadIdleTimeout           caddy.Duration
++	WriteIdleTimeout          caddy.Duration
++	MaxWriteChunk             int
+ 	KeepAliveInterval         caddy.Duration
+ 	KeepAliveIdle             caddy.Duration
+ 	KeepAliveCount            int
+@@ -168,6 +171,36 @@ func unmarshalCaddyfileServerOptions(d *caddyfile.Dispenser) (any, error) {
+ 					}
+ 					serverOpts.IdleTimeout = caddy.Duration(dur)
+ 
++				case "read_body_idle":
++					if !d.NextArg() {
++						return nil, d.ArgErr()
++					}
++					dur, err := caddy.ParseDuration(d.Val())
++					if err != nil {
++						return nil, d.Errf("parsing read_body_idle timeout duration: %v", err)
++					}
++					serverOpts.ReadIdleTimeout = caddy.Duration(dur)
++
++				case "write_idle":
++					if !d.NextArg() {
++						return nil, d.ArgErr()
++					}
++					dur, err := caddy.ParseDuration(d.Val())
++					if err != nil {
++						return nil, d.Errf("parsing write_idle timeout duration: %v", err)
++					}
++					serverOpts.WriteIdleTimeout = caddy.Duration(dur)
++
++				case "write_max_chunk":
++					if !d.NextArg() {
++						return nil, d.ArgErr()
++					}
++					size, err := humanize.ParseBytes(d.Val())
++					if err != nil {
++						return nil, d.Errf("parsing write_max_chunk: %v", err)
++					}
++					serverOpts.MaxWriteChunk = int(size)
++
+ 				default:
+ 					return nil, d.Errf("unrecognized timeouts option '%s'", d.Val())
+ 				}
+@@ -391,6 +424,9 @@ func applyServerOptions(
+ 		server.ReadHeaderTimeout = opts.ReadHeaderTimeout
+ 		server.WriteTimeout = opts.WriteTimeout
+ 		server.IdleTimeout = opts.IdleTimeout
++		server.ReadIdleTimeout = opts.ReadIdleTimeout
++		server.WriteIdleTimeout = opts.WriteIdleTimeout
++		server.MaxWriteChunk = opts.MaxWriteChunk
+ 		server.KeepAliveInterval = opts.KeepAliveInterval
+ 		server.KeepAliveIdle = opts.KeepAliveIdle
+ 		server.KeepAliveCount = opts.KeepAliveCount
+diff --git a/modules/caddyhttp/app.go b/modules/caddyhttp/app.go
+index 04ee7b18b..ca15673ad 100644
+--- a/modules/caddyhttp/app.go
++++ b/modules/caddyhttp/app.go
+@@ -407,6 +407,15 @@ func (app *App) Provision(ctx caddy.Context) error {
+ 		if srv.ReadHeaderTimeout == 0 {
+ 			srv.ReadHeaderTimeout = defaultReadHeaderTimeout // see #6663
+ 		}
++		if srv.ReadIdleTimeout == 0 {
++			srv.ReadIdleTimeout = defaultReadIdleTimeout
++		}
++		if srv.WriteIdleTimeout == 0 {
++			srv.WriteIdleTimeout = defaultWriteIdleTimeout
++		}
++		if srv.MaxWriteChunk == 0 {
++			srv.MaxWriteChunk = DefaultMaxWriteChunk
++		}
+ 	}
+ 	ctx.Context = oldContext
+ 	return nil
+@@ -891,6 +900,14 @@ const (
+ 	// long time even on legitimately slow connections or
+ 	// busy servers to read it.
+ 	defaultReadHeaderTimeout = caddy.Duration(time.Minute)
++
++	// defaultReadIdleTimeout is the default timeout for reading
++	// from a client's upload if idle.
++	defaultReadIdleTimeout = caddy.Duration(time.Minute)
++
++	// defaultWriteIdleTimeout is the default timeout for writing
++	// to a client if idle.
++	defaultWriteIdleTimeout = caddy.Duration(time.Minute)
+ )
+ 
+ // Interface guards
+diff --git a/modules/caddyhttp/idletimeout.go b/modules/caddyhttp/idletimeout.go
+new file mode 100644
+index 000000000..8fe92c786
+--- /dev/null
++++ b/modules/caddyhttp/idletimeout.go
+@@ -0,0 +1,242 @@
++// Copyright 2015 Matthew Holt and The Caddy Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package caddyhttp
++
++import (
++	"errors"
++	"io"
++	"net/http"
++	"time"
++
++	"go.uber.org/zap"
++)
++
++// DefaultMaxWriteChunk is the default maximum size of an underlying write
++// or ReadFrom chunk for idle-timeout writers (64 KiB).
++const DefaultMaxWriteChunk = 64 * 1024
++
++// IdleDeadline encapsulates parameters for calculating idle timeouts,
++// rate floors, and hard ceilings.
++type IdleDeadline struct {
++	Start        time.Time
++	Timeout      time.Duration
++	HardDeadline time.Time
++	MinRate      int64
++}
++
++func (d IdleDeadline) deadline(now time.Time, bytesTransferred int64) time.Time {
++	var dl time.Time
++	if d.Timeout > 0 {
++		dl = now.Add(d.Timeout)
++	}
++	if d.MinRate > 0 {
++		start := d.Start
++		if start.IsZero() {
++			start = now
++		}
++		if bytesTransferred < 0 {
++			bytesTransferred = 0
++		}
++		sec := bytesTransferred / d.MinRate
++		rem := bytesTransferred % d.MinRate
++		earned := time.Duration(sec)*time.Second + time.Duration(rem)*time.Second/time.Duration(d.MinRate)
++		rateLimit := start.Add(d.Timeout).Add(earned)
++		if dl.IsZero() || rateLimit.Before(dl) {
++			dl = rateLimit
++		}
++	}
++	if !d.HardDeadline.IsZero() {
++		if dl.IsZero() || d.HardDeadline.Before(dl) {
++			dl = d.HardDeadline
++		}
++	}
++	return dl
++}
++
++// IdleTimeoutReader wraps an io.ReadCloser with idle read deadline enforcement.
++type IdleTimeoutReader struct {
++	ReadCloser io.ReadCloser
++	Ctrl       *http.ResponseController
++	Deadline   IdleDeadline
++	Logger     *zap.Logger
++
++	bytesRead   int64
++	initialized bool
++}
++
++func (r *IdleTimeoutReader) setReadDeadline() {
++	if r.Ctrl == nil {
++		return
++	}
++	if !r.initialized {
++		r.initialized = true
++		if r.Deadline.Start.IsZero() {
++			r.Deadline.Start = time.Now()
++		}
++	}
++	dl := r.Deadline.deadline(time.Now(), r.bytesRead)
++	if !dl.IsZero() {
++		if err := r.Ctrl.SetReadDeadline(dl); err != nil {
++			if r.Logger != nil {
++				r.Logger.Debug("failed to set read deadline", zap.Error(err))
++			}
++		}
++	}
++}
++
++func (r *IdleTimeoutReader) Read(p []byte) (int, error) {
++	if r.ReadCloser == nil {
++		return 0, io.EOF
++	}
++	r.setReadDeadline()
++	n, err := r.ReadCloser.Read(p)
++	if n > 0 {
++		r.bytesRead += int64(n)
++		r.setReadDeadline()
++	}
++	return n, err
++}
++
++func (r *IdleTimeoutReader) Close() error {
++	if r.ReadCloser != nil {
++		return r.ReadCloser.Close()
++	}
++	return nil
++}
++
++// IdleTimeoutWriter wraps a ResponseWriterWrapper to enforce idle write deadlines
++// and chunk large writes.
++type IdleTimeoutWriter struct {
++	*ResponseWriterWrapper
++	Ctrl     *http.ResponseController
++	Deadline IdleDeadline
++	MaxChunk int
++	Logger   *zap.Logger
++
++	bytesWritten int64
++	initialized  bool
++}
++
++func (w *IdleTimeoutWriter) controller() *http.ResponseController {
++	if w.Ctrl != nil {
++		return w.Ctrl
++	}
++	if w.ResponseWriterWrapper != nil {
++		w.Ctrl = http.NewResponseController(w.ResponseWriterWrapper)
++		return w.Ctrl
++	}
++	return nil
++}
++
++func (w *IdleTimeoutWriter) setWriteDeadline() {
++	ctrl := w.controller()
++	if ctrl == nil {
++		return
++	}
++	if !w.initialized {
++		w.initialized = true
++		if w.Deadline.Start.IsZero() {
++			w.Deadline.Start = time.Now()
++		}
++	}
++	dl := w.Deadline.deadline(time.Now(), w.bytesWritten)
++	if !dl.IsZero() {
++		if err := ctrl.SetWriteDeadline(dl); err != nil {
++			if w.Logger != nil {
++				w.Logger.Debug("failed to set write deadline", zap.Error(err))
++			}
++		}
++	}
++}
++
++func (w *IdleTimeoutWriter) chunkSize() int {
++	if w.MaxChunk > 0 {
++		return w.MaxChunk
++	}
++	return DefaultMaxWriteChunk
++}
++
++func (w *IdleTimeoutWriter) Write(p []byte) (int, error) {
++	if w.ResponseWriterWrapper == nil {
++		return 0, errors.New("nil ResponseWriterWrapper")
++	}
++	chunkSize := w.chunkSize()
++	var totalWritten int
++	for len(p) > 0 {
++		chunk := p
++		if len(chunk) > chunkSize {
++			chunk = chunk[:chunkSize]
++		}
++		w.setWriteDeadline()
++		n, err := w.ResponseWriterWrapper.Write(chunk)
++		if n > 0 {
++			totalWritten += n
++			w.bytesWritten += int64(n)
++			w.setWriteDeadline()
++		}
++		if err != nil {
++			return totalWritten, err
++		}
++		p = p[n:]
++	}
++	return totalWritten, nil
++}
++
++func (w *IdleTimeoutWriter) ReadFrom(r io.Reader) (int64, error) {
++	if w.ResponseWriterWrapper == nil {
++		return 0, errors.New("nil ResponseWriterWrapper")
++	}
++	chunkSize := w.chunkSize()
++	var total int64
++	for {
++		w.setWriteDeadline()
++		limited := io.LimitReader(r, int64(chunkSize))
++		n, err := w.ResponseWriterWrapper.ReadFrom(limited)
++		if n > 0 {
++			total += n
++			w.bytesWritten += n
++			w.setWriteDeadline()
++		}
++		if err != nil {
++			if errors.Is(err, io.EOF) {
++				return total, nil
++			}
++			return total, err
++		}
++		if n < int64(chunkSize) {
++			break
++		}
++	}
++	return total, nil
++}
++
++func (w *IdleTimeoutWriter) WriteHeader(statusCode int) {
++	w.setWriteDeadline()
++	if w.ResponseWriterWrapper != nil {
++		w.ResponseWriterWrapper.WriteHeader(statusCode)
++	}
++}
++
++func (w *IdleTimeoutWriter) Unwrap() http.ResponseWriter {
++	if w.ResponseWriterWrapper != nil {
++		return w.ResponseWriterWrapper.ResponseWriter
++	}
++	return nil
++}
++
++var (
++	_ http.ResponseWriter = (*IdleTimeoutWriter)(nil)
++	_ io.ReaderFrom       = (*IdleTimeoutWriter)(nil)
++)
+diff --git a/modules/caddyhttp/server.go b/modules/caddyhttp/server.go
+index d8077463b..40f7103ae 100644
+--- a/modules/caddyhttp/server.go
++++ b/modules/caddyhttp/server.go
+@@ -79,6 +79,28 @@ type Server struct {
+ 	// 5m is applied to help avoid resource exhaustion.
+ 	IdleTimeout caddy.Duration `json:"idle_timeout,omitempty"`
+ 
++	// ReadIdleTimeout is the idle timeout for reading from a client's
++	// upload. Each successful read resets the idle deadline.
++	// Default is 1 minute.
++	ReadIdleTimeout caddy.Duration `json:"read_idle_timeout,omitempty"`
++
++	// ReadMinRate is the minimum transfer rate for reading from a client's
++	// upload in bytes per second. Default is 0 (disabled).
++	ReadMinRate int64 `json:"read_min_rate,omitempty"`
++
++	// WriteIdleTimeout is the idle timeout for writing to a client.
++	// Each successful write resets the idle deadline.
++	// Default is 1 minute.
++	WriteIdleTimeout caddy.Duration `json:"write_idle_timeout,omitempty"`
++
++	// WriteMinRate is the minimum transfer rate for writing to a client
++	// in bytes per second. Default is 0 (disabled).
++	WriteMinRate int64 `json:"write_min_rate,omitempty"`
++
++	// MaxWriteChunk is the maximum chunk size in bytes for an underlying write
++	// or ReadFrom call to the client. Default is 64 KiB.
++	MaxWriteChunk int `json:"max_write_chunk,omitempty"`
++
+ 	// KeepAliveInterval is the interval at which TCP keepalive packets
+ 	// are sent to keep the connection alive at the TCP layer when no other
+ 	// data is being transmitted.
+@@ -562,6 +584,49 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 
+ 	var duration time.Duration
+ 
++	var hardReadDeadline, hardWriteDeadline time.Time
++	if s.ReadTimeout > 0 {
++		hardReadDeadline = start.Add(time.Duration(s.ReadTimeout))
++	}
++	if s.WriteTimeout > 0 {
++		hardWriteDeadline = start.Add(time.Duration(s.WriteTimeout))
++	}
++
++	if s.ReadIdleTimeout > 0 || s.ReadMinRate > 0 || s.ReadTimeout > 0 {
++		if r.Body != nil {
++			r.Body = &IdleTimeoutReader{
++				ReadCloser: r.Body,
++				Ctrl:       http.NewResponseController(w),
++				Deadline: IdleDeadline{
++					Start:        start,
++					Timeout:      time.Duration(s.ReadIdleTimeout),
++					HardDeadline: hardReadDeadline,
++					MinRate:      s.ReadMinRate,
++				},
++				Logger: s.logger,
++			}
++		}
++	}
++
++	if s.WriteIdleTimeout > 0 || s.WriteMinRate > 0 || s.WriteTimeout > 0 || s.MaxWriteChunk > 0 {
++		maxChunk := s.MaxWriteChunk
++		if maxChunk <= 0 {
++			maxChunk = DefaultMaxWriteChunk
++		}
++		w = &IdleTimeoutWriter{
++			ResponseWriterWrapper: &ResponseWriterWrapper{ResponseWriter: w},
++			Ctrl:                  http.NewResponseController(w),
++			Deadline: IdleDeadline{
++				Start:        start,
++				Timeout:      time.Duration(s.WriteIdleTimeout),
++				HardDeadline: hardWriteDeadline,
++				MinRate:      s.WriteMinRate,
++			},
++			MaxChunk: maxChunk,
++			Logger:   s.logger,
++		}
++	}
++
+ 	if s.shouldLogRequest(r) {
+ 		wrec := NewResponseRecorder(w, nil, nil)
+ 		w = wrec
+diff --git a/modules/caddyhttp/standard/imports.go b/modules/caddyhttp/standard/imports.go
+index 6617941c6..792467598 100644
+--- a/modules/caddyhttp/standard/imports.go
++++ b/modules/caddyhttp/standard/imports.go
+@@ -21,5 +21,6 @@ import (
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy/forwardauth"
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/templates"
++	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/timeouts"
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/tracing"
+ )
+diff --git a/modules/caddyhttp/timeouts/caddyfile.go b/modules/caddyhttp/timeouts/caddyfile.go
+new file mode 100644
+index 000000000..888c31893
+--- /dev/null
++++ b/modules/caddyhttp/timeouts/caddyfile.go
+@@ -0,0 +1,150 @@
++// Copyright 2015 Matthew Holt and The Caddy Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package timeouts
++
++import (
++	"strconv"
++	"time"
++
++	"github.com/dustin/go-humanize"
++
++	"github.com/caddyserver/caddy/v2"
++	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
++	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
++	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
++)
++
++func init() {
++	httpcaddyfile.RegisterHandlerDirective("timeouts", parseCaddyfile)
++}
++
++func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
++	t := new(Timeouts)
++	err := t.UnmarshalCaddyfile(h.Dispenser)
++	if err != nil {
++		return nil, err
++	}
++	return t, nil
++}
++
++// UnmarshalCaddyfile sets up the handler from Caddyfile tokens. Syntax:
++//
++//	timeouts [<read_timeout>] [<write_timeout>] {
++//	    read_timeout    <duration> [<min_rate>]
++//	    write_timeout   <duration> [<min_rate>]
++//	    write_max_chunk <size>
++//	}
++func (t *Timeouts) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
++	d.Next() // consume directive name
++
++	args := d.RemainingArgs()
++	if len(args) > 0 {
++		dur, err := caddy.ParseDuration(args[0])
++		if err != nil {
++			return d.Errf("parsing timeouts read duration: %v", err)
++		}
++		t.ReadTimeout = dur
++		t.WriteTimeout = dur
++		if len(args) > 1 {
++			dur2, err := caddy.ParseDuration(args[1])
++			if err != nil {
++				return d.Errf("parsing timeouts write duration: %v", err)
++			}
++			t.WriteTimeout = dur2
++		}
++		if len(args) > 2 {
++			return d.ArgErr()
++		}
++	}
++
++	for d.NextBlock(0) {
++		switch d.Val() {
++		case "read_timeout":
++			dur := time.Minute
++			if d.NextArg() {
++				var err error
++				dur, err = caddy.ParseDuration(d.Val())
++				if err != nil {
++					return d.Errf("parsing read_timeout duration: %v", err)
++				}
++			}
++			t.ReadTimeout = dur
++			if d.NextArg() {
++				rate, err := parseBytes(d.Val())
++				if err != nil {
++					return d.Errf("parsing read_timeout min_rate: %v", err)
++				}
++				t.ReadMinRate = rate
++			}
++			if d.NextArg() {
++				return d.ArgErr()
++			}
++
++		case "write_timeout":
++			dur := time.Minute
++			if d.NextArg() {
++				var err error
++				dur, err = caddy.ParseDuration(d.Val())
++				if err != nil {
++					return d.Errf("parsing write_timeout duration: %v", err)
++				}
++			}
++			t.WriteTimeout = dur
++			if d.NextArg() {
++				rate, err := parseBytes(d.Val())
++				if err != nil {
++					return d.Errf("parsing write_timeout min_rate: %v", err)
++				}
++				t.WriteMinRate = rate
++			}
++			if d.NextArg() {
++				return d.ArgErr()
++			}
++
++		case "write_max_chunk":
++			if !d.NextArg() {
++				return d.ArgErr()
++			}
++			size, err := parseBytes(d.Val())
++			if err != nil {
++				return d.Errf("parsing write_max_chunk: %v", err)
++			}
++			t.MaxWriteChunk = int(size)
++			if d.NextArg() {
++				return d.ArgErr()
++			}
++
++		default:
++			return d.Errf("unrecognized timeouts subdirective '%s'", d.Val())
++		}
++	}
++
++	return nil
++}
++
++func parseBytes(s string) (int64, error) {
++	val, err := humanize.ParseBytes(s)
++	if err == nil {
++		return int64(val), nil
++	}
++	i, err := strconv.ParseInt(s, 10, 64)
++	if err == nil {
++		return i, nil
++	}
++	return 0, err
++}
++
++// Interface guard
++var _ caddyfile.Unmarshaler = (*Timeouts)(nil)
+diff --git a/modules/caddyhttp/timeouts/timeouts.go b/modules/caddyhttp/timeouts/timeouts.go
+new file mode 100644
+index 000000000..1e1561198
+--- /dev/null
++++ b/modules/caddyhttp/timeouts/timeouts.go
+@@ -0,0 +1,130 @@
++// Copyright 2015 Matthew Holt and The Caddy Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package timeouts
++
++import (
++	"encoding/json"
++	"net/http"
++	"time"
++
++	"go.uber.org/zap"
++
++	"github.com/caddyserver/caddy/v2"
++	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
++)
++
++func init() {
++	caddy.RegisterModule(Timeouts{})
++}
++
++// Timeouts is a middleware handler that enforces idle read and write
++// timeouts and minimum transfer rates per route.
++type Timeouts struct {
++	ReadTimeout   time.Duration `json:"read_timeout,omitempty"`
++	ReadMinRate   int64         `json:"read_min_rate,omitempty"`
++	WriteTimeout  time.Duration `json:"write_timeout,omitempty"`
++	WriteMinRate  int64         `json:"write_min_rate,omitempty"`
++	MaxWriteChunk int           `json:"max_write_chunk,omitempty"`
++
++	logger *zap.Logger
++}
++
++// CaddyModule returns the Caddy module information.
++func (Timeouts) CaddyModule() caddy.ModuleInfo {
++	return caddy.ModuleInfo{
++		ID:  "http.handlers.timeouts",
++		New: func() caddy.Module { return new(Timeouts) },
++	}
++}
++
++// Provision sets up the handler.
++func (t *Timeouts) Provision(ctx caddy.Context) error {
++	t.logger = ctx.Logger()
++	return nil
++}
++
++// ServeHTTP implements caddyhttp.MiddlewareHandler.
++func (t Timeouts) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
++	if t.ReadTimeout > 0 || t.ReadMinRate > 0 {
++		if r.Body != nil {
++			r.Body = &caddyhttp.IdleTimeoutReader{
++				ReadCloser: r.Body,
++				Ctrl:       http.NewResponseController(w),
++				Deadline: caddyhttp.IdleDeadline{
++					Start:   time.Now(),
++					Timeout: t.ReadTimeout,
++					MinRate: t.ReadMinRate,
++				},
++				Logger: t.logger,
++			}
++		}
++	}
++	if t.WriteTimeout > 0 || t.WriteMinRate > 0 || t.MaxWriteChunk > 0 {
++		maxChunk := t.MaxWriteChunk
++		if maxChunk <= 0 {
++			maxChunk = caddyhttp.DefaultMaxWriteChunk
++		}
++		w = &caddyhttp.IdleTimeoutWriter{
++			ResponseWriterWrapper: &caddyhttp.ResponseWriterWrapper{ResponseWriter: w},
++			Ctrl:                  http.NewResponseController(w),
++			Deadline: caddyhttp.IdleDeadline{
++				Start:   time.Now(),
++				Timeout: t.WriteTimeout,
++				MinRate: t.WriteMinRate,
++			},
++			MaxChunk: maxChunk,
++			Logger:   t.logger,
++		}
++	}
++	return next.ServeHTTP(w, r)
++}
++
++// UnmarshalJSON unmarshals JSON into a Timeouts struct, supporting string durations.
++func (t *Timeouts) UnmarshalJSON(b []byte) error {
++	type alias Timeouts
++	var raw struct {
++		alias
++		ReadTimeout  caddy.Duration `json:"read_timeout,omitempty"`
++		WriteTimeout caddy.Duration `json:"write_timeout,omitempty"`
++	}
++	if err := json.Unmarshal(b, &raw); err != nil {
++		return err
++	}
++	*t = Timeouts(raw.alias)
++	t.ReadTimeout = time.Duration(raw.ReadTimeout)
++	t.WriteTimeout = time.Duration(raw.WriteTimeout)
++	return nil
++}
++
++// MarshalJSON marshals a Timeouts struct to JSON.
++func (t Timeouts) MarshalJSON() ([]byte, error) {
++	type alias Timeouts
++	return json.Marshal(struct {
++		alias
++		ReadTimeout  caddy.Duration `json:"read_timeout,omitempty"`
++		WriteTimeout caddy.Duration `json:"write_timeout,omitempty"`
++	}{
++		alias:        alias(t),
++		ReadTimeout:  caddy.Duration(t.ReadTimeout),
++		WriteTimeout: caddy.Duration(t.WriteTimeout),
++	})
++}
++
++// Interface guards
++var (
++	_ caddy.Module                = (*Timeouts)(nil)
++	_ caddy.Provisioner           = (*Timeouts)(nil)
++	_ caddyhttp.MiddlewareHandler = (*Timeouts)(nil)
++)

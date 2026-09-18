@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-b15af1",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:59:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "4e6f3a019d76cedaa1b6cbeec90ad4544f5452c0b49676237f699d642b3ee544",
+  "wall_s": 113.1,
+  "cost_usd": 0.28119,
+  "usage": {
+    "input": 35445,
+    "output": 17525,
+    "thinking": 17285,
+    "cache_read": 0,
+    "total": 52970
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches Zoekt idioms, cleanly integrates with the existing gitindex package and command structure.",
+    "edge_cases": "Handles bare repos, worktrees, concurrent locking, directory traversal boundaries, and name collisions accurately.",
+    "scope": "Implements exactly the requested subcommands and dry-run behavior; extracts index functions minimally without unrelated churn.",
+    "readability": "Code is neatly factored into single-purpose files (discover, inventory, lock, main) with clear logic and naming.",
+    "robustness": "Graceful error handling, correct non-blocking directory locks, and safe resource cleanup with defer.",
+    "maintainability": "Highly extensible CLI structure using flag sets, separated logic, and reusable extracted index routines."
+  },
+  "flags": []
+}

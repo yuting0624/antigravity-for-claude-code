@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-0ddf11",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 2,
+  "judged_at": "2026-09-16T16:10:10+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "999ec1a7603bb7cfda4d078663c818e95277cedf6471162d931255d03d04e339",
+  "wall_s": 62.2,
+  "cost_usd": 0.28837825,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Git client helpers mirror WorktreeRemove; develop reuses the existing ff-only warning line and cmdutil validation idioms; shared package layout matches. Minor: checkout.go now mixes opts.Worktree and worktreeTarget.Path for -C prefixes and messages.",
+    "edge_cases": "Covers blank path, --list exclusion, --checkout requirement, relative-to-absolute, spaces via argv, existing vs new local branch, reuse of an existing linked worktree, symlink leaf, path inside another repo/worktree, and fails early before API calls.",
+    "scope": "Moves path resolution to shared as asked and adds the two client helpers; small extras (localBranchExists now delegates to HasLocalBranch, new WorktreeCheckoutCommands only used by pr checkout) are related but not strictly required.",
+    "readability": "Clear names and doc comments; checkoutWorktreeBranch's branch/reuse matrix is easy to follow; WorktreeCheckoutCommands returning a bool for the caller to append sync commands is slightly awkward.",
+    "robustness": "Errors propagated from Abs/git calls, pull failure downgraded to a warning like the existing flow, Copy() used for the worktree-scoped client so test command contexts are preserved; no panics on zero-value target.",
+    "maintainability": "Shared resolver removes duplication of path rules, but the worktree checkout decision tree now exists twice (WorktreeCheckoutCommands for pr checkout, checkoutWorktreeBranch for issue develop), and the opts.Worktree vs target.Path mix in checkout.go invites drift."
+  },
+  "flags": []
+}

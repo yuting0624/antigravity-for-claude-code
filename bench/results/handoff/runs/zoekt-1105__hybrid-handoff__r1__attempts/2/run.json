@@ -1,0 +1,330 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "handoff",
+  "run_key": "zoekt-1105__hybrid-handoff__r1",
+  "task_id": "zoekt-1105",
+  "arm": "hybrid-handoff",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "B",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": "bash_cap_backgrounded_delegation",
+  "violations": [],
+  "started_at": "2026-09-17T01:39:16+00:00",
+  "ended_at": "2026-09-17T01:57:14+00:00",
+  "agent_wall_s": 1074.3,
+  "agent_active_s": 1074.3,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352",
+    "appendix": "hybrid-handoff-appendix.md",
+    "appendix_sha256": "69ffd63a3f0d2c7228c1407267ab57a2dff51ba4fa8bf05e6c8ff6469ff94b8f",
+    "sent_sha256": "a41719915c080e356e442bc90bffe7b1cf795dbb1c64c786a0d24131b4400c75"
+  },
+  "claude": {
+    "session_id": "1dc862f2-63cf-4c17-8001-c456ec193017",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 10,
+    "num_turns_source": "result",
+    "duration_ms": 1068654,
+    "duration_api_ms": 167345,
+    "total_cost_usd": 0.88915375,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 20,
+      "cache_creation_input_tokens": 77051,
+      "cache_read_input_tokens": 148172,
+      "output_tokens": 13266,
+      "output_tokens_details": {
+        "thinking_tokens": 5044
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 77051
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1624,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0017490000000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 20,
+        "outputTokens": 13266,
+        "cacheReadInputTokens": 148172,
+        "cacheCreationInputTokens": 77051,
+        "webSearchRequests": 0,
+        "costUSD": 0.88740475,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 5044,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 0.887405,
+    "recomputed_vs_reported_gap": -0.002,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "long_context": {
+      "usd_long_context_est": 0.887405,
+      "requests": 10,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    },
+    "transcript": {
+      "present": true,
+      "turns": 10,
+      "input": 20,
+      "output": 13266,
+      "cache_creation": 77051,
+      "cache_read": 148172,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 10,
+          "input": 20,
+          "output": 13266,
+          "cache_creation": 77051,
+          "cache_read": 148172
+        }
+      },
+      "tool_calls": {
+        "Bash": 8,
+        "ToolSearch": 1
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 20,
+        "transcript": 20,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 13266,
+        "transcript": 13266,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 77051,
+        "transcript": 77051,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 148172,
+        "transcript": 148172,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 7,
+    "denied_tools": {
+      "Bash:which": 1,
+      "Bash:agy-delegate": 6
+    },
+    "result_head": "The delegation is running; the harness capped the foreground Bash timeout at 15 minutes, so it moved to the background (ID `bwbmcf49v`). I'll pick it up when it completes and then run the verification gate.\n\nNote for context: the bench bash gate rejected several encodings of the prompt before this one — newline-before-`#`, backticks under ANSI-C quoting, and `$'...'` quoting itself. The text final",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 7,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 1,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 17,
+    "gate_blocks": 4,
+    "blocked_heads": {
+      "which": 1,
+      "agy-delegate": 3
+    },
+    "gate_allows": 4,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "gitindex/index.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "# github.com/sourcegraph/zoekt/cmd/zoekt-local-sync\n# [github.com/sourcegraph/zoekt/cmd/zoekt-local-sync]\nvet: cmd/zoekt-local-sync/discover_test.go:44:23: undefined: discoverRepositories\n",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 3.1,
+      "passed_tests": 83,
+      "failed_tests": [],
+      "failed_packages": [
+        "github.com/sourcegraph/zoekt/cmd/zoekt-local-sync"
+      ],
+      "build_failed_packages": [
+        "github.com/sourcegraph/zoekt/cmd/zoekt-local-sync"
+      ],
+      "packages": 2,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 7.8,
+      "passed_tests": 1106,
+      "failed_tests": [],
+      "failed_packages": [
+        "github.com/sourcegraph/zoekt/cmd/zoekt-local-sync"
+      ],
+      "build_failed_packages": [
+        "github.com/sourcegraph/zoekt/cmd/zoekt-local-sync"
+      ],
+      "packages": 56,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 1,
+    "code_added": 10,
+    "code_removed": 1,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "e9413750043b785c5dab12ab0279bfadd694ba46ec6eb731cd0d2781ae32e719"
+  },
+  "diff_files": {
+    "gitindex/index.go": {
+      "added": 10,
+      "removed": 1,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 0.88915375,
+    "gemini_usd": 0.0,
+    "total_usd": 0.88915375
+  },
+  "notes": [
+    "reaccounted at 2026-09-17T04:33:41+00:00",
+    "reaccounted at 2026-09-17T04:34:10+00:00",
+    "reaccounted at 2026-09-17T04:34:51+00:00"
+  ],
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "scheduler_class": "infra"
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-a14050",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:52:20+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "11e7de552d4cf33787b54d7bf26481a0aa33e837405ea4f8cc441dd94f5f30c3",
+  "wall_s": 179.7,
+  "cost_usd": 0.340008,
+  "usage": {
+    "input": 46626,
+    "output": 20563,
+    "thinking": 20343,
+    "cache_read": 0,
+    "total": 67189
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 5
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Uses time.Duration instead of caddy.Duration in the Timeouts handler struct, limiting JSON config to integers instead of string durations.",
+    "edge_cases": "Route-level timeouts are overwritten by server-level idle timeouts due to the nested wrapping order, and route timeouts bypass server hard timeouts.",
+    "scope": "Implements all requested functionality (idle timeouts, chunking, rates, Caddyfile support) exactly as specified with no unrelated changes.",
+    "readability": "The code is exceptionally clear and includes excellent explanatory comments for the subtle chunking and Hijack logic.",
+    "robustness": "The creditFor cap of math.MaxInt64 overflows time.Duration when added to d.Timeout, which abruptly kills very large transfers with low MinRate.",
+    "maintainability": "Properly modularizes the timeout logic by encapsulating state into Reusable IdleDeadline and clean wrapper structs."
+  },
+  "flags": []
+}

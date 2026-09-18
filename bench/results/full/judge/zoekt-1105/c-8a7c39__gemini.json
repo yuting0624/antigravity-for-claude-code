@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-8a7c39",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:54:55+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290cec7a8665a74769f60f85e0cd659be0bc481db3d6994e367c16d562d8bbe4",
+  "wall_s": 122.8,
+  "cost_usd": 0.221032,
+  "usage": {
+    "input": 36434,
+    "output": 12347,
+    "thinking": 12162,
+    "cache_read": 0,
+    "total": 48781
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Idiomatic Go that perfectly matches Zoekt's conventions for flags, indexing options, and file layout.",
+    "edge_cases": "Handles symlinks, worktrees, duplicates, and dry-run incremental logic well, but fails to print usage on missing arguments.",
+    "scope": "Implements all core requirements flawlessly, but misses the explicit requirement to print usage when run without a root.",
+    "readability": "Excellent separation of concerns into discover, plan, and apply phases with clear abstractions.",
+    "robustness": "Strong concurrency locking, defensive sidecar deletion order, and proper io/fs path handling.",
+    "maintainability": "Highly extensible design with clean data structures and localized, safe modifications to the shared indexer."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

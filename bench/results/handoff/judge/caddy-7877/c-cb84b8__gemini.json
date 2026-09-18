@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-cb84b8",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:45:49+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 125.3,
+  "cost_usd": 0.188354,
+  "usage": {
+    "input": 27973,
+    "output": 11034,
+    "thinking": 10822,
+    "cache_read": 0,
+    "total": 39007
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Adheres to Go formatting and idioms, though using string(byte) instead of string([]byte{b}) is a common anti-pattern.",
+    "edge_cases": "Fails on non-ASCII characters due to string(byte) rune conversion and makes the entire comparison incorrectly case-insensitive.",
+    "scope": "Removes the reverse workaround and implements the suffix logic, but broadens case-insensitivity beyond the hex digits.",
+    "readability": "The algorithm is well-structured and clearly commented, making the backward iteration logic straightforward to follow.",
+    "robustness": "Safely bounds checks before indexing and gracefully handles unescape errors by leaving the path untouched.",
+    "maintainability": "Iterating backward byte-by-byte is fragile for UTF-8 and makes future adjustments harder compared to a token-based approach."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

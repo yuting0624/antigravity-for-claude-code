@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-64195a",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:58:15+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "97eaa99bcb97998070996e6409a1e201d73919e77ecc07a06c8bf9e2ebeb3f3e",
+  "wall_s": 86.8,
+  "cost_usd": 0.6393047500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Uses the existing options-map/global-option pattern, slices helpers and unexported helper naming; comments are a bit wordier than surrounding code but match its voice.",
+    "edge_cases": "Handles nil options, invalid order erroring with no global write, multiple order lines chaining via existingVal, and plugin init orders; RegisterDirectiveOrder now relies on Index never returning -1 (guarded, but Insert would panic if the invariant broke).",
+    "scope": "Core change is focused; cloning the whole options map and deleting 'order' is justified by the shared-map concurrency requirement, but the RegisterDirectiveOrder rewrite is a small optional refactor.",
+    "readability": "Clear names (directiveOrderForOptions), explicit order parameter threading, and comments explain the non-obvious ownership of the order value.",
+    "robustness": "No runtime writes to the global order, per-adaptation cloned options, no locks needed; slices.Clone before DeleteFunc fixes in-place corruption of the default order.",
+    "maintainability": "Order dependency is explicit in buildSubroute/sortRoutes signatures; minor duplication of directiveOrderForOptions(h.options) at three call sites and the 'order' key string appears in two places."
+  },
+  "flags": []
+}

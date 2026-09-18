@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-dbf5f2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:25:31+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "5b53046e2cb3b6da33b498cbe851b7e83c43a83dc6d4b29a203f32a863651a24",
+  "wall_s": 22.5,
+  "cost_usd": 0.19345325000000005,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: same struct shape, Validate, module ID naming, Caddyfile subdirectives, and interface guards; registered beside the cookie filter.",
+    "edge_cases": "Unparsable lines pass through, quoting preserved, delete drops the value, exact name match, attribute suffix kept verbatim; leading whitespace before the name is silently dropped on rebuild, and non-array fields are returned untouched.",
+    "scope": "Only adds the new filter, registration and interface guards; no unrelated edits or refactors.",
+    "readability": "Clear linear flow with sensible names; the suffix extraction via first ';' works but would benefit from a one-line comment explaining why it is safe.",
+    "robustness": "No panics on bad input, does not mutate the input array, relies on stdlib http.ParseSetCookie; defensive default branch for unknown action types.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's rather than a shared helper, so future subdirective changes must be made twice; otherwise straightforward to extend."
+  },
+  "flags": []
+}

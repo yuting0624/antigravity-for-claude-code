@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-3a6726",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:18:03+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "404522340833c055275f60357eacab92764854ea35b94cacf09941ff7017d18a",
+  "wall_s": 42.5,
+  "cost_usd": 0.115818,
+  "usage": {
+    "input": 28587,
+    "output": 4887,
+    "thinking": 4636,
+    "cache_read": 0,
+    "total": 33474
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Seamlessly follows Caddy module conventions, reusing unexported types and patterns to minimize duplication.",
+    "edge_cases": "Flawlessly handles unparseable cookies, preserves original quoting via Go 1.23's c.Quoted, and correctly retains suffix attributes.",
+    "scope": "Implements exactly the requested feature with a clean, focused diff that perfectly maps to all requirements.",
+    "readability": "Using a dummy http.Response to leverage the standard library for parsing Set-Cookie headers is elegant and highly readable.",
+    "robustness": "Safe type assertions, graceful passthrough of malformed data, and safe slice access prevent panics.",
+    "maintainability": "Well-structured and isolated logic that elegantly delegates complex HTTP header parsing to the standard library."
+  },
+  "flags": []
+}

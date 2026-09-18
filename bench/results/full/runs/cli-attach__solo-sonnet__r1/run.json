@@ -1,0 +1,430 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-attach__solo-sonnet__r1",
+  "task_id": "cli-attach",
+  "arm": "solo-sonnet",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "C",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-15T15:21:06+00:00",
+  "ended_at": "2026-09-15T17:17:29+00:00",
+  "agent_wall_s": 6982.9,
+  "agent_active_s": 6982.9,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": null,
+    "plugin_sha": null
+  },
+  "conductor": {
+    "model_alias": "sonnet",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-sonnet-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d",
+    "appendix": null,
+    "appendix_sha256": null,
+    "sent_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d"
+  },
+  "claude": {
+    "session_id": "6bffd157-1361-4b5a-9738-db6a34c8eae4",
+    "subtype": "error_max_turns",
+    "is_error": true,
+    "num_turns": 251,
+    "num_turns_source": "result",
+    "duration_ms": 6980909,
+    "duration_api_ms": 7730487,
+    "total_cost_usd": 33.88966569999998,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": true,
+    "usage": {
+      "input_tokens": 490,
+      "cache_creation_input_tokens": 770542,
+      "cache_read_input_tokens": 121672001,
+      "output_tokens": 253855,
+      "output_tokens_details": {
+        "thinking_tokens": 155529
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 770542
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1865,
+        "outputTokens": 27,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-sonnet-5[1m]": {
+        "inputTokens": 668,
+        "outputTokens": 386347,
+        "cacheReadInputTokens": 136991411,
+        "cacheCreationInputTokens": 1049831,
+        "webSearchRequests": 0,
+        "costUSD": 33.887665699999985,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 255948,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 50.831499,
+    "recomputed_vs_reported_gap": 0.4999,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 334,
+      "input": 668,
+      "output": 308726,
+      "cache_creation": 1049831,
+      "cache_read": 136991411,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-sonnet-5": {
+          "turns": 250,
+          "input": 500,
+          "output": 307023,
+          "cache_creation": 770542,
+          "cache_read": 123464174
+        }
+      },
+      "tool_calls": {
+        "Bash": 157,
+        "Read": 133,
+        "Agent": 1,
+        "Write": 10,
+        "Edit": 74,
+        "ToolSearch": 1
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 84,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": false,
+    "usage_reconciliation": {
+      "input": {
+        "result": 490,
+        "transcript": 668,
+        "rel": 0.2665
+      },
+      "output": {
+        "result": 253855,
+        "transcript": 308726,
+        "rel": 0.1777
+      },
+      "cache_creation": {
+        "result": 770542,
+        "transcript": 1049831,
+        "rel": 0.266
+      },
+      "cache_read": {
+        "result": 121672001,
+        "transcript": 136991411,
+        "rel": 0.1118
+      }
+    },
+    "permission_denials": 9,
+    "denied_tools": {
+      "Bash:find": 3,
+      "Bash:go": 1,
+      "Bash:git": 1,
+      "Read": 1,
+      "Bash:mkdir": 1,
+      "Bash:rm": 2
+    },
+    "result_head": "",
+    "errors": [
+      "Reached maximum number of turns (250)"
+    ],
+    "long_context": {
+      "usd_long_context_est": 85.696124,
+      "requests": 250,
+      "requests_over_200k": 237,
+      "ctx_tokens_over_200k_share": 0.9892
+    }
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 0,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 83,
+    "claude_bash": 1,
+    "agy": 0,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 1,
+    "events": 630,
+    "gate_blocks": 6,
+    "blocked_heads": {
+      "find": 2,
+      "git": 1,
+      "mkdir": 1,
+      "rm": 2
+    },
+    "gate_allows": 151,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [
+      "grep"
+    ],
+    "claude_bash_files": [
+      "api/queries_pr.go"
+    ],
+    "agy_files": [],
+    "claude_tool_files": [
+      "internal/config/config.go",
+      "internal/ghinstance/host.go",
+      "api/query_builder.go",
+      "api/queries_pr.go",
+      "api/queries_issue.go",
+      "api/queries_repo.go",
+      "internal/attachments/asset.go",
+      "internal/attachments/flags.go",
+      "internal/attachments/client.go",
+      "internal/attachments/zzexplore_test.go",
+      "internal/attachments/references.go",
+      "internal/attachments/attach.go",
+      "pkg/cmd/pr/shared/commentable.go",
+      "internal/attachments/testhelpers.go",
+      "pkg/cmd/pr/comment/comment.go",
+      "pkg/cmd/issue/comment/comment.go",
+      "pkg/httpmock/legacy.go",
+      "pkg/cmd/pr/create/create.go",
+      "pkg/cmd/pr/edit/edit.go",
+      "pkg/cmd/issue/create/create.go",
+      "pkg/cmd/issue/edit/edit.go"
+    ]
+  },
+  "outcome": {
+    "build_ok": false,
+    "build_stderr_tail": "# github.com/cli/cli/v2/pkg/cmd/issue/edit\npkg/cmd/issue/edit/edit.go:5:2: \"errors\" imported and not used\n",
+    "vet_ok": false,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": null,
+    "full_suite": null,
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 21,
+    "code_added": 1917,
+    "code_removed": 48,
+    "test_added": 1,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/attachments/asset.go",
+      "internal/attachments/testhelpers.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "b73ce4113d232281697d83abac2bdc2a2dc3589df1de6de31cb53be3a888b82b"
+  },
+  "diff_files": {
+    "api/queries_issue.go": {
+      "added": 20,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/queries_pr.go": {
+      "added": 23,
+      "removed": 3,
+      "class": "code"
+    },
+    "api/queries_repo.go": {
+      "added": 4,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/query_builder.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/asset.go": {
+      "added": 173,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/attach.go": {
+      "added": 79,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/client.go": {
+      "added": 224,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/flags.go": {
+      "added": 109,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/references.go": {
+      "added": 821,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/testhelpers.go": {
+      "added": 66,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/zzexplore_test.go": {
+      "added": 1,
+      "removed": 0,
+      "class": "test"
+    },
+    "internal/config/config.go": {
+      "added": 7,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/ghinstance/host.go": {
+      "added": 9,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/comment/comment.go": {
+      "added": 7,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/create/create.go": {
+      "added": 55,
+      "removed": 3,
+      "class": "code"
+    },
+    "pkg/cmd/issue/edit/edit.go": {
+      "added": 74,
+      "removed": 12,
+      "class": "code"
+    },
+    "pkg/cmd/pr/comment/comment.go": {
+      "added": 7,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/pr/create/create.go": {
+      "added": 61,
+      "removed": 9,
+      "class": "code"
+    },
+    "pkg/cmd/pr/edit/edit.go": {
+      "added": 63,
+      "removed": 2,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/commentable.go": {
+      "added": 103,
+      "removed": 17,
+      "class": "code"
+    },
+    "pkg/httpmock/legacy.go": {
+      "added": 10,
+      "removed": 2,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 33.88966569999998,
+    "gemini_usd": 0.0,
+    "total_usd": 33.88966569999998
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:51+00:00",
+    "reaccounted at 2026-09-17T14:49:00+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

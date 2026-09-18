@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-f60206",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:20:41+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "962fe1f2ac5273b8338d505a6f45930fd81caf174b9783ec330294ccad63298f",
+  "wall_s": 7.4,
+  "cost_usd": 0.11531150000000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to match conventions.",
+    "edge_cases": "Empty diff; no handling of idle timeouts, rates, or chunking.",
+    "scope": "Empty diff; none of the requirement was delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; no implementation.",
+    "maintainability": "Empty diff; nothing to maintain."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

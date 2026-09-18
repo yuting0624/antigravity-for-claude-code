@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-64195a",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:59:06+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "97eaa99bcb97998070996e6409a1e201d73919e77ecc07a06c8bf9e2ebeb3f3e",
+  "wall_s": 50.3,
+  "cost_usd": 0.134238,
+  "usage": {
+    "input": 38157,
+    "output": 4827,
+    "thinking": 4590,
+    "cache_read": 0,
+    "total": 42984
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Idiomatic use of the slices and maps packages seamlessly matches Caddy's existing codebase patterns.",
+    "edge_cases": "Flawlessly handles nil options maps, properly chains multiple order directives, and prevents leakage between adaptations.",
+    "scope": "Strictly targets the race conditions and state leakage of the global directive order without introducing unrelated changes.",
+    "readability": "Replaces cumbersome loop-based slice manipulation with clean slices API calls and provides excellent clarifying comments.",
+    "robustness": "Completely eliminates data races and cross-adaptation side effects by properly cloning maps and slices before mutation.",
+    "maintainability": "Effectively isolates adaptation-scoped configuration from global plugin state, making future order logic much safer."
+  },
+  "flags": []
+}

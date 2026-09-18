@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-f75481",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:12:37+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "d638f257c7667443299f7ded1fd04218901ed3be245545a10d6702d3f3cc517a",
+  "wall_s": 38.3,
+  "cost_usd": 0.46523024999999996,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Threads order explicitly like other per-adaptation state (options, warnings, groupCounter); the opt==\"order\" special case mirrors existing servers/log/default_bind cases, though it branches before optFunc instead of after.",
+    "edge_cases": "Invalid order fails before any state is touched; multiple order lines in one block compound via existingVal; nil options map handled; plugin RegisterDirectiveOrder still splices into process-wide directiveOrder visible to all adaptations.",
+    "scope": "Focused on the order state; maps.Clone of options and cloning directiveOrder go slightly beyond the minimum but are justified by the reuse/default-never-mutated requirements. No unrelated edits.",
+    "readability": "Clear parameter threading and helpful doc comments; a few comments are long and one cites an issue URL, but nothing obscures the flow.",
+    "robustness": "No shared mutable order state: directiveOrder is read-only during adaptation, parseOptOrder clones before mutating. newOrder.([]string) unchecked assertion is internal-only; no locks needed.",
+    "maintainability": "Order is an explicit Helper field and parameter rather than a global, easy to follow; the string-keyed special case couples evaluateGlobalOptionsBlock to parseOptOrder and options[\"order\"] is no longer populated, which future readers must know."
+  },
+  "flags": []
+}

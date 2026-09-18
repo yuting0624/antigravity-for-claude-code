@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-7755fc",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:06:08+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "bbb21b38ac4d4d4f79ccbb278a1c8c712bf858fe53728a011f2fedc1dce4c20d",
+  "wall_s": 63.4,
+  "cost_usd": 0.93139325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (authCtx, closeResponse, CheckResponse, httperr.ClassifyStatus) and cmd/output patterns; but ResponseError shape diverges from v6, fake server lives in dir `test` with package `provtest`, and exported v6 RetryInterval/MaxRetries were removed.",
+    "edge_cases": "Covers 409 find-by-name, int32 overflow, nil upload URL, aborted/completed before start, ctx cancel in poll/retry, PushRefID short-circuit, malformed durations; unknown abort reasons get code 0 rather than a defined code, and MaxSamplesPerPackage→MaxTimeSeriesInBatch is a guess.",
+    "scope": "Delivers the full flow, but adds a clientcfg extraction refactor of the v6 client, leaves the now-dead `thresholds` map computed in createCloudTest, and carries unused Client.host/version and HTTPClient.logger fields.",
+    "readability": "Names and structure are clear, but comments are heavy and some are stale or contradictory: 'skeleton starts with an empty mux', 'registered by individual specs', '(existing pattern)', and a cmd comment claiming no map[string]any round-trip while StartLocalExecution does exactly that.",
+    "robustness": "Retries reset bodies via GetBody, waits honour ctx, bodies drained/closed, nil SDK responses guarded; minor: doWithRetry returns an already-closed resp on ctx cancel, notify uses context.Background, default-poll-interval logged at Info.",
+    "maintainability": "provisioning.Client bundles a v6 client and the output builds a whole provisioning client just to notify; provisioning mode is gated by a flag plus two nil-checked deps plus config fields; duplicated 8036 switch arms and dead code add friction."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

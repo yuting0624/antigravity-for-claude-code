@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-450435",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:40:59+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7fdfa74d535bc7f369bfde665957d3bdf17323c6a73d83b1a16e06551f805a25",
+  "wall_s": 113.1,
+  "cost_usd": 0.257758,
+  "usage": {
+    "input": 69167,
+    "output": 9952,
+    "thinking": 9771,
+    "cache_read": 0,
+    "total": 79119
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Integrates seamlessly with the existing command flags, gh instance patterns, and GraphQL query builder.",
+    "edge_cases": "Handles complex markdown AST rewriting boundaries flawlessly, but fails to completely abort object creation if a partial upload fails.",
+    "scope": "Added deliberate partial-success submission logic that contradicts the strict 'nothing is written' constraint on failure.",
+    "readability": "The markdown reference parser is dense and complex due to goldmark limitations, but well-factored.",
+    "robustness": "Excellent API error handling, rate limit parsing, and file metadata validation before upload.",
+    "maintainability": "Logic is well isolated in the internal attachments package with clear responsibilities and types."
+  },
+  "flags": []
+}

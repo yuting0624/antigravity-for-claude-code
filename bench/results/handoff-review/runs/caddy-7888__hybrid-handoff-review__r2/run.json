@@ -1,0 +1,382 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "handoff-review",
+  "run_key": "caddy-7888__hybrid-handoff-review__r2",
+  "task_id": "caddy-7888",
+  "arm": "hybrid-handoff-review",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "B",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-18T07:19:42+00:00",
+  "ended_at": "2026-09-18T07:42:17+00:00",
+  "agent_wall_s": 1351.8,
+  "agent_active_s": 1351.8,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.6",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 30,
+    "max_turns": 150,
+    "wall_s": 9000,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "12ba74ef9a4667169627270f8f848bdade1373f524a8b7a24bbc1a0c1f0d3fa9",
+    "appendix": "hybrid-handoff-review-appendix.md",
+    "appendix_sha256": "469a9f93b1f3d91009f4df9ffe2994db421e3072ebd8f9246d8a9ffa7aec7d07",
+    "sent_sha256": "74a0a253a1ed1c570d4a807b138a14a77692c689444290a0510b881160e99669"
+  },
+  "claude": {
+    "session_id": "0629f770-ade6-434e-9757-f74c1b71fc85",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 11,
+    "num_turns_source": "result",
+    "duration_ms": 1351365,
+    "duration_api_ms": 98600,
+    "total_cost_usd": 0.90863225,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 22,
+      "cache_creation_input_tokens": 100453,
+      "cache_read_input_tokens": 170556,
+      "output_tokens": 7734,
+      "output_tokens_details": {
+        "thinking_tokens": 1572
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 100453
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1943,
+        "outputTokens": 24,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002063,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 22,
+        "outputTokens": 7734,
+        "cacheReadInputTokens": 170556,
+        "cacheCreationInputTokens": 100453,
+        "webSearchRequests": 0,
+        "costUSD": 0.90656925,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 1572,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 0.906569,
+    "recomputed_vs_reported_gap": -0.0023,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "long_context": {
+      "usd_long_context_est": 0.906569,
+      "requests": 11,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    },
+    "transcript": {
+      "present": true,
+      "turns": 11,
+      "input": 22,
+      "output": 7734,
+      "cache_creation": 100453,
+      "cache_read": 170556,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 11,
+          "input": 22,
+          "output": 7734,
+          "cache_creation": 100453,
+          "cache_read": 170556
+        }
+      },
+      "tool_calls": {
+        "Bash": 10
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 22,
+        "transcript": 22,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 7734,
+        "transcript": 7734,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 100453,
+        "transcript": 100453,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 170556,
+        "transcript": 170556,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 6,
+    "denied_tools": {
+      "Bash:which": 1,
+      "Bash:agy-delegate": 3,
+      "Bash:git": 2
+    },
+    "result_head": "**Pass.**\n\n- `go build ./...`, `go vet ./...`, `go test ./...` — all green (`modules/logging` re-run with `-count=1` to bypass the cache).\n- `gofmt -l modules/logging` — clean.\n- Working tree: only `modules/logging/filters.go` modified, uncommitted. No test files touched, no commits/branches/tags.\n\nOne process note: the initial delegation was blocked twice by the shell gate (a newline followed by ",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 2,
+    "usage_lines": 2,
+    "signal_only": 0,
+    "succeeded": 2,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 2,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 2,
+        "input": 1430431,
+        "output": 111554,
+        "thinking": 94819,
+        "cache_read": 7154503,
+        "usd": 2.027738
+      }
+    },
+    "totals": {
+      "input": 1430431,
+      "output": 111554,
+      "thinking": 94819,
+      "cache_read": 7154503,
+      "total": 1541985
+    },
+    "invariant_ok": true,
+    "shadow_usd": 2.027738,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "67bd49e9-055f-4983-a7f6-6a0777ec84d4",
+      "7a50e6a8-1453-4f08-858b-e4fa3eb9322a"
+    ],
+    "agy_duration_s_sum": 1235.894,
+    "wrapper_calls_in_transcript": 5,
+    "trace_audit": {
+      "67bd49e9-055f-4983-a7f6-6a0777ec84d4": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 63,
+          "GENERIC": 62,
+          "CHECKPOINT": 2,
+          "SYSTEM_MESSAGE": 1
+        },
+        "tool_calls": {
+          "run_command": 18,
+          "find_by_name": 1,
+          "view_file": 28,
+          "grep_search": 12,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T07:20:49Z",
+        "last_step_at": "2026-09-18T07:32:05Z"
+      },
+      "7a50e6a8-1453-4f08-858b-e4fa3eb9322a": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 57,
+          "GENERIC": 55,
+          "CHECKPOINT": 1,
+          "SYSTEM_MESSAGE": 3
+        },
+        "tool_calls": {
+          "run_command": 30,
+          "view_file": 9,
+          "grep_search": 11,
+          "find_by_name": 1,
+          "replace_file_content": 1,
+          "schedule": 2,
+          "manage_task": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T07:32:50Z",
+        "last_step_at": "2026-09-18T07:41:54Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 4
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 2,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 24,
+    "gate_blocks": 4,
+    "blocked_heads": {
+      "which": 1,
+      "agy-delegate": 1,
+      "git": 2
+    },
+    "gate_allows": 6,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "modules/logging/filters.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 0.8,
+      "passed_tests": 27,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 1,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 5.8,
+      "passed_tests": 1178,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 47,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 1,
+    "code_added": 133,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "3149b6ae73a6a99020243d625da1a912dce616745e32b22f74a59f41b49106f5"
+  },
+  "diff_files": {
+    "modules/logging/filters.go": {
+      "added": 133,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 0.90863225,
+    "gemini_usd": 2.027738,
+    "total_usd": 2.93637025
+  },
+  "notes": [],
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "scheduler_class": "final"
+}

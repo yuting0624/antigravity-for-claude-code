@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-349eb6",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:16:30+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "231a06d64c36f4eda1c6ec0624793db2816ab191463d6ef938dc25ce882b7ac9",
+  "wall_s": 22.0,
+  "cost_usd": 0.18967825000000002,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: reuses cookieFilterAction, same Validate/CaddyModule/Unmarshal shape, OUTER label idiom, registration and interface assertions placed beside cookie.",
+    "edge_cases": "Unparseable lines pass through via Cookies() len check; quoting preserved; suffix kept verbatim via Cut on ';'; exact name match. Non-array (string) input silently ignored, and only the first ';' split is considered, which is fine for the leading pair.",
+    "scope": "Only adds the filter, registration and assertions; no unrelated edits or refactors.",
+    "readability": "Clear flow with brief comments on the dummy-Response trick and verbatim suffix; the nested action loop with break/continue OUTER is slightly dense but matches neighbouring code.",
+    "robustness": "No panics: length-guarded quote check, Cut results checked, type assertion guarded; stateless Filter is concurrency-safe.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's (repo already does this for query/cookie), so extension means touching two places; otherwise self-contained and reuses shared hash/action types."
+  },
+  "flags": []
+}

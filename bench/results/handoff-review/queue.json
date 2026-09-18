@@ -1,0 +1,439 @@
+{
+  "run_id": "handoff-review",
+  "seed": 20260914,
+  "arms": [
+    "hybrid-handoff-review"
+  ],
+  "reps": 2,
+  "tasks": [
+    "caddy-7877",
+    "caddy-7888",
+    "caddy-7913",
+    "caddy-7995",
+    "cli-14136",
+    "cli-attach",
+    "k6-6169",
+    "zoekt-1105"
+  ],
+  "created_at": "2026-09-17T23:19:02+00:00",
+  "items": [
+    {
+      "task_id": "caddy-7888",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "medium",
+      "status": "done",
+      "attempts": 2,
+      "lane": "A",
+      "started_at": "2026-09-18T01:03:28+00:00",
+      "ended_at": "2026-09-18T01:25:51+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789687300.4591732,
+          "ended_ts": 1789693005.7085319,
+          "class": "suspended",
+          "error": null,
+          "pass": true,
+          "total_usd": 1.67896425,
+          "subtype": "success"
+        },
+        {
+          "attempt": 2,
+          "lane": "A",
+          "started_ts": 1789693408.857236,
+          "ended_ts": 1789694751.494051,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 2.6658885,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7877",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "small",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-17T23:32:42+00:00",
+      "ended_at": "2026-09-18T01:22:49+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789687962.928763,
+          "ended_ts": 1789694569.394316,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 2.9176772499999997,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "zoekt-1105",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "large",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T01:30:52+00:00",
+      "ended_at": "2026-09-18T01:59:14+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789695052.426526,
+          "ended_ts": 1789696754.042115,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 2.9556277499999997,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7913",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "medium",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-18T01:31:21+00:00",
+      "ended_at": "2026-09-18T02:10:40+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789695081.014268,
+          "ended_ts": 1789697440.061456,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 4.400508,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7995",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "small",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T02:04:15+00:00",
+      "ended_at": "2026-09-18T02:26:15+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789697055.117959,
+          "ended_ts": 1789698375.176943,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 2.728835,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "cli-14136",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "medium",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-18T02:15:41+00:00",
+      "ended_at": "2026-09-18T02:57:03+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789697741.0270069,
+          "ended_ts": 1789700223.5130482,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 4.4747695,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "cli-attach",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "large",
+      "status": "done",
+      "attempts": 2,
+      "lane": "B",
+      "started_at": "2026-09-18T05:57:06+00:00",
+      "ended_at": "2026-09-18T07:14:39+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789698676.208218,
+          "ended_ts": 1789708054.401973,
+          "class": "suspended",
+          "error": null,
+          "pass": false,
+          "total_usd": 10.951350249999999,
+          "subtype": "success",
+          "note": "relabelled by the operator: both delegations died of a 67-min sleep (network errors); classifier extended"
+        },
+        {
+          "attempt": 1,
+          "lane": null,
+          "started_ts": null,
+          "ended_ts": 1789710563.2206552,
+          "error": "requeued by operator",
+          "pass": null,
+          "total_usd": null,
+          "subtype": null
+        },
+        {
+          "attempt": 2,
+          "lane": "B",
+          "started_ts": 1789711026.204022,
+          "ended_ts": 1789715679.6539168,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 11.02666925,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "k6-6169",
+      "arm": "hybrid-handoff-review",
+      "rep": 1,
+      "size_class": "large",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-18T03:02:04+00:00",
+      "ended_at": "2026-09-18T05:48:21+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789700524.794613,
+          "ended_ts": 1789710501.931906,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 11.48230675,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7877",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "small",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T05:57:27+00:00",
+      "ended_at": "2026-09-18T06:21:19+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789711047.214803,
+          "ended_ts": 1789712479.0565708,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 2.3384665,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7995",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "small",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T06:26:20+00:00",
+      "ended_at": "2026-09-18T06:56:48+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789712780.0801878,
+          "ended_ts": 1789714608.439688,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 3.21946125,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "cli-14136",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "medium",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T07:01:49+00:00",
+      "ended_at": "2026-09-18T07:40:42+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789714909.974426,
+          "ended_ts": 1789717242.89632,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 4.03893425,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7888",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "medium",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-18T07:19:40+00:00",
+      "ended_at": "2026-09-18T07:42:26+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789715980.861838,
+          "ended_ts": 1789717346.804961,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 2.93637025,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "caddy-7913",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "medium",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T08:03:45+00:00",
+      "ended_at": "2026-09-18T08:55:24+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789718625.270668,
+          "ended_ts": 1789721724.182633,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 5.14440125,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "k6-6169",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "large",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-18T08:04:28+00:00",
+      "ended_at": "2026-09-18T09:26:21+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789718668.547812,
+          "ended_ts": 1789723581.05301,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 8.99532225,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "zoekt-1105",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "large",
+      "status": "done",
+      "attempts": 1,
+      "lane": "A",
+      "started_at": "2026-09-18T09:00:26+00:00",
+      "ended_at": "2026-09-18T09:31:59+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "A",
+          "started_ts": 1789722026.202635,
+          "ended_ts": 1789723919.422706,
+          "class": "final",
+          "error": null,
+          "pass": true,
+          "total_usd": 3.66845825,
+          "subtype": "success"
+        }
+      ]
+    },
+    {
+      "task_id": "cli-attach",
+      "arm": "hybrid-handoff-review",
+      "rep": 2,
+      "size_class": "large",
+      "status": "done",
+      "attempts": 1,
+      "lane": "B",
+      "started_at": "2026-09-18T09:31:22+00:00",
+      "ended_at": "2026-09-18T10:40:23+00:00",
+      "history": [
+        {
+          "attempt": 1,
+          "lane": "B",
+          "started_ts": 1789723882.146744,
+          "ended_ts": 1789728023.327871,
+          "class": "final",
+          "error": null,
+          "pass": false,
+          "total_usd": 9.59319925,
+          "subtype": "success"
+        }
+      ]
+    }
+  ],
+  "allow_same_arm_concurrency": true
+}

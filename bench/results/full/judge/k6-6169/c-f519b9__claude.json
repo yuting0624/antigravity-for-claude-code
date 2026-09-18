@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-f519b9",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:18:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "dc498fe9de265799a5f0f9661a7533238eb218e6ce09f7475a112a999f302091",
+  "wall_s": 48.8,
+  "cost_usd": 0.8837072499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (closeResponse, errUnknown, CheckResponse, httperr classification, idempotency key); ResponseError is a pointer type unlike v6's value type, and the test helper package name differs from its dir.",
+    "edge_cases": "Handles 409 fallback, nil archive, missing upload URL, terminal statuses while polling, ctx cancel, unparseable durations; silently caps archive_size at MaxInt32 and passes projectID 0 straight into the v6 path.",
+    "scope": "Delivers the required flow and keeps run --out cloud / PushRefID on v1; adds a small gratuitous clientcfg package and touches v6/client.go just to alias constants that provisioning could import from v6 directly.",
+    "readability": "Clear names, small focused files, well-placed comments explaining why (presigned URL auth, background ctx for notify); mode flag plus lazyInit is slightly indirect but documented.",
+    "robustness": "Bodies drained/closed, retries rewind via GetBody and respect ctx, notify bounded by its own timeout, no panics outside the test server; unknown/non-abort errors are sent with code 0 which the API may not accept.",
+    "maintainability": "Composition function and typed RuntimeConfig isolate SDK models; some duplication (closeResponse, ProvisionResult vs StartLocalExecutionResponse) and the output now juggles two lifecycles behind a bool flag."
+  },
+  "flags": []
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-6c7e72",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:50:47+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b78bfef19b1f2570c435ff55307e71bd8cf7319238ec5257c30820c33b235f05",
+  "wall_s": 95.0,
+  "cost_usd": 0.65491575,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.833,
+  "rationale": {
+    "consistency": "Reuses gitindex.IndexGitRepo and index.Options.Flags, but list/remove use a bare -index with no default while sync defaults to ~/.zoekt; unguarded syscall.Flock ignores the repo's unix/other build-tag convention.",
+    "edge_cases": "Handles duplicate names, missing roots, no roots, unmatched remove args, .git-file worktrees and bare repos; passing the same root twice errors as a duplicate, multi-repo shards are deleted wholesale, unreadable shards are silently skipped.",
+    "scope": "Delivers the command, subcommands, lock and gitindex name fix; adds an unrequested explicit 'sync' subcommand and ~100 lines of up-to-date detection beyond the preview requirement.",
+    "readability": "Clear file split and flow; matchRecord is a tangle of abs/source comparisons, recordsFromShards juggles three parallel structures, and isRepository carries spec-style '(a)/(b)' comments.",
+    "robustness": "Per-repo errors are collected and reported; but inventory is read before the lock is taken, repositoryUpToDate swallows open/branch errors as 'not up to date', errors are printed twice, and Flock is not portable.",
+    "maintainability": "repositoryUpToDate re-implements gitindex branch expansion and IncrementalSkipIndexing, coupling preview to library internals; NameFromGitConfig inverts the default so any unlisted direct caller silently changes behaviour."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-450435",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:39:06+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7fdfa74d535bc7f369bfde665957d3bdf17323c6a73d83b1a16e06551f805a25",
+  "wall_s": 57.3,
+  "cost_usd": 1.10080925,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 2,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.667,
+  "rationale": {
+    "consistency": "Uses cmdutil.FlagErrorf/httpmock idioms, but ships a testing.go importing `testing` into a prod package, unexported error type with exported fields, mixed `%s`/`%w` wrapping, and a hand-written bubble sort.",
+    "edge_cases": "Covers symlink/hardlink dupes, empty/dir/size checks, refusal order, code fences; but partial-upload failures still create/update the issue/PR/comment, contradicting 'if one upload fails nothing is written'; ToAppend via strings.Contains on the URL is fragile.",
+    "scope": "Delivers the feature, but leaves dead code (isSingleImage, UploadStub, UserAsset.markdown), refactors hasDeferredFlags with a subtle `--parent` semantics change, and adds repository fields to every shared issue/PR query.",
+    "readability": "references.go is ~700 lines of byte-level `](` scanning and backward bracket matching layered on top of goldmark; upload() is a long chain of near-identical status-code blocks; UploadAndAttach duplicates its append logic.",
+    "robustness": "Bodies closed, bounds handled, no obvious panics; but the failure path swallows an error (`res, _ :=`), continues mutations after partial upload failure, and nil Config yields an opaque 'unsupported authentication type'.",
+    "maintainability": "Uploader construction is copy-pasted across five commands; KeepExistingBody is a de-facto constant hidden coupling; custom markdown scanner duplicates parser responsibilities and will be hard to evolve."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

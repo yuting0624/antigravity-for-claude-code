@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-9c99ae",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:47:06+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "468062709d8d120abcd60441fddb00b549f90fd02e67e212ba3e4309e5ebc133",
+  "wall_s": 121.2,
+  "cost_usd": 0.97123125,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "License headers, doc comments, nolint:bodyclose idiom, const block placement and handler registration all match Caddy; but the handler uses time.Duration instead of caddy.Duration for JSON fields, and `max` shadows the builtin.",
+    "edge_cases": "Hard-deadline ceiling, negative-disables, NoBody, empty writes, zero-progress writes, chunk>0 and int overflow are handled; per-route handler skips the NoBody check and FlushError never refreshes the deadline.",
+    "scope": "Touches exactly the files implied by the requirement; no unrelated refactors or dead code.",
+    "readability": "Clear naming and structure; the MinRate credit/overflow arithmetic in next() is dense and would benefit from a simpler formulation or comment.",
+    "robustness": "Nested route+server wrappers both set the same conn deadline and the server-level one runs last, so with the 1-minute default the per-route directive is effectively overridden; write deadlines also persist across keep-alive requests when WriteTimeout is 0. Hijack clears deadlines, good.",
+    "maintainability": "Single IdleDeadline type shared by reader/writer and by server and handler avoids duplication; Caddyfile parse blocks mirror existing repetition; interaction between server and route wrappers is an undocumented coupling."
+  },
+  "flags": []
+}

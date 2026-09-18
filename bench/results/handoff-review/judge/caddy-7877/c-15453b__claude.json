@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-15453b",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:43:34+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "84334c9a65aa744b5e272b4722fc8144a6ef7be8f4055a0e5edc1839ed1956ff",
+  "wall_s": 46.9,
+  "cost_usd": 0.34762750000000003,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Refactors trimPathPrefix into a shared matchPathPrefix helper in the same style; keeps existing comments, naming and error-comment conventions of the file.",
+    "edge_cases": "Handles decoded pattern vs %xx path, literal % in pattern, case-insensitive hex, empty suffix, no-match, and avoids aligning a match inside an escape by skipping whole valid %xx sequences.",
+    "scope": "Only suffix path changed; prefix behaviour preserved via delegation; removal of the now-unused reverse helper is warranted cleanup, nothing else touched.",
+    "readability": "Clear names and helpful comments; the scan loop with manual advance, break-on-short and 3x length bound is a little dense but each step is explained.",
+    "robustness": "All slice accesses are bounds-guarded; invalid escapes fall back to single-byte advance; no panics or new failure modes; changePath still syncs Path and RawPath.",
+    "maintainability": "Prefix and suffix now share one matcher so rule changes apply to both; no duplication; O(n·m) scan is fine for URL paths."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-80ef68",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:07:31+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ca50f171859d8d42ad07d55cf918159852f04a6d943500753d2d6f3df1f488ed",
+  "wall_s": 51.9,
+  "cost_usd": 0.81787725,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (closeResponse, errUnknown, CheckResponse, idempotency key, 409-then-find), but only 401 is classified via httperr while 403 is deliberately left as a raw ResponseError, diverging from the stated v6 convention.",
+    "edge_cases": "Handles int32 archive-size overflow, missing upload URL, aborted/completed runs during polling, ctx cancellation, empty push URL, PushRefID precedence; unknown abort reasons get code 0 rather than null, and empty test-run token is sent silently.",
+    "scope": "Stays on the local-execution path: v1 CreateTestRun kept for --out cloud, thresholds dropped at end of test as required, no unrelated edits; clientcfg is a tiny expected helper package.",
+    "readability": "Clear step-numbered orchestration and good doc comments; buildConfigFromRuntimeConfig repeats the same parse-duration block four times and expv2.Start has an awkward shadowed err plus a variable named url.",
+    "robustness": "Retry client replays bodies via GetBody, respects ctx during backoff, bounded notify timeout; whole archive is buffered in memory and the Do loop's trailing return nil is unreachable dead code.",
+    "maintainability": "provisioning.Client builds its own SDK client, a v6 client and an uploader (three clients) instead of reusing v6; output constructs that whole client just to notify; override setters on expv2 are a reasonable seam but add hidden ordering (must be before Start)."
+  },
+  "flags": []
+}

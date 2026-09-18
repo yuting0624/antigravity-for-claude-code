@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-c121ac",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:48:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c3f1c6fed61e28c5f3a0b49dc448c824d9085ecda57fc2261a4921f4bd16d945",
+  "wall_s": 44.8,
+  "cost_usd": 0.055228,
+  "usage": {
+    "input": 24230,
+    "output": 564,
+    "thinking": 402,
+    "cache_read": 0,
+    "total": 24794
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The candidate provided an empty diff, so it scores the minimum on consistency.",
+    "edge_cases": "The candidate provided an empty diff, failing to handle any edge cases.",
+    "scope": "The candidate provided an empty diff, completely failing to address the requirements.",
+    "readability": "The candidate provided an empty diff, so there is no code to read.",
+    "robustness": "The candidate provided an empty diff, so robustness cannot be evaluated and scores the minimum.",
+    "maintainability": "The candidate provided an empty diff, so maintainability cannot be evaluated and scores the minimum."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

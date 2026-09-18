@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-bfc8e4",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:08:07+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b30e42856bbf6af22d11a52beea4780fa9d83d1dc55bba005f39ae466666477d",
+  "wall_s": 111.6,
+  "cost_usd": 0.80217525,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Special-cases 'order' in evaluateGlobalOptionsBlock exactly like servers/log/default_bind; error strings, slices idioms, and field-doc style match the package; gofmt realignment done.",
+    "edge_cases": "Handles nil options map, nil per-adaptation order fallback, non-[]string existing value, accumulation of repeated order lines, invalid order erroring with no residue, and shared-map concurrency via maps.Clone.",
+    "scope": "Core change is focused; maps.Clone of options and the RegisterDirectiveOrder rewrite go slightly beyond minimum but are justified by the shared-map/default-order requirements. Unexported sortRoutes/buildSubroute signatures changed.",
+    "readability": "Clear names and explicit threading of order; a few comments are wordier than needed but explain non-obvious intent well.",
+    "robustness": "No global writes outside init-time RegisterDirectiveOrder; parseOptOrder clones before DeleteFunc/Insert so default and shared slices are never mutated; no locks needed. slices.Insert(-1) path is unreachable given invariants.",
+    "maintainability": "Explicit parameter passing avoids hidden coupling, but order is now plumbed through three functions plus a Helper field, and the directiveOrder fallback is duplicated in parseOptOrder and buildSubroute."
+  },
+  "flags": []
+}

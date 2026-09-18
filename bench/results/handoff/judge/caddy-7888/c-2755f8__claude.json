@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-2755f8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:04:11+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "550f95521d4a1c25f6c26944ac0b83974f892bee509944047927654e83853acf",
+  "wall_s": 35.2,
+  "cost_usd": 0.25799774999999997,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: reuses cookieFilterAction, same Validate/CaddyModule/UnmarshalCaddyfile shape, registered beside cookie, interface assertions added in all three var blocks.",
+    "edge_cases": "Unparseable lines pass through, exact name match, quoting preserved, delete drops the element, suffix kept verbatim; whitespace-only values would duplicate padding (minor) and defensive name re-check silently no-ops.",
+    "scope": "Only the requested filter plus registration; the leading/trailing whitespace preservation and extra unicode import go slightly beyond the ask but stay on-topic.",
+    "readability": "Clear names and structure; the whitespace bookkeeping in replaceSetCookieValue is more involved than needed and a couple of comments over-explain (e.g. citing the empty-hash prefix).",
+    "robustness": "All slice indices are bounds-checked, no panics on malformed input, non-array fields returned untouched; stateless so no concurrency concerns.",
+    "maintainability": "Reuses hash() and cookieFilterAction; Caddyfile unmarshalling is duplicated verbatim from CookieFilter, which matches existing pattern but adds a second copy to keep in sync."
+  },
+  "flags": []
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-8458da",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:37:28+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2a333cc728cfa3cdee5fb5caaee8dd321f0211c9c7a3fcc28982eef297dd2fab",
+  "wall_s": 6.6,
+  "cost_usd": 0.111464,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; nothing to compare against codebase conventions.",
+    "edge_cases": "No code; percent-encoded suffix cases, escaped patterns and case-insensitive hex remain unhandled.",
+    "scope": "Nothing delivered; the required suffix-stripping fix is entirely absent.",
+    "readability": "No code to read.",
+    "robustness": "No code; existing bug persists and the failing test is not addressed.",
+    "maintainability": "No code to maintain or extend."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

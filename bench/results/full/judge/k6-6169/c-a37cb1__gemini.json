@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-a37cb1",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:13:32+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "3ce9cb5cd353334d461a2024e757214d1de1bbe300657295523e835c3cfef702",
+  "wall_s": 32.1,
+  "cost_usd": 0.141588,
+  "usage": {
+    "input": 56904,
+    "output": 2315,
+    "thinking": 2083,
+    "cache_read": 0,
+    "total": 59219
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Flawlessly matches existing API client patterns, error classification, and configuration structure.",
+    "edge_cases": "Properly handles 409 conflicts, error code mapping, missing presigned URLs, and HTTP retries with body rewind.",
+    "scope": "Implements all requested provisioning flow requirements without touching unrelated components.",
+    "readability": "Clean separation of orchestration logic, API calls, and cloud output integration with well-named functions.",
+    "robustness": "Solid HTTP request retry mechanics, robust nil checks, and safe initialization of provisioning mode.",
+    "maintainability": "Abstracts the new dependencies in the output package cleanly through interfaces and provides a strong fake server for tests."
+  },
+  "flags": []
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-fa157d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:03:54+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2e9009fd45de3a12a1dc8988d8df6f127b0990a864784e9f6150b7aa9c5ea7c4",
+  "wall_s": 43.2,
+  "cost_usd": 0.7057582499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "License headers, interface guards, RegisterHandlerDirective and standard/imports registration all match siblings; per-route Caddyfile uses time.ParseDuration while server options use caddy.ParseDuration.",
+    "edge_cases": "Nil body, zero timeouts, hard-deadline cap and short ReadFrom all handled; but MinRate credit (transferred*time.Second) overflows int64 past ~9 GB and hard deadline is anchored at handler start rather than connection start.",
+    "scope": "Deletes request_body's read_timeout/write_timeout (JSON and Caddyfile), a breaking change nobody asked for; per-route Caddyfile key is max_write_chunk, not the required write_max_chunk; adds unrequested rate args to server options.",
+    "readability": "Clear structure and names; IdleDeadline docs are thorough though comments lean long with nginx/Apache asides.",
+    "robustness": "Unsupported deadlines degrade gracefully with a one-time debug log; reader/writer have separate state so full-duplex is safe; overflow in rate math and no validation of negative rates/chunk sizes.",
+    "maintainability": "Shared IdleDeadline/IdleTimeoutReader/Writer reused by server and handler avoids duplication; Caddyfile parsing for the rate pair is copy-pasted four times."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

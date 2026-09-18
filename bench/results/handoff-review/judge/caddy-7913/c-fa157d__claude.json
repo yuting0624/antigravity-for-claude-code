@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-fa157d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T11:05:38+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2e9009fd45de3a12a1dc8988d8df6f127b0990a864784e9f6150b7aa9c5ea7c4",
+  "wall_s": 147.8,
+  "cost_usd": 1.1239157499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 2,
+    "maintainability": 4
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "License headers, module registration, interface guards, humanize sizes and Caddyfile parsing all match siblings; handler uses time.ParseDuration/time.Duration like requestbody rather than caddy.Duration.",
+    "edge_cases": "MinRate credit (transferred*1e9) overflows past ~9 GB; per-route subdirective is max_write_chunk, not the required write_max_chunk; HTTP/1 keep-alive leaves a stale write deadline that can break a later no-body response; hard cap anchored at handler start.",
+    "scope": "Gratuitously removes request_body read_timeout/write_timeout (Caddyfile and JSON), breaking existing configs; adds unrequested rate args to server Caddyfile options.",
+    "readability": "Clear structure and names; IdleDeadline.next is easy to follow; comments are long and cite nginx/Apache but explain non-obvious chunking rationale.",
+    "robustness": "Default-on write deadline persists across keep-alive requests with WriteTimeout=0; exported reader/writer panic on nil Ctrl/Logger; unsupported deadlines are handled gracefully; chunked Write/ReadFrom loops terminate correctly.",
+    "maintainability": "Single IdleDeadline shared by server and handler avoids duplication; defaults centralized in app.go; handler/server Caddyfile parsing duplicated but small."
+  },
+  "flags": [
+    "unrelated_changes",
+    "incomplete"
+  ]
+}

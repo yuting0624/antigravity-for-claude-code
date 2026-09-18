@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-a22215",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:25:41+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c572859c05004df87a6245b97a3bbce220364298b9c7fc3ebdca671598cda646",
+  "wall_s": 32.7,
+  "cost_usd": 0.54682275,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses cmdutil.FlagErrorf/MutuallyExclusive, heredoc help, CommandModifier variadics mirroring Pull; shared package placement matches request.",
+    "edge_cases": "Blank path, --list exclusion, requires --checkout, abs-path normalisation, symlink/non-dir rejection, reuse-existing-worktree, and validation before the linked branch is created are all handled.",
+    "scope": "Shared move is required, but also swaps pr checkout's localBranchExists for HasLocalBranch in non-worktree paths and adds a WorktreeCheckoutCommands builder that only one command uses.",
+    "readability": "Clear names and useful comments; checkoutBranchInWorktree branches are easy to follow; filepath.Abs is computed twice (RunE and ResolveWorktreeTarget).",
+    "robustness": "Errors propagate; ff-only pull failure downgraded to a warning like the existing flow; git-driven path resolution is best-effort by design.",
+    "maintainability": "Same reuse/exists decision tree lives twice: shared.WorktreeCheckoutCommands for pr checkout and imperative checkoutBranchInWorktree for develop; tuple-returning builder API is awkward to extend."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-41fbd2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:51:21+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7a6454d1ca3df34be6f94f11f03ab09ad7001ff265e7a81d245aacd30a5fa3d9",
+  "wall_s": 55.2,
+  "cost_usd": 0.5260562499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Uses the same stdlib idioms (slices.Clone/Insert, maps.Clone) and comment style as the surrounding code; Helper field threading matches how options/warnings are already carried.",
+    "edge_cases": "Nil options map, invalid order (error, no global write), chained order options via existingVal, and plugin init registration all handled; silently dropping a caller-supplied 'order' key is a debatable choice.",
+    "scope": "Focused on the order leak, but cloning the whole options map in Setup is a broader behavioural change than strictly required (though it does satisfy the reuse requirement).",
+    "readability": "Clear names (dirOrder) and explanatory comments, if a little verbose; the double delete of options[\"order\"] needs the comment to make sense.",
+    "robustness": "No shared mutable state after init: global order is only read, per-adaptation order is a fresh clone, no locks needed, no new panic paths; default order can no longer be aliased by RegisterDirectiveOrder.",
+    "maintainability": "Explicit parameter threading through buildSubroute/serversFromPairings/extractNamedRoutes is easy to follow, but the nil-fallback to the global in buildSubroute creates a second, implicit path future code could rely on."
+  },
+  "flags": []
+}

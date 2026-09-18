@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-5a3957",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:35:10+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "26b3cf4f961002bc176a08f167693f228891142d600596c92b4805950fb811e2",
+  "wall_s": 28.2,
+  "cost_usd": 0.163918,
+  "usage": {
+    "input": 70523,
+    "output": 1906,
+    "thinking": 1669,
+    "cache_read": 0,
+    "total": 72429
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Code style, naming, and error handling align perfectly with the surrounding CLI conventions.",
+    "edge_cases": "Meticulously handles rate limits, symlinks, API errors, and diverse markdown corner cases like code blocks.",
+    "scope": "Strictly implements the required attachment feature without any unrelated refactoring or scope creep.",
+    "readability": "Generally very clear, though the manual byte-level markdown link parsing in references.go is somewhat dense.",
+    "robustness": "Cleanly handles API errors, correctly closes file handles, and prevents partial uploads on early failures.",
+    "maintainability": "The custom markdown tokenization for in-place replacement is complex and may require careful maintenance if edge cases arise."
+  },
+  "flags": []
+}

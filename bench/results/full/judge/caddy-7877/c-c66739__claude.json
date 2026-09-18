@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c66739",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:33:23+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "87053f0c5b93a3cd3a75af42dd630525f715db8d5f28f966e566dbf250b91692",
+  "wall_s": 50.0,
+  "cost_usd": 0.30321875,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix structure, naming, EqualFold use and error-return comment; fits surrounding idioms.",
+    "edge_cases": "Covers all required cases (decoded match, literal escape in pattern, case-insensitive hex, no-match untouched), but backward detection via escapedPath[i-3]=='%' misreads '%25ab' as '%5a' triplet, so paths with a literal-percent escape followed by hex-like chars mis-match.",
+    "scope": "Only touches suffix stripping and removes the now-dead reverse helper; prefix, query and other ops untouched.",
+    "readability": "Clear index-walking loop with explanatory comments; minor copied typo ('to consistency') and slightly dense escape-detection conditions.",
+    "robustness": "Bounds are checked before every slice, unescape errors return the path unchanged, no panics; the ambiguity above degrades to a silent non-strip rather than a crash.",
+    "maintainability": "Dedicated function parallel to trimPathPrefix is easy to follow; some logic duplication between the two but no hidden coupling."
+  },
+  "flags": []
+}

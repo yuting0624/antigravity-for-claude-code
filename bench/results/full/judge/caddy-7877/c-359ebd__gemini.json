@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-359ebd",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:19:13+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "34fa87e143d4ce7c5928322444b3b986b450e4ba53da268a241cc1d33f4a8d90",
+  "wall_s": 92.4,
+  "cost_usd": 0.227412,
+  "usage": {
+    "input": 28116,
+    "output": 14265,
+    "thinking": 14068,
+    "cache_read": 0,
+    "total": 42381
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Follows package conventions and cleanly replaces the broken reverse approach, though duplicates prefix logic in reverse.",
+    "edge_cases": "Fails on multi-byte UTF-8 due to strings.EqualFold yielding true for any invalid bytes, and makes regular characters case-insensitive.",
+    "scope": "Addresses the percent-encoding requirements and removes dead code, but alters case-sensitivity semantics contrary to instructions.",
+    "readability": "Clear loop structure, well-named variables, and helpful comments explaining the backward traversal logic.",
+    "robustness": "Safely handles out-of-bounds access and gracefully aborts on invalid URL escapes without panicking.",
+    "maintainability": "The custom backwards byte-by-byte state machine is inherently fragile and harder to maintain than a forward-parsing approach."
+  },
+  "flags": []
+}

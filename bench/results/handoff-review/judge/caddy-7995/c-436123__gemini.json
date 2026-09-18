@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-436123",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 2,
+  "judged_at": "2026-09-18T14:32:35+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 45.0,
+  "cost_usd": 0.118378,
+  "usage": {
+    "input": 38051,
+    "output": 3523,
+    "thinking": 3291,
+    "cache_read": 0,
+    "total": 41574
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Excellent use of Go 1.21 slices and maps packages, matching the codebase's idioms perfectly.",
+    "edge_cases": "Properly handles nil options maps and safely drops inherited order state, while leaving global state intact on failures.",
+    "scope": "Addresses all requirements precisely, fixing the race conditions and state leaks without unrelated changes.",
+    "readability": "The changes are straightforward, well-structured, and include clear comments explaining the state lifecycle.",
+    "robustness": "Flawlessly resolves the shared state mutation; defensive map and slice cloning ensures concurrency safety.",
+    "maintainability": "Greatly improves the design by decoupling per-adaptation state from global plugin state."
+  },
+  "flags": []
+}

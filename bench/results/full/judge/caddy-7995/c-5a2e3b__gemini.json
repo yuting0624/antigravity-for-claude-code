@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-5a2e3b",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:55:13+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "960a281f1571da4d4dd29bb6fc2c3236d464994bcede2c8dbd6cfaa367246c28",
+  "wall_s": 120.1,
+  "cost_usd": 0.176584,
+  "usage": {
+    "input": 38024,
+    "output": 8378,
+    "thinking": 8142,
+    "cache_read": 0,
+    "total": 46402
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Idiomatic use of Go 1.21 slices and maps packages perfectly matches the codebase style.",
+    "edge_cases": "Flawlessly handles multiple 'order' options, nil options maps, and accumulates changes without side effects.",
+    "scope": "Strictly adheres to the requirement with no unrelated changes or gratuitous refactors.",
+    "readability": "Clear comments and clean abstractions like directiveOrderFor make the lifecycle of the order state obvious.",
+    "robustness": "Eliminates data races and cross-adaptation corruption through disciplined cloning and local scoping.",
+    "maintainability": "Decouples adaptation state from the process-wide order, making parallel testing trivial and future-proofing the API."
+  },
+  "flags": []
+}

@@ -1,0 +1,2974 @@
+diff --git a/api/queries_issue.go b/api/queries_issue.go
+index a13bb48cc..f9dfb96fd 100644
+--- a/api/queries_issue.go
++++ b/api/queries_issue.go
+@@ -48,6 +48,7 @@ type Issue struct {
+ 	Milestone        *Milestone
+ 	ReactionGroups   ReactionGroups
+ 	IsPinned         bool
++	Repository       *PRRepository
+ 
+ 	IssueType        *IssueType
+ 	Parent           *LinkedIssue
+@@ -481,6 +482,25 @@ func (i Issue) CurrentUserComments() []Comment {
+ 	return i.Comments.CurrentUserComments()
+ }
+ 
++// RepositoryDatabaseID returns the numeric REST id of the repository the issue
++// belongs to, or zero when the `repository` field was not requested.
++func (i Issue) RepositoryDatabaseID() int64 {
++	if i.Repository == nil {
++		return 0
++	}
++	return i.Repository.DatabaseID
++}
++
++// RepositoryViewerPermission returns the viewer's role on the repository the
++// issue belongs to, or an empty string when the `repository` field was not
++// requested.
++func (i Issue) RepositoryViewerPermission() string {
++	if i.Repository == nil {
++		return ""
++	}
++	return i.Repository.ViewerPermission
++}
++
+ // UpdateIssueIssueType sets or clears the issue type on an issue. Pass an
+ // empty issueTypeID to clear the issue type.
+ func UpdateIssueIssueType(client *Client, hostname string, issueID string, issueTypeID string) error {
+diff --git a/api/queries_pr.go b/api/queries_pr.go
+index 10994958a..0a94ce2ce 100644
+--- a/api/queries_pr.go
++++ b/api/queries_pr.go
+@@ -251,10 +251,15 @@ type Workflow struct {
+ 	Name string `json:"name"`
+ }
+ 
++// PRRepository is the repository selection shared by the `repository` and
++// `headRepository` fields. Only `repository` asks for the last two, so they are
++// omitted when empty to keep them out of `--json headRepository` output.
+ type PRRepository struct {
+-	ID            string `json:"id"`
+-	Name          string `json:"name"`
+-	NameWithOwner string `json:"nameWithOwner"`
++	ID               string `json:"id"`
++	Name             string `json:"name"`
++	NameWithOwner    string `json:"nameWithOwner"`
++	DatabaseID       int64  `json:"databaseId,omitempty"`
++	ViewerPermission string `json:"viewerPermission,omitempty"`
+ }
+ 
+ type AutoMergeRequest struct {
+@@ -318,6 +323,25 @@ func (pr PullRequest) CurrentUserComments() []Comment {
+ 	return pr.Comments.CurrentUserComments()
+ }
+ 
++// RepositoryDatabaseID returns the numeric REST id of the repository the pull
++// request belongs to, or zero when the `repository` field was not requested.
++func (pr PullRequest) RepositoryDatabaseID() int64 {
++	if pr.Repository == nil {
++		return 0
++	}
++	return pr.Repository.DatabaseID
++}
++
++// RepositoryViewerPermission returns the viewer's role on the repository the
++// pull request belongs to, or an empty string when the `repository` field was
++// not requested.
++func (pr PullRequest) RepositoryViewerPermission() string {
++	if pr.Repository == nil {
++		return ""
++	}
++	return pr.Repository.ViewerPermission
++}
++
+ func (pr PullRequest) IsOpen() bool {
+ 	return pr.State == "OPEN"
+ }
+diff --git a/api/queries_repo.go b/api/queries_repo.go
+index 3e0b75648..6a8b74dfe 100644
+--- a/api/queries_repo.go
++++ b/api/queries_repo.go
+@@ -29,6 +29,7 @@ const (
+ // Repository contains information about a GitHub repo
+ type Repository struct {
+ 	ID                       string
++	DatabaseID               int64
+ 	Name                     string
+ 	NameWithOwner            string
+ 	Owner                    RepositoryOwner
+@@ -323,6 +324,7 @@ func IssueRepoInfo(client *Client, repo ghrepo.Interface) (*Repository, error) {
+ 	query IssueRepositoryInfo($owner: String!, $name: String!) {
+ 		repository(owner: $owner, name: $name) {
+ 			id
++			databaseId
+ 			name
+ 			owner { login }
+ 			hasIssuesEnabled
+@@ -360,6 +362,7 @@ func GitHubRepo(client *Client, repo ghrepo.Interface) (*Repository, error) {
+ 	query := `
+ 	fragment repo on Repository {
+ 		id
++		databaseId
+ 		name
+ 		owner { login }
+ 		hasIssuesEnabled
+@@ -498,6 +501,7 @@ func RepoNetwork(client *Client, repos []ghrepo.Interface) (RepoNetworkResult, e
+ 	err := client.GraphQL(hostname, fmt.Sprintf(`
+ 	fragment repo on Repository {
+ 		id
++		databaseId
+ 		name
+ 		owner { login }
+ 		viewerPermission
+diff --git a/api/query_builder.go b/api/query_builder.go
+index d988cdc67..08247c296 100644
+--- a/api/query_builder.go
++++ b/api/query_builder.go
+@@ -394,6 +394,10 @@ func IssueGraphQL(fields []string) string {
+ 			q = append(q, `headRepositoryOwner{id,login,...on User{name}}`)
+ 		case "headRepository":
+ 			q = append(q, `headRepository{id,name,nameWithOwner}`)
++		case "repository":
++			// The two extra fields are what the attachment upload needs; the
++			// headRepository selection above shares the Go type but not them.
++			q = append(q, `repository{id,name,nameWithOwner,databaseId,viewerPermission}`)
+ 		case "assignees":
+ 			q = append(q, `assignees(first:100){nodes{id,login,name,databaseId},totalCount}`)
+ 		case "assignedActors":
+diff --git a/internal/attachments/attach.go b/internal/attachments/attach.go
+new file mode 100644
+index 000000000..d9f918014
+--- /dev/null
++++ b/internal/attachments/attach.go
+@@ -0,0 +1,78 @@
++package attachments
++
++import (
++	"context"
++	"strings"
++)
++
++// UploadAndAttach uploads every asset and returns the body they belong in,
++// along with how many of them made it up.
++//
++// An upload cannot be undone, so the body comes back carrying whatever did
++// upload even when the call fails: a caller that has posted nothing yet should
++// write that body rather than orphan the assets. A body is only worth writing
++// when the count is above zero.
++func (u *Uploader) UploadAndAttach(ctx context.Context, markdown string, assets []UserAsset) (string, int, error) {
++	if len(assets) == 0 {
++		return markdown, 0, nil
++	}
++
++	args := make([]attachmentArg, len(assets))
++	for i, a := range assets {
++		args[i] = attachmentArg{
++			Path:            a.Path(),
++			Alt:             a.getAsset().alt,
++			RendersAsPlayer: a.rendersAsPlayer(),
++		}
++	}
++
++	// Markdown the assets cannot be written into is refused here, before
++	// anything is uploaded and so before anything can be stranded.
++	attachable, err := newAttachableMarkdown(markdown, args)
++	if err != nil {
++		return markdown, 0, err
++	}
++
++	uploaded := 0
++	var uploadErr error
++	for i := range args {
++		assetURL, err := u.upload(ctx, assets[i])
++		if err != nil {
++			// The assets after this one stay on disk, which is recoverable;
++			// pressing on past a failure is not necessarily.
++			uploadErr = err
++			break
++		}
++		attachable.args[i].URL = assetURL
++		uploaded++
++	}
++
++	if uploaded == 0 {
++		return markdown, 0, uploadErr
++	}
++
++	attached, err := attachAssetsToMarkdown(attachable)
++	if err != nil {
++		return markdown, uploaded, err
++	}
++
++	body := attached.Rewritten
++	for _, arg := range attached.ToAppend {
++		body = appendParagraph(body, arg.markdown())
++	}
++	return body, uploaded, uploadErr
++}
++
++// appendParagraph puts addition in a paragraph of its own below markdown. A
++// video only renders as a player when nothing shares its paragraph, so the
++// blank line is load bearing.
++func appendParagraph(markdown, addition string) string {
++	if addition == "" {
++		return markdown
++	}
++	trimmed := strings.TrimRight(markdown, " \t\r\n")
++	if trimmed == "" {
++		return addition
++	}
++	return trimmed + "\n\n" + addition
++}
+diff --git a/internal/attachments/client.go b/internal/attachments/client.go
+new file mode 100644
+index 000000000..b263e58e0
+--- /dev/null
++++ b/internal/attachments/client.go
+@@ -0,0 +1,251 @@
++package attachments
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"os"
++	"slices"
++	"strconv"
++	"strings"
++
++	"github.com/cli/cli/v2/internal/gh"
++	"github.com/cli/cli/v2/internal/ghinstance"
++	ghauth "github.com/cli/go-gh/v2/pkg/auth"
++)
++
++// openFile is a seam for tests: the upload opens the path it was given rather
++// than holding the bytes from validation, because a large video should not sit
++// in memory while the ones before it upload.
++var openFile = func(path string) (io.ReadCloser, error) {
++	return os.Open(path)
++}
++
++// acceptedTokenTypes are the credentials the user-attachments endpoint accepts.
++// A GitHub App token is refused by the server, and a refresh token is not a
++// credential at all, so both are caught here rather than at the endpoint.
++var acceptedTokenTypes = []gh.TokenType{
++	gh.TokenTypeOAuth,
++	gh.TokenTypePersonalAccess,
++	gh.TokenTypeFineGrainedPAT,
++}
++
++// writePermissions are the roles the endpoint accepts. TRIAGE is the highest
++// one it still refuses.
++var writePermissions = []string{"ADMIN", "MAINTAIN", "WRITE"}
++
++// Uploader posts files to a host's user-attachments endpoint on behalf of one
++// repository.
++type Uploader struct {
++	httpClient       *http.Client
++	host             string
++	targetRepository int64
++}
++
++// NewUploader checks everything that can be known before a byte is sent and
++// returns the uploader when all of it holds. An upload cannot be taken back, so
++// anything that would be refused is refused here instead.
++func NewUploader(httpClient *http.Client, tokenType gh.TokenType, host string, targetRepository int64, viewerPermission string) (*Uploader, error) {
++	if err := checkHost(host); err != nil {
++		return nil, err
++	}
++	if !slices.Contains(acceptedTokenTypes, tokenType) {
++		return nil, errors.New("unsupported authentication type")
++	}
++	switch {
++	case viewerPermission == "":
++		// Distinct from too low a permission: this one means the command did
++		// not ask for the field, which the user cannot do anything about.
++		return nil, errors.New("could not determine your permission on the repository to attach files")
++	case !slices.Contains(writePermissions, strings.ToUpper(viewerPermission)):
++		return nil, errNoWriteAccess
++	}
++	if targetRepository <= 0 {
++		return nil, errors.New("could not determine which repository to attach files to")
++	}
++
++	return &Uploader{
++		httpClient:       httpClient,
++		host:             host,
++		targetRepository: targetRepository,
++	}, nil
++}
++
++var errNoWriteAccess = errors.New("attaching files requires write access to the repository")
++
++// checkHost reports whether host serves the user-attachments endpoint at all.
++func checkHost(host string) error {
++	if ghauth.IsEnterprise(host) {
++		return errors.New("attaching files is not supported on GitHub Enterprise Server")
++	}
++	return nil
++}
++
++// upload sends one asset and returns the URL the server gave it. It never
++// retries: the server may have accepted a request whose response was lost, and
++// a second copy of an asset cannot be deleted.
++func (u *Uploader) upload(ctx context.Context, a UserAsset) (string, error) {
++	as := a.getAsset()
++
++	body, err := openFile(as.path)
++	if err != nil {
++		return "", unexpectedUploadError(as.path, 0, err)
++	}
++	defer body.Close()
++
++	query := url.Values{}
++	query.Set("repository_id", strconv.FormatInt(u.targetRepository, 10))
++	query.Set("name", as.name())
++	query.Set("content_type", as.contentType)
++	requestURL := ghinstance.UserAssetUploadPrefix(u.host) + "user-attachments/assets?" + query.Encode()
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, body)
++	if err != nil {
++		return "", unexpectedUploadError(as.path, 0, err)
++	}
++	req.ContentLength = as.info.Size()
++	req.Header.Set("Content-Type", "application/octet-stream")
++	req.Header.Set("Accept", "application/vnd.github+json")
++
++	resp, err := u.httpClient.Do(req)
++	if err != nil {
++		return "", unexpectedUploadError(as.path, 0, err)
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode > 299 {
++		return "", responseUploadError(as.path, resp)
++	}
++
++	var result struct {
++		URL string `json:"url"`
++	}
++	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
++		return "", unexpectedUploadError(as.path, 0, err)
++	}
++	if result.URL == "" {
++		return "", unexpectedUploadError(as.path, 0, errors.New("the server returned no asset URL"))
++	}
++	return result.URL, nil
++}
++
++// uploadError names the file an upload failed for, so that a run attaching
++// several of them can say which one.
++type uploadError struct {
++	Path       string
++	StatusCode int
++
++	reason string
++	// unexpected separates a failure the user can act on from one gh has
++	// nothing useful to say about.
++	unexpected bool
++	err        error
++}
++
++func (e *uploadError) Error() string {
++	verb := "could not upload"
++	if e.unexpected {
++		verb = "failed to upload"
++	}
++	if e.reason == "" {
++		return fmt.Sprintf("%s %s", verb, e.Path)
++	}
++	return fmt.Sprintf("%s %s: %s", verb, e.Path, e.reason)
++}
++
++func (e *uploadError) Unwrap() error { return e.err }
++
++func unexpectedUploadError(path string, statusCode int, err error) *uploadError {
++	return &uploadError{
++		Path:       path,
++		StatusCode: statusCode,
++		reason:     oneLine(err.Error()),
++		unexpected: true,
++		err:        err,
++	}
++}
++
++// uploadErrorResponse is the shape the endpoint reports a refusal in.
++type uploadErrorResponse struct {
++	Message string `json:"message"`
++	Errors  []struct {
++		Resource string `json:"resource"`
++		Field    string `json:"field"`
++		Code     string `json:"code"`
++		Message  string `json:"message"`
++	} `json:"errors"`
++}
++
++// responseUploadError turns a refusal into the shortest thing a user can act
++// on. The server's own words are kept wherever gh cannot say anything better:
++// the size limit for a video, for instance, depends on an account plan gh
++// cannot see.
++func responseUploadError(path string, resp *http.Response) *uploadError {
++	var parsed uploadErrorResponse
++	if b, err := io.ReadAll(resp.Body); err == nil {
++		_ = json.Unmarshal(b, &parsed)
++	}
++
++	switch resp.StatusCode {
++	case http.StatusNotFound:
++		// The endpoint hides a repository the token cannot write to.
++		return &uploadError{Path: path, StatusCode: resp.StatusCode, reason: errNoWriteAccess.Error(), err: errNoWriteAccess}
++	case http.StatusUnprocessableEntity:
++		reasons := make([]string, 0, len(parsed.Errors)+1)
++		if parsed.Message != "" {
++			reasons = append(reasons, parsed.Message)
++		}
++		for _, cause := range parsed.Errors {
++			if stated := statedCause(cause.Resource, cause.Field, cause.Code, cause.Message); stated != "" {
++				reasons = append(reasons, stated)
++			}
++		}
++		return &uploadError{Path: path, StatusCode: resp.StatusCode, reason: oneLine(strings.Join(reasons, "; "))}
++	case http.StatusTooManyRequests:
++		reason := "rate limited; wait and try again"
++		if retryAfter := resp.Header.Get("Retry-After"); retryAfter != "" {
++			if _, err := strconv.Atoi(retryAfter); err == nil {
++				reason = fmt.Sprintf("rate limited; retry after %s seconds", retryAfter)
++			} else {
++				reason = fmt.Sprintf("rate limited; retry after %s", retryAfter)
++			}
++		}
++		return &uploadError{Path: path, StatusCode: resp.StatusCode, reason: reason}
++	}
++
++	message := parsed.Message
++	if message == "" {
++		message = http.StatusText(resp.StatusCode)
++	}
++	return &uploadError{
++		Path:       path,
++		StatusCode: resp.StatusCode,
++		reason:     oneLine(fmt.Sprintf("HTTP %d: %s", resp.StatusCode, message)),
++		unexpected: true,
++	}
++}
++
++// statedCause words one entry of a validation failure, preferring the sentence
++// the server wrote over the code it fell back to.
++func statedCause(resource, field, code, message string) string {
++	if message != "" {
++		return message
++	}
++	if field == "" || code == "" {
++		return ""
++	}
++	if resource == "" {
++		return fmt.Sprintf("%s is %s", field, code)
++	}
++	return fmt.Sprintf("%s.%s is %s", resource, field, code)
++}
++
++// oneLine keeps an error to a single line, because several of them can be
++// reported together.
++func oneLine(s string) string {
++	return strings.Join(strings.Fields(s), " ")
++}
+diff --git a/internal/attachments/flags.go b/internal/attachments/flags.go
+new file mode 100644
+index 000000000..7522d460e
+--- /dev/null
++++ b/internal/attachments/flags.go
+@@ -0,0 +1,126 @@
++package attachments
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"strings"
++
++	"github.com/MakeNowJust/heredoc"
++	"github.com/spf13/cobra"
++	"github.com/spf13/pflag"
++)
++
++const flagName = "attach"
++
++// Flag is the `--attach` flag, which a command adds with AddFlag and then reads
++// with UserAssets once it has decided the flag combination is legal.
++type Flag struct {
++	flag   *pflag.Flag
++	values *[]string
++}
++
++// AddFlag registers `--attach` on cmd and returns a handle on it.
++//
++// It is a string array rather than a string slice because a comma is a legal
++// character in a file name, and a slice would split a path on it.
++func AddFlag(cmd *cobra.Command) *Flag {
++	values := []string{}
++	cmd.Flags().StringArrayVar(&values, flagName, values,
++		"Attach an image or video `file`, in '<file>#<image alt text>' format")
++	return &Flag{flag: cmd.Flags().Lookup(flagName), values: &values}
++}
++
++// Changed reports whether the flag was passed at all, which counts as body
++// input even when no other body flag was given.
++func (f *Flag) Changed() bool {
++	return f != nil && f.flag.Changed
++}
++
++// UserAssets validates every value the flag collected and returns the
++// attachments they name, in the order they were written. Every file is
++// validated before any of them is uploaded, so a bad argument stops the command
++// rather than stranding assets nobody can delete.
++func (f *Flag) UserAssets() ([]UserAsset, error) {
++	if !f.Changed() {
++		return nil, nil
++	}
++
++	var assets []UserAsset
++	for _, value := range *f.values {
++		switch value {
++		case "":
++			return nil, errors.New("cannot attach an empty path; --attach needs a file path")
++		case "-":
++			return nil, errors.New("cannot attach standard input; --attach needs a file path")
++		}
++
++		path, alt := splitPathAndAlt(value)
++		a, err := newAsset(path, alt)
++		if err != nil {
++			return nil, err
++		}
++		// The endpoint gives each upload its own URL, so the same file attached
++		// twice would silently become two assets the body cannot tell apart.
++		for _, existing := range assets {
++			if os.SameFile(existing.getAsset().info, a.getAsset().info) {
++				return nil, fmt.Errorf("%s and %s are the same file; attached files must be unique", existing.Path(), a.Path())
++			}
++		}
++		assets = append(assets, a)
++	}
++	return assets, nil
++}
++
++// splitPathAndAlt separates `<file>#<alt text>` into its two halves.
++//
++// A "#" is legal in a file name, so the split cannot simply be at the first or
++// the last one. The longest prefix that names an existing file wins, and when
++// nothing exists the last "#" is used so that the error names the path the user
++// most likely meant.
++func splitPathAndAlt(value string) (path, alt string) {
++	if exists(value) {
++		return value, ""
++	}
++
++	lastHash := -1
++	for i := len(value) - 1; i >= 0; i-- {
++		if value[i] != '#' {
++			continue
++		}
++		if lastHash < 0 {
++			lastHash = i
++		}
++		if candidate := value[:i]; candidate != "" && exists(candidate) {
++			return candidate, value[i+1:]
++		}
++	}
++
++	if lastHash > 0 {
++		return value[:lastHash], value[lastHash+1:]
++	}
++	return value, ""
++}
++
++func exists(path string) bool {
++	_, err := os.Stat(path)
++	return err == nil
++}
++
++// AttachUsage documents `--attach` for the long help of the commands that take
++// it.
++func AttachUsage() string {
++	return strings.TrimSpace(heredoc.Docf(`
++		The %[1]s--attach%[1]s flag uploads an image or a video and writes it into the body.
++		Pass it once per file, as %[1]s<file>%[1]s or %[1]s<file>#<image alt text>%[1]s. Images may be
++		png, jpg, jpeg, gif, webp or svg and at most %[2]s; videos may be mp4, mov
++		or webm and at most %[3]s.
++
++		Where the file lands depends on the body: a link to or an embed of the file's
++		path is rewritten to the uploaded URL in place, and a file the body never
++		mentions is appended below it.
++
++		Attaching is not supported on GitHub Enterprise Server, and requires write
++		access to the repository.
++	`, "`", megabytes(maxImageBytes), megabytes(maxVideoBytes)))
++}
+diff --git a/internal/attachments/references.go b/internal/attachments/references.go
+new file mode 100644
+index 000000000..7d8026690
+--- /dev/null
++++ b/internal/attachments/references.go
+@@ -0,0 +1,724 @@
++package attachments
++
++import (
++	"fmt"
++	"net/url"
++	"path/filepath"
++	"slices"
++	"strings"
++
++	"github.com/yuin/goldmark"
++	"github.com/yuin/goldmark/ast"
++	"github.com/yuin/goldmark/text"
++)
++
++// markdownParser is the CommonMark parser gh already depends on, with no
++// extensions, so that gh reads a body the way GitHub does.
++var markdownParser = goldmark.New().Parser()
++
++// attachmentArg is one attached file as the rewriter sees it: where the author
++// wrote it, where it ended up, and how it has to render.
++type attachmentArg struct {
++	Path            string
++	URL             string
++	Alt             string
++	RendersAsPlayer bool
++}
++
++// markdown renders the attachment for appending below a body.
++func (a attachmentArg) markdown() string {
++	if a.RendersAsPlayer {
++		return a.URL
++	}
++	embed := fmt.Sprintf("![%s](%s)", escapeLabel(a.Alt), a.URL)
++	if !isSingleImage(embed, a.URL) {
++		// The alt text escaped its brackets anyway, so drop it rather than let
++		// it take the destination with it.
++		embed = fmt.Sprintf("![](%s)", a.URL)
++	}
++	return embed
++}
++
++// attachableMarkdown is markdown that has been checked against the files being
++// attached to it. It only exists once that check has passed, so that nothing is
++// uploaded for a body the assets cannot be written into.
++type attachableMarkdown struct {
++	markdown string
++	args     []attachmentArg
++}
++
++// attachedMarkdown is the result of writing the uploaded assets into a body.
++type attachedMarkdown struct {
++	// Rewritten is the body with every reference pointed at its asset URL.
++	Rewritten string
++	// ToAppend are the attachments the body never referenced, in the order
++	// they were passed, for the caller to append.
++	ToAppend []attachmentArg
++}
++
++// newAttachableMarkdown refuses markdown that the attached files cannot be
++// written into, and otherwise pairs the two.
++//
++// The only such shape is a video used as a reference-style image: a video only
++// renders as a player when it is a bare URL, and the usage that would have to
++// change lives somewhere other than the definition that carries the path.
++func newAttachableMarkdown(markdown string, args []attachmentArg) (attachableMarkdown, error) {
++	r := newRewriter(markdown, args)
++
++	var offenders []string
++	reported := make([]bool, len(args))
++	for _, u := range r.usages {
++		if u.reference == nil || !u.isImage || u.argIndex < 0 {
++			continue
++		}
++		if !args[u.argIndex].RendersAsPlayer || reported[u.argIndex] {
++			continue
++		}
++		reported[u.argIndex] = true
++		offenders = append(offenders, args[u.argIndex].Path)
++	}
++	if len(offenders) > 0 {
++		return attachableMarkdown{}, fmt.Errorf("cannot embed a video as a reference-style image: %s", strings.Join(offenders, ", "))
++	}
++
++	return attachableMarkdown{markdown: markdown, args: args}, nil
++}
++
++// attachAssetsToMarkdown points every reference to an attached file at the URL
++// that file was uploaded to, and reports the attachments nothing referenced.
++func attachAssetsToMarkdown(v attachableMarkdown) (attachedMarkdown, error) {
++	r := newRewriter(v.markdown, v.args)
++
++	sites := r.inlineSites()
++
++	used := make([]bool, len(v.args))
++	var edits []edit
++	for _, s := range sites {
++		// A video that takes over its whole paragraph swallows anything
++		// written inside it, so a reference it covered is not referenced at
++		// all once it is gone.
++		if swallowed(s, sites) {
++			continue
++		}
++		used[s.argIndex] = true
++		edits = append(edits, s.edits...)
++	}
++
++	// A reference-style usage carries no destination of its own, so rewriting
++	// the definition once carries every usage of that label with it.
++	referenced := make([]bool, len(v.args))
++	for _, u := range r.usages {
++		if u.reference != nil && u.argIndex >= 0 {
++			referenced[u.argIndex] = true
++		}
++	}
++	for _, d := range r.definitions {
++		if d.argIndex < 0 || !referenced[d.argIndex] {
++			// Editing a definition nothing renders would hide the file instead
++			// of appending it.
++			continue
++		}
++		// A definition whose destination could not be located in the source is
++		// left as written, and its file is appended instead.
++		used[d.argIndex] = true
++		if arg := v.args[d.argIndex]; arg.URL != "" {
++			edits = append(edits, edit{d.destination, arg.URL})
++		}
++	}
++
++	var toAppend []attachmentArg
++	for i, arg := range v.args {
++		if !used[i] && arg.URL != "" {
++			toAppend = append(toAppend, arg)
++		}
++	}
++
++	return attachedMarkdown{Rewritten: applyEdits(v.markdown, edits), ToAppend: toAppend}, nil
++}
++
++// isSingleImage reports whether markdown is exactly one image embed pointing at
++// assetURL and nothing else. It is how gh checks that alt text it did not write
++// cannot close the image early and take the destination with it.
++func isSingleImage(markdown, assetURL string) bool {
++	src := []byte(markdown)
++	doc := markdownParser.Parse(text.NewReader(src))
++
++	paragraph, ok := doc.FirstChild().(*ast.Paragraph)
++	if !ok || doc.FirstChild() != doc.LastChild() {
++		return false
++	}
++	image, ok := paragraph.FirstChild().(*ast.Image)
++	if !ok || paragraph.FirstChild() != paragraph.LastChild() {
++		return false
++	}
++	return string(image.Destination) == assetURL
++}
++
++// byteRange is a half-open span of the original markdown.
++type byteRange struct {
++	start int
++	stop  int
++}
++
++func (r byteRange) contains(other byteRange) bool {
++	return r.start <= other.start && other.stop <= r.stop
++}
++
++// edit replaces a span of the original markdown with text.
++type edit struct {
++	byteRange
++	text string
++}
++
++// usage is a link or an image the parser found that points at an attached file.
++type usage struct {
++	node      ast.Node
++	isImage   bool
++	argIndex  int
++	reference *ast.ReferenceLink
++}
++
++// definition is a link reference definition whose destination names an attached
++// file and could be located in the source.
++type definition struct {
++	argIndex    int
++	destination byteRange
++}
++
++// site is one place the rewriter wants to change, as the edits it takes and the
++// span they sit in.
++type site struct {
++	span     byteRange
++	argIndex int
++	edits    []edit
++	// replacesSpan marks a site that overwrites everything in its span, which
++	// discards any site nested inside it.
++	replacesSpan bool
++}
++
++// rewriter holds one parse of a body and what it found in it.
++type rewriter struct {
++	src  []byte
++	args []attachmentArg
++
++	usages      []usage
++	definitions []definition
++	// codeSpans are the byte ranges of inline code, which the scanner steps
++	// over so that a bracket written as code cannot close a label.
++	codeSpans []byteRange
++}
++
++func newRewriter(markdown string, args []attachmentArg) *rewriter {
++	r := &rewriter{src: []byte(markdown), args: args}
++
++	doc := markdownParser.Parse(text.NewReader(r.src))
++
++	var links []ast.Node
++	var defs []*ast.LinkReferenceDefinition
++	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
++		if !entering {
++			return ast.WalkContinue, nil
++		}
++		switch node := n.(type) {
++		case *ast.CodeSpan:
++			if span, ok := childrenRange(node); ok {
++				r.codeSpans = append(r.codeSpans, span)
++			}
++		case *ast.Image, *ast.Link:
++			links = append(links, n)
++		case *ast.LinkReferenceDefinition:
++			defs = append(defs, node)
++		}
++		return ast.WalkContinue, nil
++	})
++
++	for _, n := range links {
++		u := usage{node: n, argIndex: -1}
++		switch node := n.(type) {
++		case *ast.Image:
++			u.isImage = true
++			u.reference = node.Reference
++			u.argIndex = r.match(string(node.Destination))
++		case *ast.Link:
++			u.reference = node.Reference
++			u.argIndex = r.match(string(node.Destination))
++		}
++		r.usages = append(r.usages, u)
++	}
++
++	for _, d := range defs {
++		argIndex := r.match(string(d.Destination))
++		if argIndex < 0 {
++			continue
++		}
++		destination, ok := r.definitionDestination(d)
++		if !ok {
++			continue
++		}
++		r.definitions = append(r.definitions, definition{argIndex: argIndex, destination: destination})
++	}
++
++	return r
++}
++
++// inlineSites turns every inline usage of an attached file into the edits that
++// point it at the asset URL.
++func (r *rewriter) inlineSites() []site {
++	var sites []site
++	for _, u := range r.usages {
++		if u.reference != nil || u.argIndex < 0 {
++			continue
++		}
++		parsed, ok := r.parseInline(u.node.Pos(), u.isImage)
++		if !ok {
++			continue
++		}
++		arg := r.args[u.argIndex]
++		s := site{span: parsed.span, argIndex: u.argIndex}
++
++		switch {
++		case arg.URL == "":
++			// Nothing uploaded for this file, so its reference stays as the
++			// author wrote it.
++		case !arg.RendersAsPlayer || !u.isImage:
++			// An image embed, or a link of any kind, only moves its
++			// destination.
++			s.edits = append(s.edits, edit{parsed.destination, arg.URL})
++		case r.aloneInParagraph(u.node, parsed.span):
++			// Nothing shares the paragraph, so the bare URL renders a player.
++			s.replacesSpan = true
++			s.edits = append(s.edits, edit{parsed.span, arg.URL})
++		default:
++			// A player cannot render here, so the embed degrades to a link
++			// that keeps whatever label the author wrote.
++			s.edits = append(s.edits, r.dropBang(parsed.span.start))
++			if parsed.label.start == parsed.label.stop {
++				s.edits = append(s.edits, edit{parsed.label, escapeLabel(arg.Alt)})
++			}
++			s.edits = append(s.edits, edit{parsed.destination, arg.URL})
++		}
++		sites = append(sites, s)
++	}
++	return sites
++}
++
++// dropBang removes the "!" that makes an embed, escaping the character before
++// it when deleting would let the two re-form an embed of the video.
++func (r *rewriter) dropBang(bang int) edit {
++	if bang > 0 && r.src[bang-1] == '!' && !isEscaped(r.src, bang-1) {
++		return edit{byteRange{bang - 1, bang + 1}, `\!`}
++	}
++	return edit{byteRange{bang, bang + 1}, ""}
++}
++
++func swallowed(s site, sites []site) bool {
++	for _, other := range sites {
++		if !other.replacesSpan || other.span == s.span {
++			continue
++		}
++		if other.span.contains(s.span) {
++			return true
++		}
++	}
++	return false
++}
++
++// inlineParse is where the pieces of an inline link sit in the source.
++type inlineParse struct {
++	span        byteRange
++	label       byteRange
++	destination byteRange
++}
++
++// parseInline reads the link or image that starts at pos. The parser has
++// already decided this is one, so the scan only has to find where its parts
++// end.
++func (r *rewriter) parseInline(pos int, isImage bool) (inlineParse, bool) {
++	var parsed inlineParse
++	if pos < 0 || pos >= len(r.src) {
++		return parsed, false
++	}
++
++	labelOpen := pos
++	if isImage {
++		labelOpen++
++	}
++	if labelOpen >= len(r.src) || r.src[labelOpen] != '[' {
++		return parsed, false
++	}
++
++	labelClose, ok := r.matchBracket(labelOpen)
++	if !ok || labelClose+1 >= len(r.src) || r.src[labelClose+1] != '(' {
++		return parsed, false
++	}
++
++	destination, tailEnd, ok := r.parseTail(labelClose + 1)
++	if !ok {
++		return parsed, false
++	}
++
++	parsed.span = byteRange{pos, tailEnd}
++	parsed.label = byteRange{labelOpen + 1, labelClose}
++	parsed.destination = destination
++	return parsed, true
++}
++
++// matchBracket returns the "]" that closes the "[" at open, stepping over
++// escapes, nested brackets and inline code.
++func (r *rewriter) matchBracket(open int) (int, bool) {
++	depth := 0
++	for i := open; i < len(r.src); {
++		if stop, ok := r.codeSpanEnd(i); ok {
++			i = stop
++			continue
++		}
++		switch r.src[i] {
++		case '\\':
++			i += 2
++			continue
++		case '[':
++			depth++
++		case ']':
++			depth--
++			if depth == 0 {
++				return i, true
++			}
++		}
++		i++
++	}
++	return 0, false
++}
++
++// parseTail reads "(destination "title")" starting at the "(" at open, and
++// returns where the destination sits and where the tail ends.
++func (r *rewriter) parseTail(open int) (byteRange, int, bool) {
++	i := r.skipSpaces(open + 1)
++
++	var destination byteRange
++	if i < len(r.src) && r.src[i] == '<' {
++		stop, ok := r.scanAngleDestination(i)
++		if !ok {
++			return destination, 0, false
++		}
++		destination = byteRange{i, stop}
++		i = stop
++	} else {
++		start := i
++		depth := 0
++	scan:
++		for i < len(r.src) {
++			switch c := r.src[i]; {
++			case c == '\\':
++				i += 2
++				continue
++			case isSpaceByte(c):
++				break scan
++			case c == '(':
++				depth++
++			case c == ')':
++				if depth == 0 {
++					break scan
++				}
++				depth--
++			}
++			i++
++		}
++		if i == start {
++			return destination, 0, false
++		}
++		destination = byteRange{start, i}
++	}
++
++	i = r.skipSpaces(i)
++	if i < len(r.src) && (r.src[i] == '"' || r.src[i] == '\'' || r.src[i] == '(') {
++		stop, ok := r.scanTitle(i)
++		if !ok {
++			return destination, 0, false
++		}
++		i = r.skipSpaces(stop)
++	}
++	if i >= len(r.src) || r.src[i] != ')' {
++		return destination, 0, false
++	}
++	return destination, i + 1, true
++}
++
++// scanAngleDestination returns the index just past the ">" that closes the "<"
++// at open. A destination cannot span a line break.
++func (r *rewriter) scanAngleDestination(open int) (int, bool) {
++	for i := open + 1; i < len(r.src); i++ {
++		switch r.src[i] {
++		case '\\':
++			i++
++		case '\n', '\r':
++			return 0, false
++		case '>':
++			return i + 1, true
++		}
++	}
++	return 0, false
++}
++
++// scanTitle returns the index just past the closing delimiter of the title that
++// starts at open.
++func (r *rewriter) scanTitle(open int) (int, bool) {
++	closer := r.src[open]
++	if closer == '(' {
++		closer = ')'
++	}
++	for i := open + 1; i < len(r.src); i++ {
++		switch r.src[i] {
++		case '\\':
++			i++
++		case closer:
++			return i + 1, true
++		}
++	}
++	return 0, false
++}
++
++// definitionDestination locates the destination of a link reference definition
++// in the source, so that it can be replaced without disturbing its label or
++// title.
++func (r *rewriter) definitionDestination(d *ast.LinkReferenceDefinition) (byteRange, bool) {
++	lines := d.Lines()
++	if lines == nil || lines.Len() == 0 {
++		return byteRange{}, false
++	}
++	start := lines.At(0).Start
++	stop := lines.At(lines.Len() - 1).Stop
++	if start >= len(r.src) || r.src[start] != '[' {
++		return byteRange{}, false
++	}
++
++	labelClose := -1
++	for i := start + 1; i < stop; i++ {
++		if r.src[i] == '\\' {
++			i++
++			continue
++		}
++		if r.src[i] == ']' {
++			labelClose = i
++			break
++		}
++	}
++	if labelClose < 0 || labelClose+1 >= stop || r.src[labelClose+1] != ':' {
++		return byteRange{}, false
++	}
++
++	i := labelClose + 2
++	for i < stop && (r.src[i] == ' ' || r.src[i] == '\t') {
++		i++
++	}
++	if i >= stop {
++		return byteRange{}, false
++	}
++
++	if r.src[i] == '<' {
++		end, ok := r.scanAngleDestination(i)
++		if !ok || end > stop {
++			return byteRange{}, false
++		}
++		return byteRange{i, end}, true
++	}
++
++	begin := i
++	for i < stop && !isSpaceByte(r.src[i]) {
++		i++
++	}
++	if i == begin {
++		// The destination is on a line of its own, and what the block range
++		// holds here is whatever prefixes that line rather than the path.
++		return byteRange{}, false
++	}
++	return byteRange{begin, i}, true
++}
++
++// aloneInParagraph reports whether span is the whole content of the paragraph
++// that holds it. Only a paragraph counts: a heading, a tight list item and a
++// soft-wrapped line all render a bare URL as a plain link rather than a player.
++func (r *rewriter) aloneInParagraph(n ast.Node, span byteRange) bool {
++	block := n.Parent()
++	for block != nil && block.Type() != ast.TypeBlock {
++		block = block.Parent()
++	}
++	if _, ok := block.(*ast.Paragraph); !ok {
++		return false
++	}
++
++	lines := block.Lines()
++	if lines == nil || lines.Len() == 0 {
++		return false
++	}
++	start := lines.At(0).Start
++	stop := lines.At(lines.Len() - 1).Stop
++	for start < stop && isSpaceByte(r.src[start]) {
++		start++
++	}
++	for stop > start && isSpaceByte(r.src[stop-1]) {
++		stop--
++	}
++	return start == span.start && stop == span.stop
++}
++
++func (r *rewriter) skipSpaces(i int) int {
++	for i < len(r.src) && isSpaceByte(r.src[i]) {
++		i++
++	}
++	return i
++}
++
++// codeSpanEnd reports whether i is the start of an inline code span's content,
++// and where that content ends.
++func (r *rewriter) codeSpanEnd(i int) (int, bool) {
++	for _, span := range r.codeSpans {
++		if span.start == i {
++			return span.stop, true
++		}
++	}
++	return 0, false
++}
++
++// match returns the index of the attachment a markdown destination names, or -1
++// when it names something else.
++func (r *rewriter) match(destination string) int {
++	if !isLocalPath(destination) {
++		return -1
++	}
++	for i, arg := range r.args {
++		for _, candidate := range spellingsOf(destination) {
++			if samePath(candidate, arg.Path) {
++				return i
++			}
++		}
++	}
++	return -1
++}
++
++// isLocalPath reports whether a markdown destination could name a file on this
++// machine at all.
++func isLocalPath(destination string) bool {
++	if destination == "" || strings.HasPrefix(destination, "#") || strings.HasPrefix(destination, "//") {
++		return false
++	}
++	colon := strings.IndexByte(destination, ':')
++	// A single letter before the colon is how Windows names a volume, which is
++	// the one spelling a scheme test has to let through.
++	if colon > 1 && isSchemeName(destination[:colon]) {
++		return false
++	}
++	return true
++}
++
++func isSchemeName(s string) bool {
++	for i := 0; i < len(s); i++ {
++		c := s[i]
++		switch {
++		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
++		case i > 0 && (c >= '0' && c <= '9' || c == '+' || c == '-' || c == '.'):
++		default:
++			return false
++		}
++	}
++	return s != ""
++}
++
++// spellingsOf returns the file names a markdown destination could stand for.
++// Markdown lets a name carrying a space or a parenthesis be written with
++// backslash escapes or percent encoding, and both spell the same file.
++func spellingsOf(destination string) []string {
++	spellings := []string{destination}
++	if unescaped := unescapeBackslashes(destination); unescaped != destination {
++		spellings = append(spellings, unescaped)
++	}
++	for _, s := range append([]string(nil), spellings...) {
++		if decoded, err := url.PathUnescape(s); err == nil && decoded != s {
++			spellings = append(spellings, decoded)
++		}
++	}
++	return spellings
++}
++
++// unescapeBackslashes drops the backslash from every escaped ASCII punctuation
++// character, which is what markdown means by it.
++func unescapeBackslashes(s string) string {
++	if !strings.ContainsRune(s, '\\') {
++		return s
++	}
++	var b strings.Builder
++	b.Grow(len(s))
++	for i := 0; i < len(s); i++ {
++		if s[i] == '\\' && i+1 < len(s) && isASCIIPunct(s[i+1]) {
++			i++
++		}
++		b.WriteByte(s[i])
++	}
++	return b.String()
++}
++
++func samePath(a, b string) bool {
++	if a == b {
++		return true
++	}
++	absA, errA := filepath.Abs(a)
++	absB, errB := filepath.Abs(b)
++	return errA == nil && errB == nil && absA == absB
++}
++
++// applyEdits writes every edit into markdown, latest first so that the earlier
++// offsets stay valid. Overlapping edits cannot both apply, so the outer one
++// wins.
++func applyEdits(markdown string, edits []edit) string {
++	if len(edits) == 0 {
++		return markdown
++	}
++	// Descending by start, and widest first where two share a start.
++	sorted := slices.Clone(edits)
++	slices.SortFunc(sorted, func(a, b edit) int {
++		if a.start != b.start {
++			return b.start - a.start
++		}
++		return b.stop - a.stop
++	})
++
++	out := []byte(markdown)
++	next := len(markdown)
++	for _, e := range sorted {
++		if e.stop > next || e.start > e.stop {
++			continue
++		}
++		out = append(out[:e.start], append([]byte(e.text), out[e.stop:]...)...)
++		next = e.start
++	}
++	return string(out)
++}
++
++// childrenRange is the span from the first to the last child of an inline node
++// that holds text segments.
++func childrenRange(n ast.Node) (byteRange, bool) {
++	first, ok := n.FirstChild().(*ast.Text)
++	if !ok {
++		return byteRange{}, false
++	}
++	last, ok := n.LastChild().(*ast.Text)
++	if !ok {
++		return byteRange{}, false
++	}
++	return byteRange{first.Segment.Start, last.Segment.Stop}, true
++}
++
++func isEscaped(src []byte, i int) bool {
++	backslashes := 0
++	for j := i - 1; j >= 0 && src[j] == '\\'; j-- {
++		backslashes++
++	}
++	return backslashes%2 == 1
++}
++
++func isSpaceByte(c byte) bool {
++	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f'
++}
++
++func isASCIIPunct(c byte) bool {
++	return strings.IndexByte("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~", c) >= 0
++}
+diff --git a/internal/attachments/testing.go b/internal/attachments/testing.go
+new file mode 100644
+index 000000000..586a8c9ce
+--- /dev/null
++++ b/internal/attachments/testing.go
+@@ -0,0 +1,73 @@
++package attachments
++
++import (
++	"net/http"
++	"os"
++	"strconv"
++	"testing"
++
++	"github.com/cli/cli/v2/pkg/httpmock"
++)
++
++// UploadStub is one stubbed response from the user-attachments endpoint, for a
++// test that states its uploads as data.
++type UploadStub struct {
++	// Name is the file name the upload carries, which is what the stub matches
++	// on so that a row can fail one upload and not the others.
++	Name   string
++	Status int
++	Body   string
++}
++
++// StubUpload registers a response for the upload of name to the default host.
++func StubUpload(reg *httpmock.Registry, targetRepository int64, name string, status int, body string) {
++	reg.Register(uploadMatcher("", targetRepository, name), httpmock.StatusStringResponse(status, body))
++}
++
++// StubUploadToHost is StubUpload for a test that also cares which upload host
++// was reached, such as one covering a data residency tenant.
++func StubUploadToHost(t *testing.T, reg *httpmock.Registry, host string, targetRepository int64, name string, status int, body string) {
++	t.Helper()
++	reg.Register(uploadMatcher(host, targetRepository, name), httpmock.StatusStringResponse(status, body))
++}
++
++// uploadMatcher matches the upload of one named file to one repository. An
++// empty host matches any of them.
++func uploadMatcher(host string, targetRepository int64, name string) httpmock.Matcher {
++	rest := httpmock.REST(http.MethodPost, "user-attachments/assets")
++	return func(req *http.Request) bool {
++		if host != "" && req.URL.Host != host {
++			return false
++		}
++		query := req.URL.Query()
++		if query.Get("name") != name {
++			return false
++		}
++		if query.Get("repository_id") != strconv.FormatInt(targetRepository, 10) {
++			return false
++		}
++		return rest(req)
++	}
++}
++
++// NewTestAssets writes the named files into a temporary working directory and
++// resolves them the way `--attach` does, so that a test can state its
++// attachments as file names.
++func NewTestAssets(t *testing.T, names ...string) []UserAsset {
++	t.Helper()
++
++	t.Chdir(t.TempDir())
++
++	assets := make([]UserAsset, 0, len(names))
++	for _, name := range names {
++		if err := os.WriteFile(name, []byte("the bytes"), 0o600); err != nil {
++			t.Fatalf("could not write %s: %v", name, err)
++		}
++		a, err := newAsset("./"+name, "")
++		if err != nil {
++			t.Fatalf("could not resolve %s: %v", name, err)
++		}
++		assets = append(assets, a)
++	}
++	return assets
++}
+diff --git a/internal/attachments/userasset.go b/internal/attachments/userasset.go
+new file mode 100644
+index 000000000..79ac39224
+--- /dev/null
++++ b/internal/attachments/userasset.go
+@@ -0,0 +1,182 @@
++// Package attachments uploads local images and videos to GitHub's
++// user-attachments endpoint and writes the resulting asset URLs into the
++// markdown body of an issue, a pull request or a comment.
++package attachments
++
++import (
++	"errors"
++	"fmt"
++	"io/fs"
++	"os"
++	"path/filepath"
++	"strings"
++)
++
++const (
++	// maxImageBytes and maxVideoBytes are the limits the endpoint applies to a
++	// free account. A paid plan may allow a larger video, but gh cannot see
++	// which plan the account is on, so it refuses at the lower limit and lets
++	// the server have the last word on anything it lets through.
++	maxImageBytes = 10 * 1024 * 1024
++	maxVideoBytes = 100 * 1024 * 1024
++)
++
++// supportedContentTypes maps the extensions the endpoint accepts to the content
++// type it wants for each. The order is the order the error message lists them
++// in, so images come before videos.
++var supportedContentTypes = []struct {
++	extension   string
++	contentType string
++}{
++	{".png", "image/png"},
++	{".jpg", "image/jpeg"},
++	{".jpeg", "image/jpeg"},
++	{".gif", "image/gif"},
++	{".webp", "image/webp"},
++	{".svg", "image/svg+xml"},
++	{".mp4", "video/mp4"},
++	{".mov", "video/quicktime"},
++	{".webm", "video/webm"},
++}
++
++// UserAsset is a local file that has been accepted for upload.
++type UserAsset interface {
++	// Path returns the path the user wrote, which is what errors name.
++	Path() string
++	// markdown renders the asset at the given URL.
++	markdown(assetURL string) string
++	// rendersAsPlayer reports whether the markdown form only plays when it
++	// stands alone in a paragraph.
++	rendersAsPlayer() bool
++	getAsset() *asset
++}
++
++// asset holds what every kind of attachment has in common.
++type asset struct {
++	path        string
++	alt         string
++	contentType string
++	info        fs.FileInfo
++}
++
++func (a *asset) Path() string     { return a.path }
++func (a *asset) getAsset() *asset { return a }
++func (a *asset) name() string     { return filepath.Base(a.path) }
++
++// imageAsset embeds as a markdown image.
++type imageAsset struct {
++	asset
++}
++
++func (a *imageAsset) markdown(assetURL string) string {
++	return fmt.Sprintf("![%s](%s)", escapeLabel(a.alt), assetURL)
++}
++
++func (a *imageAsset) rendersAsPlayer() bool { return false }
++
++// videoAsset embeds as a bare URL, which is the only form GitHub turns into a
++// player.
++type videoAsset struct {
++	asset
++}
++
++func (a *videoAsset) markdown(assetURL string) string {
++	return assetURL
++}
++
++func (a *videoAsset) rendersAsPlayer() bool { return true }
++
++// newAsset validates path and returns the attachment it names. Only metadata is
++// read; the bytes are not opened until the upload.
++func newAsset(path, alt string) (UserAsset, error) {
++	info, err := os.Stat(path)
++	if err != nil {
++		var pathErr *fs.PathError
++		if errors.As(err, &pathErr) {
++			// The syscall gh happened to make is noise: name the path the user
++			// wrote and keep the reason the operating system gave.
++			err = pathErr.Err
++		}
++		return nil, fmt.Errorf("%s: %w", path, err)
++	}
++	if info.IsDir() {
++		return nil, fmt.Errorf("%s is a directory", path)
++	}
++	if !info.Mode().IsRegular() {
++		return nil, fmt.Errorf("%s is not a regular file", path)
++	}
++
++	contentType, ok := contentTypeFor(path)
++	if !ok {
++		return nil, fmt.Errorf("%s is not a supported file type (supported: %s)", path, strings.Join(supportedExtensions(), ", "))
++	}
++	if info.Size() == 0 {
++		return nil, fmt.Errorf("%s is empty", path)
++	}
++
++	base := asset{path: path, alt: alt, contentType: contentType, info: info}
++
++	if strings.HasPrefix(contentType, "video/") {
++		if alt != "" {
++			return nil, errors.New("cannot set alt text on video")
++		}
++		if info.Size() > maxVideoBytes {
++			return nil, fmt.Errorf("%s: videos must be at most %s", path, megabytes(maxVideoBytes))
++		}
++		// A video has no alt attribute to fill, so the file name stands in as
++		// the link text for the shapes that degrade to a link.
++		base.alt = base.name()
++		return &videoAsset{base}, nil
++	}
++
++	if info.Size() > maxImageBytes {
++		return nil, fmt.Errorf("%s: images must be at most %s", path, megabytes(maxImageBytes))
++	}
++	if base.alt == "" {
++		base.alt = defaultImageAlt(base.name())
++	}
++	return &imageAsset{base}, nil
++}
++
++// contentTypeFor reports the content type the endpoint wants for path, and
++// whether the extension is one it accepts at all.
++func contentTypeFor(path string) (string, bool) {
++	extension := strings.ToLower(filepath.Ext(path))
++	for _, supported := range supportedContentTypes {
++		if supported.extension == extension {
++			return supported.contentType, true
++		}
++	}
++	return "", false
++}
++
++func supportedExtensions() []string {
++	extensions := make([]string, 0, len(supportedContentTypes))
++	for _, supported := range supportedContentTypes {
++		extensions = append(extensions, strings.TrimPrefix(supported.extension, "."))
++	}
++	return extensions
++}
++
++func megabytes(bytes int64) string {
++	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
++}
++
++// defaultImageAlt turns a file name into readable alt text: the extension goes,
++// and the dots a screenshot name is full of become spaces.
++func defaultImageAlt(name string) string {
++	return strings.ReplaceAll(strings.TrimSuffix(name, filepath.Ext(name)), ".", " ")
++}
++
++// escapeLabel makes text safe to sit between the brackets of a markdown label,
++// so that alt text cannot close the label early and take over the destination.
++func escapeLabel(text string) string {
++	replacer := strings.NewReplacer(
++		`\`, `\\`,
++		`[`, `\[`,
++		`]`, `\]`,
++		"\r", " ",
++		"\n", " ",
++	)
++	return replacer.Replace(text)
++}
+diff --git a/internal/config/config.go b/internal/config/config.go
+index dadfa284b..ebada9274 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -6,6 +6,7 @@ import (
+ 	"os"
+ 	"path/filepath"
+ 	"slices"
++	"strings"
+ 
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/keyring"
+@@ -265,6 +266,33 @@ func (c *AuthConfig) HasActiveToken(hostname string) bool {
+ 	return token != ""
+ }
+ 
++// tokenTypePrefixes maps the prefix GitHub gives each kind of credential to
++// the kind it names. An unrecognised prefix and no token at all both come out
++// as gh.TokenTypeUnknown, since neither tells us anything more.
++var tokenTypePrefixes = []struct {
++	prefix    string
++	tokenType gh.TokenType
++}{
++	{"gho_", gh.TokenTypeOAuth},
++	{"ghp_", gh.TokenTypePersonalAccess},
++	{"github_pat_", gh.TokenTypeFineGrainedPAT},
++	{"ghu_", gh.TokenTypeUserToServer},
++	{"ghs_", gh.TokenTypeServerToServer},
++	{"ghr_", gh.TokenTypeRefresh},
++}
++
++// ActiveTokenType reports which kind of credential the active token for the
++// given hostname is.
++func (c *AuthConfig) ActiveTokenType(hostname string) gh.TokenType {
++	token, _ := c.ActiveToken(hostname)
++	for _, t := range tokenTypePrefixes {
++		if strings.HasPrefix(token, t.prefix) {
++			return t.tokenType
++		}
++	}
++	return gh.TokenTypeUnknown
++}
++
+ // HasEnvToken returns true when a token has been specified in an
+ // environment variable, else returns false.
+ func (c *AuthConfig) HasEnvToken() bool {
+diff --git a/internal/gh/gh.go b/internal/gh/gh.go
+index 759a931f2..9ad0b4c16 100644
+--- a/internal/gh/gh.go
++++ b/internal/gh/gh.go
+@@ -99,6 +99,28 @@ type Migration interface {
+ 	Do(*ghConfig.Config) error
+ }
+ 
++// TokenType names the kind of credential gh is authenticated with, as far as
++// it can be told apart from the token itself. Some GitHub endpoints accept
++// only a subset of these.
++type TokenType string
++
++const (
++	// TokenTypeOAuth is a token minted by the OAuth flow, i.e. `gh auth login`.
++	TokenTypeOAuth TokenType = "oauth"
++	// TokenTypePersonalAccess is a classic personal access token.
++	TokenTypePersonalAccess TokenType = "personal access token"
++	// TokenTypeFineGrainedPAT is a fine-grained personal access token.
++	TokenTypeFineGrainedPAT TokenType = "fine-grained personal access token"
++	// TokenTypeUserToServer is a GitHub App token acting for a user.
++	TokenTypeUserToServer TokenType = "user-to-server token"
++	// TokenTypeServerToServer is a GitHub App installation token.
++	TokenTypeServerToServer TokenType = "server-to-server token"
++	// TokenTypeRefresh is an OAuth refresh token.
++	TokenTypeRefresh TokenType = "refresh token"
++	// TokenTypeUnknown covers both an unrecognised prefix and no token at all.
++	TokenTypeUnknown TokenType = "unknown"
++)
++
+ // AuthConfig is used for interacting with some persistent configuration for gh,
+ // with knowledge on how to access encrypted storage when necessary.
+ // Behavior is scoped to authentication specific tasks.
+@@ -110,6 +132,9 @@ type AuthConfig interface {
+ 	// general configuration, and finally encrypted storage.
+ 	ActiveToken(hostname string) (token string, source string)
+ 
++	// ActiveTokenType reports which kind of credential the active token for the given hostname is.
++	ActiveTokenType(hostname string) TokenType
++
+ 	// HasEnvToken returns true when a token has been specified in an environment variable, else returns false.
+ 	HasEnvToken() bool
+ 
+diff --git a/internal/ghinstance/host.go b/internal/ghinstance/host.go
+index dfea6dd94..0c5030a0e 100644
+--- a/internal/ghinstance/host.go
++++ b/internal/ghinstance/host.go
+@@ -69,6 +69,16 @@ func RESTPrefix(hostname string) string {
+ 	return fmt.Sprintf("https://api.%s/", hostname)
+ }
+ 
++// UserAssetUploadPrefix returns the base URL of the endpoint that accepts
++// user attachment uploads for the given host.
++func UserAssetUploadPrefix(hostname string) string {
++	prefix := "https://"
++	if strings.EqualFold(hostname, localhost) {
++		prefix = "http://"
++	}
++	return fmt.Sprintf("%suploads.%s/", prefix, hostname)
++}
++
+ func GistPrefix(hostname string) string {
+ 	prefix := "https://"
+ 	if strings.EqualFold(hostname, localhost) {
+diff --git a/pkg/cmd/issue/comment/comment.go b/pkg/cmd/issue/comment/comment.go
+index 9b7791656..868ee6411 100644
+--- a/pkg/cmd/issue/comment/comment.go
++++ b/pkg/cmd/issue/comment/comment.go
+@@ -2,6 +2,7 @@ package comment
+ 
+ import (
+ 	"github.com/MakeNowJust/heredoc"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/pkg/cmd/issue/shared"
+ 	issueShared "github.com/cli/cli/v2/pkg/cmd/issue/shared"
+@@ -14,6 +15,8 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 	opts := &prShared.CommentableOptions{
+ 		IO:                        f.IOStreams,
+ 		HttpClient:                f.HttpClient,
++		Config:                    f.Config,
++		KeepExistingBody:          true,
+ 		EditSurvey:                prShared.CommentableEditSurvey(f.Config, f.IOStreams),
+ 		InteractiveEditSurvey:     prShared.CommentableInteractiveEditSurvey(f.Config, f.IOStreams),
+ 		ConfirmSubmitSurvey:       prShared.CommentableConfirmSubmitSurvey(f.Prompter),
+@@ -27,14 +30,19 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 	cmd := &cobra.Command{
+ 		Use:   "comment {<number> | <url>}",
+ 		Short: "Add a comment to an issue",
+-		Long: heredoc.Doc(`
++		Long: heredoc.Docf(`
+ 			Add a comment to a GitHub issue.
+ 
+ 			Without the body text supplied through flags, the command will interactively
+ 			prompt for the comment text.
+-		`),
++
++			%[1]s
++		`, attachments.AttachUsage()),
+ 		Example: heredoc.Doc(`
+ 			$ gh issue comment 12 --body "Hi from GitHub CLI"
++
++			# Attach a screenshot to a comment
++			$ gh issue comment 12 --body "Here is the bug" --attach ./bug.png#The error dialog
+ 		`),
+ 		Args: cobra.ExactArgs(1),
+ 		PreRunE: func(cmd *cobra.Command, args []string) error {
+@@ -67,6 +75,11 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 				if opts.EditLast || opts.DeleteLast {
+ 					fields = append(fields, "comments")
+ 				}
++				if opts.AttachFlag.Changed() {
++					// Only an upload needs these, and they cost an extra
++					// permission check on the server.
++					fields = append(fields, "repository")
++				}
+ 
+ 				issue, err := issueShared.FindIssueOrPR(httpClient, baseRepo, issueNumber, fields)
+ 				if err != nil {
+@@ -101,6 +114,7 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 	cmd.Flags().BoolVar(&opts.DeleteLast, "delete-last", false, "Delete the last comment of the current user")
+ 	cmd.Flags().BoolVar(&opts.DeleteLastConfirmed, "yes", false, "Skip the delete confirmation prompt when --delete-last is provided")
+ 	cmd.Flags().BoolVar(&opts.CreateIfNone, "create-if-none", false, "Create a new comment if no comments are found. Can be used only with --edit-last")
++	opts.AttachFlag = attachments.AddFlag(cmd)
+ 
+ 	return cmd
+ }
+diff --git a/pkg/cmd/issue/create/create.go b/pkg/cmd/issue/create/create.go
+index 23f332d70..f6f51d259 100644
+--- a/pkg/cmd/issue/create/create.go
++++ b/pkg/cmd/issue/create/create.go
+@@ -1,6 +1,7 @@
+ package create
+ 
+ import (
++	"context"
+ 	"errors"
+ 	"fmt"
+ 	"net/http"
+@@ -8,6 +9,7 @@ import (
+ 
+ 	"github.com/MakeNowJust/heredoc"
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/browser"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+@@ -42,6 +44,7 @@ type CreateOptions struct {
+ 	Title       string
+ 	Body        string
+ 	Interactive bool
++	Assets      []attachments.UserAsset
+ 
+ 	Assignees []string
+ 	Labels    []string
+@@ -68,6 +71,7 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 	}
+ 
+ 	var bodyFile string
++	var attachFlag *attachments.Flag
+ 
+ 	cmd := &cobra.Command{
+ 		Use:   "create",
+@@ -81,9 +85,12 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 			The %[1]s--assignee%[1]s flag supports the following special values:
+ 			- %[1]s@me%[1]s: assign yourself
+ 			- %[1]s@copilot%[1]s: assign Copilot (not supported on GitHub Enterprise Server)
+-		`, "`"),
++
++			%[2]s
++		`, "`", attachments.AttachUsage()),
+ 		Example: heredoc.Doc(`
+ 			$ gh issue create --title "I found a bug" --body "Nothing works"
++			$ gh issue create --title "I found a bug" --body "See below" --attach ./bug.png#The error dialog
+ 			$ gh issue create --label "bug,help wanted"
+ 			$ gh issue create --label bug --label "help wanted"
+ 			$ gh issue create --assignee monalisa,hubot
+@@ -128,6 +135,21 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 				return errors.New("`--template` is not supported when using `--body` or `--body-file`")
+ 			}
+ 
++			// Reported before the files are resolved, so that a combination
++			// that could never work is named rather than whichever file happens
++			// to be missing.
++			if attachFlag.Changed() && opts.WebMode {
++				return cmdutil.FlagErrorf("`--attach` is not supported when using `--web`")
++			}
++
++			// Every file is validated before the command does anything, so that
++			// a file that cannot be attached is reported before any of them is
++			// uploaded.
++			opts.Assets, err = attachFlag.UserAssets()
++			if err != nil {
++				return err
++			}
++
+ 			opts.Interactive = !opts.EditorMode && !(titleProvided && bodyProvided)
+ 
+ 			if opts.Interactive && !opts.IO.CanPrompt() {
+@@ -156,6 +178,7 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 	cmd.Flags().StringVar(&opts.Parent, "parent", "", "Add the new issue as a sub-issue of the specified parent `number` or URL")
+ 	cmd.Flags().StringSliceVar(&opts.BlockedBy, "blocked-by", nil, "Mark the new issue as blocked by these issue `numbers` or URLs")
+ 	cmd.Flags().StringSliceVar(&opts.Blocking, "blocking", nil, "Mark the new issue as blocking these issue `numbers` or URLs")
++	attachFlag = attachments.AddFlag(cmd)
+ 
+ 	return cmd
+ }
+@@ -258,6 +281,16 @@ func createRun(opts *CreateOptions) (err error) {
+ 		return
+ 	}
+ 
++	// Resolved before anything is prompted for, so that a run that could never
++	// upload stops before the surveys.
++	var uploader *attachments.Uploader
++	if len(opts.Assets) > 0 {
++		uploader, err = createUploader(opts, baseRepo, repo)
++		if err != nil {
++			return
++		}
++	}
++
+ 	action := prShared.SubmitAction
+ 	templateNameForSubmit := ""
+ 	var openURL string
+@@ -327,7 +360,9 @@ func createRun(opts *CreateOptions) (err error) {
+ 			return
+ 		}
+ 
+-		allowPreview := !tb.HasMetadata() && prShared.ValidURL(openURL)
++		// The browser cannot carry an attachment, so previewing there would
++		// silently drop it.
++		allowPreview := !tb.HasMetadata() && prShared.ValidURL(openURL) && uploader == nil
+ 		action, err = prShared.ConfirmIssueSubmission(opts.Prompter, allowPreview, repo.ViewerCanTriage())
+ 		if err != nil {
+ 			err = fmt.Errorf("unable to confirm: %w", err)
+@@ -350,7 +385,7 @@ func createRun(opts *CreateOptions) (err error) {
+ 				return
+ 			}
+ 
+-			action, err = prShared.ConfirmIssueSubmission(opts.Prompter, !tb.HasMetadata(), false)
++			action, err = prShared.ConfirmIssueSubmission(opts.Prompter, !tb.HasMetadata() && uploader == nil, false)
+ 			if err != nil {
+ 				return
+ 			}
+@@ -393,9 +428,22 @@ func createRun(opts *CreateOptions) (err error) {
+ 		}
+ 		return opts.Browser.Browse(openURL)
+ 	} else if action == prShared.SubmitAction {
++		body := tb.Body
++		var attachErr error
++		if uploader != nil {
++			var uploaded int
++			body, uploaded, attachErr = uploader.UploadAndAttach(context.Background(), body, opts.Assets)
++			if uploaded == 0 {
++				// Nothing reached the repository, so there is no asset to
++				// strand by not creating the issue.
++				err = attachErr
++				return
++			}
++		}
++
+ 		params := map[string]interface{}{
+ 			"title": tb.Title,
+-			"body":  tb.Body,
++			"body":  body,
+ 		}
+ 		if templateNameForSubmit != "" {
+ 			params["issueTemplate"] = templateNameForSubmit
+@@ -409,19 +457,23 @@ func createRun(opts *CreateOptions) (err error) {
+ 		var newIssue *api.Issue
+ 		newIssue, err = api.IssueCreate(apiClient, repo, params)
+ 		if err != nil {
++			err = errors.Join(attachErr, err)
+ 			return
+ 		}
+ 
+ 		var updateOpts api.DeferredUpdateIssueOptions
+ 		updateOpts, err = deferredUpdateIssueOptions(apiClient, baseRepo, newIssue, opts)
+ 		if err != nil {
++			err = errors.Join(attachErr, err)
+ 			return
+ 		}
+ 		if err = api.DeferredUpdateIssue(apiClient, updateOpts); err != nil {
++			err = errors.Join(attachErr, err)
+ 			return
+ 		}
+ 
+ 		fmt.Fprintln(opts.IO.Out, newIssue.URL)
++		err = attachErr
+ 	} else {
+ 		panic("Unreachable state")
+ 	}
+@@ -429,6 +481,28 @@ func createRun(opts *CreateOptions) (err error) {
+ 	return
+ }
+ 
++// createUploader builds the uploader for the repository the issue is being
++// created in.
++func createUploader(opts *CreateOptions, baseRepo ghrepo.Interface, repo *api.Repository) (*attachments.Uploader, error) {
++	httpClient, err := opts.HttpClient()
++	if err != nil {
++		return nil, err
++	}
++	cfg, err := opts.Config()
++	if err != nil {
++		return nil, err
++	}
++
++	host := baseRepo.RepoHost()
++	return attachments.NewUploader(
++		httpClient,
++		cfg.Authentication().ActiveTokenType(host),
++		host,
++		repo.DatabaseID,
++		repo.ViewerPermission,
++	)
++}
++
+ func generatePreviewURL(apiClient *api.Client, baseRepo ghrepo.Interface, tb prShared.IssueMetadataState, projectsV1Support gh.ProjectsV1Support) (string, error) {
+ 	openURL := ghrepo.GenerateRepoURL(baseRepo, "issues/new")
+ 	return prShared.WithPrAndIssueQueryParams(apiClient, baseRepo, openURL, tb, projectsV1Support)
+diff --git a/pkg/cmd/issue/edit/edit.go b/pkg/cmd/issue/edit/edit.go
+index 5cf52d92e..a11bbe5d5 100644
+--- a/pkg/cmd/issue/edit/edit.go
++++ b/pkg/cmd/issue/edit/edit.go
+@@ -1,6 +1,8 @@
+ package edit
+ 
+ import (
++	"context"
++	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"sort"
+@@ -10,6 +12,7 @@ import (
+ 
+ 	"github.com/MakeNowJust/heredoc"
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+@@ -23,11 +26,14 @@ import (
+ 
+ type EditOptions struct {
+ 	HttpClient func() (*http.Client, error)
++	Config     func() (gh.Config, error)
+ 	IO         *iostreams.IOStreams
+ 	BaseRepo   func() (ghrepo.Interface, error)
+ 	Prompter   prShared.EditPrompter
+ 	Detector   fd.Detector
+ 
++	Assets []attachments.UserAsset
++
+ 	DetermineEditor    func() (string, error)
+ 	FieldsToEditSurvey func(prShared.EditPrompter, *prShared.Editable) error
+ 	EditFieldsSurvey   func(prShared.EditPrompter, *prShared.Editable, string) error
+@@ -54,6 +60,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 	opts := &EditOptions{
+ 		IO:                 f.IOStreams,
+ 		HttpClient:         f.HttpClient,
++		Config:             f.Config,
+ 		DetermineEditor:    func() (string, error) { return cmdutil.DetermineEditor(f.Config) },
+ 		FieldsToEditSurvey: prShared.FieldsToEditSurvey,
+ 		EditFieldsSurvey:   prShared.EditFieldsSurvey,
+@@ -63,6 +70,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 
+ 	var bodyFile string
+ 	var removeMilestone bool
++	var attachFlag *attachments.Flag
+ 
+ 	cmd := &cobra.Command{
+ 		Use:   "edit {<numbers> | <urls>}",
+@@ -77,9 +85,12 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 			the following special values:
+ 			- %[1]s@me%[1]s: assign or unassign yourself
+ 			- %[1]s@copilot%[1]s: assign or unassign Copilot (not supported on GitHub Enterprise Server)
+-		`, "`"),
++
++			%[2]s
++		`, "`", attachments.AttachUsage()),
+ 		Example: heredoc.Doc(`
+ 			$ gh issue edit 23 --title "I found a bug" --body "Nothing works"
++			$ gh issue edit 23 --attach ./screenshot.png#The login screen
+ 			$ gh issue edit 23 --add-label "bug,help wanted" --remove-label "core"
+ 			$ gh issue edit 23 --add-assignee "@me" --remove-assignee monalisa,hubot
+ 			$ gh issue edit 23 --add-assignee "@copilot"
+@@ -197,8 +208,23 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 				len(opts.AddBlockedBy) > 0 || len(opts.RemoveBlockedBy) > 0 ||
+ 				len(opts.AddBlocking) > 0 || len(opts.RemoveBlocking) > 0
+ 
++			// An attachment goes into one body, and this command can edit
++			// several issues at once.
++			if attachFlag.Changed() && len(opts.IssueNumbers) > 1 {
++				return cmdutil.FlagErrorf("`--attach` cannot be used when editing multiple issues")
++			}
++
++			// Every file is validated before the command does anything, so that
++			// a file that cannot be attached is reported before any of them is
++			// uploaded.
++			assets, err := attachFlag.UserAssets()
++			if err != nil {
++				return err
++			}
++			opts.Assets = assets
++
+ 			// Drop into interactive mode only if the user passed no edit flags at all.
+-			if !opts.Editable.Dirty() && !hasDeferredFlags {
++			if !opts.Editable.Dirty() && !hasDeferredFlags && len(opts.Assets) == 0 {
+ 				opts.Interactive = true
+ 			}
+ 
+@@ -243,6 +269,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 	cmd.Flags().StringSliceVar(&opts.RemoveBlockedBy, "remove-blocked-by", nil, "Remove 'blocked by' relationships by issue `number` or URL")
+ 	cmd.Flags().StringSliceVar(&opts.AddBlocking, "add-blocking", nil, "Add 'blocking' relationships by issue `number` or URL")
+ 	cmd.Flags().StringSliceVar(&opts.RemoveBlocking, "remove-blocking", nil, "Remove 'blocking' relationships by issue `number` or URL")
++	attachFlag = attachments.AddFlag(cmd)
+ 
+ 	return cmd
+ }
+@@ -310,6 +337,11 @@ func editRun(opts *EditOptions) error {
+ 	if opts.Parent != "" || opts.RemoveParent {
+ 		lookupFields = append(lookupFields, "parent")
+ 	}
++	if len(opts.Assets) > 0 {
++		// Only an upload needs these, and they cost an extra permission check
++		// on the server.
++		lookupFields = append(lookupFields, "repository")
++	}
+ 
+ 	// Get all specified issues and make sure they are within the same repo.
+ 	issues, err := issueShared.FindIssuesOrPRs(httpClient, baseRepo, opts.IssueNumbers, lookupFields)
+@@ -317,6 +349,17 @@ func editRun(opts *EditOptions) error {
+ 		return err
+ 	}
+ 
++	// Resolved before anything is fetched or prompted for, so that a run that
++	// could never upload stops early. The command refuses `--attach` with more
++	// than one issue, so there is exactly one to attach to here.
++	var uploader *attachments.Uploader
++	if len(opts.Assets) > 0 {
++		uploader, err = issueUploader(opts, issues[0], baseRepo)
++		if err != nil {
++			return err
++		}
++	}
++
+ 	// Fetch editable shared fields once for all issues.
+ 	apiClient := api.NewClientFromHTTP(httpClient)
+ 
+@@ -338,11 +381,6 @@ func editRun(opts *EditOptions) error {
+ 	failedIssueChan := make(chan string, len(issues))
+ 	g := sync.WaitGroup{}
+ 
+-	// Only show progress if we will not prompt below or the survey will break up the progress indicator.
+-	if !opts.Interactive {
+-		opts.IO.StartProgressIndicatorWithLabel(fmt.Sprintf("Updating %d issues", len(issues)))
+-	}
+-
+ 	// Resolve issue type ID up front for non-interactive mode; interactive
+ 	// mode resolves after the survey sets the value (inside the loop).
+ 	var issueTypeID string
+@@ -353,6 +391,34 @@ func editRun(opts *EditOptions) error {
+ 		}
+ 	}
+ 
++	var attachErr error
++	if uploader != nil {
++		// A body the attachment goes into has to be written, so an unedited
++		// body starts from the one the issue already has.
++		body := editable.Body.Value
++		if !editable.Body.Edited {
++			body = issues[0].Body
++		}
++		body, uploaded, err := uploader.UploadAndAttach(context.Background(), body, opts.Assets)
++		attachErr = err
++		if uploaded > 0 {
++			editable.Body.Value = body
++			editable.Body.Edited = true
++		} else {
++			// Nothing reached the repository, so the body is left as it is
++			// rather than written back unchanged.
++			editable.Body.Edited = false
++			if !editable.Dirty() && !hasDeferredEdits(opts) {
++				return attachErr
++			}
++		}
++	}
++
++	// Only show progress if we will not prompt below or the survey will break up the progress indicator.
++	if !opts.Interactive {
++		opts.IO.StartProgressIndicatorWithLabel(fmt.Sprintf("Updating %d issues", len(issues)))
++	}
++
+ 	for _, issue := range issues {
+ 		// Copy variables to capture in the go routine below.
+ 		editable := editable.Clone()
+@@ -451,10 +517,41 @@ func editRun(opts *EditOptions) error {
+ 	}
+ 
+ 	if len(failedIssueErrors) > 0 {
+-		return fmt.Errorf("failed to update %s", text.Pluralize(len(failedIssueErrors), "issue"))
++		return errors.Join(attachErr, fmt.Errorf("failed to update %s", text.Pluralize(len(failedIssueErrors), "issue")))
+ 	}
+ 
+-	return nil
++	return attachErr
++}
++
++// issueUploader builds the uploader for the issue the attachments belong to.
++func issueUploader(opts *EditOptions, issue *api.Issue, baseRepo ghrepo.Interface) (*attachments.Uploader, error) {
++	httpClient, err := opts.HttpClient()
++	if err != nil {
++		return nil, err
++	}
++	cfg, err := opts.Config()
++	if err != nil {
++		return nil, err
++	}
++
++	host := baseRepo.RepoHost()
++	return attachments.NewUploader(
++		httpClient,
++		cfg.Authentication().ActiveTokenType(host),
++		host,
++		issue.RepositoryDatabaseID(),
++		issue.RepositoryViewerPermission(),
++	)
++}
++
++// hasDeferredEdits reports whether the run has work that does not flow through
++// the Editable struct, and so would not show up in Editable.Dirty.
++func hasDeferredEdits(opts *EditOptions) bool {
++	return opts.RemoveIssueType ||
++		opts.Parent != "" || opts.RemoveParent ||
++		len(opts.AddSubIssues) > 0 || len(opts.RemoveSubIssues) > 0 ||
++		len(opts.AddBlockedBy) > 0 || len(opts.RemoveBlockedBy) > 0 ||
++		len(opts.AddBlocking) > 0 || len(opts.RemoveBlocking) > 0
+ }
+ 
+ // lookupIssueTypeID resolves the chosen issue type to its node ID using the
+diff --git a/pkg/cmd/pr/comment/comment.go b/pkg/cmd/pr/comment/comment.go
+index 2eed7d353..ffa5e41cb 100644
+--- a/pkg/cmd/pr/comment/comment.go
++++ b/pkg/cmd/pr/comment/comment.go
+@@ -2,6 +2,7 @@ package comment
+ 
+ import (
+ 	"github.com/MakeNowJust/heredoc"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/pkg/cmd/pr/shared"
+ 	"github.com/cli/cli/v2/pkg/cmdutil"
+@@ -12,6 +13,8 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 	opts := &shared.CommentableOptions{
+ 		IO:                        f.IOStreams,
+ 		HttpClient:                f.HttpClient,
++		Config:                    f.Config,
++		KeepExistingBody:          true,
+ 		EditSurvey:                shared.CommentableEditSurvey(f.Config, f.IOStreams),
+ 		InteractiveEditSurvey:     shared.CommentableInteractiveEditSurvey(f.Config, f.IOStreams),
+ 		ConfirmSubmitSurvey:       shared.CommentableConfirmSubmitSurvey(f.Prompter),
+@@ -25,14 +28,19 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 	cmd := &cobra.Command{
+ 		Use:   "comment [<number> | <url> | <branch>]",
+ 		Short: "Add a comment to a pull request",
+-		Long: heredoc.Doc(`
++		Long: heredoc.Docf(`
+ 			Add a comment to a GitHub pull request.
+ 
+ 			Without the body text supplied through flags, the command will interactively
+ 			prompt for the comment text.
+-		`),
++
++			%[1]s
++		`, attachments.AttachUsage()),
+ 		Example: heredoc.Doc(`
+ 			$ gh pr comment 13 --body "Hi from GitHub CLI"
++
++			# Attach a screenshot to a comment
++			$ gh pr comment 13 --body "Here is the bug" --attach ./bug.png#The error dialog
+ 		`),
+ 		Args: cobra.MaximumNArgs(1),
+ 		PreRunE: func(cmd *cobra.Command, args []string) error {
+@@ -47,6 +55,11 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 			if opts.EditLast || opts.DeleteLast {
+ 				fields = append(fields, "comments")
+ 			}
++			if opts.AttachFlag.Changed() {
++				// Only an upload needs these, and they cost an extra
++				// permission check on the server.
++				fields = append(fields, "repository")
++			}
+ 			finder := shared.NewFinder(f)
+ 			opts.RetrieveCommentable = func() (shared.Commentable, ghrepo.Interface, error) {
+ 				return finder.Find(shared.FindOptions{
+@@ -80,6 +93,7 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 	cmd.Flags().BoolVar(&opts.DeleteLast, "delete-last", false, "Delete the last comment of the current user")
+ 	cmd.Flags().BoolVar(&opts.DeleteLastConfirmed, "yes", false, "Skip the delete confirmation prompt when --delete-last is provided")
+ 	cmd.Flags().BoolVar(&opts.CreateIfNone, "create-if-none", false, "Create a new comment if no comments are found. Can be used only with --edit-last")
++	opts.AttachFlag = attachments.AddFlag(cmd)
+ 
+ 	return cmd
+ }
+diff --git a/pkg/cmd/pr/create/create.go b/pkg/cmd/pr/create/create.go
+index 1a3eba7d8..0036172b5 100644
+--- a/pkg/cmd/pr/create/create.go
++++ b/pkg/cmd/pr/create/create.go
+@@ -17,6 +17,7 @@ import (
+ 	"github.com/cli/cli/v2/api"
+ 	ghContext "github.com/cli/cli/v2/context"
+ 	"github.com/cli/cli/v2/git"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/browser"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+@@ -73,6 +74,8 @@ type CreateOptions struct {
+ 	MaintainerCanModify bool
+ 	Template            string
+ 
++	Assets []attachments.UserAsset
++
+ 	DryRun bool
+ }
+ 
+@@ -205,6 +208,7 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 	}
+ 
+ 	var bodyFile string
++	var attachFlag *attachments.Flag
+ 
+ 	cmd := &cobra.Command{
+ 		Use:   "create",
+@@ -243,9 +247,12 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 
+ 			Adding a pull request to projects requires authorization with the %[1]sproject%[1]s scope.
+ 			To authorize, run %[1]sgh auth refresh -s project%[1]s.
+-		`, "`"),
++
++			%[2]s
++		`, "`", attachments.AttachUsage()),
+ 		Example: heredoc.Doc(`
+ 			$ gh pr create --title "The bug is fixed" --body "Everything works again"
++			$ gh pr create --title "The bug is fixed" --body "See below" --attach ./after.png#After the fix
+ 			$ gh pr create --reviewer monalisa,hubot  --reviewer myorg/team-name
+ 			$ gh pr create --project "Roadmap"
+ 			$ gh pr create --base develop --head monalisa:feature
+@@ -331,6 +338,26 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 				return cmdutil.FlagErrorf("`--dry-run` is not supported when using `--web`")
+ 			}
+ 
++			// Reported before the files are resolved, so that a combination
++			// that could never work is named rather than whichever file happens
++			// to be missing.
++			if attachFlag.Changed() {
++				if opts.WebMode {
++					return cmdutil.FlagErrorf("`--attach` is not supported when using `--web`")
++				}
++				if opts.DryRun {
++					return cmdutil.FlagErrorf("`--attach` is not supported when using `--dry-run`")
++				}
++			}
++
++			// Every file is validated before the command does anything, so that
++			// a file that cannot be attached is reported before any of them is
++			// uploaded.
++			opts.Assets, err = attachFlag.UserAssets()
++			if err != nil {
++				return err
++			}
++
+ 			if runF != nil {
+ 				return runF(opts)
+ 			}
+@@ -359,6 +386,7 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 	fl.StringVar(&opts.RecoverFile, "recover", "", "Recover input from a failed run of create")
+ 	fl.StringVarP(&opts.Template, "template", "T", "", "Template `file` to use as starting body text")
+ 	fl.BoolVar(&opts.DryRun, "dry-run", false, "Print details instead of creating the PR. May still push git changes.")
++	attachFlag = attachments.AddFlag(cmd)
+ 
+ 	_ = cmdutil.RegisterBranchCompletionFlags(f.GitClient, cmd, "base", "head")
+ 
+@@ -434,6 +462,16 @@ func createRun(opts *CreateOptions) error {
+ 		state.ApiActorsSupported = true
+ 	}
+ 
++	// Resolved before anything is prompted for, so that a run that could never
++	// upload stops before the surveys.
++	var uploader *attachments.Uploader
++	if len(opts.Assets) > 0 {
++		uploader, err = createUploader(opts, ctx.PRRefs.BaseRepo())
++		if err != nil {
++			return err
++		}
++	}
++
+ 	var openURL string
+ 
+ 	if opts.WebMode {
+@@ -504,7 +542,7 @@ func createRun(opts *CreateOptions) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		return submitPR(*opts, *ctx, *state, projectsV1Support)
++		return submitPR(*opts, *ctx, *state, projectsV1Support, uploader)
+ 	}
+ 
+ 	if opts.RecoverFile != "" {
+@@ -586,7 +624,9 @@ func createRun(opts *CreateOptions) error {
+ 			return err
+ 		}
+ 
+-		allowPreview := !state.HasMetadata() && shared.ValidURL(openURL) && !opts.DryRun
++		// The browser cannot carry an attachment, so previewing there would
++		// silently drop it.
++		allowPreview := !state.HasMetadata() && shared.ValidURL(openURL) && !opts.DryRun && uploader == nil
+ 		allowMetadata := ctx.PRRefs.BaseRepo().ViewerCanTriage()
+ 		action, err = shared.ConfirmPRSubmission(opts.Prompter, allowPreview, allowMetadata, state.Draft)
+ 		if err != nil {
+@@ -605,7 +645,7 @@ func createRun(opts *CreateOptions) error {
+ 				return err
+ 			}
+ 
+-			action, err = shared.ConfirmPRSubmission(opts.Prompter, !state.HasMetadata() && !opts.DryRun, false, state.Draft)
++			action, err = shared.ConfirmPRSubmission(opts.Prompter, !state.HasMetadata() && !opts.DryRun && uploader == nil, false, state.Draft)
+ 			if err != nil {
+ 				return err
+ 			}
+@@ -629,11 +669,11 @@ func createRun(opts *CreateOptions) error {
+ 
+ 	if action == shared.SubmitDraftAction {
+ 		state.Draft = true
+-		return submitPR(*opts, *ctx, *state, projectsV1Support)
++		return submitPR(*opts, *ctx, *state, projectsV1Support, uploader)
+ 	}
+ 
+ 	if action == shared.SubmitAction {
+-		return submitPR(*opts, *ctx, *state, projectsV1Support)
++		return submitPR(*opts, *ctx, *state, projectsV1Support, uploader)
+ 	}
+ 
+ 	err = errors.New("expected to cancel, preview, or submit")
+@@ -1033,25 +1073,37 @@ func getRemotes(opts *CreateOptions) (ghContext.Remotes, error) {
+ 	return remotes, nil
+ }
+ 
+-func submitPR(opts CreateOptions, ctx CreateContext, state shared.IssueMetadataState, projectV1Support gh.ProjectsV1Support) error {
++func submitPR(opts CreateOptions, ctx CreateContext, state shared.IssueMetadataState, projectV1Support gh.ProjectsV1Support, uploader *attachments.Uploader) error {
+ 	client := ctx.Client
+ 
++	if state.Title == "" {
++		return errors.New("pull request title must not be blank")
++	}
++
++	body := state.Body
++	var attachErr error
++	if uploader != nil {
++		var uploaded int
++		body, uploaded, attachErr = uploader.UploadAndAttach(context.Background(), body, opts.Assets)
++		if uploaded == 0 {
++			// Nothing reached the repository, so there is no asset to strand by
++			// not creating the pull request.
++			return errors.Join(attachErr, errors.New("no pull request was created"))
++		}
++	}
++
+ 	params := map[string]interface{}{
+ 		"title":               state.Title,
+-		"body":                state.Body,
++		"body":                body,
+ 		"draft":               state.Draft,
+ 		"baseRefName":         ctx.PRRefs.BaseRef(),
+ 		"headRefName":         ctx.PRRefs.QualifiedHeadRef(),
+ 		"maintainerCanModify": opts.MaintainerCanModify,
+ 	}
+ 
+-	if params["title"] == "" {
+-		return errors.New("pull request title must not be blank")
+-	}
+-
+ 	err := shared.AddMetadataToIssueParams(client, ctx.PRRefs.BaseRepo(), params, &state, projectV1Support)
+ 	if err != nil {
+-		return err
++		return errors.Join(attachErr, err)
+ 	}
+ 
+ 	if opts.DryRun {
+@@ -1070,11 +1122,33 @@ func submitPR(opts CreateOptions, ctx CreateContext, state shared.IssueMetadataS
+ 	}
+ 	if err != nil {
+ 		if pr != nil {
+-			return fmt.Errorf("pull request update failed: %w", err)
++			return errors.Join(attachErr, fmt.Errorf("pull request update failed: %w", err))
+ 		}
+-		return fmt.Errorf("pull request create failed: %w", err)
++		return errors.Join(attachErr, fmt.Errorf("pull request create failed: %w", err))
+ 	}
+-	return nil
++	return attachErr
++}
++
++// createUploader builds the uploader for the repository the pull request is
++// being opened against.
++func createUploader(opts *CreateOptions, baseRepo *api.Repository) (*attachments.Uploader, error) {
++	httpClient, err := opts.HttpClient()
++	if err != nil {
++		return nil, err
++	}
++	cfg, err := opts.Config()
++	if err != nil {
++		return nil, err
++	}
++
++	host := baseRepo.RepoHost()
++	return attachments.NewUploader(
++		httpClient,
++		cfg.Authentication().ActiveTokenType(host),
++		host,
++		baseRepo.DatabaseID,
++		baseRepo.ViewerPermission,
++	)
+ }
+ 
+ func renderPullRequestPlain(w io.Writer, params map[string]interface{}, state *shared.IssueMetadataState) error {
+diff --git a/pkg/cmd/pr/edit/edit.go b/pkg/cmd/pr/edit/edit.go
+index af5e04631..a779487f3 100644
+--- a/pkg/cmd/pr/edit/edit.go
++++ b/pkg/cmd/pr/edit/edit.go
+@@ -1,6 +1,8 @@
+ package edit
+ 
+ import (
++	"context"
++	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"slices"
+@@ -9,6 +11,7 @@ import (
+ 
+ 	"github.com/MakeNowJust/heredoc"
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+@@ -23,8 +26,10 @@ import (
+ 
+ type EditOptions struct {
+ 	HttpClient func() (*http.Client, error)
++	Config     func() (gh.Config, error)
+ 	IO         *iostreams.IOStreams
+ 
++	Assets          []attachments.UserAsset
+ 	Finder          shared.PRFinder
+ 	Surveyor        Surveyor
+ 	Fetcher         EditableOptionsFetcher
+@@ -43,6 +48,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 	opts := &EditOptions{
+ 		IO:              f.IOStreams,
+ 		HttpClient:      f.HttpClient,
++		Config:          f.Config,
+ 		Surveyor:        surveyor{P: f.Prompter},
+ 		Fetcher:         fetcher{},
+ 		EditorRetriever: editorRetriever{config: f.Config},
+@@ -51,6 +57,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 
+ 	var bodyFile string
+ 	var removeMilestone bool
++	var attachFlag *attachments.Flag
+ 
+ 	cmd := &cobra.Command{
+ 		Use:   "edit [<number> | <url> | <branch>]",
+@@ -72,11 +79,16 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 			The %[1]s--add-reviewer%[1]s and %[1]s--remove-reviewer%[1]s flags support
+ 			the following special value:
+ 			- %[1]s@copilot%[1]s: request or remove review from Copilot (not supported on GitHub Enterprise Server)
+-		`, "`"),
++
++			%[2]s
++		`, "`", attachments.AttachUsage()),
+ 		Example: heredoc.Doc(`
+ 			# Edit the title and body of a pull request
+ 			$ gh pr edit 23 --title "I found a bug" --body "Nothing works"
+ 
++			# Attach a screenshot to the body
++			$ gh pr edit 23 --attach ./screenshot.png#The login screen
++
+ 			# Use a file as the body
+ 			$ gh pr edit 23 --body-file body.txt
+ 
+@@ -189,7 +201,17 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 				// see the `Editable.MilestoneId` method.
+ 			}
+ 
+-			if !opts.Editable.Dirty() {
++			// Every file is validated before the command does anything, so that
++			// a file that cannot be attached is reported before any of them is
++			// uploaded.
++			assets, err := attachFlag.UserAssets()
++			if err != nil {
++				return err
++			}
++			opts.Assets = assets
++
++			// An attachment is an edit of its own, so it needs no prompting.
++			if !opts.Editable.Dirty() && len(opts.Assets) == 0 {
+ 				opts.Interactive = true
+ 			}
+ 
+@@ -219,6 +241,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 	cmd.Flags().StringSliceVar(&opts.Editable.Projects.Remove, "remove-project", nil, "Remove the pull request from projects by `title`")
+ 	cmd.Flags().StringVarP(&opts.Editable.Milestone.Value, "milestone", "m", "", "Edit the milestone the pull request belongs to by `name`")
+ 	cmd.Flags().BoolVar(&removeMilestone, "remove-milestone", false, "Remove the milestone association from the pull request")
++	attachFlag = attachments.AddFlag(cmd)
+ 
+ 	_ = cmdutil.RegisterBranchCompletionFlags(f.GitClient, cmd, "base")
+ 
+@@ -264,6 +287,11 @@ func editRun(opts *EditOptions) error {
+ 		Fields:   []string{"id", "author", "url", "title", "body", "baseRefName", "reviewRequests", "labels", "projectCards", "projectItems", "milestone"},
+ 		Detector: opts.Detector,
+ 	}
++	if len(opts.Assets) > 0 {
++		// Only an upload needs these, and they cost an extra permission check
++		// on the server.
++		findOptions.Fields = append(findOptions.Fields, "repository")
++	}
+ 
+ 	issueFeatures, err := opts.Detector.IssueFeatures()
+ 	if err != nil {
+@@ -282,6 +310,13 @@ func editRun(opts *EditOptions) error {
+ 		return err
+ 	}
+ 
++	// Resolved before anything is prompted for, so that a run that could never
++	// upload stops before the editor opens.
++	uploader, err := editUploader(opts, pr, repo)
++	if err != nil {
++		return err
++	}
++
+ 	editable := opts.Editable
+ 	editable.Reviewers.Selectable = true
+ 	editable.Title.Default = pr.Title
+@@ -353,16 +388,65 @@ func editRun(opts *EditOptions) error {
+ 		}
+ 	}
+ 
++	var attachErr error
++	if uploader != nil {
++		// A body the attachment goes into has to be written, so an unedited
++		// body starts from the one the pull request already has.
++		body := editable.Body.Value
++		if !editable.Body.Edited {
++			body = editable.Body.Default
++		}
++		body, uploaded, err := uploader.UploadAndAttach(context.Background(), body, opts.Assets)
++		attachErr = err
++		if uploaded > 0 {
++			editable.Body.Value = body
++			editable.Body.Edited = true
++		} else {
++			// Nothing reached the repository, so the body is left as it is
++			// rather than written back unchanged.
++			editable.Body.Edited = false
++			if !editable.Dirty() {
++				return errors.Join(attachErr, errors.New("the pull request was not changed"))
++			}
++		}
++	}
++
+ 	opts.IO.StartProgressIndicator()
+ 	err = updatePullRequest(httpClient, repo, pr.ID, pr.Number, editable)
+ 	opts.IO.StopProgressIndicator()
+ 	if err != nil {
+-		return err
++		return errors.Join(attachErr, err)
+ 	}
+ 
+ 	fmt.Fprintln(opts.IO.Out, pr.URL)
+ 
+-	return nil
++	return attachErr
++}
++
++// editUploader builds the uploader the run needs, or nothing when there is
++// nothing to attach.
++func editUploader(opts *EditOptions, pr *api.PullRequest, repo ghrepo.Interface) (*attachments.Uploader, error) {
++	if len(opts.Assets) == 0 {
++		return nil, nil
++	}
++
++	httpClient, err := opts.HttpClient()
++	if err != nil {
++		return nil, err
++	}
++	cfg, err := opts.Config()
++	if err != nil {
++		return nil, err
++	}
++
++	host := repo.RepoHost()
++	return attachments.NewUploader(
++		httpClient,
++		cfg.Authentication().ActiveTokenType(host),
++		host,
++		pr.RepositoryDatabaseID(),
++		pr.RepositoryViewerPermission(),
++	)
+ }
+ 
+ // reviewerSearchFunc is intended to be an arg for MultiSelectWithSearch
+diff --git a/pkg/cmd/pr/shared/commentable.go b/pkg/cmd/pr/shared/commentable.go
+index 015d84a4b..370de9bae 100644
+--- a/pkg/cmd/pr/shared/commentable.go
++++ b/pkg/cmd/pr/shared/commentable.go
+@@ -2,12 +2,14 @@ package shared
+ 
+ import (
+ 	"bufio"
++	"context"
+ 	"errors"
+ 	"fmt"
+ 	"io"
+ 	"net/http"
+ 
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/internal/text"
+@@ -32,11 +34,17 @@ type Commentable interface {
+ 	Link() string
+ 	Identifier() string
+ 	CurrentUserComments() []api.Comment
++	// RepositoryDatabaseID and RepositoryViewerPermission are what an upload
++	// needs to know, and are only populated when the lookup asked for the
++	// repository field.
++	RepositoryDatabaseID() int64
++	RepositoryViewerPermission() string
+ }
+ 
+ type CommentableOptions struct {
+ 	IO                        *iostreams.IOStreams
+ 	HttpClient                func() (*http.Client, error)
++	Config                    func() (gh.Config, error)
+ 	RetrieveCommentable       func() (Commentable, ghrepo.Interface, error)
+ 	EditSurvey                func(string) (string, error)
+ 	InteractiveEditSurvey     func(string) (string, error)
+@@ -47,22 +55,32 @@ type CommentableOptions struct {
+ 	Interactive               bool
+ 	InputType                 InputType
+ 	Body                      string
+-	EditLast                  bool
+-	DeleteLast                bool
+-	DeleteLastConfirmed       bool
+-	CreateIfNone              bool
+-	Quiet                     bool
+-	Host                      string
++	// BodyProvided records that a body flag was passed, which is what tells an
++	// empty body meant to clear a comment from no body at all.
++	BodyProvided bool
++	// KeepExistingBody makes an edit that was given no body keep the comment
++	// text, so that `--attach` alone adds to a comment rather than emptying it.
++	KeepExistingBody    bool
++	AttachFlag          *attachments.Flag
++	Assets              []attachments.UserAsset
++	EditLast            bool
++	DeleteLast          bool
++	DeleteLastConfirmed bool
++	CreateIfNone        bool
++	Quiet               bool
++	Host                string
+ }
+ 
+ func CommentablePreRun(cmd *cobra.Command, opts *CommentableOptions) error {
+ 	inputFlags := 0
+ 	if cmd.Flags().Changed("body") {
+ 		opts.InputType = InputTypeInline
++		opts.BodyProvided = true
+ 		inputFlags++
+ 	}
+ 	if cmd.Flags().Changed("body-file") {
+ 		opts.InputType = InputTypeInline
++		opts.BodyProvided = true
+ 		inputFlags++
+ 	}
+ 	if web, _ := cmd.Flags().GetBool("web"); web {
+@@ -74,6 +92,17 @@ func CommentablePreRun(cmd *cobra.Command, opts *CommentableOptions) error {
+ 		inputFlags++
+ 	}
+ 
++	// Reported before the files are resolved, so that a combination that could
++	// never work is named rather than whichever file happens to be missing.
++	if opts.AttachFlag.Changed() {
++		if opts.InputType == InputTypeWeb {
++			return cmdutil.FlagErrorf("`--attach` is not supported when using `--web`")
++		}
++		if opts.DeleteLast {
++			return cmdutil.FlagErrorf("`--attach` is not supported when using `--delete-last`")
++		}
++	}
++
+ 	if opts.CreateIfNone && !opts.EditLast {
+ 		return cmdutil.FlagErrorf("`--create-if-none` can only be used with `--edit-last`")
+ 	}
+@@ -94,14 +123,27 @@ func CommentablePreRun(cmd *cobra.Command, opts *CommentableOptions) error {
+ 	}
+ 
+ 	if inputFlags == 0 {
+-		if !opts.IO.CanPrompt() {
++		switch {
++		case opts.AttachFlag.Changed():
++			// An attachment is a body of its own, so nothing needs prompting.
++			opts.InputType = InputTypeInline
++		case !opts.IO.CanPrompt():
+ 			return cmdutil.FlagErrorf("flags required when not running interactively")
++		default:
++			opts.Interactive = true
+ 		}
+-		opts.Interactive = true
+ 	} else if inputFlags > 1 {
+ 		return cmdutil.FlagErrorf("specify only one of `--body`, `--body-file`, `--editor`, or `--web`")
+ 	}
+ 
++	// Every file is validated before the command does anything, so that a file
++	// that cannot be attached is reported before any of them is uploaded.
++	assets, err := opts.AttachFlag.UserAssets()
++	if err != nil {
++		return err
++	}
++	opts.Assets = assets
++
+ 	return nil
+ }
+ 
+@@ -115,13 +157,20 @@ func CommentableRun(opts *CommentableOptions) error {
+ 		return deleteComment(commentable, opts)
+ 	}
+ 
++	// Resolved before anything is written or prompted for, so that a run that
++	// could never upload stops before the editor opens.
++	uploader, err := commentableUploader(opts, commentable, repo)
++	if err != nil {
++		return err
++	}
++
+ 	// Create new comment, bail before complexities of updating the last comment
+ 	if !opts.EditLast {
+-		return createComment(commentable, opts)
++		return createComment(commentable, opts, uploader)
+ 	}
+ 
+ 	// Update the last comment, handling success or unexpected errors accordingly
+-	err = updateComment(commentable, opts)
++	err = updateComment(commentable, opts, uploader)
+ 	if err == nil {
+ 		return nil
+ 	}
+@@ -145,10 +194,47 @@ func CommentableRun(opts *CommentableOptions) error {
+ 		fmt.Fprintln(opts.IO.ErrOut, "No comments found. Creating a new comment.")
+ 	}
+ 
+-	return createComment(commentable, opts)
++	return createComment(commentable, opts, uploader)
++}
++
++// commentableUploader builds the uploader the run needs, or nothing when there
++// is nothing to attach.
++func commentableUploader(opts *CommentableOptions, commentable Commentable, repo ghrepo.Interface) (*attachments.Uploader, error) {
++	if len(opts.Assets) == 0 {
++		return nil, nil
++	}
++
++	httpClient, err := opts.HttpClient()
++	if err != nil {
++		return nil, err
++	}
++	cfg, err := opts.Config()
++	if err != nil {
++		return nil, err
++	}
++
++	host := repo.RepoHost()
++	return attachments.NewUploader(
++		httpClient,
++		cfg.Authentication().ActiveTokenType(host),
++		host,
++		commentable.RepositoryDatabaseID(),
++		commentable.RepositoryViewerPermission(),
++	)
+ }
+ 
+-func createComment(commentable Commentable, opts *CommentableOptions) error {
++// attachToBody uploads the attachments into body. It returns the body to write
++// and whether writing it is worth doing: an upload cannot be deleted, so a body
++// carrying one has to be written even when a later upload failed.
++func attachToBody(opts *CommentableOptions, uploader *attachments.Uploader, body string) (string, bool, error) {
++	if uploader == nil {
++		return body, true, nil
++	}
++	body, uploaded, err := uploader.UploadAndAttach(context.Background(), body, opts.Assets)
++	return body, uploaded > 0, err
++}
++
++func createComment(commentable Commentable, opts *CommentableOptions, uploader *attachments.Uploader) error {
+ 	switch opts.InputType {
+ 	case InputTypeWeb:
+ 		openURL := commentable.Link() + "#issuecomment-new"
+@@ -180,26 +266,31 @@ func createComment(commentable Commentable, opts *CommentableOptions) error {
+ 		}
+ 	}
+ 
++	body, worthWriting, attachErr := attachToBody(opts, uploader, opts.Body)
++	if !worthWriting {
++		return errors.Join(attachErr, errors.New("no comment was posted"))
++	}
++
+ 	httpClient, err := opts.HttpClient()
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+ 	apiClient := api.NewClientFromHTTP(httpClient)
+-	params := api.CommentCreateInput{Body: opts.Body, SubjectId: commentable.Identifier()}
++	params := api.CommentCreateInput{Body: body, SubjectId: commentable.Identifier()}
+ 	url, err := api.CommentCreate(apiClient, opts.Host, params)
+ 	if err != nil {
+-		return err
++		return errors.Join(attachErr, err)
+ 	}
+ 
+ 	if !opts.Quiet {
+ 		fmt.Fprintln(opts.IO.Out, url)
+ 	}
+ 
+-	return nil
++	return attachErr
+ }
+ 
+-func updateComment(commentable Commentable, opts *CommentableOptions) error {
++func updateComment(commentable Commentable, opts *CommentableOptions, uploader *attachments.Uploader) error {
+ 	comments := commentable.CurrentUserComments()
+ 	if len(comments) == 0 {
+ 		return errNoUserComments
+@@ -227,6 +318,12 @@ func updateComment(commentable Commentable, opts *CommentableOptions) error {
+ 			return err
+ 		}
+ 		opts.Body = body
++	case InputTypeInline:
++		if opts.KeepExistingBody && !opts.BodyProvided {
++			// Only `--attach` was given, so the comment keeps its text and the
++			// attachment joins it.
++			opts.Body = lastComment.Content()
++		}
+ 	}
+ 
+ 	if opts.Interactive {
+@@ -239,23 +336,28 @@ func updateComment(commentable Commentable, opts *CommentableOptions) error {
+ 		}
+ 	}
+ 
++	body, worthWriting, attachErr := attachToBody(opts, uploader, opts.Body)
++	if !worthWriting {
++		return errors.Join(attachErr, errors.New("the comment was not changed"))
++	}
++
+ 	httpClient, err := opts.HttpClient()
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+ 	apiClient := api.NewClientFromHTTP(httpClient)
+-	params := api.CommentUpdateInput{Body: opts.Body, CommentId: lastComment.Identifier()}
++	params := api.CommentUpdateInput{Body: body, CommentId: lastComment.Identifier()}
+ 	url, err := api.CommentUpdate(apiClient, opts.Host, params)
+ 	if err != nil {
+-		return err
++		return errors.Join(attachErr, err)
+ 	}
+ 
+ 	if !opts.Quiet {
+ 		fmt.Fprintln(opts.IO.Out, url)
+ 	}
+ 
+-	return nil
++	return attachErr
+ }
+ 
+ func deleteComment(commentable Commentable, opts *CommentableOptions) error {
+diff --git a/pkg/httpmock/legacy.go b/pkg/httpmock/legacy.go
+index 1484734f3..c4686e387 100644
+--- a/pkg/httpmock/legacy.go
++++ b/pkg/httpmock/legacy.go
+@@ -7,19 +7,24 @@ import (
+ // TODO: clean up methods in this file when there are no more callers
+ 
+ func (r *Registry) StubRepoInfoResponse(owner, repo, branch string) {
++	r.StubRepoInfoResponseWithPermission(owner, repo, branch, "WRITE")
++}
++
++func (r *Registry) StubRepoInfoResponseWithPermission(owner, repo, branch, permission string) {
+ 	r.Register(
+ 		GraphQL(`query RepositoryInfo\b`),
+ 		StringResponse(fmt.Sprintf(`
+ 		{ "data": { "repository": {
+ 			"id": "REPOID",
++			"databaseId": 1234,
+ 			"name": "%s",
+ 			"owner": {"login": "%s"},
+ 			"description": "",
+ 			"defaultBranchRef": {"name": "%s"},
+ 			"hasIssuesEnabled": true,
+-			"viewerPermission": "WRITE"
++			"viewerPermission": "%s"
+ 		} } }
+-		`, repo, owner, branch)))
++		`, repo, owner, branch, permission)))
+ }
+ 
+ func (r *Registry) StubIssueRepoInfoResponse(owner, repo string) {

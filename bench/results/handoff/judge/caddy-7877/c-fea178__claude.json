@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-fea178",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:46:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a400781feaa7abafb7157bbfb0013ed3ec265aa29e0a86bd55362421a33dbff6",
+  "wall_s": 36.9,
+  "cost_usd": 0.25066675,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Follows surrounding idioms: same lock-step compare via url.PathUnescape, EqualFold case-insensitivity, doc comment mirrors trimPathPrefix's; (int, bool) return is idiomatic Go.",
+    "edge_cases": "Handles decoded pattern vs %2F/%62 path, escaped pattern requiring literal escape, upper/lower hex, invalid %zz treated as literal byte, empty suffix, non-matching suffix; end-anchoring check prevents mid-path matches.",
+    "scope": "Only touches suffix path; extracting matchPathPrefix is a justified refactor to share logic and keeps prefix behaviour identical; removes now-dead reverse(). No unrelated edits.",
+    "readability": "Clear names and a good contract comment on trimPathSuffix; pathBoundaries has no comment explaining why %xx triples are skipped, and the boundary-scan loop is a little dense.",
+    "robustness": "No panic paths: bounds checked before slicing, unescape errors fall back to no-match/literal byte. Per-request slice allocation and O(n*m) scan are acceptable for path lengths but not tight.",
+    "maintainability": "Prefix and suffix share one matcher, so contract changes land in one place; minor duplication of escape-skipping logic between pathBoundaries and matchPathPrefix."
+  },
+  "flags": []
+}

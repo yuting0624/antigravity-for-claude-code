@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c66739",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:35:35+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "87053f0c5b93a3cd3a75af42dd630525f715db8d5f28f966e566dbf250b91692",
+  "wall_s": 132.5,
+  "cost_usd": 0.251554,
+  "usage": {
+    "input": 27905,
+    "output": 16312,
+    "thinking": 16107,
+    "cache_read": 0,
+    "total": 44217
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 1,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 2,
+    "maintainability": 2
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "Integrates cleanly with existing code by replacing the reverse workaround with a dedicated parallel function.",
+    "edge_cases": "Fails catastrophically on non-ASCII paths because strings.EqualFold returns true for any pair of invalid single UTF-8 bytes (>= 0x80).",
+    "scope": "Applies case-insensitivity to the entire suffix comparison, not just the hex digits of an escape as required.",
+    "readability": "The right-to-left parsing logic is well-commented and its intent is easy to follow despite the underlying bugs.",
+    "robustness": "Silent data corruption occurs because differing non-ASCII suffixes will erroneously match and be stripped from the path.",
+    "maintainability": "Byte-by-byte string extraction coupled with rune-aware comparison functions creates a brittle and dangerous pattern."
+  },
+  "flags": []
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-8458da",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:26:05+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2a333cc728cfa3cdee5fb5caaee8dd321f0211c9c7a3fcc28982eef297dd2fab",
+  "wall_s": 11.6,
+  "cost_usd": 0.056842,
+  "usage": {
+    "input": 24125,
+    "output": 716,
+    "thinking": 628,
+    "cache_read": 0,
+    "total": 24841
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "No implementation provided.",
+    "edge_cases": "No implementation provided.",
+    "scope": "No implementation provided.",
+    "readability": "No implementation provided.",
+    "robustness": "No implementation provided.",
+    "maintainability": "No implementation provided."
+  },
+  "flags": [
+    "empty_diff"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-7801c6",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:54:35+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e3cdd2aee3a230181d6f48d292964b779e2df9085c35025be23b0b987f57529f",
+  "wall_s": 129.3,
+  "cost_usd": 0.26009,
+  "usage": {
+    "input": 28387,
+    "output": 16943,
+    "thinking": 16755,
+    "cache_read": 0,
+    "total": 45330
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Deviates from the cookie filter's Caddyfile convention by parsing the action before the cookie name.",
+    "edge_cases": "Perfectly handles quotes, unparseable lines, and safely isolates attributes via strict semicolon indexing.",
+    "scope": "Implements all functional requirements exactly, but misses the specified Caddyfile token order constraint.",
+    "readability": "Clean, idiomatic Go with a clear, logical separation of parsing, matching, and string reconstruction.",
+    "robustness": "Safely handles invalid header formats, missing semicolons, and interface type assertions without panics.",
+    "maintainability": "Highly maintainable by leveraging the standard library's http.ParseSetCookie instead of custom parsing."
+  },
+  "flags": []
+}

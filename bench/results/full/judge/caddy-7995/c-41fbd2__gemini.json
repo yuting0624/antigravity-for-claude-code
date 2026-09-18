@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-41fbd2",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:52:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7a6454d1ca3df34be6f94f11f03ab09ad7001ff265e7a81d245aacd30a5fa3d9",
+  "wall_s": 55.4,
+  "cost_usd": 0.140546,
+  "usage": {
+    "input": 39091,
+    "output": 5197,
+    "thinking": 5034,
+    "cache_read": 0,
+    "total": 44288
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly follows codebase conventions and modern Go idioms.",
+    "edge_cases": "Safely handles nil options map, repeated order directives, and gracefully falls back when dirOrder is unset.",
+    "scope": "Laser-focused on the requirement without extraneous refactors or unintended side effects.",
+    "readability": "Extremely clear changes with excellent comments explaining the lifecycle and scoping of the state.",
+    "robustness": "Eliminates data races elegantly by cloning shared maps and slices instead of using locks.",
+    "maintainability": "Properly encapsulates adaptation state inside the Helper struct, avoiding global state pollution while keeping the API stable."
+  },
+  "flags": []
+}

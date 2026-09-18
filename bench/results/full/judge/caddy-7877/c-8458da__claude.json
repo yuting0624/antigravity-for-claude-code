@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-8458da",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:25:54+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2a333cc728cfa3cdee5fb5caaee8dd321f0211c9c7a3fcc28982eef297dd2fab",
+  "wall_s": 5.5,
+  "cost_usd": 0.10367649999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to evaluate against codebase conventions.",
+    "edge_cases": "Empty diff; none of the percent-encoded suffix cases in the requirement are handled.",
+    "scope": "Empty diff; the requested change was not delivered at all.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; existing broken suffix behaviour remains.",
+    "maintainability": "Empty diff; nothing was added or changed."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

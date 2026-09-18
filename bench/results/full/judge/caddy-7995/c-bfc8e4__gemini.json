@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-bfc8e4",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:09:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b30e42856bbf6af22d11a52beea4780fa9d83d1dc55bba005f39ae466666477d",
+  "wall_s": 80.1,
+  "cost_usd": 0.22043,
+  "usage": {
+    "input": 40663,
+    "output": 11592,
+    "thinking": 11437,
+    "cache_read": 0,
+    "total": 52255
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Uses standard library slices and maps idioms cleanly, perfectly matching Caddy's style.",
+    "edge_cases": "Handles multiple order directives, nil options maps, and externally instantiated Helpers gracefully.",
+    "scope": "Directly addresses the requirements without unrelated refactors or feature creep.",
+    "readability": "Excellent inline comments clearly explain the rationale for cloning and scope isolation.",
+    "robustness": "Completely eliminates data races and cross-adaptation corruption by cloning slices and maps before mutation.",
+    "maintainability": "Moves global state to explicitly passed parameters for adaptation scope, preventing future bugs."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-c82927",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:16:09+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "13b0aa36026e881da1406b0e97baacd30cc6f77120090435aea2b26e7c03c5ab",
+  "wall_s": 53.4,
+  "cost_usd": 0.91365125,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Mirrors v6 client idioms (authCtx, closeResponse, errUnknown, httperr classification, SDK config); provisioning ResponseError is a pointer type unlike v6's value type, and a custom retrying HTTPClient sits beside the SDK's own retries.",
+    "edge_cases": "Handles 409 create-or-find, PushRefID short-circuit, missing presigned URL, aborted/completed-before-start, ctx cancellation; but unknown errors notify with code 0, projectID may stay 0 after default resolution, and X-Stack-Id 0 is sent when unset.",
+    "scope": "Delivers the full flow; extra clientcfg constants package and runtime-config tuning overrides are small additions beyond the ask but defensible.",
+    "readability": "Clear names and helpful doc comments; minor noise from redundant `code = 0` branches and defensive nil-logger checks.",
+    "robustness": "Bodies drained/closed, retries bounded with ctx awareness, body buffered for safe retry; notify uses Background ctx relying on client timeout; typed-nil interface assignment on v2 error matches prior behaviour.",
+    "maintainability": "provisionLocalCloudTest duplicates ~60 lines of createCloudTest validation; provisioning package composes v6 client plus two HTTP paths, adding coupling; exported/unexported CheckResponse pair is slightly confusing."
+  },
+  "flags": []
+}

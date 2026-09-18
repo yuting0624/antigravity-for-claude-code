@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-62a2fc",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:56:48+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "0dc1794b8529bf26ab3daf8f43178bde9246b88824ff39e1fae4fd4cbdfff8ae",
+  "wall_s": 53.9,
+  "cost_usd": 0.144372,
+  "usage": {
+    "input": 38178,
+    "output": 5668,
+    "thinking": 5500,
+    "cache_read": 0,
+    "total": 43846
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Idiomatic Go and Caddyfile parsing patterns with excellent use of the standard library slices and maps packages.",
+    "edge_cases": "Perfectly handles invalid options, missing keys, type assertion failures, and nil options map.",
+    "scope": "Tightly focused on fixing the directive order leakage without any unrelated changes.",
+    "readability": "Clear custom types, helper functions, and excellent comments explaining the state encapsulation.",
+    "robustness": "Immutable data structures (cloning slices and maps) elegantly prevent all race conditions and state leakage.",
+    "maintainability": "Encapsulates the order resolution logic beautifully via directiveOrderOption and directiveOrderFrom."
+  },
+  "flags": []
+}

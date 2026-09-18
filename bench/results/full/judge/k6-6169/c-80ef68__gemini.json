@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-80ef68",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:10:42+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ca50f171859d8d42ad07d55cf918159852f04a6d943500753d2d6f3df1f488ed",
+  "wall_s": 191.0,
+  "cost_usd": 0.340002,
+  "usage": {
+    "input": 55323,
+    "output": 19113,
+    "thinking": 18942,
+    "cache_read": 0,
+    "total": 74436
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 2,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Perfectly matches existing API client patterns, error handling, and null type usage.",
+    "edge_cases": "Excellent handling of 403 XML body preservation, zero-size archives, and HTTP retries.",
+    "scope": "Failed to branch in createCloudTest; unconditionally forces k6 run --out cloud onto the provisioning API.",
+    "readability": "Clean, clear structure with excellent naming and logical package layout.",
+    "robustness": "Careful error mapping and memory-safe request body duplication for retries.",
+    "maintainability": "Outstanding decoupling of the provisioning API, with a well-designed test server."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

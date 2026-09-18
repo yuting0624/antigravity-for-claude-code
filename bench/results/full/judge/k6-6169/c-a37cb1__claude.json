@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-a37cb1",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:13:00+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "3ce9cb5cd353334d461a2024e757214d1de1bbe300657295523e835c3cfef702",
+  "wall_s": 58.7,
+  "cost_usd": 0.8755522499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (idempotency key, closeResponse, httperr classification) but adds a hand-rolled retrying HTTP client, a pointer ResponseError unlike v6's value type, and a new clientcfg package v6 didn't need.",
+    "edge_cases": "Handles 409 find-by-name, missing upload URL, aborted/completed during polling, ctx cancellation, PushRefID precedence, unparseable durations; unknown abort reasons fall to code 0 and StackID 0 is sent when unset.",
+    "scope": "Core flow is delivered, but adds a clientcfg refactor, an unused k6cloud APIClient in the provisioning client, and unrequested mapping of max_samples_per_package onto MaxTimeSeriesInBatch.",
+    "readability": "Clear names and purposeful comments; some redundant nil/constant guards in HTTPClient.Do and a shadowed err in expv2 Start.",
+    "robustness": "Bodies closed, timers stopped, request body replayed on retry, 5xx retried; notify uses Background ctx relying on client timeout, and a client-creation failure silently falls back to the legacy v1 end-of-test call.",
+    "maintainability": "CreateOrFindLoadTest duplicates createTest, HTTPClient is constructed per call in three places, and provisioning mode hinges on lazy detection of two config strings plus a bool flag, a subtle hidden coupling."
+  },
+  "flags": []
+}

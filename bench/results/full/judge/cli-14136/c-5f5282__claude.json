@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-5f5282",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:16:50+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "fc81fbd1bcb7b5e28e80a26740c8c5a5bfb059b6cc23882164d8812f4f4cb052",
+  "wall_s": 50.5,
+  "cost_usd": 0.59873325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Follows surrounding idioms: cmdutil.MutuallyExclusive/FlagErrorf, ctx.Background(), Copy() with RepoDir, same ff-only warning text as in-place checkout, heredoc help and backticked `path` placeholder.",
+    "edge_cases": "Covers blank/--list/--checkout validation, relative->absolute, spaces via arg slices, reuse-vs-new worktree, existing-vs-new branch, cross-repo remote via branchRepo; resolves target before creating the linked branch.",
+    "scope": "Required move into pr/shared done; but localBranchExists silently switched from show-ref to HasLocalBranch (rev-parse) and a new exported WorktreeCheckoutCommands was added beyond the ask.",
+    "readability": "Clear switch in checkoutBranchInWorktree and well-commented shared helpers; AddWorktree's empty-remote mode switch is slightly implicit but documented.",
+    "robustness": "Errors propagated, Abs failures handled, path safety checks kept (symlink/non-dir), Pull failure degrades to a warning like the existing flow; no panics on odd input.",
+    "maintainability": "worktree-add argument construction now lives in three places (git.AddWorktree, shared.WorktreeCheckoutCommands, cmdsForMissingRemote), so develop and pr checkout don't actually share the git helper; Abs is computed twice."
+  },
+  "flags": []
+}

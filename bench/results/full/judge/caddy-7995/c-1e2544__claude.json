@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-1e2544",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:48:43+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a667fec150d0d9cd7ea51ea637575a985429cfe911956d58cd678e6ac308599b",
+  "wall_s": 44.8,
+  "cost_usd": 0.47179424999999997,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Uses slices.Clone/Insert and maps.Clone like surrounding code; threads order through existing helpers; comment style matches package.",
+    "edge_cases": "Chained order lines build on existingVal; invalid order errors before any state is stored; nil options handled; plugin RegisterDirectiveOrder still works and no longer aliases defaultDirectiveOrder.",
+    "scope": "Focused on the order plumbing; the nil-options guard and explicit delete of \"order\" after cloning are slightly beyond need but harmless.",
+    "readability": "directiveOrderForOptions is a clear single lookup point; comments explain the why; buildSubroute's order param unused when needsSorting=false is a small wart.",
+    "robustness": "No global writes during adaptation, so concurrent adaptations are race-free; per-adaptation order lives in the cloned options map; default order is never mutated.",
+    "maintainability": "Single accessor for the effective order avoids scattering; passing nil order from parseRoute couples callers to the needsSorting flag, a minor hidden dependency."
+  },
+  "flags": []
+}

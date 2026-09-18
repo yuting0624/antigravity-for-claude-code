@@ -1,0 +1,408 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "handoff-review",
+  "run_key": "zoekt-1105__hybrid-handoff-review__r1",
+  "task_id": "zoekt-1105",
+  "arm": "hybrid-handoff-review",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-18T01:30:54+00:00",
+  "ended_at": "2026-09-18T01:58:59+00:00",
+  "agent_wall_s": 1681.8,
+  "agent_active_s": 1681.8,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.5",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352",
+    "appendix": "hybrid-handoff-review-appendix.md",
+    "appendix_sha256": "469a9f93b1f3d91009f4df9ffe2994db421e3072ebd8f9246d8a9ffa7aec7d07",
+    "sent_sha256": "92accef9dba0978c5babe3c5c88872aa8f52a7e4b75f4047793ad54d608642c9"
+  },
+  "claude": {
+    "session_id": "07df7dbb-64f7-4c4e-bc49-eb4f7a462beb",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 11,
+    "num_turns_source": "result",
+    "duration_ms": 1681377,
+    "duration_api_ms": 102334,
+    "total_cost_usd": 0.9171057499999999,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 22,
+      "cache_creation_input_tokens": 100519,
+      "cache_read_input_tokens": 166238,
+      "output_tokens": 8139,
+      "output_tokens_details": {
+        "thinking_tokens": 1305
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 100519
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2033,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002158,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 22,
+        "outputTokens": 8139,
+        "cacheReadInputTokens": 166238,
+        "cacheCreationInputTokens": 100519,
+        "webSearchRequests": 0,
+        "costUSD": 0.9149477499999998,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 1305,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 0.914948,
+    "recomputed_vs_reported_gap": -0.0024,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "long_context": {
+      "usd_long_context_est": 0.914948,
+      "requests": 11,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    },
+    "transcript": {
+      "present": true,
+      "turns": 11,
+      "input": 22,
+      "output": 8139,
+      "cache_creation": 100519,
+      "cache_read": 166238,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 11,
+          "input": 22,
+          "output": 8139,
+          "cache_creation": 100519,
+          "cache_read": 166238
+        }
+      },
+      "tool_calls": {
+        "Bash": 10
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 22,
+        "transcript": 22,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 8139,
+        "transcript": 8139,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 100519,
+        "transcript": 100519,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 166238,
+        "transcript": 166238,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 5,
+    "denied_tools": {
+      "Bash:which": 1,
+      "Bash:agy-delegate": 3,
+      "Bash:go": 1
+    },
+    "result_head": "**Pass.**\n\n- `go build ./...`, `go vet ./...`, `go test ./...` all green; `gofmt -l` reports nothing on the changed packages.\n- Changes uncommitted: `gitindex/index.go` modified; `cmd/zoekt-local-sync/{main,discover,index,lock}.go` added. No commits, branches or tags created.\n- The four given test files are unmodified (they don't appear in `git status`, and `git diff` against HEAD for them is empt",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 2,
+    "usage_lines": 2,
+    "signal_only": 0,
+    "succeeded": 2,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 2,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 2,
+        "input": 1075178,
+        "output": 145985,
+        "thinking": 119670,
+        "cache_read": 9129261,
+        "usd": 2.038522
+      }
+    },
+    "totals": {
+      "input": 1075178,
+      "output": 145985,
+      "thinking": 119670,
+      "cache_read": 9129261,
+      "total": 1221163
+    },
+    "invariant_ok": true,
+    "shadow_usd": 2.038522,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "488fe9b8-ed04-4ec6-b3b3-4964ba455067",
+      "3fc9f6f2-bfb3-4034-989d-b9769786a455"
+    ],
+    "agy_duration_s_sum": 1548.05,
+    "wrapper_calls_in_transcript": 5,
+    "trace_audit": {
+      "488fe9b8-ed04-4ec6-b3b3-4964ba455067": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 90,
+          "GENERIC": 89,
+          "SYSTEM_MESSAGE": 1,
+          "CHECKPOINT": 3
+        },
+        "tool_calls": {
+          "run_command": 21,
+          "view_file": 37,
+          "grep_search": 21,
+          "replace_file_content": 3,
+          "manage_task": 1,
+          "list_dir": 1,
+          "find_by_name": 1,
+          "write_to_file": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 7,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T01:32:08Z",
+        "last_step_at": "2026-09-18T01:48:03Z"
+      },
+      "3fc9f6f2-bfb3-4034-989d-b9769786a455": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 54,
+          "GENERIC": 53,
+          "SYSTEM_MESSAGE": 1,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "run_command": 34,
+          "view_file": 12,
+          "manage_task": 3,
+          "write_to_file": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T01:48:53Z",
+        "last_step_at": "2026-09-18T01:58:30Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 11
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 2,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 25,
+    "gate_blocks": 3,
+    "blocked_heads": {
+      "which": 1,
+      "agy-delegate": 1,
+      "go": 1
+    },
+    "gate_allows": 7,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "cmd/zoekt-local-sync/discover.go",
+      "cmd/zoekt-local-sync/index.go",
+      "cmd/zoekt-local-sync/lock.go",
+      "cmd/zoekt-local-sync/main.go",
+      "gitindex/index.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 2.9,
+      "passed_tests": 100,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 2,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 7.4,
+      "passed_tests": 1123,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 56,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 5,
+    "code_added": 625,
+    "code_removed": 19,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "cmd/zoekt-local-sync/lock.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "26fa9586cd8e6e0b9ec1131f22387e5e844009e94b50b9679ededb4d7f9152e0"
+  },
+  "diff_files": {
+    "cmd/zoekt-local-sync/discover.go": {
+      "added": 109,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/index.go": {
+      "added": 80,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/lock.go": {
+      "added": 57,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/main.go": {
+      "added": 327,
+      "removed": 0,
+      "class": "code"
+    },
+    "gitindex/index.go": {
+      "added": 52,
+      "removed": 19,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 0.9171057499999999,
+    "gemini_usd": 2.038522,
+    "total_usd": 2.9556277499999997
+  },
+  "notes": [],
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "scheduler_class": "final"
+}

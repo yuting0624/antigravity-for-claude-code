@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-attach",
+  "candidate_id": "c-eac31c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:13:38+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "eed0cfb92c071666feaef212a4fb60e92f833e97dae1355a25a6c6af97eef4ec",
+  "wall_s": 45.2,
+  "cost_usd": 0.05691,
+  "usage": {
+    "input": 24711,
+    "output": 624,
+    "thinking": 524,
+    "cache_read": 0,
+    "total": 25335
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The diff is empty.",
+    "edge_cases": "The diff is empty.",
+    "scope": "The diff is empty.",
+    "readability": "The diff is empty.",
+    "robustness": "The diff is empty.",
+    "maintainability": "The diff is empty."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

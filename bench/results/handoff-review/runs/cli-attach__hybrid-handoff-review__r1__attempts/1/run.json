@@ -1,0 +1,504 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "handoff-review",
+  "run_key": "cli-attach__hybrid-handoff-review__r1",
+  "task_id": "cli-attach",
+  "arm": "hybrid-handoff-review",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-18T02:31:22+00:00",
+  "ended_at": "2026-09-18T05:06:56+00:00",
+  "agent_wall_s": 9332.3,
+  "agent_active_s": 5310.4,
+  "suspended_s": 4022.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.5",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d",
+    "appendix": "hybrid-handoff-review-appendix.md",
+    "appendix_sha256": "469a9f93b1f3d91009f4df9ffe2994db421e3072ebd8f9246d8a9ffa7aec7d07",
+    "sent_sha256": "7bdb0180298cfa9b9e8283ebf58be33ae081727e2d6aa55c398c0128d3d04574"
+  },
+  "claude": {
+    "session_id": "b75d8a7a-0ab6-4be1-95c1-7dfb091ab973",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 18,
+    "num_turns_source": "result",
+    "duration_ms": 5309930,
+    "duration_api_ms": 182226,
+    "total_cost_usd": 1.13500925,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 36,
+      "cache_creation_input_tokens": 91205,
+      "cache_read_input_tokens": 429276,
+      "output_tokens": 13900,
+      "output_tokens_details": {
+        "thinking_tokens": 3251
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 91205
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2535,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.00266,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 36,
+        "outputTokens": 13900,
+        "cacheReadInputTokens": 429276,
+        "cacheCreationInputTokens": 91205,
+        "webSearchRequests": 0,
+        "costUSD": 1.1323492499999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 3251,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 1.132349,
+    "recomputed_vs_reported_gap": -0.0023,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "long_context": {
+      "usd_long_context_est": 1.132349,
+      "requests": 18,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    },
+    "transcript": {
+      "present": true,
+      "turns": 18,
+      "input": 36,
+      "output": 13900,
+      "cache_creation": 91205,
+      "cache_read": 429276,
+      "first_turn_cache_read": 7560,
+      "models": {
+        "claude-opus-5": {
+          "turns": 18,
+          "input": 36,
+          "output": 13900,
+          "cache_creation": 91205,
+          "cache_read": 429276
+        }
+      },
+      "tool_calls": {
+        "Bash": 15,
+        "ToolSearch": 1,
+        "TaskOutput": 1
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 1
+    },
+    "warm_start": true,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 36,
+        "transcript": 36,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 13900,
+        "transcript": 13900,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 91205,
+        "transcript": 91205,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 429276,
+        "transcript": 429276,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 6,
+    "denied_tools": {
+      "Bash:which": 1,
+      "Bash:agy-delegate": 2,
+      "Bash:git": 1,
+      "Bash:go": 2
+    },
+    "result_head": "I'm stopping here per the policy's delegation cap. Status:\n\n## Result: FAIL — incomplete\n\nBoth delegations died mid-run on the agy backend, not on the task:\n\n- **Delegation 1** (full task): ran 7562s, then `ERROR: There was a network issue connecting to the server`.\n- **Delegation 2** (fix-up, quoting the failing output): ran 1302s, then a Vertex AI transport timeout — `read tcp ... operation time",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 3,
+    "usage_lines": 2,
+    "signal_only": 1,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 1,
+      "TIMEOUT": 1
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 2,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 2,
+        "input": 7430813,
+        "output": 259020,
+        "thinking": 162692,
+        "cache_read": 43625419,
+        "usd": 9.816341
+      }
+    },
+    "totals": {
+      "input": 7430813,
+      "output": 259020,
+      "thinking": 162692,
+      "cache_read": 43625419,
+      "total": 7689833
+    },
+    "invariant_ok": true,
+    "shadow_usd": 9.816341,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "3006f373-aa90-4627-a6b0-5aff75c25461",
+      "94ecb410-591b-44e0-8d37-6041c7d5afdb"
+    ],
+    "agy_duration_s_sum": 8864.686,
+    "wrapper_calls_in_transcript": 4,
+    "trace_audit": {
+      "3006f373-aa90-4627-a6b0-5aff75c25461": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 399,
+          "GENERIC": 397,
+          "CHECKPOINT": 12,
+          "ERROR_MESSAGE": 1
+        },
+        "tool_calls": {
+          "run_command": 84,
+          "view_file": 209,
+          "grep_search": 51,
+          "write_to_file": 22,
+          "replace_file_content": 28,
+          "find_by_name": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 50,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T02:32:42Z",
+        "last_step_at": "2026-09-18T03:30:10Z"
+      },
+      "94ecb410-591b-44e0-8d37-6041c7d5afdb": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 151,
+          "GENERIC": 150,
+          "CHECKPOINT": 5,
+          "ERROR_MESSAGE": 1
+        },
+        "tool_calls": {
+          "run_command": 10,
+          "view_file": 111,
+          "grep_search": 18,
+          "replace_file_content": 11
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 11,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T04:39:56Z",
+        "last_step_at": "2026-09-18T05:01:38Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 61
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 2,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 1,
+    "events": 33,
+    "gate_blocks": 4,
+    "blocked_heads": {
+      "which": 1,
+      "git": 1,
+      "go": 2
+    },
+    "gate_allows": 11,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "api/queries_issue.go",
+      "api/queries_pr.go",
+      "api/queries_repo.go",
+      "api/query_builder.go",
+      "internal/attachments/attach.go",
+      "internal/attachments/client.go",
+      "internal/attachments/flags.go",
+      "internal/attachments/references.go",
+      "internal/attachments/testing.go",
+      "internal/attachments/userasset.go",
+      "internal/config/config.go",
+      "internal/gh/gh.go",
+      "internal/ghinstance/host.go",
+      "pkg/cmd/issue/comment/comment.go",
+      "pkg/cmd/issue/create/create.go",
+      "pkg/cmd/pr/comment/comment.go",
+      "pkg/cmd/pr/shared/commentable.go",
+      "pkg/cmd/issue/edit/edit.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "# github.com/cli/cli/v2/pkg/cmd/pr/edit\n# [github.com/cli/cli/v2/pkg/cmd/pr/edit]\nvet: pkg/cmd/pr/edit/edit_test.go:380:30: gotOpts.Assets undefined (type *EditOptions has no field or method Assets)\n# github.com/cli/cli/v2/pkg/cmd/pr/create\n# [github.com/cli/cli/v2/pkg/cmd/pr/create]\nvet: pkg/cmd/pr/create/create_test.go:383:27: opts.Assets undefined (type *CreateOptions has no field or method Assets)\n",
+    "gofmt_clean": false,
+    "gofmt_dirty_files": [
+      "internal/attachments/references.go"
+    ],
+    "hidden_tests": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 1.4,
+      "passed_tests": 790,
+      "failed_tests": [],
+      "failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit"
+      ],
+      "build_failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit"
+      ],
+      "packages": 11,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 31.3,
+      "passed_tests": 7633,
+      "failed_tests": [],
+      "failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit"
+      ],
+      "build_failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/pr/create",
+        "github.com/cli/cli/v2/pkg/cmd/pr/edit"
+      ],
+      "packages": 309,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 18,
+    "code_added": 1582,
+    "code_removed": 6,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/attachments/testing.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "326a4d5c128622e904ec1113296a987b430fbf1707366f214e8e4d5c5c94f503"
+  },
+  "diff_files": {
+    "api/queries_issue.go": {
+      "added": 15,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/queries_pr.go": {
+      "added": 19,
+      "removed": 3,
+      "class": "code"
+    },
+    "api/queries_repo.go": {
+      "added": 4,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/query_builder.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/attach.go": {
+      "added": 69,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/client.go": {
+      "added": 220,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/flags.go": {
+      "added": 96,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/references.go": {
+      "added": 680,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/testing.go": {
+      "added": 73,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/userasset.go": {
+      "added": 141,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/config/config.go": {
+      "added": 6,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/gh/gh.go": {
+      "added": 3,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/ghinstance/host.go": {
+      "added": 8,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/comment/comment.go": {
+      "added": 7,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/create/create.go": {
+      "added": 52,
+      "removed": 2,
+      "class": "code"
+    },
+    "pkg/cmd/issue/edit/edit.go": {
+      "added": 75,
+      "removed": 1,
+      "class": "code"
+    },
+    "pkg/cmd/pr/comment/comment.go": {
+      "added": 7,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/commentable.go": {
+      "added": 105,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 1.13500925,
+    "gemini_usd": 9.816341,
+    "total_usd": 10.951350249999999
+  },
+  "notes": [],
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "scheduler_class": "final"
+}

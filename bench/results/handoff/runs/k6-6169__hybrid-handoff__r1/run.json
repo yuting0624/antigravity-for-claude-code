@@ -1,0 +1,468 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "handoff",
+  "run_key": "k6-6169__hybrid-handoff__r1",
+  "task_id": "k6-6169",
+  "arm": "hybrid-handoff",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-17T03:43:05+00:00",
+  "ended_at": "2026-09-17T05:21:04+00:00",
+  "agent_wall_s": 5875.0,
+  "agent_active_s": 5784.3,
+  "suspended_s": 90.7,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "664c2b05c5caff13caabdb8e8928635ee08409836dd6c5bff427c6007b36423a",
+    "appendix": "hybrid-handoff-appendix.md",
+    "appendix_sha256": "69ffd63a3f0d2c7228c1407267ab57a2dff51ba4fa8bf05e6c8ff6469ff94b8f",
+    "sent_sha256": "21fd565961b9391888c3fd72390ee79fb0dfde2cb622148d9b57c0367ce71915"
+  },
+  "claude": {
+    "session_id": "74bf3e8f-85bd-4b44-8ba3-4fd352ababf1",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 26,
+    "num_turns_source": "result",
+    "duration_ms": 5783817,
+    "duration_api_ms": 215709,
+    "total_cost_usd": 2.5153675000000004,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 50,
+      "cache_creation_input_tokens": 306342,
+      "cache_read_input_tokens": 459826,
+      "output_tokens": 14734,
+      "output_tokens_details": {
+        "thinking_tokens": 3816
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 306342
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2072,
+        "outputTokens": 29,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0022170000000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 50,
+        "outputTokens": 14734,
+        "cacheReadInputTokens": 459826,
+        "cacheCreationInputTokens": 306342,
+        "webSearchRequests": 0,
+        "costUSD": 2.5131505,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 3816,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 2.513151,
+    "recomputed_vs_reported_gap": -0.0009,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "long_context": {
+      "usd_long_context_est": 2.51315,
+      "requests": 25,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    },
+    "transcript": {
+      "present": true,
+      "turns": 25,
+      "input": 50,
+      "output": 14734,
+      "cache_creation": 306342,
+      "cache_read": 459826,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 25,
+          "input": 50,
+          "output": 14734,
+          "cache_creation": 306342,
+          "cache_read": 459826
+        }
+      },
+      "tool_calls": {
+        "Bash": 16,
+        "ToolSearch": 2,
+        "TaskOutput": 7
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 2
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 50,
+        "transcript": 50,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 14734,
+        "transcript": 14734,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 306342,
+        "transcript": 306342,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 459826,
+        "transcript": 459826,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 6,
+    "denied_tools": {
+      "Bash:which": 1,
+      "Bash:agy-delegate": 3,
+      "Bash:go": 2
+    },
+    "result_head": "**PASS** (with pre-existing failures elsewhere in the repo).\n\nDelegation took two attempts — the first died on a network error with nothing written, the second hit a Vertex 429 quota error but had already written the full implementation to disk. The result verifies clean:\n\n- `go build ./...` — clean.\n- All 13 named test files pass **unmodified** (`git status -- '*_test.go'` is empty): `cloudapi`, ",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 4,
+    "usage_lines": 2,
+    "signal_only": 2,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 1,
+      "QUOTA_EXHAUSTED": 1
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 2,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 2,
+        "input": 5423270,
+        "output": 178582,
+        "thinking": 118773,
+        "cache_read": 27911842,
+        "usd": 6.830523
+      }
+    },
+    "totals": {
+      "input": 5423270,
+      "output": 178582,
+      "thinking": 118773,
+      "cache_read": 27911842,
+      "total": 5601852
+    },
+    "invariant_ok": true,
+    "shadow_usd": 6.830523,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "ccd51b94-4627-4ba7-a687-c74327606593",
+      "85938397-93d7-4c0c-b823-a819ee9bd73b"
+    ],
+    "agy_duration_s_sum": 5238.592,
+    "wrapper_calls_in_transcript": 6,
+    "trace_audit": {
+      "ccd51b94-4627-4ba7-a687-c74327606593": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 133,
+          "GENERIC": 133,
+          "SYSTEM_MESSAGE": 3,
+          "CHECKPOINT": 4,
+          "ERROR_MESSAGE": 7
+        },
+        "tool_calls": {
+          "run_command": 50,
+          "manage_task": 3,
+          "view_file": 79,
+          "find_by_name": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-17T03:44:47Z",
+        "last_step_at": "2026-09-17T04:20:13Z"
+      },
+      "85938397-93d7-4c0c-b823-a819ee9bd73b": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 244,
+          "GENERIC": 243,
+          "SYSTEM_MESSAGE": 4,
+          "CHECKPOINT": 7,
+          "ERROR_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 47,
+          "manage_task": 5,
+          "view_file": 132,
+          "replace_file_content": 24,
+          "grep_search": 18,
+          "list_dir": 5,
+          "write_to_file": 10,
+          "find_by_name": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 34,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-17T04:24:19Z",
+        "last_step_at": "2026-09-17T05:12:22Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 34
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 1,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 1,
+    "post_missing": 0,
+    "events": 40,
+    "gate_blocks": 4,
+    "blocked_heads": {
+      "which": 1,
+      "agy-delegate": 1,
+      "go": 2
+    },
+    "gate_allows": 12,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "cloudapi/config.go",
+      "internal/cloudapi/clientcfg/clientcfg.go",
+      "internal/cloudapi/provisioning/errors.go",
+      "internal/cloudapi/provisioning/test/server.go",
+      "internal/cloudapi/v6/api.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "internal/js/modules/k6/experimental/fs/file.go:85:16: method Seek(offset int64, whence fs.SeekMode) (int64, error) should have signature Seek(int64, int) (int64, error)\nlib/executor/helpers.go:146:18: the cancel function returned by context.WithDeadline should be called, not discarded, to avoid a context leak\n",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 4.2,
+      "passed_tests": 178,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 7,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 67.0,
+      "passed_tests": 5991,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 131,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 15,
+    "code_added": 1019,
+    "code_removed": 61,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/cloudapi/provisioning/types.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "6f917575283a9d068d025eded31bd284289a3d778d69ea2df3e76c2c22285d3c"
+  },
+  "diff_files": {
+    "cloudapi/config.go": {
+      "added": 8,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/clientcfg/clientcfg.go": {
+      "added": 11,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/api.go": {
+      "added": 146,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/client.go": {
+      "added": 80,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/errors.go": {
+      "added": 44,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/http_client.go": {
+      "added": 98,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/notify.go": {
+      "added": 48,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/provision.go": {
+      "added": 63,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/test/server.go": {
+      "added": 183,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/types.go": {
+      "added": 69,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/v6/api.go": {
+      "added": 27,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cmd/outputs_cloud.go": {
+      "added": 110,
+      "removed": 45,
+      "class": "code"
+    },
+    "internal/output/cloud/output.go": {
+      "added": 77,
+      "removed": 0,
+      "class": "code"
+    },
+    "output/cloud/expv2/metrics_client.go": {
+      "added": 27,
+      "removed": 15,
+      "class": "code"
+    },
+    "output/cloud/expv2/output.go": {
+      "added": 28,
+      "removed": 1,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 2.5153675000000004,
+    "gemini_usd": 6.830523,
+    "total_usd": 9.345890500000001
+  },
+  "notes": [
+    "reaccounted at 2026-09-17T13:37:21+00:00",
+    "reaccounted at 2026-09-17T14:48:59+00:00"
+  ],
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "scheduler_class": "final"
+}

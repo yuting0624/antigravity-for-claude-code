@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-ad363f",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:49:09+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c25c97af6074c0a4a50b64f8c3c530cfbf8f780d308ae48e92b821f3e95fa8c7",
+  "wall_s": 143.1,
+  "cost_usd": 0.23635,
+  "usage": {
+    "input": 35255,
+    "output": 13820,
+    "thinking": 13660,
+    "cache_read": 0,
+    "total": 49075
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches Go idioms well, correctly using standard slices and maps packages.",
+    "edge_cases": "Handles nil options map, invalid option recovery, and concurrent usages effectively.",
+    "scope": "Strictly limits changes to fixing the global order state leakage without unrelated refactoring.",
+    "readability": "Clean refactoring of the positional switch and clear, expressive slice operations.",
+    "robustness": "Cloning the options map and the order slice perfectly prevents data races and cross-adaptation state leaks.",
+    "maintainability": "Properly scopes the custom order to the adaptation options context, removing fragile package-global mutations."
+  },
+  "flags": []
+}

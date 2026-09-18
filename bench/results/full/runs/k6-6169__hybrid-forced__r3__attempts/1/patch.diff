@@ -1,0 +1,287 @@
+diff --git a/cloudapi/config.go b/cloudapi/config.go
+index d2846c93f..a583cbfb4 100644
+--- a/cloudapi/config.go
++++ b/cloudapi/config.go
+@@ -27,7 +27,19 @@ type Config struct {
+ 	Hostv6  null.String        `json:"hostv6" envconfig:"K6_CLOUD_HOST_V6"` // For test purposes only
+ 	Timeout types.NullDuration `json:"timeout" envconfig:"K6_CLOUD_TIMEOUT"`
+ 
+-	LogsTailURL    null.String `json:"-" envconfig:"K6_CLOUD_LOGS_TAIL_URL"`
++	LogsTailURL null.String `json:"-" envconfig:"K6_CLOUD_LOGS_TAIL_URL"`
++
++	// MetricsPushURL is the metrics ingest URL returned by the provisioning
++	// API for a locally-executed cloud test run. It is populated by the
++	// command layer and consumed by the cloud output; it is intentionally
++	// not configurable through the environment.
++	MetricsPushURL null.String `json:"metricsPushURL" ignored:"true"`
++
++	// TestRunToken is the short-lived, test-run-scoped token returned by the
++	// provisioning API. Like MetricsPushURL it is internal-only: populated by
++	// the command layer, consumed by the cloud output, never read from the
++	// environment.
++	TestRunToken   null.String `json:"testRunToken" ignored:"true"`
+ 	WebAppURL      null.String `json:"webAppURL" envconfig:"K6_CLOUD_WEB_APP_URL"`
+ 	TestRunDetails null.String `json:"testRunDetails" envconfig:"K6_CLOUD_TEST_RUN_DETAILS"`
+ 	NoCompress     null.Bool   `json:"noCompress" envconfig:"K6_CLOUD_NO_COMPRESS"`
+@@ -133,6 +145,12 @@ func (c Config) Apply(cfg Config) Config {
+ 	if cfg.LogsTailURL.Valid && cfg.LogsTailURL.String != "" {
+ 		c.LogsTailURL = cfg.LogsTailURL
+ 	}
++	if cfg.MetricsPushURL.Valid {
++		c.MetricsPushURL = cfg.MetricsPushURL
++	}
++	if cfg.TestRunToken.Valid {
++		c.TestRunToken = cfg.TestRunToken
++	}
+ 	if cfg.PushRefID.Valid {
+ 		c.PushRefID = cfg.PushRefID
+ 	}
+diff --git a/internal/cloudapi/clientcfg/clientcfg.go b/internal/cloudapi/clientcfg/clientcfg.go
+new file mode 100644
+index 000000000..87cc0910b
+--- /dev/null
++++ b/internal/cloudapi/clientcfg/clientcfg.go
+@@ -0,0 +1,12 @@
++// Package clientcfg holds HTTP client tuning shared by the k6 Cloud API
++// clients (internal/cloudapi/v6, internal/cloudapi/provisioning).
++package clientcfg
++
++import "time"
++
++const (
++	// RetryInterval is the default cloud request retry interval.
++	RetryInterval = 500 * time.Millisecond
++	// MaxRetries specifies max retry attempts.
++	MaxRetries = 3
++)
+diff --git a/internal/cloudapi/provisioning/test/server.go b/internal/cloudapi/provisioning/test/server.go
+new file mode 100644
+index 000000000..3550f1748
+--- /dev/null
++++ b/internal/cloudapi/provisioning/test/server.go
+@@ -0,0 +1,151 @@
++// Package provtest provides an HTTP test server that simulates the k6 Cloud
++// provisioning API.
++package provtest
++
++import (
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"sync/atomic"
++	"testing"
++
++	k6cloud "github.com/grafana/k6-cloud-openapi-client-go/k6"
++
++	v6 "go.k6.io/k6/v2/internal/cloudapi/v6"
++)
++
++const (
++	// DefaultLoadTestID is the default load test ID used in tests.
++	DefaultLoadTestID int64 = 456
++
++	// DefaultTestRunID is the default test run ID used in tests.
++	DefaultTestRunID int64 = 123
++
++	// PresignedUploadPath is the URL path for presigned archive uploads.
++	PresignedUploadPath = "/presigned/archive_upload"
++)
++
++// Server is a test HTTP server for the k6 Cloud provisioning API.
++type Server struct {
++	*httptest.Server
++
++	// Mux is the request multiplexer, exposed so tests can register
++	// extra routes (for example a catch-all for metrics pushes).
++	Mux *http.ServeMux
++
++	fetchTestRunHits atomic.Int32
++}
++
++// NewServer starts a provisioning API test server with no routes
++// registered; register them with the Handle* methods.
++func NewServer(t *testing.T) *Server {
++	t.Helper()
++
++	mux := http.NewServeMux()
++	srv := httptest.NewServer(mux)
++	t.Cleanup(srv.Close)
++
++	return &Server{
++		Server: srv,
++		Mux:    mux,
++	}
++}
++
++// PresignedUploadURL returns the absolute URL of the presigned archive
++// upload route served by this server.
++func (s *Server) PresignedUploadURL() string {
++	return s.URL + PresignedUploadPath
++}
++
++// HandleCreateLoadTest registers the v6 create-load-test route for the
++// given project. It deliberately matches every method so a handler can
++// serve the POST and the GET name-lookup fallback from one place.
++func (s *Server) HandleCreateLoadTest(projectID int64, h http.HandlerFunc) {
++	s.Mux.HandleFunc(fmt.Sprintf("/cloud/v6/projects/%d/load_tests", projectID), h)
++}
++
++// HandleStartLocalExecution registers the provisioning start route.
++func (s *Server) HandleStartLocalExecution(loadTestID int64, h http.HandlerFunc) {
++	s.Mux.HandleFunc(fmt.Sprintf("POST /provisioning/v1/load_tests/%d/start_local_execution", loadTestID), h)
++}
++
++// HandlePresignedUpload registers the presigned archive upload route.
++func (s *Server) HandlePresignedUpload(path string, h http.HandlerFunc) {
++	s.Mux.HandleFunc("PUT "+path, h)
++}
++
++// HandleNotify registers the provisioning end-of-test notification route.
++func (s *Server) HandleNotify(testRunID int64, h http.HandlerFunc) {
++	s.Mux.HandleFunc(fmt.Sprintf("POST /provisioning/v1/test_runs/%d/notify", testRunID), h)
++}
++
++// HandleFetchTestRun registers the v6 test-run route, serving the given
++// progressions in order; the last one repeats once the slice runs out.
++func (s *Server) HandleFetchTestRun(testRunID int64, progress []v6.TestProgress) {
++	s.Mux.HandleFunc(fmt.Sprintf("GET /cloud/v6/test_runs/%d", testRunID), func(w http.ResponseWriter, _ *http.Request) {
++		hits := s.fetchTestRunHits.Add(1)
++		var tp v6.TestProgress
++		if len(progress) > 0 {
++			idx := min(int(hits-1), len(progress)-1)
++			tp = progress[idx]
++		}
++
++		res := k6cloud.NewTestRunApiModelWithDefaults()
++		res.SetStatus(tp.Status.String())
++		res.SetResult(tp.Result.String())
++		res.SetEstimatedDuration(tp.EstimatedDuration)
++		res.SetExecutionDuration(tp.ExecutionDuration)
++		res.SetStatusHistory(v6.ToStatusModel(tp.StatusHistory))
++		// SDK decoder requires these keys on the other end even when empty.
++		res.SetDistribution([]k6cloud.DistributionZoneApiModel{})
++		res.SetResultDetails(k6cloud.ResultDetailsApiModelAsTestRunApiModelResultDetails(k6cloud.NewResultDetailsApiModel("")))
++		res.SetOptions(map[string]any{})
++		writeJSON(w, http.StatusOK, res)
++	})
++}
++
++// FetchTestRunHitCount returns how many times the test-run route was served.
++func (s *Server) FetchTestRunHitCount() int32 {
++	return s.fetchTestRunHits.Load()
++}
++
++// DefaultStartLocalExecutionResponse returns a fully populated
++// start_local_execution response that tests can tweak before serving.
++func DefaultStartLocalExecutionResponse() *k6cloud.StartLocalExecutionTestResponse {
++	m := k6cloud.NewMetricsRuntimeConfigWithDefaults()
++	m.SetPushUrl("https://ingest.k6.io/v1/metrics")
++	m.SetPushInterval("2s")
++	m.SetPushConcurrency(5)
++	m.SetAggregationPeriod("3s")
++	m.SetAggregationWaitPeriod("1s")
++	m.SetMaxSamplesPerPackage(2000)
++
++	sec := k6cloud.NewSecretsRuntimeConfigWithDefaults()
++	sec.SetEndpoint(fmt.Sprintf("https://api.k6.io/provisioning/v1/test_runs/%d/decrypt_secret?name={key}", DefaultTestRunID))
++	sec.SetResponsePath("plaintext")
++
++	rc := k6cloud.NewRuntimeConfigWithDefaults()
++	rc.SetTestRunToken("test-run-token-abc")
++	rc.SetMetrics(*m)
++	rc.SetSecrets(*sec)
++	rc.SetTraces(*k6cloud.NewTracesRuntimeConfigWithDefaults())
++	rc.SetFiles(*k6cloud.NewFilesRuntimeConfigWithDefaults())
++	rc.SetLogs(*k6cloud.NewLogsRuntimeConfigWithDefaults())
++
++	resp := k6cloud.NewStartLocalExecutionTestResponseWithDefaults()
++	resp.SetTestRunId(DefaultTestRunID)
++	resp.SetArchiveUploadUrl("https://k6-archives.s3.amazonaws.com/test-runs/123/archive.tar?X-Amz-Signature=fake")
++	resp.SetTestRunDetailsPageUrl(fmt.Sprintf("https://app.k6.io/runs/%d", DefaultTestRunID))
++	resp.SetRuntimeConfig(*rc)
++
++	return resp
++}
++
++func writeJSON(w http.ResponseWriter, status int, v any) {
++	w.Header().Set("Content-Type", "application/json")
++	w.WriteHeader(status)
++	if err := json.NewEncoder(w).Encode(v); err != nil {
++		panic(fmt.Errorf("provtest: encoding JSON: %w", err))
++	}
++}
+diff --git a/internal/cloudapi/v6/api.go b/internal/cloudapi/v6/api.go
+index e59bf01b8..5725e05e7 100644
+--- a/internal/cloudapi/v6/api.go
++++ b/internal/cloudapi/v6/api.go
+@@ -200,6 +200,47 @@ func (c *Client) ValidateOptions(ctx context.Context, projectID int64, opts lib.
+ 	return nil
+ }
+ 
++// CreateOrFindLoadTest ensures a load test with the given name exists in the
++// project and returns its id. It does not upload a script: the archive is
++// uploaded separately through the provisioning API presigned URL.
++func (c *Client) CreateOrFindLoadTest(ctx context.Context, projectID int64, name string) (int64, error) {
++	id, err := c.createLoadTest(ctx, projectID, name)
++	if err == nil {
++		return id, nil
++	}
++	var rerr ResponseError
++	if !errors.As(err, &rerr) || rerr.Response == nil || rerr.Response.StatusCode != http.StatusConflict {
++		return 0, err
++	}
++
++	lt, err := c.findTestByName(ctx, projectID, name)
++	if err != nil {
++		return 0, err
++	}
++
++	return lt.GetId(), nil
++}
++
++func (c *Client) createLoadTest(
++	ctx context.Context, projectID int64, name string,
++) (_ int64, err error) {
++	res, hr, err := c.apiClient.LoadTestsAPI.
++		ProjectsLoadTestsCreate(c.authCtx(ctx), projectID).
++		XStackId(c.stackID).
++		Name(name).
++		Execute()
++	defer closeResponse(hr, &err)
++
++	if err := CheckResponse(hr, err); err != nil {
++		return 0, err
++	}
++	if res == nil {
++		return 0, errUnknown
++	}
++
++	return res.GetId(), nil
++}
++
+ // UploadTest creates or updates a cloud load test's script.
+ func (c *Client) UploadTest(
+ 	ctx context.Context, name string, projectID int64, arc *lib.Archive,
+diff --git a/internal/cloudapi/v6/client.go b/internal/cloudapi/v6/client.go
+index 2374d29c6..cdf3cbcd1 100644
+--- a/internal/cloudapi/v6/client.go
++++ b/internal/cloudapi/v6/client.go
+@@ -11,14 +11,15 @@ import (
+ 
+ 	k6cloud "github.com/grafana/k6-cloud-openapi-client-go/k6"
+ 	"github.com/sirupsen/logrus"
++	"go.k6.io/k6/v2/internal/cloudapi/clientcfg"
+ 	"go.k6.io/k6/v2/internal/cloudapi/httperr"
+ )
+ 
+ const (
+ 	// RetryInterval is the default cloud request retry interval
+-	RetryInterval = 500 * time.Millisecond
++	RetryInterval = clientcfg.RetryInterval
+ 	// MaxRetries specifies max retry attempts
+-	MaxRetries = 3
++	MaxRetries = clientcfg.MaxRetries
+ )
+ 
+ // Client handles communication with the k6 Cloud API.

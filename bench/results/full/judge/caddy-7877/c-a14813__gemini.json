@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-a14813",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:29:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8b2f0203f8c15c50b2aa4467a27deab08da79a09898a69cfd102f1ec82235ec5",
+  "wall_s": 128.5,
+  "cost_usd": 0.24522,
+  "usage": {
+    "input": 27930,
+    "output": 15780,
+    "thinking": 15553,
+    "cache_read": 0,
+    "total": 43710
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 1,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 2
+  },
+  "mean": 2.833,
+  "rationale": {
+    "consistency": "Follows standard Go idioms, avoids external dependencies, and integrates cleanly with the existing changePath callback pattern.",
+    "edge_cases": "EqualFold on single bytes equates all continuation bytes (breaking UTF-8); aborts on invalid escapes instead of treating the '%' literally.",
+    "scope": "Applies EqualFold to the entire comparison, making the path matching case-insensitive and violating the requirement to preserve existing behavior.",
+    "readability": "The reverse byte-by-byte parsing loop is complex but well-commented, with clear variable names and a logical structure.",
+    "robustness": "Prevents out-of-bounds slice panics and gracefully falls back to the original path if url.PathUnescape fails, ensuring safe execution.",
+    "maintainability": "The low-level reverse byte loop is brittle; fixing the case-sensitivity and UTF-8 bugs requires complex state tracking or a full rewrite."
+  },
+  "flags": []
+}

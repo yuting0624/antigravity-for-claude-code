@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-4ddcb5",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:46:49+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b52f545e3f5f989660164d4a4b2a96c0edfad9fc0e160027bd09278bb06a300f",
+  "wall_s": 69.9,
+  "cost_usd": 0.234268,
+  "usage": {
+    "input": 54308,
+    "output": 10471,
+    "thinking": 10272,
+    "cache_read": 0,
+    "total": 64779
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches the repository's API designs, error handling conventions (httperr), and project layout.",
+    "edge_cases": "Superb handling of retries, context cancellations, HTTP errors, 409 conflict, and JSON null marshaling for ArchiveSize.",
+    "scope": "Strictly adheres to requirements; neatly isolates the provisioning logic and integrates safely via targeted interfaces without breaking v1.",
+    "readability": "Cleanly separated concerns, distinct interfaces for cloud components, and well-named types and abstractions.",
+    "robustness": "Strong concurrency hygiene, respects timeouts, properly closes HTTP bodies, prevents unbounded retries, and avoids hangs.",
+    "maintainability": "Highly decoupled architecture using interfaces like metricsPusher makes testing easy and isolates the v1 to v2 migration."
+  },
+  "flags": []
+}

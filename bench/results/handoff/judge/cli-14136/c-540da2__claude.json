@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-540da2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:31:11+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "10e392e657db2d0ad2f62c6e74311c6e68be9636a095b69fd004f6e065147967",
+  "wall_s": 36.9,
+  "cost_usd": 0.52172025,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Flag validation mirrors pr checkout's blank check and MutuallyExclusive style; Pull warning matches existing flow. Exported arg-builder funcs in the git package are atypical next to the client methods.",
+    "edge_cases": "Handles blank path, --list exclusivity, missing --checkout, relative-to-absolute, reuse of an existing linked worktree, and ff-only pull scoped to the worktree. Flag/Long help never states the --checkout requirement.",
+    "scope": "Shared package extraction and checkout.go refactor are what was asked; swapping localBranchExists for HasLocalBranch is a small extra but tied to removing the helper.",
+    "readability": "Structure is clear, but useful comments on ensureWorktreePathSafe/revParseFacts and the reuse case were dropped in the move, and develop's non-reuse branch bypasses the shared helper it already calls.",
+    "robustness": "Errors propagated at each git step; path validated before any API calls; pull failure degrades to a warning like the existing checkout path. No panics on bad input.",
+    "maintainability": "WorktreeCheckoutCommands already covers the non-reuse case yet develop.go re-implements it via client methods, and the git package now offers both methods and arg builders for the same commands; WorktreeTarget.Path is ignored in one path."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-8a7c39",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:52:52+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290cec7a8665a74769f60f85e0cd659be0bc481db3d6994e367c16d562d8bbe4",
+  "wall_s": 88.0,
+  "cost_usd": 0.61491625,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Follows cmd/ layout and flag names of zoekt-git-index, but pulls in golang.org/x/sys/unix without build tags, uses a 2026 Sourcegraph header unlike siblings, and shadows the `path` import in resolveRoots.",
+    "edge_cases": "Handles .git files, bare repos, duplicate names/sources, missing index dir, EINTR on flock; but no-root case returns an error without printing usage, and compound shards make list/sync hard-fail instead of being skipped.",
+    "scope": "Delivers discovery, dry-run/-f sync, list, remove, lock; adds unrequested `sync` alias and source-path selectors for remove, and a DryRun option on gitindex.Options that is broader than strictly needed.",
+    "readability": "Clear small functions, tabwriter list output, explanatory comments on the defer and removal order; minor variable shadowing (path) in a few places.",
+    "robustness": "Lock scoped to -f only, errors joined and reported; but the gitindex defer-restore of desc.Name changes name precedence for any caller that pre-sets Name (zoekt-git-index does), risking altered shard names for existing users despite the 'keep caller behaviour' constraint.",
+    "maintainability": "Plan/apply split and shared applyRemovals are tidy; the hidden defer-based override in setTemplatesFromRepo is implicit coupling that a future maintainer could easily break, versus an explicit opt-in option."
+  },
+  "flags": []
+}

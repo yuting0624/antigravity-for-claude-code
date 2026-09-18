@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-087ba6",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:50:43+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cf380e3f6d2c458cbcdc3178fc0d3a60057565b65c08e187de62f637c803d782",
+  "wall_s": 76.6,
+  "cost_usd": 0.179174,
+  "usage": {
+    "input": 28297,
+    "output": 10215,
+    "thinking": 10014,
+    "cache_read": 0,
+    "total": 38512
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches the module registration, Caddyfile unmarshalling, interface assertions, and structure of the existing cookie filter.",
+    "edge_cases": "Elegantly handles quotes, missing attributes, unparseable lines, and prioritizes the first matching action perfectly.",
+    "scope": "Implements exactly the set_cookie filter with the requested actions and behavior, with zero unrelated changes.",
+    "readability": "Clean structure using strings.Cut and an OUTER loop label makes the flow, string manipulation, and logic very clear.",
+    "robustness": "Safely handles malformed strings, avoids index out-of-bounds panics via strings.Cut, and correctly pre-allocates slices.",
+    "maintainability": "Modular actions loop and straightforward parsing logic make it simple to extend or modify in the future."
+  },
+  "flags": []
+}

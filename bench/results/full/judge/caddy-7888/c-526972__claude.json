@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-526972",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:20:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "041d8e141715439bfecf4cd832a0a04d7f2f1037f6f3661dcc3ff71f9a4e2715",
+  "wall_s": 31.7,
+  "cost_usd": 0.22930025,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: reuses cookieFilterAction and filterAction constants, same module ID scheme, Validate, receiver naming, OUTER label idiom, and interface guards added in the right places.",
+    "edge_cases": "Handles missing '=', empty string, quoted values, suffix preservation, exact name match, first-action-wins. Hand-rolled parser accepts anything with '=' (empty or invalid names), so 'unparseable' is a loose notion; whitespace around name/value is not trimmed.",
+    "scope": "Only adds the new filter, its registration and guards; no unrelated edits or refactors.",
+    "readability": "Clear helper with documented multi-return; Filter loop is easy to follow. Five return values from parseSetCookieValue is a bit heavy but documented.",
+    "robustness": "No panics on any input (all slicing is bounds-safe); non-array fields pass through untouched; no shared mutable state.",
+    "maintainability": "Reuses action types well, but UnmarshalCaddyfile is a verbatim copy of CookieFilter's (~40 lines) rather than a shared helper; parser is isolated and easy to swap."
+  },
+  "flags": []
+}

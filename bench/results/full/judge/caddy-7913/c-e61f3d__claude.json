@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-e61f3d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 2,
+  "judged_at": "2026-09-16T16:00:22+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "354d91de04e27c72baacce49f4f065e083dae489db54016a3fdd6a51e2a6c52d",
+  "wall_s": 103.0,
+  "cost_usd": 0.4438180000000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "License headers, module registration, interface guards, RegisterHandlerDirective and Caddyfile parsing all match siblings; handler config uses time.Duration rather than the caddy.Duration convention for JSON fields.",
+    "edge_cases": "Hard cap, negative-disables, empty writes, deadline-unsupported (logged once), nil body handled; but nested server+route wrappers both call the same controller so the server default always overwrites per-route deadlines, and http.NoBody gets wrapped needlessly.",
+    "scope": "Exactly the requested surface plus a reasonable Caddyfile adapt test; no unrelated refactors.",
+    "readability": "Clear IdleDeadline.next with a good doc comment; Write/ReadFrom loops are straightforward; a few comments repeat the same slowloris paragraph.",
+    "robustness": "No panics, deadline failures degrade gracefully, chunking bounds each underlying call; stale write deadline can persist across keep-alive requests when WriteTimeout is 0, and deadlines precede buffered rather than network writes.",
+    "maintainability": "Shared IdleDeadline type reused by server and handler; minor duplication of started/deadlineNA bookkeeping between reader and writer."
+  },
+  "flags": []
+}

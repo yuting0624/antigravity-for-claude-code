@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-d6a9cd",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:36:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cea5132cd46e62fc88a2e073a78287961de215940f239ae7f8e6e07f337c565c",
+  "wall_s": 52.0,
+  "cost_usd": 0.36451649999999997,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "trimPathSuffix mirrors trimPathPrefix's structure, doc comment style, EqualFold use, and error-return-unchanged idiom exactly.",
+    "edge_cases": "Handles empty path/suffix, escape detection from the end (correct since '%' only starts escapes in EscapedPath), escaped-suffix literal matching, case-insensitive hex, non-matching suffix untouched.",
+    "scope": "Only replaces the broken reverse-based call and adds the helper; removing reverse is justified since it becomes dead code.",
+    "readability": "Clear lock-step backward iteration with explanatory comments; the double-negated `!(iSuffix >= 2 && ...)` condition is slightly dense.",
+    "robustness": "All index accesses are bounds-guarded, no panics on short inputs, decode failure returns path unchanged, no shared state.",
+    "maintainability": "Parallels prefix logic so future fixes are easy to mirror, though the two functions are near-duplicates that could drift apart."
+  },
+  "flags": []
+}

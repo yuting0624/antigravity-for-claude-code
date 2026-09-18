@@ -1,0 +1,98 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..5458442dc 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -430,6 +430,44 @@ func buildQueryString(qs string, repl *caddy.Replacer) string {
+ // same escape at that position. Otherwise, all character comparisons are
+ // performed in normalized/unescaped space.
+ func trimPathPrefix(escapedPath, prefix string) string {
++	if iPath, ok := matchPathPrefix(escapedPath, prefix); ok {
++		return escapedPath[iPath:]
++	}
++	return escapedPath
++}
++
++// trimPathSuffix is like strings.TrimSuffix, but customized for advanced URI
++// path suffix matching. The string suffix will be trimmed from the end
++// of escapedPath if escapedPath ends with suffix. It honors the same
++// comparison rules as trimPathPrefix: all character comparisons are
++// performed in normalized/unescaped space, except where the suffix string
++// uses an escape sequence (%xx), in which case escapedPath must literally
++// use the same escape at that position.
++func trimPathSuffix(escapedPath, suffix string) string {
++	if suffix == "" {
++		return escapedPath
++	}
++
++	for i := 0; i < len(escapedPath); {
++		if consumed, ok := matchPathPrefix(escapedPath[i:], suffix); ok && i+consumed == len(escapedPath) {
++			return escapedPath[:i]
++		}
++		if escapedPath[i] == '%' && i+3 <= len(escapedPath) {
++			if _, err := url.PathUnescape(escapedPath[i : i+3]); err == nil {
++				i += 3
++				continue
++			}
++		}
++		i++
++	}
++
++	return escapedPath
++}
++
++// matchPathPrefix checks if escapedPath starts with prefix according to the
++// normalized/unescaped matching rules, returning the number of bytes consumed
++// in escapedPath and whether it matched.
++func matchPathPrefix(escapedPath, prefix string) (int, bool) {
+ 	var iPath, iPrefix int
+ 	for iPath < len(escapedPath) && iPrefix < len(prefix) {
+ 		prefixCh := prefix[iPrefix]
+@@ -440,7 +478,7 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 			ch, err = url.PathUnescape(escapedPath[iPath : iPath+3])
+ 			if err != nil {
+ 				// should be impossible unless EscapedPath() is returning invalid values!
+-				return escapedPath
++				return 0, false
+ 			}
+ 			iPath += 2
+ 		}
+@@ -448,7 +486,7 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 		// prefix comparisons are case-insensitive to consistency with
+ 		// path matcher, which is case-insensitive for good reasons
+ 		if !strings.EqualFold(ch, string(prefixCh)) {
+-			return escapedPath
++			return 0, false
+ 		}
+ 
+ 		iPath++
+@@ -457,19 +495,11 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 
+ 	// if we iterated through the entire prefix, we found it, so trim it
+ 	if iPrefix >= len(prefix) {
+-		return escapedPath[iPath:]
++		return iPath, true
+ 	}
+ 
+ 	// otherwise we did not find the prefix
+-	return escapedPath
+-}
+-
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
+-	}
+-	return string(r)
++	return 0, false
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

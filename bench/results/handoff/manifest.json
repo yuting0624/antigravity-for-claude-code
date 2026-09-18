@@ -1,0 +1,69 @@
+{
+  "run_id": "handoff",
+  "created_at": "2026-09-16T23:53:28+00:00",
+  "protocol_tag": "bench/protocol-handoff-v1",
+  "protocol_sha": "81732052b901876c43dec9327f047cc08d3223e0",
+  "reference_arms_from": "full (solo-opus, solo-sonnet)",
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "plugin_dir": "/Users/linyuting/.cache/agy-bench/plugin",
+  "caps": {
+    "small": {
+      "max_budget_usd": 8,
+      "max_turns": 80,
+      "wall_s": 2700
+    },
+    "medium": {
+      "max_budget_usd": 30,
+      "max_turns": 150,
+      "wall_s": 9000
+    },
+    "large": {
+      "max_budget_usd": 75,
+      "max_turns": 250,
+      "wall_s": 14400
+    }
+  },
+  "cold_gap_s": 300,
+  "effort": "high",
+  "hashes": {
+    "prices.lock.json": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+    "arms.json": "5947993f5e8e417ca361609236105aa038f261ef2c41a64ced25b565295812a1",
+    "allow-common.txt": "27f75f6ef04ed81a0e53842f1ff95c9c53b1ce813b5bb259569ff8d6f6f2043a",
+    "allow-plugin.txt": "2105adc142ecdc94987db63f9255e40ece89c1bc38d69f10a1aca119e453c4d0",
+    "bash-gate-rules.json": "1450e9c83fb9aca448dc7b01d697c1812fabd9dc0165d0450a2f4f32163b3674",
+    "hybrid-handoff-appendix.md": "69ffd63a3f0d2c7228c1407267ab57a2dff51ba4fa8bf05e6c8ff6469ff94b8f",
+    "judge.md": "7a6dfc73a58439cb64e2b9cfaf0e94f190edefc8293227e192d39c370bea3176"
+  },
+  "lanes": [
+    "A",
+    "B"
+  ],
+  "queue_seed": 20260914,
+  "notes": [
+    "mains-power gate on; sleep/network deaths rerun; same caps as run full",
+    "2026-09-17: write attribution corrected (piped wrapper; missing PostToolUse) and every record re-accounted; costs, passes and exclusions unchanged"
+  ],
+  "raw_archive": {
+    "file": "handoff-raw-transcripts.tgz (kept by the operator; offered as a release asset)",
+    "sha256": "267dc490bda5580eb8fd192b0dd2bbce53d2d774230c39245cf0c0793d11e927",
+    "bytes": 1610132,
+    "contents": "results/handoff/runs/**/raw (transcripts, result.json, agy_usage.log, tool_trace.jsonl) and judge/raw"
+  },
+  "finished_at": "2026-09-17T13:25:00+00:00",
+  "counted_runs": 16,
+  "skipped_items": 0,
+  "judging": {
+    "records": 64,
+    "failed": 0,
+    "usd": 22.7,
+    "finished_at": "2026-09-17T15:13:38Z"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-363d23",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:20:11+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "efb3cedecd158dd336a623789988729064dcbd2374541326ed7ab2e457db8b4c",
+  "wall_s": 27.9,
+  "cost_usd": 0.087696,
+  "usage": {
+    "input": 28302,
+    "output": 2591,
+    "thinking": 2414,
+    "cache_read": 0,
+    "total": 30893
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Properly reuses the established prefix matching logic, adhering perfectly to codebase conventions.",
+    "edge_cases": "Accurately handles escape sequence boundaries by correctly advancing indices to avoid matching inside an escape.",
+    "scope": "Strictly addresses the suffix stripping issue and cleanly removes the obsolete 'reverse' helper without unrelated changes.",
+    "readability": "Extracting 'matchPathPrefix' makes both prefix and suffix stripping functions highly clear and straightforward.",
+    "robustness": "Safely iterates over path bytes with proper bounds checking, avoiding panics on malformed escape sequences.",
+    "maintainability": "Unifies prefix and suffix matching into a single core routine, completely eliminating the brittle string reversal hack."
+  },
+  "flags": []
+}

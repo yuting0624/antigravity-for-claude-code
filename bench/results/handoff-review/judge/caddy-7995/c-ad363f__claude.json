@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-ad363f",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T14:33:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c25c97af6074c0a4a50b64f8c3c530cfbf8f780d308ae48e92b821f3e95fa8c7",
+  "wall_s": 52.1,
+  "cost_usd": 0.4863665,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses slices/maps helpers like surrounding code and keeps option-parser shape; a variadic `order ...[]string` to emulate an optional parameter is not an idiom used elsewhere in this package.",
+    "edge_cases": "nil options map, repeated `order` lines chained via existingVal, unknown positional/target directive errors, and plugin init-time ordering are all handled; caller-supplied \"order\" key is silently dropped.",
+    "scope": "Changes stay within the three relevant files; RegisterDirectiveOrder rewrite is justified by the no-aliasing requirement, though it leaves a duplicated standard-dir panic check.",
+    "readability": "parseOptOrder restructure is clear, but three stacked fallbacks (getDirectiveOrder, buildSubroute variadic check, sortRoutes nil check) and the variadic signature obscure where the effective order comes from.",
+    "robustness": "Global order is only mutated at init, options map is cloned before writes so concurrent/shared-map adaptations do not race, and failed adaptations leave no state behind; no locks needed.",
+    "maintainability": "Per-adaptation order threading is correct, but the optional variadic lets a future needsSorting=true caller silently fall back to the global order; redundant fallbacks and the duplicate panic add minor clutter."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:39:21+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 65.3,
+  "cost_usd": 0.4390705,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "trimPathSuffix mirrors trimPathPrefix's structure, byte-wise EqualFold comparison, url.PathUnescape use and even its 'should be impossible' error comment; gofmt-style code.",
+    "edge_cases": "Handles decoded-vs-escaped path, escaped suffix requiring literal escape, case-insensitive hex, short path, non-matching suffix. Escape detection assumes '%' 3 bytes back always starts a valid escape (true for EscapedPath output) and does not verify hex digits.",
+    "scope": "Only touches the suffix branch and replaces the now-dead reverse helper; prefix, query and other ops untouched.",
+    "readability": "Clear lock-step index loop with descriptive names; doc comment is long but explains the non-obvious reason reverse+prefix fails. 'for good reasons' is hand-wavy.",
+    "robustness": "All index accesses guarded (iPath>=3, iSuffix>=3, loop bounds); PathUnescape error returns path unchanged; no allocations beyond small strings, no panics on bad input.",
+    "maintainability": "Some inherent duplication with trimPathPrefix logic, but self-contained and easy to follow; no hidden coupling."
+  },
+  "flags": []
+}

@@ -1,0 +1,226 @@
+diff --git a/caddyconfig/httpcaddyfile/builtins.go b/caddyconfig/httpcaddyfile/builtins.go
+index 34965d1d6..1d18c78f2 100644
+--- a/caddyconfig/httpcaddyfile/builtins.go
++++ b/caddyconfig/httpcaddyfile/builtins.go
+@@ -818,7 +818,7 @@ func parseRoute(h Helper) (caddyhttp.MiddlewareHandler, error) {
+ 		}
+ 	}
+ 
+-	return buildSubroute(allResults, h.groupCounter, false)
++	return buildSubroute(allResults, h.groupCounter, false, h.directiveOrder())
+ }
+ 
+ func parseHandle(h Helper) (caddyhttp.MiddlewareHandler, error) {
+diff --git a/caddyconfig/httpcaddyfile/directives.go b/caddyconfig/httpcaddyfile/directives.go
+index cdf1ef3aa..7fc284722 100644
+--- a/caddyconfig/httpcaddyfile/directives.go
++++ b/caddyconfig/httpcaddyfile/directives.go
+@@ -98,10 +98,28 @@ var defaultDirectiveOrder = []string{
+ 	"acme_server",
+ }
+ 
+-// directiveOrder specifies the order to apply directives
+-// in HTTP routes, after being modified by either the
+-// plugins or by the user via the "order" global option.
+-var directiveOrder = defaultDirectiveOrder
++// directiveOrder specifies the process-wide order to apply directives
++// in HTTP routes, modified only by plugins via RegisterDirectiveOrder;
++// the "order" global option no longer changes it, it only affects a single
++// adaptation.
++var directiveOrder = slices.Clone(defaultDirectiveOrder)
++
++// adaptedDirectiveOrder is the directive order in effect for a single
++// adaptation, as modified by the "order" global option. The type is
++// unexported so that an "order" value that came from the options map of the
++// caller, rather than from the Caddyfile being adapted, is ignored.
++type adaptedDirectiveOrder []string
++
++// directiveOrderFromOptions returns the directive order to use for the
++// adaptation that options belongs to: the one built by the "order" global
++// option if there was one, otherwise the process-wide order. The returned
++// slice must not be modified.
++func directiveOrderFromOptions(options map[string]any) []string {
++	if order, ok := options["order"].(adaptedDirectiveOrder); ok {
++		return order
++	}
++	return directiveOrder
++}
+ 
+ // RegisterDirective registers a unique directive dir with an
+ // associated unmarshaling (setup) function. When directive dir
+@@ -169,22 +187,13 @@ func RegisterDirectiveOrder(dir string, position Positional, standardDir string)
+ 		panic("the 3rd argument '" + standardDir + "' must be a directive that exists in the standard distribution of Caddy")
+ 	}
+ 
+-	// insert directive into proper position
+-	newOrder := directiveOrder
+-	for i, d := range newOrder {
+-		if d != standardDir {
+-			continue
++	i := slices.Index(directiveOrder, standardDir)
++	if i >= 0 {
++		if position == After {
++			i++
+ 		}
+-		switch position {
+-		case Before:
+-			newOrder = append(newOrder[:i], append([]string{dir}, newOrder[i:]...)...)
+-		case After:
+-			newOrder = append(newOrder[:i+1], append([]string{dir}, newOrder[i+1:]...)...)
+-		case First, Last:
+-		}
+-		break
++		directiveOrder = slices.Insert(slices.Clone(directiveOrder), i, dir)
+ 	}
+-	directiveOrder = newOrder
+ }
+ 
+ // RegisterGlobalOption registers a unique global option opt with
+@@ -219,6 +228,11 @@ func (h Helper) Option(name string) any {
+ 	return h.options[name]
+ }
+ 
++// directiveOrder returns the directive order in effect for this adaptation.
++func (h Helper) directiveOrder() []string {
++	return directiveOrderFromOptions(h.options)
++}
++
+ // Caddyfiles returns the list of config files from
+ // which tokens in the current server block were loaded.
+ func (h Helper) Caddyfiles() []string {
+@@ -348,7 +362,7 @@ func ParseSegmentAsSubroute(h Helper) (caddyhttp.MiddlewareHandler, error) {
+ 		return nil, err
+ 	}
+ 
+-	return buildSubroute(allResults, h.groupCounter, true)
++	return buildSubroute(allResults, h.groupCounter, true, h.directiveOrder())
+ }
+ 
+ // parseSegmentAsConfig parses the segment such that its subdirectives
+@@ -444,9 +458,9 @@ type ConfigValue struct {
+ 	directive string
+ }
+ 
+-func sortRoutes(routes []ConfigValue) {
++func sortRoutes(routes []ConfigValue, order []string) {
+ 	dirPositions := make(map[string]int)
+-	for i, dir := range directiveOrder {
++	for i, dir := range order {
+ 		dirPositions[dir] = i
+ 	}
+ 
+diff --git a/caddyconfig/httpcaddyfile/httptype.go b/caddyconfig/httpcaddyfile/httptype.go
+index 60d851fec..38dbbb4c2 100644
+--- a/caddyconfig/httpcaddyfile/httptype.go
++++ b/caddyconfig/httpcaddyfile/httptype.go
+@@ -18,6 +18,7 @@ import (
+ 	"cmp"
+ 	"encoding/json"
+ 	"fmt"
++	"maps"
+ 	"net"
+ 	"reflect"
+ 	"slices"
+@@ -59,6 +60,14 @@ func (st ServerType) Setup(
+ 	inputServerBlocks []caddyfile.ServerBlock,
+ 	options map[string]any,
+ ) (*caddy.Config, []caddyconfig.Warning, error) {
++	// adaptation stores intermediate state in the options map, including the
++	// directive order built by the "order" global option; keep all of that to
++	// this one adaptation by working on our own copy
++	options = maps.Clone(options)
++	if options == nil {
++		options = make(map[string]any)
++	}
++
+ 	var warnings []caddyconfig.Warning
+ 	gc := counter{new(int)}
+ 	state := make(map[string]any)
+@@ -918,7 +927,7 @@ func (st *ServerType) serversFromPairings(
+ 
+ 			// set up each handler directive, making sure to honor directive order
+ 			dirRoutes := sblock.pile["route"]
+-			siteSubroute, err := buildSubroute(dirRoutes, groupCounter, true)
++			siteSubroute, err := buildSubroute(dirRoutes, groupCounter, true, directiveOrderFromOptions(options))
+ 			if err != nil {
+ 				return nil, err
+ 			}
+@@ -1421,15 +1430,15 @@ func appendSubrouteToRouteList(routeList caddyhttp.RouteList,
+ 
+ // buildSubroute turns the config values, which are expected to be routes
+ // into a clean and orderly subroute that has all the routes within it.
+-func buildSubroute(routes []ConfigValue, groupCounter counter, needsSorting bool) (*caddyhttp.Subroute, error) {
++func buildSubroute(routes []ConfigValue, groupCounter counter, needsSorting bool, order []string) (*caddyhttp.Subroute, error) {
+ 	if needsSorting {
+ 		for _, val := range routes {
+-			if !slices.Contains(directiveOrder, val.directive) {
++			if !slices.Contains(order, val.directive) {
+ 				return nil, fmt.Errorf("directive '%s' is not an ordered HTTP handler, so it cannot be used here - try placing within a route block or using the order global option", val.directive)
+ 			}
+ 		}
+ 
+-		sortRoutes(routes)
++		sortRoutes(routes, order)
+ 	}
+ 
+ 	subroute := new(caddyhttp.Subroute)
+diff --git a/caddyconfig/httpcaddyfile/options.go b/caddyconfig/httpcaddyfile/options.go
+index 0b4ee5402..d786ec2c5 100644
+--- a/caddyconfig/httpcaddyfile/options.go
++++ b/caddyconfig/httpcaddyfile/options.go
+@@ -101,7 +101,7 @@ func parseOptHTTPSPort(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	return httpsPort, nil
+ }
+ 
+-func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
++func parseOptOrder(d *caddyfile.Dispenser, existing any) (any, error) {
+ 	d.Next() // consume option name
+ 
+ 	// get directive name
+@@ -119,19 +119,26 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	}
+ 	pos := Positional(d.Val())
+ 
++	// start from the order built by any previous "order" options in this
++	// same global block, falling back to the process-wide order; neither is
++	// ever modified, the result belongs to this adaptation alone
++	prevOrder, ok := existing.(adaptedDirectiveOrder)
++	if !ok {
++		prevOrder = adaptedDirectiveOrder(directiveOrder)
++	}
++
+ 	// if directive already had an order, drop it
+-	newOrder := slices.DeleteFunc(directiveOrder, func(d string) bool {
++	newOrder := slices.DeleteFunc(slices.Clone(prevOrder), func(d string) bool {
+ 		return d == dirName
+ 	})
+ 
+ 	// act on the positional; if it's First or Last, we're done right away
+ 	switch pos {
+ 	case First:
+-		newOrder = append([]string{dirName}, newOrder...)
++		newOrder = append(adaptedDirectiveOrder{dirName}, newOrder...)
+ 		if d.NextArg() {
+ 			return nil, d.ArgErr()
+ 		}
+-		directiveOrder = newOrder
+ 		return newOrder, nil
+ 
+ 	case Last:
+@@ -139,7 +146,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 		if d.NextArg() {
+ 			return nil, d.ArgErr()
+ 		}
+-		directiveOrder = newOrder
+ 		return newOrder, nil
+ 
+ 	// if it's Before or After, continue
+@@ -171,8 +177,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	// insert the directive into the new order
+ 	newOrder = slices.Insert(newOrder, targetIndex, dirName)
+ 
+-	directiveOrder = newOrder
+-
+ 	return newOrder, nil
+ }
+ 

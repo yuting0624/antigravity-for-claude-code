@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-45d9d7",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:31:55+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a7da68cc96b815ab701180ca01422503f13eeb08757e7183503729b0832c0b74",
+  "wall_s": 89.5,
+  "cost_usd": 0.231752,
+  "usage": {
+    "input": 48742,
+    "output": 11189,
+    "thinking": 10950,
+    "cache_read": 0,
+    "total": 59931
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Seamless integration with Caddy's configuration, logging, struct tags, and module registration systems.",
+    "edge_cases": "Flawlessly handles ReadFrom fast paths, connection hijacking, and the interaction between rate floors and absolute hard ceilings.",
+    "scope": "Implements all requested global/per-route options and idle semantics exactly without any unnecessary changes.",
+    "readability": "Clean structure with excellent explanatory comments for the rate floor math and deadline behaviors.",
+    "robustness": "Properly ignores ErrNotSupported for HTTP/3, chunks writes safely, and leverages Go's ResponseController correctly.",
+    "maintainability": "Highly modular design keeps the idle deadline logic fully encapsulated and cleanly separated from standard server logic."
+  },
+  "flags": []
+}

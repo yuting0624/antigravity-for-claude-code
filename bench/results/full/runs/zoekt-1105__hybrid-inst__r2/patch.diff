@@ -1,0 +1,848 @@
+diff --git a/cmd/zoekt-git-index/main.go b/cmd/zoekt-git-index/main.go
+index 81d9ca67..175ed17d 100644
+--- a/cmd/zoekt-git-index/main.go
++++ b/cmd/zoekt-git-index/main.go
+@@ -132,6 +132,8 @@ func run() int {
+ 			Branches:                          branches,
+ 			RepoDir:                           dir,
+ 			DeltaShardNumberFallbackThreshold: *deltaShardNumberFallbackThreshold,
++			// Preserve historical behaviour: origin-derived name overrides path-derived name.
++			NameFromGitConfig: true,
+ 		}
+ 
+ 		if _, err := gitindex.IndexGitRepo(gitOpts); err != nil {
+diff --git a/cmd/zoekt-local-sync/discover.go b/cmd/zoekt-local-sync/discover.go
+new file mode 100644
+index 00000000..42f2786b
+--- /dev/null
++++ b/cmd/zoekt-local-sync/discover.go
+@@ -0,0 +1,123 @@
++// Copyright 2026 Sourcegraph, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package main
++
++import (
++	"fmt"
++	"io/fs"
++	"os"
++	"path/filepath"
++	"sort"
++	"strings"
++)
++
++// repository is a git repository discovered under one of the roots.
++type repository struct {
++	// Name is the slash separated name of the repository, derived from its
++	// path relative to the root it was found under.
++	Name string
++	// Path is the absolute path of the repository: the work tree root, or
++	// the directory of a bare repository.
++	Path string
++	// Root is the absolute root directory the repository was found under.
++	Root string
++}
++
++// discoverRepositories walks roots and returns the git repositories below
++// them, sorted by name.
++func discoverRepositories(roots []string) ([]repository, error) {
++	var cleanRoots []string
++	for _, root := range roots {
++		absRoot, err := filepath.Abs(root)
++		if err != nil {
++			return nil, fmt.Errorf("root %q: %w", root, err)
++		}
++		absRoot = filepath.Clean(absRoot)
++		if _, err := os.Stat(absRoot); err != nil {
++			return nil, fmt.Errorf("root %q does not exist: %w", root, err)
++		}
++		cleanRoots = append(cleanRoots, absRoot)
++	}
++
++	seen := make(map[string]string)
++	var repos []repository
++
++	for _, absRoot := range cleanRoots {
++		err := filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, err error) error {
++			if err != nil {
++				// Skip directories that cannot be read rather than aborting the walk.
++				return nil
++			}
++			if !d.IsDir() {
++				return nil
++			}
++			if !isRepository(path) {
++				return nil
++			}
++
++			var name string
++			if path == absRoot {
++				name = strings.TrimSuffix(filepath.Base(absRoot), ".git")
++			} else {
++				rel, err := filepath.Rel(absRoot, path)
++				if err != nil {
++					return err
++				}
++				name = strings.TrimSuffix(filepath.ToSlash(rel), ".git")
++			}
++
++			if prev, ok := seen[name]; ok {
++				return fmt.Errorf("duplicate repository name %q: %s and %s", name, prev, path)
++			}
++			seen[name] = path
++
++			repos = append(repos, repository{
++				Name: name,
++				Path: path,
++				Root: absRoot,
++			})
++			return filepath.SkipDir
++		})
++		if err != nil {
++			return nil, err
++		}
++	}
++
++	sort.Slice(repos, func(i, j int) bool {
++		return repos[i].Name < repos[j].Name
++	})
++
++	return repos, nil
++}
++
++func isRepository(dir string) bool {
++	// (a) an entry named ".git" exists inside it (a directory OR a plain file, as used by worktrees and submodules)
++	if _, err := os.Lstat(filepath.Join(dir, ".git")); err == nil {
++		return true
++	}
++
++	// (b) it looks like a bare repository: it contains a subdirectory named "objects" AND
++	// (it contains an entry named "HEAD" OR its base name ends in ".git").
++	if fi, err := os.Stat(filepath.Join(dir, "objects")); err == nil && fi.IsDir() {
++		if strings.HasSuffix(filepath.Base(dir), ".git") {
++			return true
++		}
++		if _, err := os.Lstat(filepath.Join(dir, "HEAD")); err == nil {
++			return true
++		}
++	}
++
++	return false
++}
+diff --git a/cmd/zoekt-local-sync/index.go b/cmd/zoekt-local-sync/index.go
+new file mode 100644
+index 00000000..df420f30
+--- /dev/null
++++ b/cmd/zoekt-local-sync/index.go
+@@ -0,0 +1,214 @@
++// Copyright 2026 Sourcegraph, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package main
++
++import (
++	"errors"
++	"fmt"
++	"io"
++	"os"
++	"path/filepath"
++	"reflect"
++	"sort"
++	"strings"
++
++	"github.com/go-git/go-git/v5"
++	"github.com/go-git/go-git/v5/plumbing"
++	"github.com/sourcegraph/zoekt"
++	"github.com/sourcegraph/zoekt/gitindex"
++	"github.com/sourcegraph/zoekt/index"
++)
++
++type shardInfo struct {
++	Path         string
++	Repositories []*zoekt.Repository
++}
++
++func readInventory(indexDir string) ([]shardInfo, error) {
++	if _, err := os.Stat(indexDir); os.IsNotExist(err) {
++		return nil, nil
++	}
++	matches, err := filepath.Glob(filepath.Join(indexDir, "*.zoekt"))
++	if err != nil {
++		return nil, err
++	}
++	sort.Strings(matches)
++
++	var shards []shardInfo
++	for _, match := range matches {
++		repos, _, err := index.ReadMetadataPath(match)
++		if err != nil {
++			continue
++		}
++		shards = append(shards, shardInfo{
++			Path:         match,
++			Repositories: repos,
++		})
++	}
++	return shards, nil
++}
++
++type repositoryRecord struct {
++	Name   string
++	Source string
++	Shards []string
++}
++
++func recordsFromShards(shards []shardInfo) []repositoryRecord {
++	groups := make(map[string]*repositoryRecord)
++	shardSets := make(map[string]map[string]struct{})
++	var names []string
++
++	for _, s := range shards {
++		for _, repo := range s.Repositories {
++			if repo == nil {
++				continue
++			}
++			rec, ok := groups[repo.Name]
++			if !ok {
++				rec = &repositoryRecord{Name: repo.Name}
++				groups[repo.Name] = rec
++				shardSets[repo.Name] = make(map[string]struct{})
++				names = append(names, repo.Name)
++			}
++			if rec.Source == "" && repo.Source != "" {
++				rec.Source = repo.Source
++			}
++			if s.Path != "" {
++				shardSets[repo.Name][s.Path] = struct{}{}
++			}
++		}
++	}
++
++	sort.Strings(names)
++	records := make([]repositoryRecord, 0, len(names))
++	for _, name := range names {
++		rec := *groups[name]
++		var shardList []string
++		for sp := range shardSets[name] {
++			shardList = append(shardList, sp)
++		}
++		sort.Strings(shardList)
++		rec.Shards = shardList
++		records = append(records, rec)
++	}
++	return records
++}
++
++func removeRecord(rec repositoryRecord) error {
++	for _, shard := range rec.Shards {
++		for _, path := range []string{shard, shard + ".meta"} {
++			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
++				return err
++			}
++		}
++	}
++	return nil
++}
++
++func repositoryUpToDate(opts gitindex.Options) (bool, error) {
++	repo, err := git.PlainOpenWithOptions(opts.RepoDir, &git.PlainOpenOptions{
++		EnableDotGitCommonDir: true,
++	})
++	if errors.Is(err, git.ErrRepositoryNotExists) {
++		repo, err = git.PlainOpenWithOptions(opts.RepoDir, &git.PlainOpenOptions{
++			DetectDotGit:          true,
++			EnableDotGitCommonDir: true,
++		})
++	}
++	if err != nil {
++		return false, nil
++	}
++
++	var expandedBranches []string
++	for _, b := range opts.Branches {
++		if strings.Contains(b, "*") {
++			iter, err := repo.Branches()
++			if err != nil {
++				return false, nil
++			}
++			for {
++				ref, err := iter.Next()
++				if errors.Is(err, io.EOF) {
++					break
++				}
++				if err != nil {
++					iter.Close()
++					return false, nil
++				}
++				name := ref.Name().Short()
++				matched, err := filepath.Match(b, name)
++				if err != nil {
++					iter.Close()
++					return false, nil
++				}
++				if matched {
++					expandedBranches = append(expandedBranches, name)
++				}
++			}
++			iter.Close()
++		} else {
++			expandedBranches = append(expandedBranches, b)
++		}
++	}
++
++	var branches []zoekt.RepositoryBranch
++	for _, b := range expandedBranches {
++		hash, err := repo.ResolveRevision(plumbing.Revision(b))
++		if err != nil {
++			hash, err = repo.ResolveRevision(plumbing.Revision(filepath.Join(opts.BranchPrefix, b)))
++		}
++		if err != nil {
++			if opts.AllowMissingBranch {
++				continue
++			}
++			return false, nil
++		}
++		branches = append(branches, zoekt.RepositoryBranch{
++			Name:    b,
++			Version: hash.String(),
++		})
++	}
++
++	shards := opts.BuildOptions.FindAllShards()
++	if len(shards) == 0 {
++		return false, nil
++	}
++
++	repos, _, err := index.ReadMetadataPath(shards[0])
++	if err != nil {
++		return false, fmt.Errorf("read metadata %s: %w", shards[0], err)
++	}
++
++	var targetRepo *zoekt.Repository
++	for _, r := range repos {
++		if r != nil && r.Name == opts.BuildOptions.RepositoryDescription.Name {
++			targetRepo = r
++			break
++		}
++	}
++	if targetRepo == nil {
++		return false, nil
++	}
++
++	if targetRepo.IndexOptions != opts.BuildOptions.GetHash() {
++		return false, nil
++	}
++	if !reflect.DeepEqual(targetRepo.Branches, branches) {
++		return false, nil
++	}
++
++	return true, nil
++}
+diff --git a/cmd/zoekt-local-sync/main.go b/cmd/zoekt-local-sync/main.go
+new file mode 100644
+index 00000000..4ea6f46b
+--- /dev/null
++++ b/cmd/zoekt-local-sync/main.go
+@@ -0,0 +1,449 @@
++// Copyright 2026 Sourcegraph, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++// Command zoekt-local-sync keeps a zoekt index directory in sync with local git repositories.
++package main
++
++import (
++	"errors"
++	"flag"
++	"fmt"
++	"io"
++	"os"
++	"path/filepath"
++	"strings"
++	"sync"
++	"syscall"
++	"text/tabwriter"
++
++	"github.com/sourcegraph/zoekt"
++	"github.com/sourcegraph/zoekt/gitindex"
++	"github.com/sourcegraph/zoekt/index"
++)
++
++type directoryLock struct {
++	file *os.File
++	once sync.Once
++	err  error
++}
++
++func acquireDirectoryLock(indexDir string) (*directoryLock, error) {
++	if err := os.MkdirAll(indexDir, 0o755); err != nil {
++		return nil, fmt.Errorf("create index directory %q: %w", indexDir, err)
++	}
++
++	lockPath := filepath.Join(indexDir, ".zoekt-local-sync.lock")
++	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o600)
++	if err != nil {
++		return nil, fmt.Errorf("open lock file %q: %w", lockPath, err)
++	}
++
++	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
++		_ = f.Close()
++		return nil, fmt.Errorf("another zoekt-local-sync is running in that index directory: %w", err)
++	}
++
++	return &directoryLock{
++		file: f,
++	}, nil
++}
++
++func (l *directoryLock) Close() error {
++	l.once.Do(func() {
++		if l.file != nil {
++			var firstErr error
++			if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN); err != nil {
++				firstErr = err
++			}
++			if err := l.file.Close(); err != nil && firstErr == nil {
++				firstErr = err
++			}
++			l.err = firstErr
++			l.file = nil
++		}
++	})
++	return l.err
++}
++
++type syncFlags struct {
++	buildOptions         index.Options
++	branches             string
++	prefix               string
++	submodules           bool
++	allowMissingBranches bool
++	repoCache            string
++	force                bool
++}
++
++func newSyncFlagSet(name string, errOut io.Writer, flags *syncFlags) *flag.FlagSet {
++	fs := flag.NewFlagSet(name, flag.ContinueOnError)
++	fs.SetOutput(errOut)
++	fs.Usage = func() {
++		fmt.Fprintln(errOut, "Usage: zoekt-local-sync sync [options] <root>...")
++		fmt.Fprintln(errOut)
++		fmt.Fprintln(errOut, "Options:")
++		fs.PrintDefaults()
++	}
++	if flags == nil {
++		flags = &syncFlags{}
++	}
++	(&flags.buildOptions).Flags(fs)
++	fs.StringVar(&flags.branches, "branches", "HEAD", "git branches to index.")
++	fs.StringVar(&flags.prefix, "prefix", "refs/heads/", "prefix for branch names")
++	fs.BoolVar(&flags.submodules, "submodules", true, "if set to false, do not recurse into submodules")
++	fs.BoolVar(&flags.allowMissingBranches, "allow_missing_branches", false, "allow missing branches.")
++	fs.StringVar(&flags.repoCache, "repo_cache", "", "directory holding bare git repos, named by URL. "+
++		"this is used to find repositories for submodules. "+
++		"It also affects name if the indexed repository is under this directory.")
++	fs.BoolVar(&flags.force, "f", false, "apply the changes instead of previewing")
++	return fs
++}
++
++func printTopLevelHelp(out io.Writer) {
++	fmt.Fprintln(out, "zoekt-local-sync keeps a zoekt index directory in sync with local git repositories.")
++	fmt.Fprintln(out)
++	fmt.Fprintln(out, "Usage:")
++	fmt.Fprintln(out, "  zoekt-local-sync [options] <root>...")
++	fmt.Fprintln(out, "  zoekt-local-sync sync [options] <root>...")
++	fmt.Fprintln(out, "  zoekt-local-sync list [options]")
++	fmt.Fprintln(out, "  zoekt-local-sync remove [options] <repository>...")
++	fmt.Fprintln(out)
++	fmt.Fprintln(out, "By default, commands run in preview mode. Without -f nothing is changed.")
++	fmt.Fprintln(out)
++	fmt.Fprintln(out, "Default sync options:")
++	fs := newSyncFlagSet("sync", io.Discard, nil)
++	fs.SetOutput(out)
++	fs.PrintDefaults()
++	fmt.Fprintln(out)
++	fmt.Fprintln(out, "Run 'zoekt-local-sync sync -h' for more details on sync.")
++	fmt.Fprintln(out, "Run 'zoekt-local-sync list -h' for list options.")
++	fmt.Fprintln(out, "Run 'zoekt-local-sync remove -h' for remove options.")
++}
++
++func execute(args []string, out, errOut io.Writer) error {
++	if len(args) > 0 {
++		switch args[0] {
++		case "-h", "--help", "help":
++			printTopLevelHelp(out)
++			return nil
++		case "sync":
++			return runSync(args[1:], out, errOut)
++		case "list":
++			return runList(args[1:], out, errOut)
++		case "remove":
++			return runRemove(args[1:], out, errOut)
++		default:
++			return runSync(args, out, errOut)
++		}
++	}
++	return runSync(args, out, errOut)
++}
++
++func runSync(args []string, out, errOut io.Writer) error {
++	var sFlags syncFlags
++	fs := newSyncFlagSet("sync", errOut, &sFlags)
++	if err := fs.Parse(args); err != nil {
++		return err
++	}
++
++	roots := fs.Args()
++	if len(roots) == 0 {
++		fs.Usage()
++		return errors.New("at least one root directory is required")
++	}
++
++	sFlags.buildOptions.SetDefaults()
++	if sFlags.buildOptions.IndexDir == "" {
++		return errors.New("-index must not be empty")
++	}
++
++	absIndexDir, err := filepath.Abs(sFlags.buildOptions.IndexDir)
++	if err != nil {
++		return fmt.Errorf("abs index dir: %w", err)
++	}
++	sFlags.buildOptions.IndexDir = absIndexDir
++	indexDir := sFlags.buildOptions.IndexDir
++
++	repos, err := discoverRepositories(roots)
++	if err != nil {
++		return err
++	}
++
++	shards, err := readInventory(indexDir)
++	if err != nil {
++		return err
++	}
++	records := recordsFromShards(shards)
++
++	if sFlags.force {
++		lock, err := acquireDirectoryLock(indexDir)
++		if err != nil {
++			return err
++		}
++		defer lock.Close()
++	}
++
++	var branches []string
++	if sFlags.branches != "" {
++		branches = strings.Split(sFlags.branches, ",")
++	}
++
++	repoCacheDir := sFlags.repoCache
++	if repoCacheDir != "" {
++		if abs, err := filepath.Abs(repoCacheDir); err == nil {
++			repoCacheDir = abs
++		}
++	}
++
++	var syncErrors []error
++	for _, repo := range repos {
++		bOpts := sFlags.buildOptions
++		bOpts.RepositoryDescription = zoekt.Repository{
++			Name:   repo.Name,
++			Source: repo.Path,
++		}
++		bOpts.SetDefaults()
++
++		gitOpts := gitindex.Options{
++			RepoDir:            repo.Path,
++			Branches:           branches,
++			BranchPrefix:       sFlags.prefix,
++			Submodules:         sFlags.submodules,
++			Incremental:        true,
++			AllowMissingBranch: sFlags.allowMissingBranches,
++			RepoCacheDir:       repoCacheDir,
++			BuildOptions:       bOpts,
++		}
++
++		upToDate, err := repositoryUpToDate(gitOpts)
++		if err != nil {
++			fmt.Fprintf(errOut, "zoekt-local-sync: check %q: %v\n", repo.Name, err)
++			syncErrors = append(syncErrors, fmt.Errorf("check repository %q: %w", repo.Name, err))
++			upToDate = false
++		}
++
++		if upToDate {
++			fmt.Fprintf(out, "Up to date %q\n", repo.Name)
++		} else if !sFlags.force {
++			fmt.Fprintf(out, "Would index %q from %s\n", repo.Name, repo.Path)
++		} else {
++			fmt.Fprintf(out, "Indexing %q from %s\n", repo.Name, repo.Path)
++			if _, err := gitindex.IndexGitRepo(gitOpts); err != nil {
++				fmt.Fprintf(errOut, "zoekt-local-sync: index %q: %v\n", repo.Name, err)
++				syncErrors = append(syncErrors, fmt.Errorf("index repository %q: %w", repo.Name, err))
++			} else {
++				fmt.Fprintf(out, "Indexed %q\n", repo.Name)
++			}
++		}
++	}
++
++	discovered := make(map[string]bool, len(repos))
++	for _, r := range repos {
++		discovered[r.Name] = true
++	}
++
++	for _, rec := range records {
++		if !discovered[rec.Name] {
++			if !sFlags.force {
++				for _, shard := range rec.Shards {
++					fmt.Fprintf(out, "Would remove %s\n", shard)
++				}
++			} else {
++				if err := removeRecord(rec); err != nil {
++					return fmt.Errorf("remove record %q: %w", rec.Name, err)
++				}
++				fmt.Fprintf(out, "Removed %q\n", rec.Name)
++			}
++		}
++	}
++
++	if !sFlags.force {
++		fmt.Fprintln(out, "Pass -f to apply these changes.")
++	}
++
++	return errors.Join(syncErrors...)
++}
++
++func runList(args []string, out, errOut io.Writer) error {
++	fs := flag.NewFlagSet("list", flag.ContinueOnError)
++	fs.SetOutput(errOut)
++	fs.Usage = func() {
++		fmt.Fprintln(errOut, "Usage: zoekt-local-sync list [options]")
++		fmt.Fprintln(errOut)
++		fmt.Fprintln(errOut, "Options:")
++		fs.PrintDefaults()
++	}
++
++	var indexDir string
++	fs.StringVar(&indexDir, "index", "", "directory for search indices")
++	if err := fs.Parse(args); err != nil {
++		return err
++	}
++
++	if len(fs.Args()) > 0 {
++		fs.Usage()
++		return fmt.Errorf("unexpected arguments: %s", strings.Join(fs.Args(), " "))
++	}
++
++	if indexDir == "" {
++		return errors.New("-index must not be empty")
++	}
++
++	absIndexDir, err := filepath.Abs(indexDir)
++	if err != nil {
++		return fmt.Errorf("abs index dir: %w", err)
++	}
++	indexDir = absIndexDir
++
++	shards, err := readInventory(indexDir)
++	if err != nil {
++		return err
++	}
++	records := recordsFromShards(shards)
++
++	w := tabwriter.NewWriter(out, 0, 8, 1, ' ', 0)
++	fmt.Fprintln(w, "NAME\tSOURCE\tSHARDS")
++	for _, rec := range records {
++		fmt.Fprintf(w, "%s\t%s\t%s\n", rec.Name, rec.Source, strings.Join(rec.Shards, ", "))
++	}
++	return w.Flush()
++}
++
++func matchRecord(arg string, rec repositoryRecord) bool {
++	if rec.Name == arg {
++		return true
++	}
++	absArg, err := filepath.Abs(arg)
++	if err == nil {
++		if rec.Name == absArg {
++			return true
++		}
++	}
++	if rec.Source != "" {
++		if rec.Source == arg {
++			return true
++		}
++		if err == nil && rec.Source == absArg {
++			return true
++		}
++		if absSource, errSource := filepath.Abs(rec.Source); errSource == nil {
++			if absSource == arg || (err == nil && absSource == absArg) {
++				return true
++			}
++		}
++	}
++	return false
++}
++
++func runRemove(args []string, out, errOut io.Writer) error {
++	fs := flag.NewFlagSet("remove", flag.ContinueOnError)
++	fs.SetOutput(errOut)
++	fs.Usage = func() {
++		fmt.Fprintln(errOut, "Usage: zoekt-local-sync remove [options] <repository>...")
++		fmt.Fprintln(errOut)
++		fmt.Fprintln(errOut, "Options:")
++		fs.PrintDefaults()
++	}
++
++	var (
++		indexDir string
++		force    bool
++	)
++	fs.StringVar(&indexDir, "index", "", "directory for search indices")
++	fs.BoolVar(&force, "f", false, "apply the changes instead of previewing")
++	if err := fs.Parse(args); err != nil {
++		return err
++	}
++
++	repoArgs := fs.Args()
++	if len(repoArgs) == 0 {
++		fs.Usage()
++		return errors.New("at least one repository is required")
++	}
++
++	if indexDir == "" {
++		return errors.New("-index must not be empty")
++	}
++
++	absIndexDir, err := filepath.Abs(indexDir)
++	if err != nil {
++		return fmt.Errorf("abs index dir: %w", err)
++	}
++	indexDir = absIndexDir
++
++	shards, err := readInventory(indexDir)
++	if err != nil {
++		return err
++	}
++	records := recordsFromShards(shards)
++
++	var unmatched []string
++	matchedRecs := make(map[string]bool)
++	var toRemove []repositoryRecord
++
++	for _, arg := range repoArgs {
++		matched := false
++		for _, rec := range records {
++			if matchRecord(arg, rec) {
++				matched = true
++				if !matchedRecs[rec.Name] {
++					matchedRecs[rec.Name] = true
++					toRemove = append(toRemove, rec)
++				}
++			}
++		}
++		if !matched {
++			unmatched = append(unmatched, arg)
++		}
++	}
++
++	if len(unmatched) > 0 {
++		return fmt.Errorf("unmatched repositories: %s", strings.Join(unmatched, ", "))
++	}
++
++	if !force {
++		for _, rec := range toRemove {
++			for _, shard := range rec.Shards {
++				fmt.Fprintf(out, "Would remove %s\n", shard)
++			}
++		}
++		fmt.Fprintln(out, "Pass -f to apply these changes.")
++		return nil
++	}
++
++	lock, err := acquireDirectoryLock(indexDir)
++	if err != nil {
++		return err
++	}
++	defer lock.Close()
++
++	for _, rec := range toRemove {
++		if err := removeRecord(rec); err != nil {
++			return fmt.Errorf("remove record %q: %w", rec.Name, err)
++		}
++		fmt.Fprintf(out, "Removed %q\n", rec.Name)
++	}
++
++	return nil
++}
++
++func main() {
++	if err := execute(os.Args[1:], os.Stdout, os.Stderr); err != nil {
++		if errors.Is(err, flag.ErrHelp) {
++			os.Exit(2)
++		}
++		fmt.Fprintf(os.Stderr, "zoekt-local-sync: %v\n", err)
++		os.Exit(1)
++	}
++}
+diff --git a/gitindex/index.go b/gitindex/index.go
+index 268d5df8..f0253246 100644
+--- a/gitindex/index.go
++++ b/gitindex/index.go
+@@ -391,6 +391,12 @@ type Options struct {
+ 	// Don't error out if some branch is missing
+ 	AllowMissingBranch bool
+ 
++	// If set, the repository name is taken from the git configuration (the
++	// zoekt.name setting, or the origin remote URL) even when
++	// BuildOptions.RepositoryDescription.Name is already set. By default an
++	// explicitly configured name wins.
++	NameFromGitConfig bool
++
+ 	// Specifies the root of a Repository cache. Needed for submodule indexing.
+ 	RepoCacheDir string
+ 
+@@ -506,9 +512,13 @@ func indexGitRepo(opts Options, config gitIndexConfig) (bool, error) {
+ 		defer repoCloser.Close()
+ 	}
+ 
++	repoName := opts.BuildOptions.RepositoryDescription.Name
+ 	if err := setTemplatesFromRepo(&opts.BuildOptions.RepositoryDescription, repo, opts.RepoDir); err != nil {
+ 		log.Printf("setTemplatesFromRepo(%s): %s", opts.RepoDir, err)
+ 	}
++	if repoName != "" && !opts.NameFromGitConfig {
++		opts.BuildOptions.RepositoryDescription.Name = repoName
++	}
+ 
+ 	branches, err := expandBranches(repo, opts.Branches, opts.BranchPrefix)
+ 	if err != nil {

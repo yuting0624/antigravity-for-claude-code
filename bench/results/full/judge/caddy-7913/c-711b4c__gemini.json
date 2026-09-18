@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-711b4c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:45:05+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "47f90a6e3fd637f2480ecfadc8585a0a51cf34a58e5a052a7f5e70c659dc61eb",
+  "wall_s": 162.8,
+  "cost_usd": 0.33382,
+  "usage": {
+    "input": 47618,
+    "output": 19882,
+    "thinking": 19662,
+    "cache_read": 0,
+    "total": 67500
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 2,
+    "maintainability": 3
+  },
+  "mean": 2.833,
+  "rationale": {
+    "consistency": "Follows Caddy conventions well, properly embeds ResponseWriterWrapper, and elegantly uses io.LimitReader to chunk ReadFrom without breaking sendfile.",
+    "edge_cases": "Unconditionally forcing a 1-minute default on Server breaks the no-behavior-change constraint for existing configs; MinRate without Timeout causes instant failure.",
+    "scope": "Implements all requested properties, but the wrapper architecture causes the server to unconditionally overwrite the per-route handler's deadlines.",
+    "readability": "Code is clean, well-commented, and the deadline math is clear.",
+    "robustness": "The inner Server wrapper executes setDeadline after the outer handler wrapper, silently overriding the handler's deadlines on every read/write.",
+    "maintainability": "Deadline logic is nicely encapsulated, but the wrapper collision reveals a structural flaw in composing multiple deadline-enforcing wrappers."
+  },
+  "flags": []
+}

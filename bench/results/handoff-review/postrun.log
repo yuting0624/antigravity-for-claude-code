@@ -1,0 +1,11 @@
+2026-09-18T10:41:27+00:00 queue finished: {'done': 16}
+2026-09-18T10:48:53+00:00 caddy-7877 judged: 8 ok / 8
+2026-09-18T10:54:35+00:00 caddy-7888 judged: 8 ok / 8
+2026-09-18T11:09:09+00:00 caddy-7913 judged: 8 ok / 8
+2026-09-18T15:27:45+00:00 caddy-7995 judged: 7 ok / 8
+2026-09-18T15:27:46+00:00 waited 0 s for mains power before judging cli-14136
+2026-09-18T15:36:14+00:00 cli-14136 judged: 8 ok / 8
+2026-09-18T15:44:23+00:00 cli-attach judged: 8 ok / 8
+2026-09-18T15:53:36+00:00 k6-6169 judged: 8 ok / 8
+2026-09-18T16:02:37+00:00 zoekt-1105 judged: 8 ok / 8
+2026-09-18T16:02:38+00:00 analyzed: 73 runs, arms ['hybrid-handoff', 'hybrid-handoff-review', 'solo-opus', 'solo-sonnet']

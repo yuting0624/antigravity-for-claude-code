@@ -1,0 +1,341 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "pilot",
+  "run_key": "caddy-7913__solo-opus__r1",
+  "task_id": "caddy-7913",
+  "arm": "solo-opus",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-14T15:05:02+00:00",
+  "ended_at": "2026-09-14T15:18:19+00:00",
+  "agent_wall_s": 797.7,
+  "versions": {
+    "claude": "2.1.270 (Claude Code)",
+    "agy": "1.2.2",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": null,
+    "plugin_sha": null
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 25.0,
+    "max_turns": 150,
+    "wall_s": 3600,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "3072e18ca52b3917281555742e9988a023a182f8fad7faeae3993fb97d1da77b",
+    "appendix": null,
+    "appendix_sha256": null,
+    "sent_sha256": "3072e18ca52b3917281555742e9988a023a182f8fad7faeae3993fb97d1da77b"
+  },
+  "claude": {
+    "session_id": "2d704e8b-15b2-4803-8aad-d270cb682218",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 62,
+    "duration_ms": 797360,
+    "duration_api_ms": 694802,
+    "total_cost_usd": 4.764253499999998,
+    "usage": {
+      "input_tokens": 110,
+      "cache_creation_input_tokens": 133238,
+      "cache_read_input_tokens": 5130286,
+      "output_tokens": 54567,
+      "output_tokens_details": {
+        "thinking_tokens": 30375
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 133238
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1513,
+        "outputTokens": 27,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001648,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 110,
+        "outputTokens": 54567,
+        "cacheReadInputTokens": 5130286,
+        "cacheCreationInputTokens": 133238,
+        "webSearchRequests": 0,
+        "costUSD": 4.7626054999999985,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 30375,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 4.762606,
+    "recomputed_vs_reported_gap": -0.0003,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 55,
+      "input": 110,
+      "output": 54567,
+      "cache_creation": 133238,
+      "cache_read": 5130286,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 55,
+          "input": 110,
+          "output": 54567,
+          "cache_creation": 133238,
+          "cache_read": 5130286
+        }
+      },
+      "tool_calls": {
+        "Bash": 31,
+        "Read": 9,
+        "Write": 6,
+        "Edit": 15
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 21,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 110,
+        "transcript": 110,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 54567,
+        "transcript": 54567,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 133238,
+        "transcript": 133238,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 5130286,
+        "transcript": 5130286,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 6,
+    "denied_tools": {
+      "Bash:grep": 2,
+      "Bash:ls": 1,
+      "Write": 1,
+      "Bash:go": 1,
+      "Bash:rm": 1
+    },
+    "result_head": "Everything is green. Here's what I built.\n\n## New files\n\n**`modules/caddyhttp/idletimeout.go`** — the core:\n- `IdleDeadline` computes the deadline for each individual read/write: `now + Timeout` (reset on every read/write), capped by a rate allowance `Start + Timeout + bytes/MinRate` when `MinRate > 0`, and capped again by `HardDeadline` so an idle reset can never push past a hard timeout. The min",
+    "errors": [],
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 0,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 20,
+    "claude_bash": 0,
+    "agy": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 129,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "go": 1,
+      "rm": 1
+    },
+    "gate_allows": 29,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 5.8,
+      "passed_tests": 13,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 2,
+      "stderr_tail": ""
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 7.7,
+      "passed_tests": 1211,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 48,
+      "stderr_tail": ""
+    },
+    "hidden_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": [],
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "tree_pass": true
+  },
+  "diff": {
+    "files_touched": 10,
+    "code_added": 727,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 18,
+    "other_added": 66,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "66ac19d7592059629c37b5127c6107a5f9e55bc400e6f4cdc39d851097fde243"
+  },
+  "diff_files": {
+    "caddyconfig/httpcaddyfile/directives.go": {
+      "added": 1,
+      "removed": 0,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/serveroptions.go": {
+      "added": 37,
+      "removed": 0,
+      "class": "code"
+    },
+    "caddytest/integration/caddyfile_adapt/timeouts.caddyfiletest": {
+      "added": 66,
+      "removed": 0,
+      "class": "other"
+    },
+    "modules/caddyhttp/app.go": {
+      "added": 11,
+      "removed": 0,
+      "class": "code"
+    },
+    "modules/caddyhttp/idletimeout.go": {
+      "added": 348,
+      "removed": 0,
+      "class": "code"
+    },
+    "modules/caddyhttp/server.go": {
+      "added": 79,
+      "removed": 0,
+      "class": "code"
+    },
+    "modules/caddyhttp/standard/imports.go": {
+      "added": 1,
+      "removed": 0,
+      "class": "code"
+    },
+    "modules/caddyhttp/timeouts/caddyfile.go": {
+      "added": 115,
+      "removed": 0,
+      "class": "code"
+    },
+    "modules/caddyhttp/timeouts/timeouts.go": {
+      "added": 135,
+      "removed": 0,
+      "class": "code"
+    },
+    "tmp_adapt_input.txt": {
+      "added": 18,
+      "removed": 0,
+      "class": "doc"
+    }
+  },
+  "cost": {
+    "claude_usd": 4.764253499999998,
+    "gemini_usd": 0.0,
+    "total_usd": 4.764253499999998
+  },
+  "notes": [
+    "reaccounted at 2026-09-14T18:37:08+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

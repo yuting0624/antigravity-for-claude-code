@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-866458",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:00:49+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "17c5949c7add99ef0da82e2cd139263c0e2f15553b6d699faf2f9c9261fe8856",
+  "wall_s": 31.4,
+  "cost_usd": 0.131306,
+  "usage": {
+    "input": 40057,
+    "output": 4266,
+    "thinking": 4032,
+    "cache_read": 0,
+    "total": 44323
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Flawlessly matches existing conventions by threading state down through Helper and unexported functions.",
+    "edge_cases": "Correctly handles multiple 'order' occurrences by cloning the global order exactly once and falling back safely.",
+    "scope": "Fixes the global state mutation and the options map leak exactly as requested, with no unrelated changes.",
+    "readability": "Clear variable naming and excellent comments explaining the lifecycle and scope of the localized 'order' state.",
+    "robustness": "Eliminates global slice mutations and options map pollution, ensuring thread-safe concurrent Caddyfile adaptations.",
+    "maintainability": "Decoupling adaptation state from the global process state makes the package much easier to extend and test safely."
+  },
+  "flags": []
+}

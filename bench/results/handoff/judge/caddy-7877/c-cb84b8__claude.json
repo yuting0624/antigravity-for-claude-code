@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-cb84b8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:43:44+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 63.6,
+  "cost_usd": 0.26427775000000003,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "trimPathSuffix mirrors trimPathPrefix's structure, naming, PathUnescape use, EqualFold case-folding and even its error comment; fits the file's idioms.",
+    "edge_cases": "Handles decoded-vs-escaped path, escaped pattern requiring literal escape, case-insensitive hex, non-match untouched, empty/short inputs; suffix escape detection via suffix[i-3]=='%' is a heuristic that could misfire on malformed patterns like 'a%bc'.",
+    "scope": "Only the suffix call site and the new helper change; removing the now-unused reverse helper is appropriate dead-code cleanup rather than an unrelated refactor.",
+    "readability": "Clear lock-step loop with named pathHasEscape/suffixHasEscape flags; the doc comment is somewhat long but the explanation of why reverse fails is genuinely useful.",
+    "robustness": "All index accesses are bounds-guarded (iPath>=3, iSuffix>=3), PathUnescape error returns path unchanged, no panics on odd input; changePath still keeps Path and RawPath consistent.",
+    "maintainability": "Symmetric counterpart to trimPathPrefix is easy to follow; some logic duplication between the two helpers, but a shared abstraction would likely obscure more than it saves."
+  },
+  "flags": []
+}

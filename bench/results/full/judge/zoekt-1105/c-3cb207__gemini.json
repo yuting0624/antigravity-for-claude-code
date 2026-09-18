@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-3cb207",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:40:59+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8303caa08b9d9362dd8796dd6f0416f2bbb7bf50962791d94a76652738b53a2b",
+  "wall_s": 33.5,
+  "cost_usd": 0.111892,
+  "usage": {
+    "input": 35024,
+    "output": 3487,
+    "thinking": 3315,
+    "cache_read": 0,
+    "total": 38511
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Perfectly aligns with standard Go idioms, the flag package, and existing zoekt conventions.",
+    "edge_cases": "Handles duplicate names and relative paths flawlessly, but omits printing usage when failing on missing root arguments.",
+    "scope": "Implements all requested features including dry-run, locking, and metadata preservation without unnecessary additions.",
+    "readability": "Code is exceptionally clear, modular, and well-documented with concise and accurate comments.",
+    "robustness": "Safely handles file operations, cleanly propagates errors, and properly manages advisory directory locks.",
+    "maintainability": "Excellent separation of CLI parsing, repository discovery, and indexing logic makes it highly extensible."
+  },
+  "flags": []
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-a33be8",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:20:34+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "69efb7f2e74257ed19c86e3ff7b632e7e74b26e34a41a6ef39c18d359c1fccce",
+  "wall_s": 167.2,
+  "cost_usd": 0.314552,
+  "usage": {
+    "input": 51154,
+    "output": 17687,
+    "thinking": 17480,
+    "cache_read": 0,
+    "total": 68841
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 3,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Follows Caddy idioms and wrapper usage, though the Caddyfile parser mixes time.ParseDuration with caddy.ParseDuration.",
+    "edge_cases": "Per-route idle deadlines bypass server-wide hard deadlines; negative idle timeouts with min rates incorrectly shrink the burst allowance.",
+    "scope": "Implements the requirement, but deleting timeouts from request_body breaks existing configurations that relied on them.",
+    "readability": "Cleanly structured with clear abstractions like IdleDeadline and well-placed comments explaining the chunking loop.",
+    "robustness": "Safely handles unsupported deadlines; io.LimitReader brilliantly chunks ReadFrom without defeating underlying sendfile optimizations.",
+    "maintainability": "Deadline logic is well-encapsulated and easy to reason about, though the per-route handler fails to inherit server context."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

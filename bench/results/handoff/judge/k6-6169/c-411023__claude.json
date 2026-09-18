@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "k6-6169",
+  "candidate_id": "c-411023",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:55:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1824f2101a64a3e1b98b019118d8d8e0e3ecb57a5ad3d80758ac7585bdf8b4cd",
+  "wall_s": 49.4,
+  "cost_usd": 0.8190959999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.833,
+  "rationale": {
+    "consistency": "Follows v6 shape (ResponseError, CheckResponse, idempotency key) but mixes import groups, drops the nolint:gosec on GetMaxPossibleVUs, and CreateOrFindLoadTest ignores its named err in favour of execErr unlike sibling methods.",
+    "edge_cases": "409 fallback, missing upload URL, aborted/completed-before-start, ctx cancel in poll and retry loops are handled; unknown errors are notified as code 0 rather than null, and an unparsable testRunID silently notifies run 0.",
+    "scope": "Covers the required flow, but adds unused Client.apiClient/timeout fields, undocumented MetricsRuntimeConfig/SecretsRuntimeConfig aliases, and a redundant config.MetricsPushURL fallback inside expv2 alongside SetMetricsURL.",
+    "readability": "Functions are short and named clearly; the wire struct duplicating StartLocalExecutionRequest, the BaseURL type-assertion hack in newMetricsClient, and repeated host/stackID resolution add noise.",
+    "robustness": "Retry replays bodies, stops on 4xx, honours ctx; but the metrics pusher defaults to http.DefaultClient with no timeout, notify uses a bare context.Background, and 5xx are retried even on non-idempotent notify without the idempotency header.",
+    "maintainability": "Hidden coupling via versionedOutput.(*cloudv2.Output) assertion, two provisioning clients built from duplicated config logic in cmd and output, dead struct fields, and per-call HTTPClient construction make extension awkward."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

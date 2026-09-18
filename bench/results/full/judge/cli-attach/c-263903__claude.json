@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-263903",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:27:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a534fab413db7e5860b79905e154603273b0e2f2b9c3cd9738384ec7fa56e418",
+  "wall_s": 59.6,
+  "cost_usd": 1.23112475,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Uses cmdutil.MutuallyExclusive/FlagErrorf, heredoc.Docf, api.HandleHTTPError, safeurl and lowercase errors as the codebase does; but testify/testing are imported from a non-test file in a package linked into the binary, and the essay-style comments are far more verbose than surrounding code.",
+    "edge_cases": "Covers symlink/hardlink dupes via os.SameFile, empty and '-' values, dirs, non-regular and empty files, size caps, video alt refusal, '#' in filenames, code spans/fences, reference definitions, blockquote continuations, escaped alt text and protocol-relative URLs.",
+    "scope": "Implements every command and the package, but deliberately writes the body after a partial upload failure, contradicting 'if one upload fails nothing is written'; also restructures issue edit (hasDeferredEdits, moved issueTypeID lookup) beyond what the feature needs.",
+    "readability": "Structure is clear and names are mostly good, but references.go is an 810-line hand-rolled byte scanner with near-homonym types (attachmentArg/attachmentRef/attachableMarkdown/attachedMarkdown) and many philosophical comments that obscure rather than explain.",
+    "robustness": "Bounds checks throughout the scanner, nil block handling, GetBody for redirects, files closed, uploads sequential and stop at first failure, HTTP errors mapped to actionable messages; upload/write errors are joined rather than lost.",
+    "maintainability": "Uploader construction, host/token lookup and identical help prose are copy-pasted across six commands; the custom markdown position scanner duplicates parsing goldmark already did and will be fragile to maintain; issue edit and pr edit handle the nothing-uploaded case differently."
+  },
+  "flags": []
+}

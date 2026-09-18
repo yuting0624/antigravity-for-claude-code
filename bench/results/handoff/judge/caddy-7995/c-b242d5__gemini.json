@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b242d5",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:01:50+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 54.8,
+  "cost_usd": 0.098466,
+  "usage": {
+    "input": 30289,
+    "output": 1855,
+    "thinking": 1685,
+    "cache_read": 7814,
+    "total": 32144
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Uses standard library slices and maps functions matching Go 1.21+ idioms seamlessly with existing code.",
+    "edge_cases": "Handles nil options map, removes leaked order state, and correctly sequences multiple order directives.",
+    "scope": "Strictly solves the concurrency and state leakage problems without unrelated refactoring.",
+    "readability": "Logic is straightforward, comments explain the lifecycle of the state clearly, and helper functions are well-named.",
+    "robustness": "Eliminates global state mutation during adaptation, preventing race conditions and leaving state clean on failure.",
+    "maintainability": "Centralizes per-adaptation directive order resolution and prevents accidental global mutations."
+  },
+  "flags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-34831d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:43:03+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a97c36531dbe572aab17a5dd3ae36575c46109b42153194a35699c083c02c90b",
+  "wall_s": 86.2,
+  "cost_usd": 0.132314,
+  "usage": {
+    "input": 35119,
+    "output": 5173,
+    "thinking": 4958,
+    "cache_read": 0,
+    "total": 40292
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Code aligns perfectly with Zoekt conventions, utilizing the standard flag package, tabwriter, and idiomatic error handling.",
+    "edge_cases": "Handles repository detection, duplicates, and missing shards safely, but misses the requirement to print usage (only fails) when run without positional roots.",
+    "scope": "Implements all requested functionality including default dry-run, locking, discovery, and name preservation without unnecessary additions.",
+    "readability": "Clean, logical separation of concerns across multiple files (discover.go, inventory.go, lock.go) with expressive variable names.",
+    "robustness": "Safely acquires non-blocking file locks, properly handles missing index states in IsUpToDate, and reliably defers resource cleanup.",
+    "maintainability": "Highly extensible subcommand routing and a clean refactoring of gitindex prepare logic makes future modifications straightforward."
+  },
+  "flags": []
+}

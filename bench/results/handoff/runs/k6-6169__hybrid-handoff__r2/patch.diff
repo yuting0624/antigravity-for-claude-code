@@ -1,0 +1,1324 @@
+diff --git a/cloudapi/config.go b/cloudapi/config.go
+index d2846c93f..8b7248b7a 100644
+--- a/cloudapi/config.go
++++ b/cloudapi/config.go
+@@ -66,6 +66,9 @@ type Config struct {
+ 
+ 	// The time interval between periodic API calls for sending samples to the cloud ingest service.
+ 	TracesPushInterval types.NullDuration `json:"tracesPushInterval" envconfig:"K6_CLOUD_TRACES_PUSH_INTERVAL"`
++
++	MetricsPushURL null.String `json:"metricsPushURL,omitempty" envconfig:"-"`
++	TestRunToken   null.String `json:"testRunToken,omitempty" envconfig:"-"`
+ }
+ 
+ // NewConfig creates a new Config instance with default values for some fields.
+@@ -181,6 +184,12 @@ func (c Config) Apply(cfg Config) Config {
+ 	if cfg.AggregationWaitPeriod.Valid {
+ 		c.AggregationWaitPeriod = cfg.AggregationWaitPeriod
+ 	}
++	if cfg.MetricsPushURL.Valid {
++		c.MetricsPushURL = cfg.MetricsPushURL
++	}
++	if cfg.TestRunToken.Valid {
++		c.TestRunToken = cfg.TestRunToken
++	}
+ 	return c
+ }
+ 
+diff --git a/internal/cloudapi/clientcfg/config.go b/internal/cloudapi/clientcfg/config.go
+new file mode 100644
+index 000000000..c327b19cd
+--- /dev/null
++++ b/internal/cloudapi/clientcfg/config.go
+@@ -0,0 +1,10 @@
++package clientcfg
++
++import "time"
++
++const (
++	// RetryInterval specifies the sleep time between retries.
++	RetryInterval = 500 * time.Millisecond
++	// MaxRetries specifies max retry attempts.
++	MaxRetries = 3
++)
+diff --git a/internal/cloudapi/provisioning/api.go b/internal/cloudapi/provisioning/api.go
+new file mode 100644
+index 000000000..4d272284a
+--- /dev/null
++++ b/internal/cloudapi/provisioning/api.go
+@@ -0,0 +1,136 @@
++package provisioning
++
++import (
++	"bytes"
++	"context"
++	"crypto/rand"
++	"encoding/hex"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"strconv"
++	"time"
++
++	v6 "go.k6.io/k6/v2/internal/cloudapi/v6"
++)
++
++// StartLocalExecution starts a local execution test run via the provisioning API.
++func (c *Client) StartLocalExecution(
++	ctx context.Context,
++	loadTestID int64,
++	req StartLocalExecutionRequest,
++) (*StartLocalExecutionResponse, error) {
++	url := fmt.Sprintf("%s/provisioning/v1/load_tests/%d/start_local_execution", c.host, loadTestID)
++
++	var key [8]byte
++	if _, err := rand.Read(key[:]); err != nil {
++		return nil, err
++	}
++	idempKey := hex.EncodeToString(key[:])
++
++	bodyBytes, err := json.Marshal(req)
++	if err != nil {
++		return nil, err
++	}
++
++	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
++	if err != nil {
++		return nil, err
++	}
++
++	httpReq.Header.Set("Content-Type", "application/json")
++	httpReq.Header.Set("K6-Idempotency-Key", idempKey)
++	if c.stackID != 0 {
++		httpReq.Header.Set("X-Stack-Id", strconv.FormatInt(c.stackID, 10))
++	}
++
++	var res StartLocalExecutionResponse
++	if err := c.httpClient.Do(httpReq, &res); err != nil {
++		return nil, err
++	}
++
++	return &res, nil
++}
++
++// UploadArchive uploads the tar archive to the presigned S3 URL without authorization header.
++func (c *Client) UploadArchive(ctx context.Context, presignedURL string, archiveBytes []byte) error {
++	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, presignedURL, bytes.NewReader(archiveBytes))
++	if err != nil {
++		return err
++	}
++
++	httpReq.Header.Set("Content-Type", "application/x-tar")
++	httpReq.ContentLength = int64(len(archiveBytes))
++
++	unauthClient := NewHTTPClient(c.httpClient.client, "", c.version, c.logger)
++	return unauthClient.Do(httpReq, nil)
++}
++
++// WaitForTestRunReady polls the v6 test run until it transitions to initializing status.
++func (c *Client) WaitForTestRunReady(ctx context.Context, testRunID int64, pollInterval time.Duration) error {
++	var lastStatus v6.Status
++	for {
++		tp, err := c.v6Client.FetchTest(ctx, testRunID)
++		if err != nil {
++			return err
++		}
++
++		switch tp.Status {
++		case v6.StatusInitializing:
++			return nil
++		case v6.StatusAborted:
++			if len(tp.StatusHistory) > 0 {
++				for i := len(tp.StatusHistory) - 1; i >= 0; i-- {
++					if tp.StatusHistory[i].Status == v6.StatusAborted && tp.StatusHistory[i].Message != "" {
++						return fmt.Errorf("test run aborted before starting: %s", tp.StatusHistory[i].Message)
++					}
++				}
++			}
++			return errors.New("test run aborted before starting")
++		case v6.StatusCompleted:
++			return fmt.Errorf("test run unexpected status: %s", tp.Status)
++		default:
++			if tp.Status != lastStatus {
++				lastStatus = tp.Status
++				c.logger.WithField("status", tp.FormatStatus()).Info("Test run status updated")
++			}
++		}
++
++		select {
++		case <-ctx.Done():
++			return ctx.Err()
++		case <-time.After(pollInterval):
++		}
++	}
++}
++
++// NotifyTestRunCompleted posts the completion event and mapped error to the provisioning notify endpoint.
++func (c *Client) NotifyTestRunCompleted(ctx context.Context, testRunID int64, token string, testErr error) error {
++	url := fmt.Sprintf("%s/provisioning/v1/test_runs/%d/notify", c.host, testRunID)
++
++	type notifyPayload struct {
++		EventType string       `json:"event_type"`
++		Error     *notifyError `json:"error"`
++	}
++
++	payload := notifyPayload{
++		EventType: "script_execution_completed",
++		Error:     mapTestErrorToNotifyCode(testErr),
++	}
++
++	bodyBytes, err := json.Marshal(payload)
++	if err != nil {
++		return err
++	}
++
++	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
++	if err != nil {
++		return err
++	}
++
++	httpReq.Header.Set("Content-Type", "application/json")
++	httpReq.Header.Set("Authorization", "Bearer "+token)
++
++	return c.httpClient.Do(httpReq, nil)
++}
+diff --git a/internal/cloudapi/provisioning/client.go b/internal/cloudapi/provisioning/client.go
+new file mode 100644
+index 000000000..583b8c8d0
+--- /dev/null
++++ b/internal/cloudapi/provisioning/client.go
+@@ -0,0 +1,79 @@
++package provisioning
++
++import (
++	"fmt"
++	"net/http"
++	"time"
++
++	k6cloud "github.com/grafana/k6-cloud-openapi-client-go/k6"
++	"github.com/sirupsen/logrus"
++	"go.k6.io/k6/v2/internal/cloudapi/clientcfg"
++	v6 "go.k6.io/k6/v2/internal/cloudapi/v6"
++)
++
++// Client handles communication with the provisioning API and wraps v6 operations.
++type Client struct {
++	logger     logrus.FieldLogger
++	token      string
++	host       string
++	version    string
++	stackID    int64
++	apiClient  *k6cloud.APIClient
++	v6Client   *v6.Client
++	httpClient *HTTPClient
++}
++
++// NewClient returns a new provisioning client.
++func NewClient(
++	logger logrus.FieldLogger,
++	token, host, version string,
++	stackID int64,
++	timeout time.Duration,
++) (*Client, error) {
++	if token == "" {
++		return nil, fmt.Errorf("token is required to create provisioning client")
++	}
++
++	cfg := k6cloud.NewConfiguration()
++	cfg.UserAgent = "k6cloud/" + version
++	cfg.Servers = k6cloud.ServerConfigurations{
++		{
++			URL:         host,
++			Description: "Global k6 Cloud API.",
++		},
++	}
++	cfg.HTTPClient = &http.Client{
++		Timeout:   timeout,
++		Transport: http.DefaultTransport,
++	}
++	cfg.MaxRetries = clientcfg.MaxRetries
++	cfg.RetryInterval = clientcfg.RetryInterval
++
++	apiClient := k6cloud.NewAPIClient(cfg)
++
++	v6Client, err := v6.NewClient(logger, token, host, version, timeout)
++	if err != nil {
++		return nil, err
++	}
++	if err := v6Client.SetStackID(stackID); err != nil {
++		return nil, err
++	}
++
++	httpClient := NewHTTPClient(cfg.HTTPClient, token, version, logger)
++
++	return &Client{
++		logger:     logger,
++		token:      token,
++		host:       host,
++		version:    version,
++		stackID:    stackID,
++		apiClient:  apiClient,
++		v6Client:   v6Client,
++		httpClient: httpClient,
++	}, nil
++}
++
++// SetV6Client sets a custom v6 client on the Client.
++func (c *Client) SetV6Client(v6Client *v6.Client) {
++	c.v6Client = v6Client
++}
+diff --git a/internal/cloudapi/provisioning/errors.go b/internal/cloudapi/provisioning/errors.go
+new file mode 100644
+index 000000000..fb6c2611c
+--- /dev/null
++++ b/internal/cloudapi/provisioning/errors.go
+@@ -0,0 +1,52 @@
++package provisioning
++
++import (
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"strings"
++
++	"go.k6.io/k6/v2/internal/cloudapi/httperr"
++)
++
++// ResponseError represents an HTTP error response from the provisioning API.
++type ResponseError struct {
++	StatusCode int
++	Body       string
++}
++
++func (e *ResponseError) Error() string {
++	if e.Body == "" {
++		return fmt.Sprintf("HTTP %d", e.StatusCode)
++	}
++	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Body)
++}
++
++// Unwrap classifies the HTTP status code (e.g. 401 -> ErrUnauthorized, 403 -> ErrForbidden).
++func (e *ResponseError) Unwrap() error {
++	return httperr.ClassifyStatus(e.StatusCode)
++}
++
++// CheckResponse inspects the HTTP response status. If it indicates an error,
++// it returns a *ResponseError with the status code and body.
++func CheckResponse(r *http.Response) error {
++	if r == nil {
++		return errors.New("nil response")
++	}
++	if r.StatusCode >= 200 && r.StatusCode <= 299 {
++		return nil
++	}
++	var body string
++	if r.Body != nil {
++		data, err := io.ReadAll(r.Body)
++		if err == nil {
++			body = string(data)
++			r.Body = io.NopCloser(strings.NewReader(body))
++		}
++	}
++	return &ResponseError{
++		StatusCode: r.StatusCode,
++		Body:       body,
++	}
++}
+diff --git a/internal/cloudapi/provisioning/http_client.go b/internal/cloudapi/provisioning/http_client.go
+new file mode 100644
+index 000000000..e42b42ee3
+--- /dev/null
++++ b/internal/cloudapi/provisioning/http_client.go
+@@ -0,0 +1,106 @@
++package provisioning
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"io"
++	"net/http"
++	"time"
++
++	"github.com/sirupsen/logrus"
++	"go.k6.io/k6/v2/internal/cloudapi/clientcfg"
++)
++
++// HTTPClient wraps http.Client with authentication, user-agent, retry logic, and JSON decoding.
++type HTTPClient struct {
++	client  *http.Client
++	token   string
++	version string
++	logger  logrus.FieldLogger
++}
++
++// NewHTTPClient returns a new HTTPClient.
++func NewHTTPClient(client *http.Client, token, version string, logger logrus.FieldLogger) *HTTPClient {
++	if client == nil {
++		client = http.DefaultClient
++	}
++	return &HTTPClient{
++		client:  client,
++		token:   token,
++		version: version,
++		logger:  logger,
++	}
++}
++
++// Do executes an HTTP request with retries on 5xx and network errors.
++// On success (2xx), if v is non-nil, the response body is decoded into v.
++func (c *HTTPClient) Do(req *http.Request, v any) error {
++	var bodyBytes []byte
++	if req.Body != nil {
++		var err error
++		bodyBytes, err = io.ReadAll(req.Body)
++		if err != nil {
++			return err
++		}
++		_ = req.Body.Close()
++	}
++
++	if c.token != "" && req.Header.Get("Authorization") == "" {
++		req.Header.Set("Authorization", "Bearer "+c.token)
++	}
++	if req.Header.Get("User-Agent") == "" {
++		req.Header.Set("User-Agent", "k6cloud/"+c.version)
++	}
++
++	for attempt := 0; attempt < clientcfg.MaxRetries; attempt++ {
++		if attempt > 0 {
++			select {
++			case <-req.Context().Done():
++				return req.Context().Err()
++			case <-time.After(clientcfg.RetryInterval):
++			}
++		}
++
++		if bodyBytes != nil {
++			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
++			req.ContentLength = int64(len(bodyBytes))
++		}
++
++		resp, err := c.client.Do(req)
++		if err != nil {
++			if req.Context().Err() != nil {
++				return req.Context().Err()
++			}
++			if attempt < clientcfg.MaxRetries-1 {
++				continue
++			}
++			return err
++		}
++
++		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
++			if attempt < clientcfg.MaxRetries-1 {
++				_ = resp.Body.Close()
++				continue
++			}
++			defer resp.Body.Close()
++			return CheckResponse(resp)
++		}
++
++		defer resp.Body.Close()
++
++		if err := CheckResponse(resp); err != nil {
++			return err
++		}
++
++		if v != nil {
++			if err := json.NewDecoder(resp.Body).Decode(v); err != nil && !errors.Is(err, io.EOF) {
++				return err
++			}
++		}
++
++		return nil
++	}
++
++	return nil
++}
+diff --git a/internal/cloudapi/provisioning/notify.go b/internal/cloudapi/provisioning/notify.go
+new file mode 100644
+index 000000000..f3a8bb23f
+--- /dev/null
++++ b/internal/cloudapi/provisioning/notify.go
+@@ -0,0 +1,47 @@
++package provisioning
++
++import (
++	"errors"
++
++	"go.k6.io/k6/v2/errext"
++)
++
++type notifyError struct {
++	Code   int32  `json:"code"`
++	Reason string `json:"reason"`
++}
++
++func mapTestErrorToNotifyCode(testErr error) *notifyError {
++	if testErr == nil {
++		return nil
++	}
++
++	var hasAbort errext.HasAbortReason
++	if errors.As(testErr, &hasAbort) {
++		reason := hasAbort.AbortReason()
++		switch reason {
++		case errext.AbortedByUser, errext.AbortedByScriptAbort, errext.AbortedByThreshold:
++			return &notifyError{
++				Code:   8036,
++				Reason: testErr.Error(),
++			}
++		case errext.AbortedByScriptError:
++			return &notifyError{
++				Code:   8035,
++				Reason: testErr.Error(),
++			}
++		case errext.AbortedByOutput, errext.AbortedByTimeout:
++			return &notifyError{
++				Code:   8034,
++				Reason: testErr.Error(),
++			}
++		case errext.AbortedByThresholdsAfterTestEnd:
++			return nil
++		}
++	}
++
++	return &notifyError{
++		Code:   0,
++		Reason: testErr.Error(),
++	}
++}
+diff --git a/internal/cloudapi/provisioning/provision.go b/internal/cloudapi/provisioning/provision.go
+new file mode 100644
+index 000000000..1143d8613
+--- /dev/null
++++ b/internal/cloudapi/provisioning/provision.go
+@@ -0,0 +1,68 @@
++package provisioning
++
++import (
++	"bytes"
++	"context"
++	"fmt"
++	"time"
++)
++
++// ProvisionLocalExecution orchestrates the complete setup flow for local execution:
++// 1. Create or find the load test via v6 API.
++// 2. Start local execution via the provisioning API.
++// 3. Upload the archive if present and an upload URL was provided.
++// 4. Wait for the test run to reach initializing state.
++func (c *Client) ProvisionLocalExecution(ctx context.Context, params ProvisionParams) (*ProvisionResult, error) {
++	loadTestID, err := c.v6Client.CreateOrFindLoadTest(ctx, params.ProjectID, params.Name)
++	if err != nil {
++		return nil, fmt.Errorf("create or find load test: %w", err)
++	}
++
++	var archiveSize int64
++	var archiveBytes []byte
++	if params.Archive != nil {
++		var buf bytes.Buffer
++		if err := params.Archive.Write(&buf); err != nil {
++			return nil, err
++		}
++		archiveBytes = buf.Bytes()
++		archiveSize = int64(len(archiveBytes))
++	}
++
++	sleReq := StartLocalExecutionRequest{
++		Options:       params.Options,
++		MaxVUs:        params.MaxVUs,
++		TotalDuration: params.TotalDuration,
++		ArchiveSize:   archiveSize,
++	}
++
++	sleResp, err := c.StartLocalExecution(ctx, loadTestID, sleReq)
++	if err != nil {
++		return nil, fmt.Errorf("start local execution: %w", err)
++	}
++
++	if params.Archive != nil {
++		if sleResp.ArchiveUploadURL != nil && *sleResp.ArchiveUploadURL != "" {
++			if err := c.UploadArchive(ctx, *sleResp.ArchiveUploadURL, archiveBytes); err != nil {
++				return nil, fmt.Errorf("upload archive: %w", err)
++			}
++		} else {
++			c.logger.Warn("Archive provided but no upload URL returned by provisioning API, skipping archive upload")
++		}
++	}
++
++	pollInterval := params.PollInterval
++	if pollInterval <= 0 {
++		pollInterval = 500 * time.Millisecond
++	}
++
++	if err := c.WaitForTestRunReady(ctx, sleResp.TestRunID, pollInterval); err != nil {
++		return nil, fmt.Errorf("wait for test run ready: %w", err)
++	}
++
++	return &ProvisionResult{
++		TestRunID:             sleResp.TestRunID,
++		TestRunDetailsPageURL: sleResp.TestRunDetailsPageURL,
++		RuntimeConfig:         sleResp.RuntimeConfig,
++	}, nil
++}
+diff --git a/internal/cloudapi/provisioning/test/server.go b/internal/cloudapi/provisioning/test/server.go
+new file mode 100644
+index 000000000..3c5548a47
+--- /dev/null
++++ b/internal/cloudapi/provisioning/test/server.go
+@@ -0,0 +1,138 @@
++package provtest
++
++import (
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"sync/atomic"
++	"testing"
++
++	k6cloud "github.com/grafana/k6-cloud-openapi-client-go/k6"
++	v6 "go.k6.io/k6/v2/internal/cloudapi/v6"
++)
++
++const (
++	DefaultLoadTestID   int64 = 456
++	DefaultTestRunID    int64 = 123
++	PresignedUploadPath       = "/presigned/upload"
++)
++
++// Server is a fake provisioning server used in tests.
++type Server struct {
++	*httptest.Server
++	Mux              *http.ServeMux
++	fetchTestRunHits atomic.Int32
++}
++
++// NewServer creates a new test server.
++func NewServer(t *testing.T) *Server {
++	t.Helper()
++	mux := http.NewServeMux()
++	ts := httptest.NewServer(mux)
++	t.Cleanup(ts.Close)
++	return &Server{
++		Server: ts,
++		Mux:    mux,
++	}
++}
++
++// PresignedUploadURL returns the presigned upload URL for the server.
++func (s *Server) PresignedUploadURL() string {
++	return s.URL + PresignedUploadPath
++}
++
++// FetchTestRunHitCount returns the number of times the fetch test run endpoint was hit.
++func (s *Server) FetchTestRunHitCount() int32 {
++	return s.fetchTestRunHits.Load()
++}
++
++// HandleCreateLoadTest registers a handler for creating a load test.
++func (s *Server) HandleCreateLoadTest(projectID int64, handler http.HandlerFunc) {
++	path := fmt.Sprintf("/cloud/v6/projects/%d/load_tests", projectID)
++	s.Mux.HandleFunc(path, handler)
++}
++
++// HandleStartLocalExecution registers a handler for starting local execution.
++func (s *Server) HandleStartLocalExecution(loadTestID int64, handler http.HandlerFunc) {
++	path := fmt.Sprintf("/provisioning/v1/load_tests/%d/start_local_execution", loadTestID)
++	s.Mux.HandleFunc(path, handler)
++}
++
++// HandlePresignedUpload registers a handler for presigned archive upload.
++func (s *Server) HandlePresignedUpload(path string, handler http.HandlerFunc) {
++	s.Mux.HandleFunc(path, handler)
++}
++
++// HandleFetchTestRun registers a handler that returns test run progress.
++func (s *Server) HandleFetchTestRun(testRunID int64, progress []v6.TestProgress) {
++	var idx atomic.Int32
++	path := fmt.Sprintf("/cloud/v6/test_runs/%d", testRunID)
++	s.Mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
++		s.fetchTestRunHits.Add(1)
++		cur := int(idx.Add(1) - 1)
++		if cur >= len(progress) {
++			cur = len(progress) - 1
++		}
++		p := progress[cur]
++
++		resp := k6cloud.NewTestRunApiModelWithDefaults()
++		resp.SetId(testRunID)
++		resp.SetStatus(p.Status.String())
++		resp.SetResult(p.Result.String())
++		resp.SetEstimatedDuration(p.EstimatedDuration)
++		resp.SetExecutionDuration(p.ExecutionDuration)
++		resp.SetStatusHistory(v6.ToStatusModel(p.StatusHistory))
++		resp.SetDistribution([]k6cloud.DistributionZoneApiModel{})
++		resp.SetResultDetails(k6cloud.ResultDetailsApiModelAsTestRunApiModelResultDetails(k6cloud.NewResultDetailsApiModel("")))
++		resp.SetOptions(map[string]any{})
++
++		w.Header().Set("Content-Type", "application/json")
++		w.WriteHeader(http.StatusOK)
++		_ = json.NewEncoder(w).Encode(resp)
++	})
++}
++
++// HandleNotify registers a handler for test run notification.
++func (s *Server) HandleNotify(testRunID int64, handler http.HandlerFunc) {
++	path := fmt.Sprintf("/provisioning/v1/test_runs/%d/notify", testRunID)
++	s.Mux.HandleFunc(path, handler)
++}
++
++// DefaultStartLocalExecutionResponse creates a default response for start local execution.
++func DefaultStartLocalExecutionResponse() *k6cloud.StartLocalExecutionTestResponse {
++	resp := k6cloud.NewStartLocalExecutionTestResponseWithDefaults()
++	resp.SetTestRunId(DefaultTestRunID)
++	uploadURL := "https://s3.amazonaws.com/k6-archives/test-archive.tar"
++	resp.ArchiveUploadUrl = *k6cloud.NewNullableString(&uploadURL)
++	resp.SetTestRunDetailsPageUrl(fmt.Sprintf("https://app.k6.io/runs/%d", DefaultTestRunID))
++
++	pushInterval := "2s"
++	pushConcurrency := int32(5)
++	aggPeriod := "3s"
++	aggWaitPeriod := "1s"
++	maxSamples := int32(2000)
++
++	metricsConfig := k6cloud.NewMetricsRuntimeConfig(
++		"https://ingest.k6.io/v1/metrics",
++		*k6cloud.NewNullableString(&pushInterval),
++		*k6cloud.NewNullableInt32(&pushConcurrency),
++		*k6cloud.NewNullableString(&aggPeriod),
++		*k6cloud.NewNullableString(&aggWaitPeriod),
++		*k6cloud.NewNullableInt32(nil),
++		*k6cloud.NewNullableInt32(&maxSamples),
++	)
++
++	secretsConfig := k6cloud.NewSecretsRuntimeConfig(
++		"https://api.k6.io/provisioning/v1/test_runs/123/decrypt_secret?name={key}",
++		"plaintext",
++	)
++
++	runtimeConfig := k6cloud.NewRuntimeConfigWithDefaults()
++	runtimeConfig.SetMetrics(*metricsConfig)
++	runtimeConfig.SetSecrets(*secretsConfig)
++	runtimeConfig.SetTestRunToken("test-run-token-abc")
++
++	resp.SetRuntimeConfig(*runtimeConfig)
++	return resp
++}
+diff --git a/internal/cloudapi/provisioning/types.go b/internal/cloudapi/provisioning/types.go
+new file mode 100644
+index 000000000..c48180d5c
+--- /dev/null
++++ b/internal/cloudapi/provisioning/types.go
+@@ -0,0 +1,82 @@
++package provisioning
++
++import (
++	"encoding/json"
++	"time"
++
++	"go.k6.io/k6/v2/lib"
++)
++
++// MetricsConfig contains metrics tuning parameters returned by the provisioning service.
++type MetricsConfig struct {
++	PushURL               string  `json:"push_url"`
++	PushInterval          *string `json:"push_interval,omitempty"`
++	PushConcurrency       *int32  `json:"push_concurrency,omitempty"`
++	AggregationPeriod     *string `json:"aggregation_period,omitempty"`
++	AggregationWaitPeriod *string `json:"aggregation_wait_period,omitempty"`
++	AggregationMinSamples *int32  `json:"aggregation_min_samples,omitempty"`
++	MaxSamplesPerPackage  *int32  `json:"max_samples_per_package,omitempty"`
++}
++
++// SecretsConfig contains secrets endpoints configuration.
++type SecretsConfig struct {
++	Endpoint     string `json:"endpoint"`
++	ResponsePath string `json:"response_path"`
++}
++
++// RuntimeConfig contains runtime overrides and configuration for a test run.
++type RuntimeConfig struct {
++	Metrics      MetricsConfig `json:"metrics"`
++	TestRunToken string        `json:"test_run_token"`
++	Secrets      SecretsConfig `json:"secrets"`
++}
++
++// StartLocalExecutionRequest is the request payload to start local execution.
++type StartLocalExecutionRequest struct {
++	Options       json.RawMessage `json:"options"`
++	MaxVUs        int64           `json:"max_vus"`
++	TotalDuration int64           `json:"total_duration"`
++	ArchiveSize   int64           `json:"archive_size"`
++}
++
++// MarshalJSON ensures archive_size is explicit null when <= 0.
++func (r StartLocalExecutionRequest) MarshalJSON() ([]byte, error) {
++	type Alias StartLocalExecutionRequest
++	var archiveSize *int64
++	if r.ArchiveSize > 0 {
++		archiveSize = &r.ArchiveSize
++	}
++	return json.Marshal(&struct {
++		Alias
++		ArchiveSize *int64 `json:"archive_size"`
++	}{
++		Alias:       Alias(r),
++		ArchiveSize: archiveSize,
++	})
++}
++
++// StartLocalExecutionResponse is the response from the provisioning service.
++type StartLocalExecutionResponse struct {
++	TestRunID             int64         `json:"test_run_id"`
++	ArchiveUploadURL      *string       `json:"archive_upload_url"`
++	TestRunDetailsPageURL string        `json:"test_run_details_page_url"`
++	RuntimeConfig         RuntimeConfig `json:"runtime_config"`
++}
++
++// ProvisionParams configures ProvisionLocalExecution.
++type ProvisionParams struct {
++	Name          string
++	ProjectID     int64
++	MaxVUs        int64
++	TotalDuration int64
++	Options       json.RawMessage
++	Archive       *lib.Archive
++	PollInterval  time.Duration
++}
++
++// ProvisionResult contains the result of ProvisionLocalExecution.
++type ProvisionResult struct {
++	TestRunID             int64
++	TestRunDetailsPageURL string
++	RuntimeConfig         RuntimeConfig
++}
+diff --git a/internal/cloudapi/v6/api.go b/internal/cloudapi/v6/api.go
+index e59bf01b8..285c14323 100644
+--- a/internal/cloudapi/v6/api.go
++++ b/internal/cloudapi/v6/api.go
+@@ -248,6 +248,38 @@ func (c *Client) createTest(
+ 	return res, nil
+ }
+ 
++// CreateOrFindLoadTest creates a new load test in the given project without a script.
++// If a load test with the same name already exists (HTTP 409 Conflict),
++// it finds the existing load test by name and returns its ID.
++func (c *Client) CreateOrFindLoadTest(
++	ctx context.Context, projectID int64, name string,
++) (int64, error) {
++	res, hr, err := c.apiClient.LoadTestsAPI.
++		ProjectsLoadTestsCreate(c.authCtx(ctx), projectID).
++		XStackId(c.stackID).
++		Name(name).
++		Execute()
++	defer closeResponse(hr, &err)
++
++	if err := CheckResponse(hr, err); err != nil {
++		var rerr ResponseError
++		if errors.As(err, &rerr) && rerr.Response != nil && rerr.Response.StatusCode == http.StatusConflict {
++			lt, findErr := c.findTestByName(ctx, projectID, name)
++			if findErr != nil {
++				return 0, findErr
++			}
++			return lt.GetId(), nil
++		}
++		return 0, err
++	}
++
++	if res == nil {
++		return 0, errUnknown
++	}
++
++	return res.GetId(), nil
++}
++
+ func (c *Client) findTestByName(
+ 	ctx context.Context, projectID int64, name string,
+ ) (_ *k6cloud.LoadTestApiModel, err error) {
+diff --git a/internal/cmd/outputs_cloud.go b/internal/cmd/outputs_cloud.go
+index 4fc7ae16a..4c244e714 100644
+--- a/internal/cmd/outputs_cloud.go
++++ b/internal/cmd/outputs_cloud.go
+@@ -2,10 +2,12 @@ package cmd
+ 
+ import (
+ 	"bytes"
++	"context"
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"path/filepath"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -15,8 +17,11 @@ import (
+ 	"go.k6.io/k6/v2/cloudapi"
+ 	"go.k6.io/k6/v2/cmd/state"
+ 	"go.k6.io/k6/v2/internal/build"
++	"go.k6.io/k6/v2/internal/cloudapi/provisioning"
++	cloudapiv6 "go.k6.io/k6/v2/internal/cloudapi/v6"
+ 	cloudsecrets "go.k6.io/k6/v2/internal/secretsource/cloud"
+ 	"go.k6.io/k6/v2/lib"
++	"go.k6.io/k6/v2/lib/types"
+ 	"go.k6.io/k6/v2/metrics"
+ )
+ 
+@@ -25,6 +30,53 @@ const (
+ 	testRunIDKey    = "K6_CLOUDRUN_TEST_RUN_ID"
+ )
+ 
++func buildConfigFromRuntimeConfig(logger logrus.FieldLogger, rc provisioning.RuntimeConfig) cloudapi.Config {
++	var cfg cloudapi.Config
++	if rc.Metrics.PushURL != "" {
++		cfg.MetricsPushURL = null.StringFrom(rc.Metrics.PushURL)
++	}
++	if rc.TestRunToken != "" {
++		cfg.TestRunToken = null.StringFrom(rc.TestRunToken)
++	}
++
++	if rc.Metrics.PushInterval != nil {
++		d, err := time.ParseDuration(*rc.Metrics.PushInterval)
++		if err != nil {
++			logger.WithField("field", "push_interval").WithError(err).Warn("failed to parse push_interval")
++		} else {
++			cfg.MetricPushInterval = types.NewNullDuration(d, true)
++		}
++	}
++
++	if rc.Metrics.PushConcurrency != nil {
++		cfg.MetricPushConcurrency = null.IntFrom(int64(*rc.Metrics.PushConcurrency))
++	}
++
++	if rc.Metrics.AggregationPeriod != nil {
++		d, err := time.ParseDuration(*rc.Metrics.AggregationPeriod)
++		if err != nil {
++			logger.WithField("field", "aggregation_period").WithError(err).Warn("failed to parse aggregation_period")
++		} else {
++			cfg.AggregationPeriod = types.NewNullDuration(d, true)
++		}
++	}
++
++	if rc.Metrics.AggregationWaitPeriod != nil {
++		d, err := time.ParseDuration(*rc.Metrics.AggregationWaitPeriod)
++		if err != nil {
++			logger.WithField("field", "aggregation_wait_period").WithError(err).Warn("failed to parse aggregation_wait_period")
++		} else {
++			cfg.AggregationWaitPeriod = types.NewNullDuration(d, true)
++		}
++	}
++
++	if rc.Metrics.MaxSamplesPerPackage != nil {
++		cfg.MaxTimeSeriesInBatch = null.IntFrom(int64(*rc.Metrics.MaxSamplesPerPackage))
++	}
++
++	return cfg
++}
++
+ // createCloudTest performs test and Cloud configuration validations and prepares the test run.
+ // It creates a new test run in the k6 Cloud backend unless a PushRefID is provided,
+ // in which case it reuses an existing test run.
+@@ -104,64 +156,84 @@ func createCloudTest(gs *state.GlobalState, test *loadedAndConfiguredTest) error
+ 		testArchive = test.makeArchive()
+ 	}
+ 
+-	testRun := &cloudapi.TestRun{
+-		Name:       conf.Name.String,
+-		ProjectID:  conf.ProjectID.Int64,
+-		VUsMax:     int64(lib.GetMaxPossibleVUs(executionPlan)), //nolint:gosec
+-		Thresholds: thresholds,
+-		Duration:   int64(duration / time.Second),
+-		Archive:    testArchive,
+-	}
+-
+ 	logger := gs.Logger.WithFields(logrus.Fields{"output": builtinOutputCloud.String()})
+ 
+-	apiClient := cloudapi.NewClient(
+-		logger, conf.Token.String, conf.Host.String, build.Version, conf.Timeout.TimeDuration())
+-	if conf.StackID.Valid {
+-		apiClient.SetStackID(conf.StackID.Int64)
++	provClient, err := provisioning.NewClient(
++		logger, conf.Token.String, conf.Host.String, build.Version, conf.StackID.Int64, conf.Timeout.TimeDuration())
++	if err != nil {
++		return err
+ 	}
+-
+-	if testRun.ProjectID == 0 {
+-		projectID, err := resolveDefaultProjectID(gs, &conf)
++	if conf.Hostv6.Valid && conf.Hostv6.String != "" && conf.Hostv6.String != conf.Host.String {
++		v6Client, err := cloudapiv6.NewClient(
++			logger, conf.Token.String, conf.Hostv6.String, build.Version, conf.Timeout.TimeDuration())
+ 		if err != nil {
+ 			return err
+ 		}
+-		if projectID > 0 {
+-			testRun.ProjectID = projectID
++		if conf.StackID.Valid {
++			if err := v6Client.SetStackID(conf.StackID.Int64); err != nil {
++				return err
++			}
+ 		}
++		provClient.SetV6Client(v6Client)
+ 	}
+ 
+-	response, err := apiClient.CreateTestRun(testRun)
++	projectID := conf.ProjectID.Int64
++	if projectID == 0 {
++		projectID, err = resolveDefaultProjectID(gs, &conf)
++		if err != nil {
++			return err
++		}
++	}
++
++	optionsJSON, err := json.Marshal(test.derivedConfig.Options)
++	if err != nil {
++		return fmt.Errorf("marshalling options: %w", err)
++	}
++
++	ctx := gs.Ctx
++	if ctx == nil {
++		ctx = context.Background()
++	}
++
++	res, err := provClient.ProvisionLocalExecution(ctx, provisioning.ProvisionParams{
++		Name:          conf.Name.String,
++		ProjectID:     projectID,
++		MaxVUs:        int64(lib.GetMaxPossibleVUs(executionPlan)),
++		TotalDuration: int64(duration / time.Second),
++		Options:       optionsJSON,
++		Archive:       testArchive,
++	})
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+ 	// We store the test run id in the environment, so it can be used later.
+-	test.preInitState.RuntimeOptions.Env[testRunIDKey] = response.ReferenceID
++	test.preInitState.RuntimeOptions.Env[testRunIDKey] = strconv.FormatInt(res.TestRunID, 10)
+ 
+-	if response.SecretsConfig != nil && gs.CloudSecretSource != nil {
++	if res.RuntimeConfig.Secrets.Endpoint != "" && gs.CloudSecretSource != nil {
+ 		gs.CloudSecretSource.SetConfig(&cloudsecrets.Config{
+-			Token:        response.TestRunToken,
+-			Endpoint:     response.SecretsConfig.Endpoint,
+-			ResponsePath: response.SecretsConfig.ResponsePath,
++			Token:        res.RuntimeConfig.TestRunToken,
++			Endpoint:     res.RuntimeConfig.Secrets.Endpoint,
++			ResponsePath: res.RuntimeConfig.Secrets.ResponsePath,
+ 		})
+ 	}
+ 
+-	// If the Cloud API returned configuration overrides, we apply them to the current configuration.
+-	// Then, we serialize the overridden configuration back, so it can be used by the Cloud output.
+-	if response.ConfigOverride != nil {
+-		logger.WithFields(logrus.Fields{"override": response.ConfigOverride}).Debug("overriding config options")
++	if res.TestRunDetailsPageURL != "" {
++		conf.TestRunDetails = null.StringFrom(res.TestRunDetailsPageURL)
++	}
+ 
+-		raw, err := cloudConfToRawMessage(conf.Apply(*response.ConfigOverride))
+-		if err != nil {
+-			return fmt.Errorf("could not serialize overridden cloud configuration: %w", err)
+-		}
++	rcConf := buildConfigFromRuntimeConfig(logger, res.RuntimeConfig)
++	conf = conf.Apply(rcConf)
+ 
+-		if test.derivedConfig.Collectors == nil {
+-			test.derivedConfig.Collectors = make(map[string]json.RawMessage)
+-		}
+-		test.derivedConfig.Collectors[builtinOutputCloud.String()] = raw
++	raw, err := cloudConfToRawMessage(conf)
++	if err != nil {
++		return fmt.Errorf("could not serialize overridden cloud configuration: %w", err)
++	}
++
++	if test.derivedConfig.Collectors == nil {
++		test.derivedConfig.Collectors = make(map[string]json.RawMessage)
+ 	}
++	test.derivedConfig.Collectors[builtinOutputCloud.String()] = raw
+ 
+ 	return nil
+ }
+diff --git a/internal/output/cloud/output.go b/internal/output/cloud/output.go
+index a1b4c2dd6..817260be9 100644
+--- a/internal/output/cloud/output.go
++++ b/internal/output/cloud/output.go
+@@ -2,9 +2,12 @@
+ package cloud
+ 
+ import (
++	"context"
+ 	"errors"
+ 	"fmt"
++	"net/http"
+ 	"path/filepath"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -14,6 +17,7 @@ import (
+ 	"go.k6.io/k6/v2/cloudapi"
+ 	"go.k6.io/k6/v2/errext"
+ 	"go.k6.io/k6/v2/internal/build"
++	"go.k6.io/k6/v2/internal/cloudapi/provisioning"
+ 	"go.k6.io/k6/v2/internal/usage"
+ 	"go.k6.io/k6/v2/lib"
+ 	"go.k6.io/k6/v2/metrics"
+@@ -50,6 +54,14 @@ type cloudClient interface {
+ 	TestFinished(referenceID string, thresholds cloudapi.ThresholdResult, tainted bool, runStatus cloudapi.RunStatus) error
+ }
+ 
++type metricsPusher interface {
++	Do(req *http.Request, v any) error
++}
++
++type provisioningNotifier interface {
++	NotifyTestRunCompleted(ctx context.Context, testRunID int64, token string, testErr error) error
++}
++
+ type apiVersion int64
+ 
+ const (
+@@ -81,6 +93,10 @@ type Output struct {
+ 	client       cloudClient
+ 	testStopFunc func(error)
+ 
++	metricsPusher        metricsPusher
++	provisioningNotifier provisioningNotifier
++	provisioningMode     bool
++
+ 	usage *usage.Usage
+ }
+ 
+@@ -183,11 +199,57 @@ func validateRequiredSystemTags(scriptTags *metrics.SystemTagSet) error {
+ 	return nil
+ }
+ 
++func (out *Output) lazyInitProvisioning() error {
++	if out.provisioningNotifier == nil {
++		client, err := provisioning.NewClient(
++			out.logger,
++			out.config.Token.String,
++			out.config.Host.String,
++			build.Version,
++			out.config.StackID.Int64,
++			out.config.Timeout.TimeDuration(),
++		)
++		if err != nil {
++			return err
++		}
++		out.provisioningNotifier = client
++	}
++	if out.metricsPusher == nil {
++		out.metricsPusher = provisioning.NewHTTPClient(
++			&http.Client{Timeout: out.config.Timeout.TimeDuration()},
++			out.config.TestRunToken.String,
++			fmt.Sprintf("k6/%s", build.Version),
++			out.logger,
++		)
++	}
++	return nil
++}
++
+ // Start calls the k6 Cloud API to initialize the test run, and then starts the
+ // goroutine that would listen for metric samples and send them to the cloud.
+ func (out *Output) Start() error {
+ 	if out.config.PushRefID.Valid {
+ 		out.testRunID = out.config.PushRefID.String
++		out.logger.WithField("testRunId", out.testRunID).Debug("Directly pushing metrics without init")
++		return out.startVersionedOutput()
++	}
++
++	if out.config.MetricsPushURL.Valid && out.config.MetricsPushURL.String != "" {
++		if err := out.lazyInitProvisioning(); err != nil {
++			return err
++		}
++		out.provisioningMode = true
++		err := out.startVersionedOutput()
++		if err != nil {
++			return fmt.Errorf("the Gateway Output failed to start a versioned output: %w", err)
++		}
++		out.logger.WithFields(logrus.Fields{
++			"name":      out.config.Name,
++			"projectId": out.config.ProjectID,
++			"duration":  out.duration,
++			"testRunId": out.testRunID,
++		}).Debug("Started!")
++		return nil
+ 	}
+ 
+ 	if out.testRunID != "" {
+@@ -298,6 +360,19 @@ func (out *Output) testFinished(testErr error) error {
+ 		return nil
+ 	}
+ 
++	if out.provisioningMode {
++		testRunID, err := strconv.ParseInt(out.testRunID, 10, 64)
++		if err != nil {
++			return fmt.Errorf("could not parse test run id: %w", err)
++		}
++		return out.provisioningNotifier.NotifyTestRunCompleted(
++			context.Background(),
++			testRunID,
++			out.config.TestRunToken.String,
++			testErr,
++		)
++	}
++
+ 	testTainted := false
+ 	thresholdResults := make(cloudapi.ThresholdResult)
+ 	for name, thresholds := range out.thresholds {
+@@ -400,6 +475,17 @@ func (out *Output) startVersionedOutput() error {
+ 		return err
+ 	}
+ 
++	if out.provisioningMode {
++		if v2, ok := out.versionedOutput.(*cloudv2.Output); ok {
++			if out.metricsPusher != nil {
++				v2.SetMetricsHTTPClient(out.metricsPusher)
++			}
++			if out.config.MetricsPushURL.Valid && out.config.MetricsPushURL.String != "" {
++				v2.SetMetricsURL(out.config.MetricsPushURL.String)
++			}
++		}
++	}
++
+ 	out.SetTestRunID(out.testRunID)
+ 	out.versionedOutput.SetTestRunStopCallback(out.testStopFunc)
+ 	return out.versionedOutput.Start()
+diff --git a/output/cloud/expv2/metrics_client.go b/output/cloud/expv2/metrics_client.go
+index bc0f64db4..0ae812019 100644
+--- a/output/cloud/expv2/metrics_client.go
++++ b/output/cloud/expv2/metrics_client.go
+@@ -15,10 +15,16 @@ import (
+ 	"go.k6.io/k6/v2/internal/output/cloud/expv2/pbcloud"
+ )
+ 
+-// metricsHTTPClient is the interface used by metricsClient to perform HTTP requests.
++// MetricsHTTPClient is the interface used by metricsClient to perform HTTP requests.
+ // It allows tests to inject a mock that returns immediately without using real HTTP.
+-type metricsHTTPClient interface {
++type MetricsHTTPClient interface {
+ 	Do(req *http.Request, v any) error
++}
++
++type metricsHTTPClient = MetricsHTTPClient
++
++type cloudBaseURLClient interface {
++	metricsHTTPClient
+ 	BaseURL() string
+ }
+ 
+@@ -30,28 +36,35 @@ type metricsClient struct {
+ 	url        string
+ }
+ 
+-// newMetricsClient creates and initializes a new MetricsClient.
+-func newMetricsClient(c metricsHTTPClient, testRunID string) (*metricsClient, error) {
+-	// The cloudapi.Client works across different versions of the API, the test
+-	// lifecycle management is under /v1 instead the metrics ingestion is /v2.
+-	// Unfortunately, the current client has v1 hard-coded so we need to trim the wrong path
+-	// to be able to replace it with the correct one.
+-	// A versioned client would be better but it would require a breaking change
+-	// and considering that other services (e.g. k6-operator) depend on it,
+-	// we want to stabilize the API before.
+-	u := c.BaseURL()
+-	if !strings.HasSuffix(u, "/v1") {
+-		return nil, errors.New("a /v1 suffix is expected in the Cloud service's BaseURL path")
++func deriveMetricsURL(baseURL string, testRunID string) (string, error) {
++	if !strings.HasSuffix(baseURL, "/v1") {
++		return "", errors.New("a /v1 suffix is expected in the Cloud service's BaseURL path")
+ 	}
+ 	if testRunID == "" {
+-		return nil, errors.New("TestRunID of the test is required")
++		return "", errors.New("TestRunID of the test is required")
++	}
++	return strings.TrimSuffix(baseURL, "/v1") + "/v2/metrics/" + testRunID, nil
++}
++
++func newMetricsClientWithURL(httpClient metricsHTTPClient, url string) (*metricsClient, error) {
++	if url == "" {
++		return nil, errors.New("metrics push URL is required")
+ 	}
+ 	return &metricsClient{
+-		httpClient: c,
+-		url:        strings.TrimSuffix(u, "/v1") + "/v2/metrics/" + testRunID,
++		httpClient: httpClient,
++		url:        url,
+ 	}, nil
+ }
+ 
++// newMetricsClient creates and initializes a new MetricsClient.
++func newMetricsClient(c cloudBaseURLClient, testRunID string) (*metricsClient, error) {
++	u, err := deriveMetricsURL(c.BaseURL(), testRunID)
++	if err != nil {
++		return nil, err
++	}
++	return newMetricsClientWithURL(c, u)
++}
++
+ // Push the provided metrics for the given test run ID. The context cancels the
+ // underlying HTTP request so a stuck push cannot block k6 shutdown.
+ func (mc *metricsClient) push(ctx context.Context, samples *pbcloud.MetricSet) error {
+diff --git a/output/cloud/expv2/output.go b/output/cloud/expv2/output.go
+index 2770a8451..c331c26a0 100644
+--- a/output/cloud/expv2/output.go
++++ b/output/cloud/expv2/output.go
+@@ -41,6 +41,9 @@ type Output struct {
+ 	cloudClient *cloudapi.Client
+ 	testRunID   string
+ 
++	metricsHTTPClient metricsHTTPClient
++	metricsURL        string
++
+ 	collector *collector
+ 	flushing  flusher
+ 
+@@ -92,6 +95,16 @@ func (o *Output) SetTestRunStopCallback(stopFunc func(error)) {
+ 	o.testStopFunc = stopFunc
+ }
+ 
++// SetMetricsHTTPClient sets a custom HTTP client for metric pushing.
++func (o *Output) SetMetricsHTTPClient(client metricsHTTPClient) {
++	o.metricsHTTPClient = client
++}
++
++// SetMetricsURL sets a custom metrics push URL.
++func (o *Output) SetMetricsURL(url string) {
++	o.metricsURL = url
++}
++
+ // Start starts the goroutine that would listen
+ // for metric samples and send them to the cloud.
+ func (o *Output) Start() error {
+@@ -106,7 +119,24 @@ func (o *Output) Start() error {
+ 		return fmt.Errorf("failed to initialize the samples collector: %w", err)
+ 	}
+ 
+-	mc, err := newMetricsClient(o.cloudClient, o.testRunID)
++	var mc *metricsClient
++	if o.metricsURL != "" || o.metricsHTTPClient != nil {
++		httpClient := o.metricsHTTPClient
++		if httpClient == nil {
++			httpClient = o.cloudClient
++		}
++		metricsURL := o.metricsURL
++		if metricsURL == "" {
++			var err error
++			metricsURL, err = deriveMetricsURL(o.cloudClient.BaseURL(), o.testRunID)
++			if err != nil {
++				return fmt.Errorf("failed to derive metrics push URL: %w", err)
++			}
++		}
++		mc, err = newMetricsClientWithURL(httpClient, metricsURL)
++	} else {
++		mc, err = newMetricsClient(o.cloudClient, o.testRunID)
++	}
+ 	if err != nil {
+ 		return fmt.Errorf("failed to initialize the http metrics flush client: %w", err)
+ 	}

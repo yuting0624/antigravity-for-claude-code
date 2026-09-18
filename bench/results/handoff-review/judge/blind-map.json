@@ -1,0 +1,165 @@
+{
+  "seed": 20260914,
+  "candidates": {
+    "c-c0ee1d": {
+      "task_id": "caddy-7877",
+      "source": "author",
+      "diff_sha256": "b09784697487fb49f5799b4911b8baa1bfd9c82c9d11b9d43f437d7d15d59e6b"
+    },
+    "c-8458da": {
+      "task_id": "caddy-7877",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-15453b": {
+      "task_id": "caddy-7877",
+      "source": "run:caddy-7877__hybrid-handoff-review__r1",
+      "diff_sha256": "28da371c23dc1e0051d379dbe2201b287f9358375e5e57428e83558ae6fc6cb6"
+    },
+    "c-0daf72": {
+      "task_id": "caddy-7877",
+      "source": "run:caddy-7877__hybrid-handoff-review__r2",
+      "diff_sha256": "ec8f45eb8f6434d8b7585f63fba30b8f7d235d77cdbcdae975a0195d30c880a1"
+    },
+    "c-2755f8": {
+      "task_id": "caddy-7888",
+      "source": "author",
+      "diff_sha256": "03bd8d093a6d18392c0a192e641ac41ee28ad9e8fc5d07289718e97c59c7ae0d"
+    },
+    "c-7801c6": {
+      "task_id": "caddy-7888",
+      "source": "run:caddy-7888__hybrid-handoff-review__r1",
+      "diff_sha256": "e3a8937ecc20cbc282bf5fa1b8d277ff095260f1e274c6d2194fec6b1b3de64f"
+    },
+    "c-087ba6": {
+      "task_id": "caddy-7888",
+      "source": "run:caddy-7888__hybrid-handoff-review__r2",
+      "diff_sha256": "d08139ee599563acdc582ed753bc127fccd69e9e84d1f33ac3c1d78ee6ac0b9d"
+    },
+    "c-04bfdf": {
+      "task_id": "caddy-7888",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-1151c4": {
+      "task_id": "caddy-7913",
+      "source": "run:caddy-7913__hybrid-handoff-review__r1",
+      "diff_sha256": "35e863a9b2dd098e69fd82e54f0871e3db1ccf088ac86807c414a93c69f6c246"
+    },
+    "c-fa157d": {
+      "task_id": "caddy-7913",
+      "source": "author",
+      "diff_sha256": "914e77ef98b4c70f480b746bea0a3dafc116c3cb30af72e45d5321bd3ab0277a"
+    },
+    "c-f60206": {
+      "task_id": "caddy-7913",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-d5945f": {
+      "task_id": "caddy-7913",
+      "source": "run:caddy-7913__hybrid-handoff-review__r2",
+      "diff_sha256": "408f908511312a5fcd625df9d960f37fd76c7a65bf5990258c14e183d37de317"
+    },
+    "c-436123": {
+      "task_id": "caddy-7995",
+      "source": "run:caddy-7995__hybrid-handoff-review__r1",
+      "diff_sha256": "8198d6bfa1083dbcf350da5108c837ed77964b8e4f489223e638576c851973c4"
+    },
+    "c-b8485c": {
+      "task_id": "caddy-7995",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-b242d5": {
+      "task_id": "caddy-7995",
+      "source": "author",
+      "diff_sha256": "8198d6bfa1083dbcf350da5108c837ed77964b8e4f489223e638576c851973c4"
+    },
+    "c-ad363f": {
+      "task_id": "caddy-7995",
+      "source": "run:caddy-7995__hybrid-handoff-review__r2",
+      "diff_sha256": "ba9121c3fddd6bebc97a26542753d02388e449e8f13c6064a12496853355fb15"
+    },
+    "c-fe6896": {
+      "task_id": "cli-14136",
+      "source": "run:cli-14136__hybrid-handoff-review__r1",
+      "diff_sha256": "054aa45bf47ffc6c1c1a091d9aea6d0634dd9266fd5c6d8d4da2079b2046ce12"
+    },
+    "c-cc003c": {
+      "task_id": "cli-14136",
+      "source": "run:cli-14136__hybrid-handoff-review__r2",
+      "diff_sha256": "b9fe41a389ea4c3b859f5897ad99da05a07339e2b0519bdbbff2b686de43d8bf"
+    },
+    "c-a4df5a": {
+      "task_id": "cli-14136",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-83a88e": {
+      "task_id": "cli-14136",
+      "source": "author",
+      "diff_sha256": "7e164d017223ca64e3f9e2b6a3d8eeb99d51114cfff35aa8b721e9a10379dec7"
+    },
+    "c-eac31c": {
+      "task_id": "cli-attach",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-263903": {
+      "task_id": "cli-attach",
+      "source": "author",
+      "diff_sha256": "84ebced84bb8a59da549c4dbccb3189de41b3c51fb48f50f669303c3c3f2da6e"
+    },
+    "c-450435": {
+      "task_id": "cli-attach",
+      "source": "run:cli-attach__hybrid-handoff-review__r2",
+      "diff_sha256": "c3176e953e75fdefb32b0ca558fe79fe79c5bc7df5388f115a6d095eca9f8a45"
+    },
+    "c-c4e6ee": {
+      "task_id": "cli-attach",
+      "source": "run:cli-attach__hybrid-handoff-review__r1",
+      "diff_sha256": "afd64fa3c3e8c6870e78293a7b4b831ef40aec4cc7410834f3b40782ed8acc5d"
+    },
+    "c-7755fc": {
+      "task_id": "k6-6169",
+      "source": "author",
+      "diff_sha256": "6cc59a2c9995fe287eb154b96850cde201b677c238047862c7e8fec937da5b76"
+    },
+    "c-997e15": {
+      "task_id": "k6-6169",
+      "source": "run:k6-6169__hybrid-handoff-review__r1",
+      "diff_sha256": "84ede1e2228a6aebf71ee2d225dfd97089f4b3642095653499e59b7bc2a8f442"
+    },
+    "c-e073ea": {
+      "task_id": "k6-6169",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-4ddcb5": {
+      "task_id": "k6-6169",
+      "source": "run:k6-6169__hybrid-handoff-review__r2",
+      "diff_sha256": "a855db6540790e74d504e941a8bf2076c87d458d4e336698b5862a2f3038880b"
+    },
+    "c-dec85c": {
+      "task_id": "zoekt-1105",
+      "source": "run:zoekt-1105__hybrid-handoff-review__r1",
+      "diff_sha256": "3e85b364a01080c7909d45465d289e0191b25270c8672defab66faa6a49271b6"
+    },
+    "c-b15af1": {
+      "task_id": "zoekt-1105",
+      "source": "run:zoekt-1105__hybrid-handoff-review__r2",
+      "diff_sha256": "9f4284cb1e9593589e12be5d3596e611f8440bc72c736fdefdcb7bbe485c3b4f"
+    },
+    "c-c121ac": {
+      "task_id": "zoekt-1105",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-8a7c39": {
+      "task_id": "zoekt-1105",
+      "source": "author",
+      "diff_sha256": "ebab04c9cf8d3ba01c267176790fddae7ccfa5a085d2cfbe79686df1224b867e"
+    }
+  }
+}

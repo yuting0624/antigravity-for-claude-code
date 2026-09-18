@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-4ddcb5",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:45:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b52f545e3f5f989660164d4a4b2a96c0edfad9fc0e160027bd09278bb06a300f",
+  "wall_s": 75.3,
+  "cost_usd": 0.90408675,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "CreateOrFindLoadTest mirrors UploadTest and 401/403 go through httperr like v6, but provisioning is hand-rolled HTTP/JSON with a differently shaped ResponseError instead of the SDK, and the fake server is package provtest in dir test/.",
+    "edge_cases": "409 fallback, missing upload URL, aborted/completed during poll, ctx cancel and PushRefID short-circuit handled; unknown errors notify with code 0, and the output builds its notify client from conf.Host (v1 ingest) rather than Hostv6 as the cmd layer does.",
+    "scope": "Thresholds removal and expv2 URL/client injection are on-target, but Client carries unused apiClient/token/version fields, Server duplicates the embedded URL field, and clientcfg is a two-constant package.",
+    "readability": "Provision flow and notify mapping are clear; expv2 Start has convoluted nil/URL branching, buildConfigFromRuntimeConfig repeats the same parse block three times, and dispatch relies on many manual Unlock paths.",
+    "robustness": "Bodies closed and retries bounded with ctx checks, but rand error ignored for idempotency key, notify host likely wrong in production, a full v6+SDK client is built just to POST notify, and the *cloudv2.Output type assertion silently no-ops.",
+    "maintainability": "Retry loop duplicated between UploadArchive and HTTPClient.Do; hidden coupling via concrete type assertion in startVersionedOutput; dead struct fields and the newMetricsClient anonymous-interface parameter add friction."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:46:30+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 70.6,
+  "cost_usd": 0.40919325000000006,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix's structure, EqualFold comparison, url.PathUnescape error handling and comment style; name and placement fit the file.",
+    "edge_cases": "Handles decoded-vs-encoded, escaped-pattern-must-match-literally, case-insensitive hex, empty suffix/path, and non-matching suffix; escape detection relies on EscapedPath() validity (same assumption as prefix) and `<= 0` is slightly loose.",
+    "scope": "Only replaces the broken reverse trick with a proper suffix trimmer and drops the now-unused reverse helper; no other operations touched.",
+    "readability": "Clear lock-step loop with named pathHasEscape/suffixHasEscape flags; doc comment is long but explains why reversal fails; 'for good reasons' is vaguer than the prefix comment's RFC cite.",
+    "robustness": "All index accesses are bounds-guarded, unescape errors return the path unchanged, no panics on empty inputs.",
+    "maintainability": "Self-contained and parallel to trimPathPrefix; conceptual duplication between the two walkers is inherent to direction and acceptable."
+  },
+  "flags": []
+}

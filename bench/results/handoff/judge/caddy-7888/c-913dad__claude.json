@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-913dad",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:08:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ca212b18bcc72c9f5f81b4529bc352863d1e32e31991a4b34d9bb25a54b62893",
+  "wall_s": 35.4,
+  "cost_usd": 0.25159425,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: same receiver names, doc style, cookieFilterAction reuse, Validate/CaddyModule/UnmarshalCaddyfile shape, registration and interface assertions placed beside cookie.",
+    "edge_cases": "Unparseable lines pass through, exact name match, quoting preserved, empty suffix and delete handled; hashed values are re-quoted too and leading whitespace before the name is dropped on rebuild (minor).",
+    "scope": "Focused on the feature; small extras are the added CookieFilter Validator assertion and an unrequested []string branch, both harmless.",
+    "readability": "Clear flow and names; the separate delete check before the switch is slightly awkward and could be a switch case.",
+    "robustness": "Uses stdlib http.ParseSetCookie, no panics on bad input, unknown Interface types returned unchanged, value receiver with read-only access to actions.",
+    "maintainability": "Reuses hash, filterAction and cookieFilterAction, but UnmarshalCaddyfile is a verbatim copy of CookieFilter's rather than a shared helper."
+  },
+  "flags": []
+}

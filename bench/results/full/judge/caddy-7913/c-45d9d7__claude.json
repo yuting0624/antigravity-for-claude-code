@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-45d9d7",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:30:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a7da68cc96b815ab701180ca01422503f13eeb08757e7183503729b0832c0b74",
+  "wall_s": 91.3,
+  "cost_usd": 0.83820425,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "License headers, interface guards, module ID/registration, standard imports, Caddyfile parsing and nolint usage all match siblings; handler config uses time.Duration instead of the caddy.Duration convention.",
+    "edge_cases": "Handles nil body, empty writes, chunked Write/ReadFrom, hijack cleanup, ErrNotSupported logging; but rate-only config (Timeout<=0, MinRate>0) yields an immediately-expired deadline, and negative Timeout is added into the rate allowance.",
+    "scope": "Exactly the requested fields, options, directive, ordering and constant; no unrelated edits or refactors.",
+    "readability": "Small focused types, clear doc comments explaining the deadline model, straightforward chunk loops.",
+    "robustness": "Server-level default (1m) wraps inside the per-route wrapper, so the inner reset overrides the route's tighter deadline on every I/O; write deadline is never cleared after a request so a stale one can leak into the next keep-alive request when Go writes headers itself.",
+    "maintainability": "Shared IdleDeadline/reader/writer types reused by server and handler; minor duplication of the wrapping blocks and no composition strategy for nested wrappers."
+  },
+  "flags": []
+}

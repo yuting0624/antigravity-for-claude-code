@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-4acbd6",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:16:12+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "931cf8827363ff38e5451d76de57b8198a09e4904f0871503c29f88c262d9f35",
+  "wall_s": 255.1,
+  "cost_usd": 0.265578,
+  "usage": {
+    "input": 48099,
+    "output": 14115,
+    "thinking": 13914,
+    "cache_read": 0,
+    "total": 62214
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Excellent adherence to Caddy conventions, including JSON unmarshaling patterns, module registration, and directive ordering.",
+    "edge_cases": "Calculates rate floors precisely and handles LimitReader's swallowed EOF intelligently, though misses some zero-value checks.",
+    "scope": "Violates the explicit negative constraint ('No behaviour change for existing configurations') by forcing idle timeout defaults on all servers in app.go.",
+    "readability": "Clean, modular code with clear struct boundaries and well-named deadline math.",
+    "robustness": "Unconditionally calls ReadFrom on ResponseWriterWrapper without type-asserting io.ReaderFrom, which is likely a compile error.",
+    "maintainability": "Properly exposes the unwrapped writer for Go 1.20's ResponseController, ensuring future compatibility."
+  },
+  "flags": []
+}

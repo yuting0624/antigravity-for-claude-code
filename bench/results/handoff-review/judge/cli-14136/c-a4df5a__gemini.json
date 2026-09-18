@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-a4df5a",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:30:12+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "6e4ffdfc8fa3121b5dd75fc94d522536e97ad825826ce027ab31bd008cdd2538",
+  "wall_s": 9.8,
+  "cost_usd": 0.056618,
+  "usage": {
+    "input": 24229,
+    "output": 680,
+    "thinking": 484,
+    "cache_read": 0,
+    "total": 24909
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The candidate provided an empty diff, failing to implement any part of the requirement.",
+    "edge_cases": "No code was provided to handle any edge cases.",
+    "scope": "The scope was entirely missed due to the empty diff.",
+    "readability": "There is no code to evaluate for readability.",
+    "robustness": "No implementation means no robust handling of resources or errors.",
+    "maintainability": "No code was submitted to evaluate maintainability."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

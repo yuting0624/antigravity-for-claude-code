@@ -1,0 +1,448 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "k6-6169__hybrid-forced__r3",
+  "task_id": "k6-6169",
+  "arm": "hybrid-forced",
+  "rep": 3,
+  "attempt": 1,
+  "lane": "D",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-16T12:32:24+00:00",
+  "ended_at": "2026-09-16T13:22:01+00:00",
+  "agent_wall_s": 2975.4,
+  "agent_active_s": 1758.8,
+  "suspended_s": 1216.6,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "664c2b05c5caff13caabdb8e8928635ee08409836dd6c5bff427c6007b36423a",
+    "appendix": "hybrid-forced-appendix.md",
+    "appendix_sha256": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "sent_sha256": "8b76dd7745bc9cb024fabe5236e087403c3390561a4f89208c825a6886b3f3e9"
+  },
+  "claude": {
+    "session_id": "8397d836-bbf9-4d2c-b129-6dcba7f70241",
+    "subtype": "success",
+    "is_error": true,
+    "num_turns": 55,
+    "num_turns_source": "result",
+    "duration_ms": 1753234,
+    "duration_api_ms": 612613,
+    "total_cost_usd": 5.040675499999999,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 74,
+      "cache_creation_input_tokens": 348904,
+      "cache_read_input_tokens": 3073333,
+      "output_tokens": 52832,
+      "output_tokens_details": {
+        "thinking_tokens": 29813
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 348904
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2059,
+        "outputTokens": 26,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002189,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 74,
+        "outputTokens": 52832,
+        "cacheReadInputTokens": 3073333,
+        "cacheCreationInputTokens": 348904,
+        "webSearchRequests": 0,
+        "costUSD": 5.038486499999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 29813,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 5.038487,
+    "recomputed_vs_reported_gap": -0.0004,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 38,
+      "input": 74,
+      "output": 52832,
+      "cache_creation": 348904,
+      "cache_read": 3073333,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 37,
+          "input": 74,
+          "output": 52832,
+          "cache_creation": 348904,
+          "cache_read": 3073333
+        },
+        "<synthetic>": {
+          "turns": 1,
+          "input": 0,
+          "output": 0,
+          "cache_creation": 0,
+          "cache_read": 0
+        }
+      },
+      "tool_calls": {
+        "Bash": 37,
+        "Read": 17
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 74,
+        "transcript": 74,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 52832,
+        "transcript": 52832,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 348904,
+        "transcript": 348904,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 3073333,
+        "transcript": 3073333,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 3,
+    "denied_tools": {
+      "Bash:ls": 1,
+      "Bash:agy-delegate": 2
+    },
+    "result_head": "API Error: getaddrinfo ENOTFOUND oauth2.googleapis.com",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 5.038486,
+      "requests": 37,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    }
+  },
+  "agy": {
+    "delegations": 2,
+    "usage_lines": 2,
+    "signal_only": 0,
+    "succeeded": 2,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 2,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 2,
+        "input": 1432514,
+        "output": 59917,
+        "thinking": 44605,
+        "cache_read": 5345114,
+        "usd": 1.699958
+      }
+    },
+    "totals": {
+      "input": 1432514,
+      "output": 59917,
+      "thinking": 44605,
+      "cache_read": 5345114,
+      "total": 1492431
+    },
+    "invariant_ok": true,
+    "shadow_usd": 1.699958,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "1fc4030c-838f-4732-ab8f-0163992c3303",
+      "5983aac1-8979-4353-8152-de40de2ee42c"
+    ],
+    "agy_duration_s_sum": 951.359,
+    "wrapper_calls_in_transcript": 5,
+    "trace_audit": {
+      "1fc4030c-838f-4732-ab8f-0163992c3303": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 58,
+          "GENERIC": 57,
+          "SYSTEM_MESSAGE": 1,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 34,
+          "view_file": 18,
+          "write_to_file": 1,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 5,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T12:39:30Z",
+        "last_step_at": "2026-09-16T12:46:23Z"
+      },
+      "5983aac1-8979-4353-8152-de40de2ee42c": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 39,
+          "GENERIC": 38,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 15,
+          "view_file": 15,
+          "find_by_name": 2,
+          "grep_search": 2,
+          "write_to_file": 3,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T12:49:43Z",
+        "last_step_at": "2026-09-16T12:58:19Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 9
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 2,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 107,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "agy-delegate": 1
+    },
+    "gate_allows": 36,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "cloudapi/config.go",
+      "internal/cloudapi/clientcfg/clientcfg.go",
+      "internal/cloudapi/v6/api.go",
+      "internal/cloudapi/v6/client.go",
+      "internal/cloudapi/provisioning/test/server.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "go.k6.io/k6/v2/internal/cloudapi/provisioning: no non-test Go files in /Users/linyuting/.cache/agy-bench/work/k6-6169__hybrid-forced__r3/internal/cloudapi/provisioning\n# go.k6.io/k6/v2/internal/cloudapi/provisioning\n# [go.k6.io/k6/v2/internal/cloudapi/provisioning]\nvet: internal/cloudapi/provisioning/api_test.go:57:17: undefined: NewClient\ninternal/js/modules/k6/experimental/fs/file.go:85:16: method Seek(offset int64, whence fs.SeekMode) (int64, error) should have signature Seek(int64, int) (int64, error)\n# go.k6.io/k6/v2/internal/output/cloud\n# [go.k6.io/k6/v2/internal/output/cloud]\nvet: internal/output/cloud/output_test.go:482:6: out.metricsPusher undefined (type *Output has no field or method metricsPusher)\nlib/executor/helpers.go:146:18: the cancel function returned by context.WithDeadline should be called, not discarded, to avoid a context leak\n# go.k6.io/k6/v2/output/cloud/expv2\n# [go.k6.io/k6/v2/output/cloud/expv2]\nvet: output/cloud/expv2/metrics_client_test.go:41:14: undefined: deriveMetricsURL\n",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 372.2,
+      "passed_tests": 61,
+      "failed_tests": [
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution/does_not_upload_the_archive_when_--no-archive-upload_is_provided",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecutionNoCloudSecrets",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution/the_script_can_read_the_test_run_id_to_the_environment",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution/should_upload_the_test_archive_via_presigned_S3_URL_as_a_default",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution"
+      ],
+      "failed_packages": [
+        "go.k6.io/k6/v2/internal/cloudapi/provisioning",
+        "go.k6.io/k6/v2/internal/cmd",
+        "go.k6.io/k6/v2/internal/cmd/tests",
+        "go.k6.io/k6/v2/internal/output/cloud",
+        "go.k6.io/k6/v2/output/cloud/expv2"
+      ],
+      "build_failed_packages": [
+        "go.k6.io/k6/v2/internal/cloudapi/provisioning",
+        "go.k6.io/k6/v2/internal/cmd",
+        "go.k6.io/k6/v2/internal/output/cloud",
+        "go.k6.io/k6/v2/output/cloud/expv2"
+      ],
+      "packages": 7,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 323.7,
+      "passed_tests": 5228,
+      "failed_tests": [
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecutionNoCloudSecrets",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution/should_upload_the_test_archive_via_presigned_S3_URL_as_a_default",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution/the_script_can_read_the_test_run_id_to_the_environment",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution/does_not_upload_the_archive_when_--no-archive-upload_is_provided",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestCloudRunLocalExecution",
+        "go.k6.io/k6/v2/internal/cmd/tests.TestActiveVUsCount",
+        "go.k6.io/k6/v2/internal/execution.TestExecutionInfoScenarioIter",
+        "go.k6.io/k6/v2/internal/execution.TestExecutionInfoVUSharing"
+      ],
+      "failed_packages": [
+        "go.k6.io/k6/v2/internal/cloudapi/provisioning",
+        "go.k6.io/k6/v2/internal/cmd",
+        "go.k6.io/k6/v2/internal/cmd/tests",
+        "go.k6.io/k6/v2/internal/execution",
+        "go.k6.io/k6/v2/internal/output/cloud",
+        "go.k6.io/k6/v2/output/cloud/expv2"
+      ],
+      "build_failed_packages": [
+        "go.k6.io/k6/v2/internal/cloudapi/provisioning",
+        "go.k6.io/k6/v2/internal/cmd",
+        "go.k6.io/k6/v2/internal/output/cloud",
+        "go.k6.io/k6/v2/output/cloud/expv2"
+      ],
+      "packages": 131,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 5,
+    "code_added": 226,
+    "code_removed": 3,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "7a3f376c83b4f9d7b482aadf049142579dad863e4713be58ab8802a60d947a76"
+  },
+  "diff_files": {
+    "cloudapi/config.go": {
+      "added": 19,
+      "removed": 1,
+      "class": "code"
+    },
+    "internal/cloudapi/clientcfg/clientcfg.go": {
+      "added": 12,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/test/server.go": {
+      "added": 151,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/v6/api.go": {
+      "added": 41,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/v6/client.go": {
+      "added": 3,
+      "removed": 2,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 5.040675499999999,
+    "gemini_usd": 1.699958,
+    "total_usd": 6.7406334999999995
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:51+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "suspended"
+}

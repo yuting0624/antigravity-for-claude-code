@@ -1,0 +1,150 @@
+{
+  "schema": "bench.task/1",
+  "task_id": "cli-14136",
+  "repo": "cli/cli",
+  "repo_url": "https://github.com/cli/cli",
+  "license": "MIT",
+  "prs": [
+    {
+      "number": 14136,
+      "url": "https://github.com/cli/cli/pull/14136",
+      "title": "Add worktree checkout to `gh issue develop`",
+      "merged_at": "2026-08-21T15:11:54Z",
+      "author": "sergiou87",
+      "merge_commit": "62e3e719a483d9e2b9be2b7dba7e2bb4a7f91c8c",
+      "head_sha": "f5dce1a8bed7cf8e10b04cfb4a1ac7067fcf166a",
+      "commits": 6
+    }
+  ],
+  "merge_method_first": "merge",
+  "base_sha": "d9cba2af43d85420a9577870c132df82237e4a22",
+  "target_sha": "62e3e719a483d9e2b9be2b7dba7e2bb4a7f91c8c",
+  "go_directive": "1.26.0",
+  "size_class": "medium",
+  "author_patch": {
+    "code_added": 199,
+    "code_removed": 113,
+    "test_added": 537,
+    "test_removed": 165,
+    "files_code": [
+      "pkg/cmd/issue/develop/develop.go",
+      "pkg/cmd/pr/checkout/checkout.go",
+      "pkg/cmd/pr/shared/worktree.go"
+    ],
+    "files_generated": [],
+    "files_test": [
+      "acceptance/testdata/issue/issue-develop-worktree-cross-repo.txtar",
+      "acceptance/testdata/issue/issue-develop-worktree.txtar",
+      "pkg/cmd/issue/develop/develop_test.go",
+      "pkg/cmd/pr/checkout/checkout_test.go",
+      "pkg/cmd/pr/shared/worktree_test.go"
+    ],
+    "files_other": []
+  },
+  "hidden_tests": {
+    "files": [
+      "acceptance/testdata/issue/issue-develop-worktree-cross-repo.txtar",
+      "acceptance/testdata/issue/issue-develop-worktree.txtar",
+      "pkg/cmd/issue/develop/develop_test.go",
+      "pkg/cmd/pr/checkout/checkout_test.go",
+      "pkg/cmd/pr/shared/worktree_test.go"
+    ],
+    "funcs": [
+      "TestDevelopRun",
+      "TestNewCmdCheckout",
+      "TestNewCmdDevelop",
+      "TestPRCheckout_detach",
+      "TestPRCheckout_detachedHead",
+      "TestPRCheckout_differentRepo",
+      "TestPRCheckout_differentRepoForce",
+      "TestPRCheckout_differentRepo_currentBranch",
+      "TestPRCheckout_differentRepo_existingBranch",
+      "TestPRCheckout_differentRepo_invalidBranchName",
+      "TestPRCheckout_differentRepo_remoteExists",
+      "TestPRCheckout_existingBranch",
+      "TestPRCheckout_force",
+      "TestPRCheckout_maintainerCanModify",
+      "TestPRCheckout_recurseSubmodules",
+      "TestPRCheckout_sameRepo",
+      "TestPromptingPRResolver",
+      "TestResolveWorktreeTarget",
+      "TestResolveWorktreeTargetPathSafety",
+      "TestSpecificPRResolver",
+      "TestWorktreeCheckoutCommands",
+      "Test_authenticatedCommand_stripsWorktreePrefix",
+      "Test_checkoutRun"
+    ],
+    "packages": [
+      "./pkg/cmd/issue/develop",
+      "./pkg/cmd/pr/checkout",
+      "./pkg/cmd/pr/shared"
+    ],
+    "run_regex": "^(TestDevelopRun|TestNewCmdCheckout|TestNewCmdDevelop|TestPRCheckout_detach|TestPRCheckout_detachedHead|TestPRCheckout_differentRepo|TestPRCheckout_differentRepoForce|TestPRCheckout_differentRepo_currentBranch|TestPRCheckout_differentRepo_existingBranch|TestPRCheckout_differentRepo_invalidBranchName|TestPRCheckout_differentRepo_remoteExists|TestPRCheckout_existingBranch|TestPRCheckout_force|TestPRCheckout_maintainerCanModify|TestPRCheckout_recurseSubmodules|TestPRCheckout_sameRepo|TestPromptingPRResolver|TestResolveWorktreeTarget|TestResolveWorktreeTargetPathSafety|TestSpecificPRResolver|TestWorktreeCheckoutCommands|Test_authenticatedCommand_stripsWorktreePrefix|Test_checkoutRun)$",
+    "base_status": "compile_fail"
+  },
+  "verify": {
+    "status": "ok",
+    "prewarm": {
+      "base": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 50.8,
+        "errors": ""
+      },
+      "target": {
+        "download_ok": true,
+        "build_ok": true,
+        "vet_ok": true,
+        "test_compile_ok": true,
+        "seconds": 28.9,
+        "errors": ""
+      }
+    },
+    "checked_at": "2026-09-14T14:36:54+00:00",
+    "base": {
+      "status": "compile_fail",
+      "failed_tests": [
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout.Test_checkoutRun/checkout_with_ssh_remote_URL",
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout.Test_checkoutRun"
+      ],
+      "passed_tests": 8,
+      "seconds": 1.6
+    },
+    "target_hidden": {
+      "pass": true,
+      "failed_tests": [],
+      "passed_tests": 109
+    },
+    "target_suite": {
+      "runs": 3,
+      "median_s": 31.7,
+      "flaky": [],
+      "always_failing": [],
+      "packages": 308
+    },
+    "ok": true,
+    "environment_failures": [],
+    "hidden_dropped_flaky": [],
+    "reasons": [],
+    "skip_regex": null,
+    "vet_base_findings": [],
+    "vet_base_rc": 0
+  },
+  "deps": {
+    "go_mod_changed": false
+  },
+  "range_vs_pr_files_mismatch": [],
+  "prompt": {
+    "sha256": "878ec79131936101a7c822ed364755f664c0191cd2e27b82963d81b2eab23e89",
+    "lines": 33,
+    "lint": {
+      "ok": true,
+      "reasons": [],
+      "identifiers_checked": 12,
+      "visible_in_tests": 6
+    }
+  },
+  "curated_at": "2026-09-14T14:30:29+00:00"
+}

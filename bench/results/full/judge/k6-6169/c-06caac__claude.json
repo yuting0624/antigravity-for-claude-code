@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-06caac",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:57:42+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2a6dc39b33eaaa7560dc0d4285d88af910b7f8464a4ae45e14f371570e382465",
+  "wall_s": 20.8,
+  "cost_usd": 0.31483325000000006,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 1,
+    "readability": 3,
+    "robustness": 2,
+    "maintainability": 2
+  },
+  "mean": 2.167,
+  "rationale": {
+    "consistency": "What exists follows v6 conventions (CheckResponse, closeResponse, errUnknown, 409 fallback mirrors UploadTest); envconfig `ignored` tag is the right mechanism.",
+    "edge_cases": "Only the 409 create-or-find path is handled; no provisioning client, so 401/403 typing, no-upload-URL, poll-until-initializing and error-code mapping are all absent.",
+    "scope": "Delivers a small fraction of the requirement: no provisioning package, no cmd-layer flow, no cloud output push-URL/HTTP-client injection, no notify; most listed tests cannot compile.",
+    "readability": "Clear names and useful comments on the new config fields and fake server; nothing confusing in the code that is present.",
+    "robustness": "Fake server panics on encode failure (acceptable in test helper); v6 helper handles nil response, but the missing orchestration means no real failure handling exists.",
+    "maintainability": "clientcfg extraction avoids duplication and fake server is reusable, but the delivered pieces are disconnected stubs with no consumer, leaving the design unproven."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-2755f8",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:05:18+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "550f95521d4a1c25f6c26944ac0b83974f892bee509944047927654e83853acf",
+  "wall_s": 66.2,
+  "cost_usd": 0.095338,
+  "usage": {
+    "input": 28913,
+    "output": 3126,
+    "thinking": 2885,
+    "cache_read": 0,
+    "total": 32039
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly follows Caddy module conventions, reuses existing action types, and cleanly registers required interfaces.",
+    "edge_cases": "Carefully handles unparsable headers, missing '=' or ';', exact name matching, and preserves surrounding quotes and spacing.",
+    "scope": "Implements exactly the requested Set-Cookie filtering functionality with no extraneous changes.",
+    "readability": "Logic is very clear, distinct helper functions are used, and complex string manipulation is well-commented.",
+    "robustness": "Safe bounds checking on string indices, gracefully bypasses malformed lines, and avoids panics on edge cases.",
+    "maintainability": "Excellent separation of concerns between Caddy module wrapping, array iteration, and header string mutation."
+  },
+  "flags": []
+}

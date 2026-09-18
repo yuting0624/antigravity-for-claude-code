@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b242d5",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:26:33+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 59.6,
+  "cost_usd": 0.5874320000000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Uses the `existing` parameter idiom already used by parseOptCertIssuer, slices helpers, and comment style matching the package; small package-private helper fits the layout.",
+    "edge_cases": "Invalid order errors before any state is touched; multiple `order` lines accumulate via existing; plugin order still the base via clone of directiveOrder; RegisterDirectiveOrder no longer aliases the default array.",
+    "scope": "Changes are focused; the RegisterDirectiveOrder clone is justified by the 'default never mutated' requirement. Cloning the whole options map in Setup is broader than strictly needed and the follow-up delete(options, \"order\") is redundant after the clone.",
+    "readability": "Clear helper name and good explanatory comments; replacing the bool with a nil-means-unsorted slice is a slightly magic sentinel, and the delete comment describes a case the clone already prevents.",
+    "robustness": "No shared mutable state after init: directiveOrder is read-only, each adaptation owns its cloned slice, options map is copied so shared/reused maps are safe; slices.Index guarded against -1.",
+    "maintainability": "Single source of truth via directiveOrderFor(options); order plumbed explicitly through buildSubroute/sortRoutes, so future callers must pass it. Nil-vs-empty slice distinction is a minor footgun to document."
+  },
+  "flags": []
+}

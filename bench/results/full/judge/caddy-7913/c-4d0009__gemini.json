@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-4d0009",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:40:22+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "011d1add109594bc19ae1a65d1222bdd620f38572f52cf252dc6a6118dbc375d",
+  "wall_s": 194.7,
+  "cost_usd": 0.323916,
+  "usage": {
+    "input": 50922,
+    "output": 18506,
+    "thinking": 18332,
+    "cache_read": 0,
+    "total": 69428
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Follows Caddy conventions, naming, and module registration perfectly.",
+    "edge_cases": "Handles rate floors and chunking well, but global deadlines silently overwrite per-route deadlines due to wrapper nesting.",
+    "scope": "Implements all requested features, but violates the 'no behavior change' constraint by enabling global timeouts by default.",
+    "readability": "Clean structure, descriptive names, and excellent comments explaining the subtle deadline logic.",
+    "robustness": "Safe against panics and handles unsupported writers gracefully, but nested wrappers clobber the same connection state.",
+    "maintainability": "Well encapsulated logic, but the structural design makes composing multiple deadline layers inherently conflict."
+  },
+  "flags": []
+}

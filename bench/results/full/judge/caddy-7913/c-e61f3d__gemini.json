@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-e61f3d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:02:55+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "354d91de04e27c72baacce49f4f065e083dae489db54016a3fdd6a51e2a6c52d",
+  "wall_s": 153.5,
+  "cost_usd": 0.268882,
+  "usage": {
+    "input": 48893,
+    "output": 14258,
+    "thinking": 14035,
+    "cache_read": 0,
+    "total": 63151
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches Caddy's architecture, including Caddyfile directives, server options parsing, and module registration.",
+    "edge_cases": "Excellent handling of 0-byte writes, io.ReaderFrom chunking limits, missing underlying deadlines (deadlineNA check), and HardDeadline ceilings.",
+    "scope": "Implements all requested functionality exactly as specified, including the requested 1-minute server-level defaults and all Caddyfile options.",
+    "readability": "Cleanly separated types for reader/writer, clear purpose-driven comments, and logically structured Caddyfile parsing.",
+    "robustness": "Uses http.ResponseController correctly for modern HTTP compat, limits chunk sizes on io.ReaderFrom to ensure deadline checks, and avoids panics on unsupported connections.",
+    "maintainability": "Modular design with standalone IdleTimeoutReader/Writer that can be reused; cleanly extends the existing server and middleware chain."
+  },
+  "flags": []
+}

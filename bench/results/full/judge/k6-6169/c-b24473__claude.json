@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-b24473",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:14:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "34f4cea5a6761e988f899fb3321f0477ee9732cc11587d34808b59e9df06bd91",
+  "wall_s": 51.7,
+  "cost_usd": 0.80286325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Mirrors v6 client patterns (409 fallback, closeResponse, httperr classification) and expv2 injection style; hand-rolled HTTP client instead of SDK is a deviation but justified in comments.",
+    "edge_cases": "Handles 409, missing upload URL, ctx cancellation, aborted/completed before start, unparseable durations; unknown abort reasons map to code 0 and secrets config is set even when endpoint empty.",
+    "scope": "Core flow matches requirement; buildConfigFromRuntimeConfig tuning mapping and the clientcfg package (whose doc claims sharing that isn't wired) slightly exceed the ask; PollInterval hardcoded to the default.",
+    "readability": "Clear names and focused files; comments explain non-obvious choices (no auth on presigned PUT, provisioningMode set once).",
+    "robustness": "provisioningNotifier can be nil after a failed NewClient, leading to a nil-interface panic in testFinished; randomHex ignores rand errors; retry logic is otherwise careful with body replay and ctx.",
+    "maintainability": "Well-separated packages and injectable interfaces; some duplication (apiClient kept only for host config, full provisioning client built in output just to notify, per-call HTTPClient in notify)."
+  },
+  "flags": []
+}

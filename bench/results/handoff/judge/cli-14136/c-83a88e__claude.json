@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-83a88e",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:33:53+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e3b7533ab5411107bc614418faf704f25ad7dfc36566e7f3e39887423dcf9c84",
+  "wall_s": 77.4,
+  "cost_usd": 0.6891565000000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 2,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Uses prShared alias, cmdutil.FlagErrorf/MutuallyExclusive and mirrors the existing pull-warning pattern, but develop now shells raw command slices via runGitCommands instead of git.Client methods like the rest of that file.",
+    "edge_cases": "Covers blank path, --list exclusion, --checkout requirement (ordered after --list check), abs normalisation, spaces as one arg, symlink/other-repo/same-worktree rejection and existing-worktree reuse.",
+    "scope": "Requirement asked for the two worktree operations as reusable git.Client helpers; none were added. Also swaps checkout's localBranchExists (show-ref) for HasLocalBranch (rev-parse), changing existing git invocations, and flag help omits the --checkout constraint.",
+    "readability": "Structure is clear, but doc comments on revParseFacts and the security-motivated ensureWorktreePathSafe were dropped in the move; checkoutBranch mixes opts.Worktree and worktreeTarget.Path for the same value; (cmds, bool) tuple return is awkward.",
+    "robustness": "Validates target before any API mutation, propagates git errors with stderr, and downgrades ff-pull failure to a warning as the existing flow does; no panics on bad input.",
+    "maintainability": "Sharing ResolveWorktreeTarget/WorktreeCheckoutCommands removes duplication between the two commands, but the missing git.Client abstraction and the redundant Abs plus dual path state leave hidden coupling."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

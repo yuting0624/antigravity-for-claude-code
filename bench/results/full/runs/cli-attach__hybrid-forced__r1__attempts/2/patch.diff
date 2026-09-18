@@ -1,0 +1,109 @@
+diff --git a/api/queries_issue.go b/api/queries_issue.go
+index a13bb48cc..e564b87fe 100644
+--- a/api/queries_issue.go
++++ b/api/queries_issue.go
+@@ -48,6 +48,7 @@ type Issue struct {
+ 	Milestone        *Milestone
+ 	ReactionGroups   ReactionGroups
+ 	IsPinned         bool
++	Repository       *PRRepository
+ 
+ 	IssueType        *IssueType
+ 	Parent           *LinkedIssue
+@@ -481,6 +482,20 @@ func (i Issue) CurrentUserComments() []Comment {
+ 	return i.Comments.CurrentUserComments()
+ }
+ 
++func (i Issue) RepositoryDatabaseID() int64 {
++	if i.Repository == nil {
++		return 0
++	}
++	return i.Repository.DatabaseID
++}
++
++func (i Issue) RepositoryViewerPermission() string {
++	if i.Repository == nil {
++		return ""
++	}
++	return i.Repository.ViewerPermission
++}
++
+ // UpdateIssueIssueType sets or clears the issue type on an issue. Pass an
+ // empty issueTypeID to clear the issue type.
+ func UpdateIssueIssueType(client *Client, hostname string, issueID string, issueTypeID string) error {
+diff --git a/api/queries_pr.go b/api/queries_pr.go
+index 10994958a..92f051493 100644
+--- a/api/queries_pr.go
++++ b/api/queries_pr.go
+@@ -252,9 +252,11 @@ type Workflow struct {
+ }
+ 
+ type PRRepository struct {
+-	ID            string `json:"id"`
+-	Name          string `json:"name"`
+-	NameWithOwner string `json:"nameWithOwner"`
++	ID               string `json:"id"`
++	Name             string `json:"name"`
++	NameWithOwner    string `json:"nameWithOwner"`
++	DatabaseID       int64  `json:"databaseId,omitempty"`
++	ViewerPermission string `json:"viewerPermission,omitempty"`
+ }
+ 
+ type AutoMergeRequest struct {
+@@ -322,6 +324,20 @@ func (pr PullRequest) IsOpen() bool {
+ 	return pr.State == "OPEN"
+ }
+ 
++func (pr PullRequest) RepositoryDatabaseID() int64 {
++	if pr.Repository == nil {
++		return 0
++	}
++	return pr.Repository.DatabaseID
++}
++
++func (pr PullRequest) RepositoryViewerPermission() string {
++	if pr.Repository == nil {
++		return ""
++	}
++	return pr.Repository.ViewerPermission
++}
++
+ type PullRequestChecksStatus struct {
+ 	Pending int
+ 	Failing int
+diff --git a/api/queries_repo.go b/api/queries_repo.go
+index 3e0b75648..6a8b74dfe 100644
+--- a/api/queries_repo.go
++++ b/api/queries_repo.go
+@@ -29,6 +29,7 @@ const (
+ // Repository contains information about a GitHub repo
+ type Repository struct {
+ 	ID                       string
++	DatabaseID               int64
+ 	Name                     string
+ 	NameWithOwner            string
+ 	Owner                    RepositoryOwner
+@@ -323,6 +324,7 @@ func IssueRepoInfo(client *Client, repo ghrepo.Interface) (*Repository, error) {
+ 	query IssueRepositoryInfo($owner: String!, $name: String!) {
+ 		repository(owner: $owner, name: $name) {
+ 			id
++			databaseId
+ 			name
+ 			owner { login }
+ 			hasIssuesEnabled
+@@ -360,6 +362,7 @@ func GitHubRepo(client *Client, repo ghrepo.Interface) (*Repository, error) {
+ 	query := `
+ 	fragment repo on Repository {
+ 		id
++		databaseId
+ 		name
+ 		owner { login }
+ 		hasIssuesEnabled
+@@ -498,6 +501,7 @@ func RepoNetwork(client *Client, repos []ghrepo.Interface) (RepoNetworkResult, e
+ 	err := client.GraphQL(hostname, fmt.Sprintf(`
+ 	fragment repo on Repository {
+ 		id
++		databaseId
+ 		name
+ 		owner { login }
+ 		viewerPermission

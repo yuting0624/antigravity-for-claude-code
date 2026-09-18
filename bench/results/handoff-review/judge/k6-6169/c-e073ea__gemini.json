@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-e073ea",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:53:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "81e0dbdbf416c07e0fba4cda0d3495a25db9caa51206536882db2e4b1a2217bd",
+  "wall_s": 9.0,
+  "cost_usd": 0.055882,
+  "usage": {
+    "input": 24623,
+    "output": 553,
+    "thinking": 375,
+    "cache_read": 0,
+    "total": 25176
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The candidate provided an empty diff.",
+    "edge_cases": "The candidate provided an empty diff.",
+    "scope": "The candidate provided an empty diff.",
+    "readability": "The candidate provided an empty diff.",
+    "robustness": "The candidate provided an empty diff.",
+    "maintainability": "The candidate provided an empty diff."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

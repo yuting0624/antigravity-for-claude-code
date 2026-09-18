@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-42ec47",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:18:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "03d909bdbd7b2953e5abab87774a4a8035932774dd71d28dc4326252d7eff23c",
+  "wall_s": 20.9,
+  "cost_usd": 0.18370275,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: module ID, cookieFilterAction reuse, Validate, Caddyfile block shape, interface guards; reuses hash().",
+    "edge_cases": "Unparseable lines pass through via Response.Cookies(); suffix kept verbatim; quotes preserved; exact name match; delete drops entry. Drops whitespace around the value inside name=value on rewrite.",
+    "scope": "Only the new filter plus registration and guards; no unrelated edits or dead code.",
+    "readability": "Filter body is one long function mixing lookup, parsing and rewriting; a small helper would clarify. Names are fine; comments adequate.",
+    "robustness": "No panic paths: bounds checked before slicing, non-array input returned unchanged, empty cookie list handled; builds a Response per value which is cheap enough.",
+    "maintainability": "UnmarshalCaddyfile and Validate are copy-pasted from CookieFilter rather than shared; inline parsing logic would be hard to reuse or test in isolation."
+  },
+  "flags": []
+}

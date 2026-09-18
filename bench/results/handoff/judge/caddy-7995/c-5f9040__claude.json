@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-5f9040",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:56:58+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ee834d479a1ded0643395b3dc0ffcad289dfc6d6aedd5d1f1ec544de069ce979",
+  "wall_s": 98.5,
+  "cost_usd": 0.7390540000000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Uses slices helpers like surrounding code, but variadic optional params on unexported funcs, a get-prefixed helper and a needless nil-map check are un-idiomatic for this package.",
+    "edge_cases": "Handles multiple order lines, invalid directive/positional errors without leaking, nil options and plugin-registered directives; empty-order fallback is over-defensive but harmless.",
+    "scope": "Core fix is on target; copying the whole options map and rewriting RegisterDirectiveOrder go somewhat beyond the ask, and the duplicated standardDir panic is dead code.",
+    "readability": "Logic is easy to follow, but the options copy that silently drops 'order' has no explanatory comment and the variadic plumbing obscures what buildSubroute/sortRoutes actually need.",
+    "robustness": "No global mutation during adaptation, defaults cloned, per-call options copy makes shared-map concurrency safe; only init-time panics remain.",
+    "maintainability": "Order fallback is duplicated in getDirectiveOrder and sortRoutes; variadic options means a future caller that forgets to pass them silently reverts to global order, reintroducing the bug class."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

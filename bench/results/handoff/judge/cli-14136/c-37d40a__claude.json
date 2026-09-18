@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-37d40a",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:28:44+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a427d3c8a75225028b7e05aee966f1627d7d5689186a04a074cf38711c364d1c",
+  "wall_s": 83.2,
+  "cost_usd": 0.788371,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "prShared alias, FlagErrorf and MutuallyExclusive match conventions, but variadic-as-optional params on the git client are un-idiomatic here, and swapping ShowRefs-based localBranchExists for HasLocalBranch silently changes pr checkout's git invocations.",
+    "edge_cases": "Blank path, --list exclusivity, --checkout requirement, filepath.Abs normalisation, symlink/non-dir guard, reuse of an existing linked worktree, and early validation before the remote branch is created are all covered; ff-only pull failure downgraded to a warning as before.",
+    "scope": "Required move to shared and new develop flag done, but adds unused WorktreeAdd/WorktreeAddCommand plus a redundant method wrapper, and refactors non-worktree pr checkout paths (HasLocalBranch) beyond what was asked.",
+    "readability": "develop.go changes are clear; the shared move dropped the useful comments on ensureWorktreePathSafe and revParseFacts, WorktreeCheckoutCommands' bool return is undocumented, and four layered WorktreeAdd* helpers obscure a single arg builder.",
+    "robustness": "Errors propagate, no panics (trackingRef index guarded), plain Command is fine for local worktree ops; Pull via WithRepoDir relies on the client's RepoDir being unset, a latent coupling.",
+    "maintainability": "Dedup into shared.ResolveWorktreeTarget/WorktreeCheckoutCommands is good, but develop uses gc.Pull while checkout uses merge --ff-only cmd lists for the same step, and the git client grows near-duplicate helpers with an optional-variadic API that is awkward to extend."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

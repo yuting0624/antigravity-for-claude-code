@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-deae4d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:44:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cdae25048c0b7317b47d7451d6b55e4ceff5ff41998e98d40185feb92655b20b",
+  "wall_s": 250.2,
+  "cost_usd": 0.395262,
+  "usage": {
+    "input": 27807,
+    "output": 28304,
+    "thinking": 28059,
+    "cache_read": 0,
+    "total": 56111
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 2
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Adopts the file's conventions (e.g., byte-by-byte EqualFold) but the reverse state machine is structurally inconsistent with prefix block matching.",
+    "edge_cases": "Fails on overlapping escapes (e.g., path '%25%32F' matches suffix '%2F') because suffix escapes are evaluated one byte at a time, leaving the first two bytes unprotected.",
+    "scope": "Strictly implements the requested suffix stripping fix and correctly wires it into changePath without any scope creep.",
+    "readability": "The 1-byte lookbehind for suffixEscaped is a clever workaround but highly unintuitive to trace and reason about mentally.",
+    "robustness": "Safe from bounds panics and handles invalid path escape sequences gracefully by falling back to returning the unmodified path.",
+    "maintainability": "The fractured byte-by-byte backwards state machine for 3-byte escape sequences is fragile, bug-prone, and very difficult to safely extend."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-7c1005",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:21:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "da7c72440625f46494b9d0aa7e1923fe00fc3472392ff0029d26528c8c75115d",
+  "wall_s": 73.1,
+  "cost_usd": 0.40950725000000004,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "trimPathSuffix mirrors trimPathPrefix's structure, naming, url.PathUnescape use, EqualFold case-folding and comment style; helper placed next to its sibling.",
+    "edge_cases": "Handles decoded-vs-encoded match, literal escape in suffix, empty suffix/path, case-insensitive hex; only a marginal quirk with double-encoded '%25' where suffix '%' is decoded rather than literal.",
+    "scope": "Only replaces the broken reverse-based suffix trim and removes the now-dead reverse helper; prefix, query and other rewrites untouched.",
+    "readability": "Doc comment explains why backward walking needs the suffix-escape check; clear index names; inherits the slightly garbled 'to consistency with' comment wording.",
+    "robustness": "All slice indexes guarded (iPath>=2, iSuffix>=2, iPath+1>=0); unescape error returns path unchanged; no allocation beyond the prefix version's pattern.",
+    "maintainability": "Duplicates the loop shape of trimPathPrefix instead of sharing, but the two directions differ enough that this is defensible and each stays self-contained."
+  },
+  "flags": []
+}

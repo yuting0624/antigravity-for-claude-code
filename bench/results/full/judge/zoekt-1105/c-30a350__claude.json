@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-30a350",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:38:29+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "3a79473bfff806df6386fc9a0f15d949ef8683b233e2733700bd67c3b560ce74",
+  "wall_s": 48.9,
+  "cost_usd": 0.45807774999999995,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Mirrors zoekt-git-index flag names, reuses index.Options.Flags/SetDefaults and gitindex.IndexGitRepo; license headers and package layout match siblings. The new gitindex flag is negatively-defaulted (zero value changes old behaviour), which is off-idiom for an additive option.",
+    "edge_cases": "Root-as-repo, bare .git dirs, nested .git skipping, duplicate names, missing roots, no roots, empty index dir, branch patterns, unmatched remove names all handled. Pruning a compound shard would drop co-located repos; unreadable shards are silently ignored.",
+    "scope": "Delivers discovery, dry-run/-f sync, list, remove, lock, and the minimal gitindex change. Small extras (explicit `sync` and `help` words, remove-by-source-path) but nothing unrelated.",
+    "readability": "Clear file split and names, focused doc comments; minor noise like redundant IsNotExist checks and a redundant selectedIndices map.",
+    "robustness": "Errors are collected with errors.Join and indexing continues per repo; dry run never creates dirs or lock; O_EXCL lock file is simple and stale after a crash but the message tells the user. Lock Close errors are dropped in defer.",
+    "maintainability": "Up-to-date check reimplements gitindex's branch resolution and repo-open fallback instead of reusing it; the NameFromRemote default flip means future library callers must remember to set it to get the historical behaviour."
+  },
+  "flags": []
+}

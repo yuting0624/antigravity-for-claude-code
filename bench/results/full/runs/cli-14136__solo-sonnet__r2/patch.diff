@@ -1,0 +1,554 @@
+diff --git a/git/client.go b/git/client.go
+index a12c166c9..5c1621a3f 100644
+--- a/git/client.go
++++ b/git/client.go
+@@ -288,6 +288,29 @@ func (c *Client) WorktreeRemove(ctx context.Context, path string) error {
+ 	return err
+ }
+ 
++// AddWorktree creates a worktree at path for the existing local branch via
++// `git worktree add -- <path> <branch>`.
++func (c *Client) AddWorktree(ctx context.Context, path, branch string) error {
++	cmd, err := c.Command(ctx, "worktree", "add", "--", path, branch)
++	if err != nil {
++		return err
++	}
++	_, err = cmd.Output()
++	return err
++}
++
++// AddWorktreeTrackingBranch creates a worktree at path with a new branch that
++// tracks remoteBranch via
++// `git worktree add --track -b <branch> -- <path> <remoteBranch>`.
++func (c *Client) AddWorktreeTrackingBranch(ctx context.Context, path, branch, remoteBranch string) error {
++	cmd, err := c.Command(ctx, "worktree", "add", "--track", "-b", branch, "--", path, remoteBranch)
++	if err != nil {
++		return err
++	}
++	_, err = cmd.Output()
++	return err
++}
++
+ // parseWorktrees parses the output of `git worktree list --porcelain` into a
+ // slice of Worktree. Each record begins with a "worktree <path>" line followed
+ // by attribute lines; attributes other than "branch" are ignored.
+diff --git a/pkg/cmd/issue/develop/develop.go b/pkg/cmd/issue/develop/develop.go
+index 90c52dff6..3e3024a51 100644
+--- a/pkg/cmd/issue/develop/develop.go
++++ b/pkg/cmd/issue/develop/develop.go
+@@ -5,6 +5,7 @@ import (
+ 	"fmt"
+ 	"net/http"
+ 	"net/url"
++	"path/filepath"
+ 	"strings"
+ 
+ 	"github.com/MakeNowJust/heredoc"
+@@ -14,6 +15,7 @@ import (
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/internal/tableprinter"
+ 	"github.com/cli/cli/v2/pkg/cmd/issue/shared"
++	prShared "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+ 	"github.com/cli/cli/v2/pkg/cmdutil"
+ 	"github.com/cli/cli/v2/pkg/iostreams"
+ 	"github.com/spf13/cobra"
+@@ -32,6 +34,7 @@ type DevelopOptions struct {
+ 	BaseBranch  string
+ 	Checkout    bool
+ 	List        bool
++	Worktree    string
+ }
+ 
+ func NewCmdDevelop(f *cmdutil.Factory, runF func(*DevelopOptions) error) *cobra.Command {
+@@ -66,6 +69,9 @@ func NewCmdDevelop(f *cmdutil.Factory, runF func(*DevelopOptions) error) *cobra.
+ 			# Create a branch for issue 123 and check it out
+ 			$ gh issue develop 123 --checkout
+ 
++			# Create a branch for issue 123 and check it out in a new worktree
++			$ gh issue develop 123 --checkout --worktree ../issue-123
++
+ 			# Create a branch in repo monalisa/cli for issue 123 in repo cli/cli
+ 			$ gh issue develop 123 --repo cli/cli --branch-repo monalisa/cli
+ 		`),
+@@ -120,6 +126,24 @@ func NewCmdDevelop(f *cmdutil.Factory, runF func(*DevelopOptions) error) *cobra.
+ 			if err := cmdutil.MutuallyExclusive("specify only one of `--list` or `--name`", opts.List, opts.Name != ""); err != nil {
+ 				return err
+ 			}
++
++			if cmd.Flags().Changed("worktree") && opts.Worktree == "" {
++				return cmdutil.FlagErrorf("--worktree cannot be blank")
++			}
++			if err := cmdutil.MutuallyExclusive("specify only one of `--list` or `--worktree`", opts.List, opts.Worktree != ""); err != nil {
++				return err
++			}
++			if opts.Worktree != "" {
++				if !opts.Checkout {
++					return cmdutil.FlagErrorf("--worktree requires --checkout")
++				}
++				abs, err := filepath.Abs(opts.Worktree)
++				if err != nil {
++					return err
++				}
++				opts.Worktree = abs
++			}
++
+ 			if runF != nil {
+ 				return runF(opts)
+ 			}
+@@ -133,6 +157,7 @@ func NewCmdDevelop(f *cmdutil.Factory, runF func(*DevelopOptions) error) *cobra.
+ 	fl.BoolVarP(&opts.Checkout, "checkout", "c", false, "Checkout the branch after creating it")
+ 	fl.BoolVarP(&opts.List, "list", "l", false, "List linked branches for the issue")
+ 	fl.StringVarP(&opts.Name, "name", "n", "", "Name of the branch to create")
++	fl.StringVar(&opts.Worktree, "worktree", "", "Checkout the branch in a new git worktree at `path` (requires --checkout)")
+ 
+ 	var issueRepoSelector string
+ 	fl.StringVarP(&issueRepoSelector, "issue-repo", "i", "", "Name or URL of the issue's repository")
+@@ -176,6 +201,15 @@ func developRun(opts *DevelopOptions) error {
+ }
+ 
+ func developRunCreate(opts *DevelopOptions, apiClient *api.Client, issueRepo ghrepo.Interface, issue *api.Issue) error {
++	var worktreeTarget prShared.WorktreeTarget
++	if opts.Worktree != "" {
++		var err error
++		worktreeTarget, err = prShared.ResolveWorktreeTarget(opts.GitClient, opts.Worktree)
++		if err != nil {
++			return err
++		}
++	}
++
+ 	branchRepo := issueRepo
+ 	if opts.BranchRepo != "" {
+ 		var err error
+@@ -252,7 +286,7 @@ func developRunCreate(opts *DevelopOptions, apiClient *api.Client, issueRepo ghr
+ 
+ 	fmt.Fprintf(opts.IO.Out, "%s/%s/tree/%s\n", branchRepo.RepoHost(), ghrepo.FullName(branchRepo), branchName)
+ 
+-	return checkoutBranch(opts, branchRepo, branchName)
++	return checkoutBranch(opts, branchRepo, branchName, worktreeTarget)
+ }
+ 
+ func findExistingLinkedBranchName(branches []api.LinkedBranch, branchRepo ghrepo.Interface, branchName string) string {
+@@ -318,7 +352,7 @@ func printLinkedBranches(io *iostreams.IOStreams, branches []api.LinkedBranch) {
+ 	_ = table.Render()
+ }
+ 
+-func checkoutBranch(opts *DevelopOptions, branchRepo ghrepo.Interface, checkoutBranch string) (err error) {
++func checkoutBranch(opts *DevelopOptions, branchRepo ghrepo.Interface, checkoutBranch string, worktreeTarget prShared.WorktreeTarget) (err error) {
+ 	remotes, err := opts.Remotes()
+ 	if err != nil {
+ 		// If the user specified the branch to be checked out and no remotes are found
+@@ -352,6 +386,10 @@ func checkoutBranch(opts *DevelopOptions, branchRepo ghrepo.Interface, checkoutB
+ 		return nil
+ 	}
+ 
++	if opts.Worktree != "" {
++		return checkoutWorktreeBranch(opts, gc, worktreeTarget, baseRemote.Name, checkoutBranch)
++	}
++
+ 	if gc.HasLocalBranch(ctx.Background(), checkoutBranch) {
+ 		if err := gc.CheckoutBranch(ctx.Background(), checkoutBranch); err != nil {
+ 			return err
+@@ -368,3 +406,33 @@ func checkoutBranch(opts *DevelopOptions, branchRepo ghrepo.Interface, checkoutB
+ 
+ 	return nil
+ }
++
++// checkoutWorktreeBranch checks branch out into worktreeTarget: a new worktree
++// is created when worktreeTarget.Reuse is false, otherwise the existing linked
++// worktree at worktreeTarget.Path is switched to branch (and synced with
++// remoteName/branch when it already existed locally).
++func checkoutWorktreeBranch(opts *DevelopOptions, gc *git.Client, worktreeTarget prShared.WorktreeTarget, remoteName, branch string) error {
++	wtClient := gc.Copy()
++	wtClient.RepoDir = worktreeTarget.Path
++
++	if gc.HasLocalBranch(ctx.Background(), branch) {
++		if worktreeTarget.Reuse {
++			if err := wtClient.CheckoutBranch(ctx.Background(), branch); err != nil {
++				return err
++			}
++		} else if err := gc.AddWorktree(ctx.Background(), worktreeTarget.Path, branch); err != nil {
++			return err
++		}
++
++		if err := wtClient.Pull(ctx.Background(), remoteName, branch); err != nil {
++			_, _ = fmt.Fprintf(opts.IO.ErrOut, "%s warning: not possible to fast-forward to: %q\n", opts.IO.ColorScheme().WarningIcon(), branch)
++		}
++		return nil
++	}
++
++	if worktreeTarget.Reuse {
++		return wtClient.CheckoutNewBranch(ctx.Background(), remoteName, branch)
++	}
++	remoteBranch := fmt.Sprintf("%s/%s", remoteName, branch)
++	return gc.AddWorktreeTrackingBranch(ctx.Background(), worktreeTarget.Path, branch, remoteBranch)
++}
+diff --git a/pkg/cmd/pr/checkout/checkout.go b/pkg/cmd/pr/checkout/checkout.go
+index 962c17de9..ad6f98efa 100644
+--- a/pkg/cmd/pr/checkout/checkout.go
++++ b/pkg/cmd/pr/checkout/checkout.go
+@@ -4,8 +4,6 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"net/http"
+-	"os"
+-	"path/filepath"
+ 	"slices"
+ 	"strings"
+ 
+@@ -117,12 +115,9 @@ func checkoutRun(opts *CheckoutOptions) error {
+ 		return err
+ 	}
+ 
+-	var reuseWorktree bool
++	var worktreeTarget shared.WorktreeTarget
+ 	if opts.Worktree != "" {
+-		if err := ensureWorktreePathSafe(opts.Worktree); err != nil {
+-			return err
+-		}
+-		reuseWorktree, err = resolveWorktreeTarget(opts.GitClient, opts.Worktree)
++		worktreeTarget, err = shared.ResolveWorktreeTarget(opts.GitClient, opts.Worktree)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -158,7 +153,7 @@ func checkoutRun(opts *CheckoutOptions) error {
+ 	var cmdQueue [][]string
+ 
+ 	if headRemote != nil {
+-		cmdQueue = append(cmdQueue, cmdsForExistingRemote(headRemote, pr, opts, reuseWorktree)...)
++		cmdQueue = append(cmdQueue, cmdsForExistingRemote(headRemote, pr, opts, worktreeTarget)...)
+ 	} else {
+ 		httpClient, err := opts.HttpClient()
+ 		if err != nil {
+@@ -170,7 +165,7 @@ func checkoutRun(opts *CheckoutOptions) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		cmdQueue = append(cmdQueue, cmdsForMissingRemote(pr, baseURLOrName, baseRepo.RepoHost(), defaultBranch, protocol, opts, reuseWorktree)...)
++		cmdQueue = append(cmdQueue, cmdsForMissingRemote(pr, baseURLOrName, baseRepo.RepoHost(), defaultBranch, protocol, opts, worktreeTarget)...)
+ 	}
+ 
+ 	if opts.RecurseSubmodules {
+@@ -200,7 +195,7 @@ func checkoutRun(opts *CheckoutOptions) error {
+ 	return nil
+ }
+ 
+-func cmdsForExistingRemote(remote *cliContext.Remote, pr *api.PullRequest, opts *CheckoutOptions, reuseWorktree bool) [][]string {
++func cmdsForExistingRemote(remote *cliContext.Remote, pr *api.PullRequest, opts *CheckoutOptions, worktreeTarget shared.WorktreeTarget) [][]string {
+ 	var cmds [][]string
+ 	remoteBranch := fmt.Sprintf("%s/%s", remote.Name, pr.HeadRefName)
+ 
+@@ -218,25 +213,17 @@ func cmdsForExistingRemote(remote *cliContext.Remote, pr *api.PullRequest, opts
+ 	fetchCmd := []string{"fetch", remote.Name, refSpec, "--no-tags"}
+ 
+ 	if opts.Detach {
+-		return append(cmds, detachCmds(fetchCmd, opts.Worktree, reuseWorktree)...)
++		return append(cmds, detachCmds(fetchCmd, opts.Worktree, worktreeTarget.Reuse)...)
+ 	}
+ 
+ 	cmds = append(cmds, fetchCmd)
+ 
+ 	switch {
+ 	case opts.Worktree != "":
+-		if reuseWorktree {
+-			if localBranchExists(opts.GitClient, localBranch) {
+-				cmds = append(cmds, worktreeCheckoutCmds(opts.Worktree, localBranch, remoteBranchRef, opts.Force)...)
+-			} else {
+-				// New --branch name while reusing a worktree: create it tracking the remote.
+-				cmds = append(cmds, []string{"-C", opts.Worktree, "checkout", "-b", localBranch, "--track", remoteBranch})
+-			}
+-		} else if localBranchExists(opts.GitClient, localBranch) {
+-			cmds = append(cmds, []string{"worktree", "add", "--", opts.Worktree, localBranch})
+-			cmds = append(cmds, syncBranchCmds(opts.Worktree, remoteBranchRef, opts.Force)...)
+-		} else {
+-			cmds = append(cmds, []string{"worktree", "add", "--track", "-b", localBranch, "--", opts.Worktree, remoteBranch})
++		wtCmds, branchExists := shared.WorktreeCheckoutCommands(opts.GitClient, worktreeTarget, localBranch, remoteBranch)
++		cmds = append(cmds, wtCmds...)
++		if branchExists {
++			cmds = append(cmds, syncBranchCmds(worktreeTarget.Path, remoteBranchRef, opts.Force)...)
+ 		}
+ 	case localBranchExists(opts.GitClient, localBranch):
+ 		cmds = append(cmds, []string{"checkout", localBranch})
+@@ -248,13 +235,13 @@ func cmdsForExistingRemote(remote *cliContext.Remote, pr *api.PullRequest, opts
+ 	return cmds
+ }
+ 
+-func cmdsForMissingRemote(pr *api.PullRequest, baseURLOrName, repoHost, defaultBranch, protocol string, opts *CheckoutOptions, reuseWorktree bool) [][]string {
++func cmdsForMissingRemote(pr *api.PullRequest, baseURLOrName, repoHost, defaultBranch, protocol string, opts *CheckoutOptions, worktreeTarget shared.WorktreeTarget) [][]string {
+ 	var cmds [][]string
+ 	ref := fmt.Sprintf("refs/pull/%d/head", pr.Number)
+ 
+ 	if opts.Detach {
+ 		fetchCmd := []string{"fetch", baseURLOrName, ref, "--no-tags"}
+-		return detachCmds(fetchCmd, opts.Worktree, reuseWorktree)
++		return detachCmds(fetchCmd, opts.Worktree, worktreeTarget.Reuse)
+ 	}
+ 
+ 	localBranch := pr.HeadRefName
+@@ -267,15 +254,15 @@ func cmdsForMissingRemote(pr *api.PullRequest, baseURLOrName, repoHost, defaultB
+ 
+ 	currentBranch, _ := opts.Branch()
+ 	if opts.Worktree != "" {
+-		if reuseWorktree {
++		if worktreeTarget.Reuse {
+ 			// FETCH_HEAD is per-worktree, and git refuses to update a branch via
+ 			// refspec while it is checked out, so fetch to FETCH_HEAD inside the worktree.
+-			cmds = append(cmds, []string{"-C", opts.Worktree, "fetch", baseURLOrName, ref, "--no-tags"})
++			cmds = append(cmds, []string{"-C", worktreeTarget.Path, "fetch", baseURLOrName, ref, "--no-tags"})
+ 			if localBranchExists(opts.GitClient, localBranch) {
+-				cmds = append(cmds, []string{"-C", opts.Worktree, "checkout", localBranch})
+-				cmds = append(cmds, syncBranchCmds(opts.Worktree, "FETCH_HEAD", opts.Force)...)
++				cmds = append(cmds, []string{"-C", worktreeTarget.Path, "checkout", localBranch})
++				cmds = append(cmds, syncBranchCmds(worktreeTarget.Path, "FETCH_HEAD", opts.Force)...)
+ 			} else {
+-				cmds = append(cmds, []string{"-C", opts.Worktree, "checkout", "-b", localBranch, "FETCH_HEAD"})
++				cmds = append(cmds, []string{"-C", worktreeTarget.Path, "checkout", "-b", localBranch, "FETCH_HEAD"})
+ 			}
+ 		} else {
+ 			fetchCmd := []string{"fetch", baseURLOrName, fmt.Sprintf("%s:%s", ref, localBranch), "--no-tags"}
+@@ -283,7 +270,7 @@ func cmdsForMissingRemote(pr *api.PullRequest, baseURLOrName, repoHost, defaultB
+ 				fetchCmd = append(fetchCmd, "--force")
+ 			}
+ 			cmds = append(cmds, fetchCmd)
+-			cmds = append(cmds, []string{"worktree", "add", "--", opts.Worktree, localBranch})
++			cmds = append(cmds, []string{"worktree", "add", "--", worktreeTarget.Path, localBranch})
+ 		}
+ 	} else if localBranch == currentBranch {
+ 		// PR head matches currently checked out branch
+@@ -324,68 +311,7 @@ func missingMergeConfigForBranch(client *git.Client, b string) bool {
+ }
+ 
+ func localBranchExists(client *git.Client, b string) bool {
+-	_, err := client.ShowRefs(context.Background(), []string{"refs/heads/" + b})
+-	return err == nil
+-}
+-
+-// resolveWorktreeTarget asks git where path lives, letting git resolve symlinks,
+-// "..", case, and trailing slashes for us instead of comparing paths ourselves.
+-// It returns whether an existing linked worktree there should be reused, and
+-// errors when the path cannot host a new worktree: a path inside a different
+-// repository, a subdirectory of another worktree, or the worktree we are already
+-// running in. Detection is best-effort: if git cannot resolve the current or
+-// target worktree (e.g. the path does not exist yet), reuse is false so git
+-// worktree add handles the path.
+-func resolveWorktreeTarget(client *git.Client, path string) (reuseWorktree bool, err error) {
+-	abs, err := filepath.Abs(path)
+-	if err != nil {
+-		return false, err
+-	}
+-
+-	// git emits one line per flag, so we expect exactly two lines here.
+-	current, ok := revParseFacts(client, "", "--show-toplevel", "--git-common-dir")
+-	if !ok || len(current) != 2 {
+-		return false, nil
+-	}
+-	currentToplevel, currentCommonDir := current[0], current[1]
+-
+-	// A non-existent or non-git target fails here: it is a fresh path for a new worktree.
+-	target, ok := revParseFacts(client, abs, "--show-toplevel", "--show-prefix", "--git-common-dir")
+-	if !ok || len(target) != 3 {
+-		return false, nil
+-	}
+-	targetToplevel, targetPrefix, targetCommonDir := target[0], target[1], target[2]
+-
+-	switch {
+-	case targetCommonDir != currentCommonDir:
+-		return false, fmt.Errorf("--worktree path is inside a different repository")
+-	case targetToplevel == currentToplevel:
+-		return false, fmt.Errorf("--worktree path points to the repository you're already in; omit --worktree to check out here")
+-	case targetPrefix != "":
+-		return false, fmt.Errorf("--worktree path is inside an existing worktree")
+-	}
+-	// The path is the root of another linked worktree of this repo; reuse it.
+-	return true, nil
+-}
+-
+-// revParseFacts runs `git rev-parse --path-format=absolute <flags...>` and
+-// returns one absolute path per flag, in flag order (an empty --show-prefix
+-// yields an empty string), with ok=false if git fails. When dir is non-empty
+-// the query is scoped there with -C.
+-func revParseFacts(client *git.Client, dir string, flags ...string) (fields []string, ok bool) {
+-	args := append([]string{"rev-parse", "--path-format=absolute"}, flags...)
+-	if dir != "" {
+-		args = append([]string{"-C", dir}, args...)
+-	}
+-	cmd, err := client.Command(context.Background(), args...)
+-	if err != nil {
+-		return nil, false
+-	}
+-	out, err := cmd.Output()
+-	if err != nil {
+-		return nil, false
+-	}
+-	return strings.Split(strings.TrimRight(string(out), "\n"), "\n"), true
++	return client.HasLocalBranch(context.Background(), b)
+ }
+ 
+ // detachCmds returns the commands for a detached checkout. When reusing an
+@@ -425,33 +351,6 @@ func syncBranchCmds(path, ref string, force bool) [][]string {
+ 	return [][]string{append(prefix, "merge", "--ff-only", ref)}
+ }
+ 
+-func worktreeCheckoutCmds(path, branch, ref string, force bool) [][]string {
+-	cmds := [][]string{{"-C", path, "checkout", branch}}
+-	cmds = append(cmds, syncBranchCmds(path, ref, force)...)
+-	return cmds
+-}
+-
+-// ensureWorktreePathSafe validates a --worktree target before we write to it:
+-// it must be a non-existent path (git will create it) or an existing directory,
+-// and never a symlink at its final component. A symlinked ancestor (e.g. macOS
+-// /tmp -> /private/tmp) is fine; os.Lstat checks only the leaf so it is not
+-// followed. Rejecting a leaf symlink guards against writing PR content through a
+-// planted link.
+-func ensureWorktreePathSafe(path string) error {
+-	fi, err := os.Lstat(path)
+-	switch {
+-	case os.IsNotExist(err):
+-		return nil
+-	case err != nil:
+-		return err
+-	case fi.Mode()&os.ModeSymlink != 0:
+-		return fmt.Errorf("--worktree path must not be a symlink: %s", path)
+-	case !fi.IsDir():
+-		return fmt.Errorf("--worktree path must be a directory: %s", path)
+-	}
+-	return nil
+-}
+-
+ func executeCmds(client *git.Client, credentialPattern git.CredentialPattern, cmdQueue [][]string) error {
+ 	for _, args := range cmdQueue {
+ 		// Determine the git sub-command, skipping any -C <path> prefix.
+diff --git a/pkg/cmd/pr/shared/worktree.go b/pkg/cmd/pr/shared/worktree.go
+new file mode 100644
+index 000000000..ace95a30f
+--- /dev/null
++++ b/pkg/cmd/pr/shared/worktree.go
+@@ -0,0 +1,128 @@
++package shared
++
++import (
++	"context"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strings"
++
++	"github.com/cli/cli/v2/git"
++)
++
++// WorktreeTarget describes a --worktree destination that has been validated
++// and resolved against the current repository's worktrees.
++type WorktreeTarget struct {
++	// Path is the absolute path to the worktree.
++	Path string
++	// Reuse indicates that Path is the root of an existing linked worktree
++	// of this repository that should be reused rather than created afresh.
++	Reuse bool
++}
++
++// ResolveWorktreeTarget validates a --worktree target path and determines
++// whether it points at an existing linked worktree of the current repository
++// that should be reused, or a fresh path where a new worktree should be
++// created.
++//
++// It errors when the path cannot host a worktree: a path inside a different
++// repository, a subdirectory of another worktree, or the worktree we are
++// already running in. Detection of an existing worktree is best-effort: if
++// git cannot resolve the current or target worktree (e.g. the path does not
++// exist yet), Reuse is false so `git worktree add` handles the path.
++func ResolveWorktreeTarget(client *git.Client, path string) (WorktreeTarget, error) {
++	if err := ensureWorktreePathSafe(path); err != nil {
++		return WorktreeTarget{}, err
++	}
++
++	abs, err := filepath.Abs(path)
++	if err != nil {
++		return WorktreeTarget{}, err
++	}
++
++	// git emits one line per flag, so we expect exactly two lines here.
++	current, ok := revParseFacts(client, "", "--show-toplevel", "--git-common-dir")
++	if !ok || len(current) != 2 {
++		return WorktreeTarget{Path: abs}, nil
++	}
++	currentToplevel, currentCommonDir := current[0], current[1]
++
++	// A non-existent or non-git target fails here: it is a fresh path for a new worktree.
++	target, ok := revParseFacts(client, abs, "--show-toplevel", "--show-prefix", "--git-common-dir")
++	if !ok || len(target) != 3 {
++		return WorktreeTarget{Path: abs}, nil
++	}
++	targetToplevel, targetPrefix, targetCommonDir := target[0], target[1], target[2]
++
++	switch {
++	case targetCommonDir != currentCommonDir:
++		return WorktreeTarget{}, fmt.Errorf("--worktree path is inside a different repository")
++	case targetToplevel == currentToplevel:
++		return WorktreeTarget{}, fmt.Errorf("--worktree path points to the repository you're already in; omit --worktree to check out here")
++	case targetPrefix != "":
++		return WorktreeTarget{}, fmt.Errorf("--worktree path is inside an existing worktree")
++	}
++	// The path is the root of another linked worktree of this repo; reuse it.
++	return WorktreeTarget{Path: abs, Reuse: true}, nil
++}
++
++// ensureWorktreePathSafe validates a --worktree target before we write to it:
++// it must be a non-existent path (git will create it) or an existing directory,
++// and never a symlink at its final component. A symlinked ancestor (e.g. macOS
++// /tmp -> /private/tmp) is fine; os.Lstat checks only the leaf so it is not
++// followed. Rejecting a leaf symlink guards against writing content through a
++// planted link.
++func ensureWorktreePathSafe(path string) error {
++	fi, err := os.Lstat(path)
++	switch {
++	case os.IsNotExist(err):
++		return nil
++	case err != nil:
++		return err
++	case fi.Mode()&os.ModeSymlink != 0:
++		return fmt.Errorf("--worktree path must not be a symlink: %s", path)
++	case !fi.IsDir():
++		return fmt.Errorf("--worktree path must be a directory: %s", path)
++	}
++	return nil
++}
++
++// revParseFacts runs `git rev-parse --path-format=absolute <flags...>` and
++// returns one absolute path per flag, in flag order (an empty --show-prefix
++// yields an empty string), with ok=false if git fails. When dir is non-empty
++// the query is scoped there with -C.
++func revParseFacts(client *git.Client, dir string, flags ...string) (fields []string, ok bool) {
++	args := append([]string{"rev-parse", "--path-format=absolute"}, flags...)
++	if dir != "" {
++		args = append([]string{"-C", dir}, args...)
++	}
++	cmd, err := client.Command(context.Background(), args...)
++	if err != nil {
++		return nil, false
++	}
++	out, err := cmd.Output()
++	if err != nil {
++		return nil, false
++	}
++	return strings.Split(strings.TrimRight(string(out), "\n"), "\n"), true
++}
++
++// WorktreeCheckoutCommands returns the git command(s) to check out branch into
++// target, along with whether branch already exists as a local branch.
++// remoteBranch is the remote-tracking branch (e.g. "origin/feature") to track
++// when branch does not exist locally yet.
++func WorktreeCheckoutCommands(client *git.Client, target WorktreeTarget, branch, remoteBranch string) (commands [][]string, branchExists bool) {
++	branchExists = client.HasLocalBranch(context.Background(), branch)
++
++	if target.Reuse {
++		if branchExists {
++			return [][]string{{"-C", target.Path, "checkout", branch}}, true
++		}
++		return [][]string{{"-C", target.Path, "checkout", "-b", branch, "--track", remoteBranch}}, false
++	}
++
++	if branchExists {
++		return [][]string{{"worktree", "add", "--", target.Path, branch}}, true
++	}
++	return [][]string{{"worktree", "add", "--track", "-b", branch, "--", target.Path, remoteBranch}}, false
++}

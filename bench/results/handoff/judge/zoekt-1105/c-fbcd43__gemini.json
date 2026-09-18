@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-fbcd43",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:54:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "f8af2c01dbd322d7e77eda58cb233350d6cf9257bad415d4f6e3834045022a58",
+  "wall_s": 225.9,
+  "cost_usd": 0.239948,
+  "usage": {
+    "input": 35518,
+    "output": 14076,
+    "thinking": 13882,
+    "cache_read": 0,
+    "total": 49594
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Flawlessly matches the project's coding style, CLI conventions, and package layout.",
+    "edge_cases": "Handles nested repos, duplicates, and dry runs elegantly, but misses preventing a repo's local .git/config from overriding the discovered name.",
+    "scope": "Strictly implements the requested features with a surgical, non-breaking refactoring of the shared indexer.",
+    "readability": "Highly readable with clean modularization (discover, inventory, lock, main) and clear control flow.",
+    "robustness": "Rigorous error handling, safe locking semantics, and careful avoidance of variable shadowing in assignments.",
+    "maintainability": "Excellent separation of concerns; extracting IsUpToDate creates a clean API for incremental checks."
+  },
+  "flags": []
+}

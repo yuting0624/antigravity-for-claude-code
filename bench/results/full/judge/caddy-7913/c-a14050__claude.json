@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-a14050",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:49:20+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "11e7de552d4cf33787b54d7bf26481a0aa33e837405ea4f8cc441dd94f5f30c3",
+  "wall_s": 96.6,
+  "cost_usd": 0.82969325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "License headers, interface guards, EXPERIMENTAL notes, humanize parsing, nolint:bodyclose, value-receiver ServeHTTP and RegisterHandlerDirective all match sibling handlers and server option code.",
+    "edge_cases": "Handles nil/NoBody, ErrNotSupported, hijack, short writes, credit overflow. Per-route handler sets no hard ceiling so it can push past server WriteTimeout; server read ceiling is measured from handler start, slightly later than Go's own deadline.",
+    "scope": "Delivers all requested surfaces plus a fitting adapt test. Treats zero idle timeout as disabled (1m only when a rate is set), a defensible but arguable reading of 'default 1 minute'; exports an extra DefaultIdleTimeout constant.",
+    "readability": "Clear structure and thorough comments explaining why chunking and header/hijack handling exist. DefaultIdleTimeout name is easily confused with the server's keep-alive IdleTimeout; some comments run long.",
+    "robustness": "No panics, loops terminate, unsupported controllers degrade to debug logs, initial write deadline covers 100-continue. Hijack clears deadline even when the server hard timeout was the only one in force on route-level use.",
+    "maintainability": "IdleDeadline cleanly separates policy from IO wrappers, but the enable/wrap wiring and idleWindow helper are duplicated between Server and the handler package rather than shared."
+  },
+  "flags": []
+}

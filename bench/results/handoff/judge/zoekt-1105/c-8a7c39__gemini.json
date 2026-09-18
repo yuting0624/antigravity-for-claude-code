@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-8a7c39",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:47:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290cec7a8665a74769f60f85e0cd659be0bc481db3d6994e367c16d562d8bbe4",
+  "wall_s": 146.4,
+  "cost_usd": 0.138034,
+  "usage": {
+    "input": 36383,
+    "output": 5439,
+    "thinking": 5257,
+    "cache_read": 0,
+    "total": 41822
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Code follows Go CLI and filesystem conventions closely, leveraging standard libraries like fs and flag appropriately.",
+    "edge_cases": "Handles symlinks, overlapping sources, and name conflicts robustly, though misses printing usage on zero-argument error.",
+    "scope": "Implements all required functionality precisely, with a minor miss on printing the usage text when invoked without arguments.",
+    "readability": "Clean separation of concerns with clear naming, logical package layout, and tabular output for list.",
+    "robustness": "Uses non-blocking directory locks properly and removes metadata sidecars first to avoid index corruption.",
+    "maintainability": "Decoupled repository discovery, planning, and execution makes the tool highly extensible and easy to test."
+  },
+  "flags": []
+}

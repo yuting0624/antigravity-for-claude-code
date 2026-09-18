@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-04bfdf",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:15:04+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c4a2e4405dc524d2e19e70325fff4e985735bceb7ec2073402742de7fdc3112a",
+  "wall_s": 5.8,
+  "cost_usd": 0.04736424999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to compare against codebase conventions.",
+    "edge_cases": "Empty diff; no handling of unparseable values, quoting, or case-sensitive names.",
+    "scope": "Empty diff; none of the required set_cookie filter was delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; no implementation exists.",
+    "maintainability": "Empty diff; nothing to maintain or extend."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

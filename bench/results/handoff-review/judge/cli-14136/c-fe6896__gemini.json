@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-fe6896",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:36:14+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e13a942f14ecdf43dbead87e6794525e3a61973f37ae4e1f327167f3726ff6f8",
+  "wall_s": 98.5,
+  "cost_usd": 0.179486,
+  "usage": {
+    "input": 38257,
+    "output": 8581,
+    "thinking": 8379,
+    "cache_read": 0,
+    "total": 46838
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Duplicates a command execution loop in develop.go instead of utilizing a proper git client method.",
+    "edge_cases": "Properly handles path edge cases, flag validations, and spaces, though absolute path normalization is missed in pr checkout.",
+    "scope": "Implements the core requirements but fails to expose the Git operations as a helper directly on the git client as instructed.",
+    "readability": "Logic is clear and well-structured, but generating command strings rather than calling a typed API is slightly cumbersome.",
+    "robustness": "Safely executes Git commands passing the path as a single argument and properly scopes fast-forward pulls to the worktree.",
+    "maintainability": "Generates string arrays for Git commands in a shared package rather than encapsulating execution details within the git client."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

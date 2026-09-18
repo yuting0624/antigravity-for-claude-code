@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-167e8a",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:37:40+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "9eb33c6d66606110a2b1f6f21bd511399dfec8e48d4f1cfe747d2d50178bd5d1",
+  "wall_s": 65.7,
+  "cost_usd": 0.156718,
+  "usage": {
+    "input": 37967,
+    "output": 6732,
+    "thinking": 6559,
+    "cache_read": 0,
+    "total": 44699
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches Go idioms, CLI structure, and the zoekt code style.",
+    "edge_cases": "Gracefully handles root-as-repository, duplicate names, dry-run safety, and compound shards during pruning.",
+    "scope": "Implements exactly the requested commands and functionality with no unrelated changes.",
+    "readability": "Clean, well-documented code with excellently named functions and logical separation of concerns.",
+    "robustness": "Uses robust locking, safely handles metadata read failures, and prevents deleting compound shards containing active repositories.",
+    "maintainability": "Modular design with independent discovery, index management, and CLI layers makes it highly extensible."
+  },
+  "flags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-66cda3",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:23:17+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7b79a4c38cea6213cc47c712551983e40320cc59a4cd0a9338df8ee5261945a3",
+  "wall_s": 67.2,
+  "cost_usd": 0.15364,
+  "usage": {
+    "input": 29264,
+    "output": 7926,
+    "thinking": 7739,
+    "cache_read": 0,
+    "total": 37190
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches the repository's Caddy module patterns, zapcore filter idioms, and logging conventions.",
+    "edge_cases": "Correctly handles quoted values, missing attributes, and unparseable headers by precisely mirroring Go's standard library behavior.",
+    "scope": "Implements exactly the requested feature and seamlessly extracts Caddyfile unmarshalling without unrelated changes.",
+    "readability": "Clean, concise, and well-commented, with effective use of helper functions like replaceSetCookieValue.",
+    "robustness": "Safely passes through invalid types and malformed headers without panicking, ensuring stable logging operations.",
+    "maintainability": "Extracts and shares the unmarshalling logic with CookieFilter, eliminating duplication and simplifying future updates."
+  },
+  "flags": []
+}

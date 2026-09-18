@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-15a508",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:34:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "db014cdb4bca2b0b742984c74669ee91b82b00155853218a3a69fa0636dd80ec",
+  "wall_s": 94.8,
+  "cost_usd": 0.63015975,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Mirrors zoekt-git-index flags and FindGitRepos walk, but shells out to `git rev-parse` where gitindex uses go-git, and top-level -h returns nil while subcommand -h returns ErrHelp (exit 0 vs 2).",
+    "edge_cases": "Handles root-as-repo, bare repos, .git files, duplicate names, unmatched remove selectors; but no-root case returns an error without printing usage, and a compound shard with one undiscovered repo is pruned whole.",
+    "scope": "Focused on the command, but changes SetTemplatesFromOrigin globally so any caller that pre-sets Name (zoekt-git-index does) no longer gets the origin-derived name, contrary to the keep-existing-behaviour constraint; an opt-in would be safer.",
+    "readability": "Clear names and helpful comments; minor warts like recordsFromShards taking a slice always of length one and a doubled 'zoekt-local-sync:' error prefix.",
+    "robustness": "Lock only taken on -f so dry run truly writes nothing, flock released on close; but unix.Flock breaks Windows builds, unreadable shards are silently skipped, and the first index failure aborts before pruning.",
+    "maintainability": "Reasonable split across files, reuses index.IndexFilePaths and IncrementalSkipIndexing; but branch resolution is re-implemented via exec and run redundantly before IndexGitRepo does the same check."
+  },
+  "flags": []
+}

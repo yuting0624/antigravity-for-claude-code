@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-263903",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:38:09+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a534fab413db7e5860b79905e154603273b0e2f2b9c3cd9738384ec7fa56e418",
+  "wall_s": 60.5,
+  "cost_usd": 0.219262,
+  "usage": {
+    "input": 76607,
+    "output": 5504,
+    "thinking": 5320,
+    "cache_read": 0,
+    "total": 82111
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Perfectly matches codebase conventions, flag handling patterns, and idiomatic Go practices.",
+    "edge_cases": "Exceptionally thorough handling of markdown parsing, alt text escaping, file validation, and duplicate detection.",
+    "scope": "Delivers all requested features, though deliberately proceeds with resource creation upon partial upload failure to avoid orphaning assets.",
+    "readability": "Highly readable with clean abstractions, well-named functions, and excellent explanatory comments for complex logic.",
+    "robustness": "Gracefully handles network errors, safe AST modifications, early validation, and properly maps HTTP errors.",
+    "maintainability": "Cleanly decouples markdown rewriting and API communication into a cohesive internal package that is easy to extend."
+  },
+  "flags": []
+}

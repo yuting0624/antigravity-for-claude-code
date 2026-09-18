@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-997e15",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:53:20+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "0053ccab6f87794294e08155db24eefabf63382ed50eff4892ce82c26e9080b7",
+  "wall_s": 147.0,
+  "cost_usd": 0.305222,
+  "usage": {
+    "input": 54637,
+    "output": 16329,
+    "thinking": 16117,
+    "cache_read": 0,
+    "total": 70966
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches the repository's API client design, package layout, error handling, and configuration paradigms.",
+    "edge_cases": "Accurately implements 409 conflict lookups, avoids Auth headers on S3 PUTs, maps all abort reasons accurately, and omits 0-size archives.",
+    "scope": "Strictly isolated the provisioning flow to local execution while cleanly preserving the legacy v1 execution and PushRefID paths as requested.",
+    "readability": "Clean file boundaries, clear naming conventions, and well-organized responsibilities make the orchestration and output logic easy to follow.",
+    "robustness": "Strong resource hygiene with safe retry loops, proper context and cancellation handling, and bounded teardown timeouts.",
+    "maintainability": "Elegant decoupling of command orchestration from the output layer through explicit interfaces and config passthrough."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-436123",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T11:10:14+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 64.7,
+  "cost_usd": 0.609662,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Uses slices/maps helpers and lower-case comment style like surrounding code; threading order through options and Helper.options matches existing patterns.",
+    "edge_cases": "Nil options, chained order options via existing, invalid order aborting with no residue, plugin init order all handled; delete(options,\"order\") is redundant after the clone and its comment misstates why.",
+    "scope": "Core change is focused; RegisterDirectiveOrder rewrite is justified by the base append-aliasing bug, but cloning the whole options map is broader than needed and changes what callers can read back.",
+    "readability": "Clear helper directiveOrderFor; nil-slice as 'no sorting' sentinel in buildSubroute is a bit magic though documented; comments somewhat chatty.",
+    "robustness": "No global writes after init, no locks, default backing array never aliased, per-adaptation slice ownership is explicit; race-free by construction.",
+    "maintainability": "Order is now an explicit parameter rather than hidden global reads; two sources (options vs plugin global) are mediated by one helper, though the bool->[]string signature repurposing is slightly implicit."
+  },
+  "flags": []
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-e13202",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:31:54+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b9907ffa2606a6fb7af62d24fab2c120c091cb98356e367eeca60437261cd6ed",
+  "wall_s": 39.0,
+  "cost_usd": 0.5620539999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Flag wiring, MutuallyExclusive checks, FlagErrorf and warning output match surrounding code; but the requested helpers were not added to git.Client, where CheckoutBranch/Pull live.",
+    "edge_cases": "Blank path, --checkout requirement, --list exclusion, relative-to-absolute, symlink/non-dir, same-repo and foreign-repo targets, and cross-repo remote selection are all handled.",
+    "scope": "Delivers the feature, but swaps localBranchExists (show-ref) for HasLocalBranch (rev-parse) in unrelated non-worktree pr checkout paths, and skips the required git-client helper.",
+    "readability": "Clear WorktreeTarget struct and doc comments; WorktreeCheckoutCommands returning a (cmds, branchExists) pair is slightly awkward but understandable.",
+    "robustness": "No panics; path validated before any API calls; ff-only pull failure downgraded to a warning as in the existing flow; spaces in paths pass as one argument.",
+    "maintainability": "Worktree resolution and command generation are centralised in pr/shared, removing duplication, but raw argv slices instead of typed git.Client methods keep the two commands coupled to string construction."
+  },
+  "flags": [
+    "unrelated_changes",
+    "incomplete"
+  ]
+}

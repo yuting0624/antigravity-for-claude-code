@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-ff6a8b",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:47:58+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1c8175231bd3fca655d18558c3f320813c300a6eab4e49a958803755c4342974",
+  "wall_s": 149.5,
+  "cost_usd": 0.276976,
+  "usage": {
+    "input": 28076,
+    "output": 18402,
+    "thinking": 18191,
+    "cache_read": 0,
+    "total": 46478
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Follows codebase style and conventions, though allocating strings in a hot loop is unidiomatic and inefficient.",
+    "edge_cases": "Fails on multi-byte non-ASCII characters; string(byte) conversion and byte-wise EqualFold on UTF-8 fragments causes false mismatches.",
+    "scope": "Perfectly scoped; implements only the requested suffix matching logic and removes unused code with no unrelated changes.",
+    "readability": "The complex backward iteration is clearly structured and well-explained by comments, making the logic easy to follow.",
+    "robustness": "Safely handles out-of-bounds risks and malformed escapes without panicking, though functionally fragile for non-ASCII input.",
+    "maintainability": "Cleanly encapsulated in a helper function, but manual backward byte iteration of UTF-8 is inherently error-prone and hard to extend."
+  },
+  "flags": []
+}

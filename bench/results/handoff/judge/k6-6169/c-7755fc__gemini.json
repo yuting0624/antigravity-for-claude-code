@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "k6-6169",
+  "candidate_id": "c-7755fc",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:59:07+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "bbb21b38ac4d4d4f79ccbb278a1c8c712bf858fe53728a011f2fedc1dce4c20d",
+  "wall_s": 64.4,
+  "cost_usd": 0.136566,
+  "usage": {
+    "input": 59067,
+    "output": 1536,
+    "thinking": 1362,
+    "cache_read": 0,
+    "total": 60603
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Excellent adherence to k6 conventions, including proper null types, logging, and error handling",
+    "edge_cases": "Handles body resets on HTTP retries perfectly, checks int32 overflows, and gracefully degrades on bad backend duration strings",
+    "scope": "Implements the exact requirements with a clean separation for provisioning orchestration without touching unrelated paths",
+    "readability": "Clear package structure, well-named functions, and comprehensive documentation comments for all new APIs",
+    "robustness": "Thorough resource hygiene (draining and closing response bodies), context propagation, and reliable retry mechanisms",
+    "maintainability": "Strong decoupling via dependency injection for the metrics pusher, making it easy to test and extend"
+  },
+  "flags": []
+}

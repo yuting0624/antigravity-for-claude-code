@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-fbcd43",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:50:40+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "f8af2c01dbd322d7e77eda58cb233350d6cf9257bad415d4f6e3834045022a58",
+  "wall_s": 144.4,
+  "cost_usd": 0.8231607500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 2,
+    "maintainability": 3
+  },
+  "mean": 2.833,
+  "rationale": {
+    "consistency": "Flag names mirror zoekt-git-index and files follow cmd/zoekt-* layout, but flock via x/sys/unix ships without a build tag unlike the repo's platform-split files, and it bypasses gitindex.FindGitRepos for its own walker.",
+    "edge_cases": "Handles root-as-repo, bare repos, .git files, cross-root duplicates and a missing index dir; misses -delta (parsed, never used), -incremental=false still skips up-to-date repos, and a zoekt.name git config overrides the discovery name so list/prune can disagree.",
+    "scope": "Delivers the command, subcommands, lock and name preservation; the indexGitRepo split into prepareRepositoryDescription/IsUpToDate is larger than the minimal shared change, and the delta field is dead.",
+    "readability": "Clear file split and names; runSync is long but linear. Minor warts: shadowed var err blocks, duplicated closer.Close() on error paths, the printGeneralHelp flagset re-output trick.",
+    "robustness": "Stale detection by Source string equality can delete a freshly rewritten same-name shard when the path differs (e.g. .git vs worktree path); one unreadable subdir or one bad repo aborts the whole sync; metadata read errors are silently dropped.",
+    "maintainability": "Good separation into discover/inventory/lock; but IsUpToDate re-opens and re-resolves branches before IndexGitRepo does it again, and prune logic is coupled to exact Source paths, which will be brittle across tools."
+  },
+  "flags": []
+}

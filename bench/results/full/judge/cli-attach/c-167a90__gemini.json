@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-167a90",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:26:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "96db4a589bd1b05554b0a47a186a50b6c0226d3a8d944564b6d59b68b426bab2",
+  "wall_s": 66.4,
+  "cost_usd": 0.217264,
+  "usage": {
+    "input": 70706,
+    "output": 6321,
+    "thinking": 6105,
+    "cache_read": 0,
+    "total": 77027
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Code style, package layout, and integration with `gh` patterns are excellent.",
+    "edge_cases": "Handles parsing, markdown rewriting, size limits, and errors cleanly, but misses avoiding interactive prompts for `--attach` in `create` commands.",
+    "scope": "Implements all requested functionality with deep care for markdown AST and file validation, though slightly misses the 'attach counts as body' requirement in `create` commands.",
+    "readability": "Clean, explicit code with well-named functions and good documentation of complex logic (e.g. AST manual parsing).",
+    "robustness": "Fault-tolerant file validation, robust concurrent HTTP error handling, and safe fallback logic on partial uploads.",
+    "maintainability": "The `attachments` package elegantly separates upload/AST-rewriting logic from CLI command wiring, making it highly modular and testable."
+  },
+  "flags": []
+}

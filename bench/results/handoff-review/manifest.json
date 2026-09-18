@@ -1,0 +1,70 @@
+{
+  "run_id": "handoff-review",
+  "created_at": "2026-09-17T23:19:33+00:00",
+  "protocol_tag": "bench/protocol-handoff-review-v1",
+  "protocol_sha": "c386459ada8da4d0a8aa72b1ec8e308274393501",
+  "reference_arms_from": "full (solo-opus, solo-sonnet); handoff (hybrid-handoff)",
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.5",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "plugin_dir": "/Users/linyuting/.cache/agy-bench/plugin",
+  "caps": {
+    "small": {
+      "max_budget_usd": 8,
+      "max_turns": 80,
+      "wall_s": 2700
+    },
+    "medium": {
+      "max_budget_usd": 30,
+      "max_turns": 150,
+      "wall_s": 9000
+    },
+    "large": {
+      "max_budget_usd": 75,
+      "max_turns": 250,
+      "wall_s": 14400
+    }
+  },
+  "cold_gap_s": 300,
+  "effort": "high",
+  "hashes": {
+    "prices.lock.json": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+    "arms.json": "396f92f448441b4d3d831a24819a828e0edb62642e6902798cb21574ae5bf443",
+    "allow-common.txt": "27f75f6ef04ed81a0e53842f1ff95c9c53b1ce813b5bb259569ff8d6f6f2043a",
+    "allow-plugin.txt": "2105adc142ecdc94987db63f9255e40ece89c1bc38d69f10a1aca119e453c4d0",
+    "bash-gate-rules.json": "1450e9c83fb9aca448dc7b01d697c1812fabd9dc0165d0450a2f4f32163b3674",
+    "hybrid-handoff-review-appendix.md": "469a9f93b1f3d91009f4df9ffe2994db421e3072ebd8f9246d8a9ffa7aec7d07",
+    "judge.md": "7a6dfc73a58439cb64e2b9cfaf0e94f190edefc8293227e192d39c370bea3176"
+  },
+  "lanes": [
+    "A",
+    "B"
+  ],
+  "queue_seed": 20260914,
+  "notes": [
+    "mains-power gate on; sleep/network deaths rerun; same caps as run full; postrun agent judges and analyzes when the queue finishes",
+    "2026-09-17 23:21Z: lane B idled 11 min at start because the queue lacked allow_same_arm_concurrency; set by hand at 23:32Z, no effect on results",
+    "2026-09-18 05:07Z: cli-attach r1 slept 67 min mid-run; both delegations died on the executor's connection (network issue / TIMEOUT) and the run failed with nothing delivered ($10.95). Classified 'final' by the classifier of the time; relabelled 'suspended' and requeued per the pre-registered sleep rule; classify() now treats a slept, delegating run with no successful delegation and no pass as 'suspended'"
+  ],
+  "raw_archive": {
+    "file": "handoff-review-raw-transcripts.tgz (kept by the operator; offered as a release asset)",
+    "sha256": "ee2ebbf522e21b7ef213a0ccb7c4648bbff75b7358977360026f86f8878e810f",
+    "bytes": 1548423,
+    "contents": "results/handoff-review/runs/**/raw (transcripts, result.json, agy_usage.log, tool_trace.jsonl) and judge/raw"
+  },
+  "finished_at": "2026-09-18T10:39:43+00:00",
+  "counted_runs": 16,
+  "skipped_items": 0,
+  "judging": {
+    "records": 64,
+    "failed": 0,
+    "usd": 22.24,
+    "finished_at": "2026-09-18T16:02:37Z"
+  }
+}

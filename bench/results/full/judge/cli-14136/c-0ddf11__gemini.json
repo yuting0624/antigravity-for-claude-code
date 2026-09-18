@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-0ddf11",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:10:57+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "999ec1a7603bb7cfda4d078663c818e95277cedf6471162d931255d03d04e339",
+  "wall_s": 46.4,
+  "cost_usd": 0.12477,
+  "usage": {
+    "input": 42879,
+    "output": 3251,
+    "thinking": 3019,
+    "cache_read": 0,
+    "total": 46130
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly adheres to existing Git client patterns and appropriately utilizes the PR shared package conventions.",
+    "edge_cases": "Robustly handles empty targets, mutually exclusive flag validation, absolute paths, and reusing existing worktrees.",
+    "scope": "Implements the exact set of requested features without over-engineering or introducing unrelated changes.",
+    "readability": "Well-structured logic, straightforward conditional flows, and clean extraction of shared worktree commands.",
+    "robustness": "Safely copies the Git client to avoid mutating shared state and properly leverages safe abstractions for Git commands.",
+    "maintainability": "Excellent extraction of worktree logic into the shared package, ensuring consistency across PR and Issue features."
+  },
+  "flags": []
+}

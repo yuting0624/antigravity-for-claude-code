@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-b15af1",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:57:43+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "4e6f3a019d76cedaa1b6cbeec90ad4544f5452c0b49676237f699d642b3ee544",
+  "wall_s": 125.4,
+  "cost_usd": 0.75354875,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Reuses index.Options.Flags, IndexFilePaths and zoekt-git-index flag names, but gating Name in SetTemplatesFromOrigin globally alters zoekt-git-index (which presets Name) despite the keep-callers constraint; unix-only flock without build tag; main -h to stdout vs subcommand -h to stderr.",
+    "edge_cases": "Handles root-as-repo, bare repos, cross-root duplicate names, missing index dir, no roots; but -incremental=false is ignored (IsRepoUpToDate short-circuits before IndexGitRepo), zoekt.name config breaks discovery/prune agreement, compound shards pruned wholesale.",
+    "scope": "Adds exported IsRepoUpToDate plus a sizeable indexGitRepo refactor, remove also matches source paths, and the shared-indexer change is broader than an opt-in; otherwise on target.",
+    "readability": "Clear file split and names; pruneShards shared; minor noise from redundant var err shadowing and 'Pass -f' printed even when nothing changes.",
+    "robustness": "Lock acquired only after planning in sync (plan/lock race), IsRepoUpToDate errors swallowed, unreadable shards skipped silently, repo opened twice per index; closer cleanup on error paths handled; dry run never writes.",
+    "maintainability": "Pointer-bag syncFlags and a throwaway flagset for main help; index flag duplicated across list/remove; name-preservation relies on implicit empty-Name coupling across packages rather than an explicit option."
+  },
+  "flags": []
+}

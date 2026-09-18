@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-attach",
+  "candidate_id": "c-263903",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:06:14+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a534fab413db7e5860b79905e154603273b0e2f2b9c3cd9738384ec7fa56e418",
+  "wall_s": 96.7,
+  "cost_usd": 0.236364,
+  "usage": {
+    "input": 76656,
+    "output": 6921,
+    "thinking": 6745,
+    "cache_read": 0,
+    "total": 83577
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 3,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Perfectly mimics existing CLI idioms, flag setup, and API query patterns.",
+    "edge_cases": "Superb handling of markdown parsing, alt-text escaping, and preventing web preview when attachments are present.",
+    "scope": "Violates the explicit 'if one upload fails nothing is written' requirement by intentionally implementing partial success instead.",
+    "readability": "Extremely clear separation of concerns with excellent, informative comments explaining the rationale behind tricky logic.",
+    "robustness": "Safely parses markdown via AST instead of regex, handles escaping securely, and strictly validates inputs.",
+    "maintainability": "Highly modular attachment package that abstracts the complexity away from command handlers."
+  },
+  "flags": []
+}

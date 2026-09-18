@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-15a508",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:35:09+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "db014cdb4bca2b0b742984c74669ee91b82b00155853218a3a69fa0636dd80ec",
+  "wall_s": 32.2,
+  "cost_usd": 0.116094,
+  "usage": {
+    "input": 35253,
+    "output": 3799,
+    "thinking": 3542,
+    "cache_read": 0,
+    "total": 39052
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Highly idiomatic Go, perfectly matching the style, flag handling, and conventions of the zoekt codebase.",
+    "edge_cases": "Handles relative paths, duplicate names, and dry runs flawlessly, but misses printing usage text when failing due to missing root arguments.",
+    "scope": "Implements all core requirements, subcommands, and indexer preservation, but slightly misses the explicit 'prints usage' requirement on empty args.",
+    "readability": "Excellent modularity, clear variable names, and well-commented functions that explain non-obvious logic.",
+    "robustness": "Safely manages dry runs, locking, and external command execution without panicking or modifying state unintentionally.",
+    "maintainability": "Well-structured subcommand parsing and clean separation of discovery from indexing make the tool very easy to maintain."
+  },
+  "flags": []
+}

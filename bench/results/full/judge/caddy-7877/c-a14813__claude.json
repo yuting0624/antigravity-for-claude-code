@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-a14813",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:27:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8b2f0203f8c15c50b2aa4467a27deab08da79a09898a69cfd102f1ec82235ec5",
+  "wall_s": 70.9,
+  "cost_usd": 0.4643875,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix in name, doc comment, error comment, EqualFold use and byte-wise loop; idiomatic for this file.",
+    "edge_cases": "Handles empty suffix, suffix longer than path, exact-match to empty, escaped-in-suffix literal match, hex case-insensitivity; inherits prefix's RuneError-equality quirk for non-ASCII bytes.",
+    "scope": "Only touches the suffix branch and replaces the now-dead reverse helper; no prefix/query changes.",
+    "readability": "Clear structure and comments; the negated compound escape-detection condition is a little dense but explained.",
+    "robustness": "All index accesses are guarded (iPath>=2, iSuffix>=2), unescape error returns unchanged path, no panics; relies on EscapedPath producing valid escapes like the prefix code.",
+    "maintainability": "Cleaner end-of-loop check than trimPathPrefix; logic is duplicated rather than shared with the prefix walker, but the two directions make sharing awkward."
+  },
+  "flags": []
+}

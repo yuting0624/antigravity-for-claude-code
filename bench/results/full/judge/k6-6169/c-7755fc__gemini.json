@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-7755fc",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:06:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "bbb21b38ac4d4d4f79ccbb278a1c8c712bf858fe53728a011f2fedc1dce4c20d",
+  "wall_s": 30.2,
+  "cost_usd": 0.153218,
+  "usage": {
+    "input": 59107,
+    "output": 2917,
+    "thinking": 2655,
+    "cache_read": 0,
+    "total": 62024
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Excellent alignment with the v6 client patterns, including clientcfg extraction and struct-mapping methods.",
+    "edge_cases": "Handles int64-to-int32 overflows, zero-archive logic, graceful time parsing, and proper body resets on retries flawlessly.",
+    "scope": "Delivers exactly the requirements without over-engineering, keeping the legacy and v6 boundaries clean.",
+    "readability": "Very clear control flow, descriptive names, and well-commented orchestration and internal config fields.",
+    "robustness": "Safe concurrency and retry handling, proper Context propagation, robust S3 upload with explicit Content-Length, and nil-pointer guarding.",
+    "maintainability": "Decoupled logic using interfaces (provisioningNotifier, metricsPusher) and lazyInitProvisioning allows for seamless mock injection and testing."
+  },
+  "flags": []
+}

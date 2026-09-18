@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-e073ea",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:53:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "81e0dbdbf416c07e0fba4cda0d3495a25db9caa51206536882db2e4b1a2217bd",
+  "wall_s": 6.9,
+  "cost_usd": 0.060662249999999994,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to assess against codebase conventions.",
+    "edge_cases": "Empty diff; none of the 409, 401/403, upload-skip or error-code mapping cases are handled.",
+    "scope": "Empty diff; nothing of the requested provisioning package, v6 flow or output changes was delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; no failure handling implemented.",
+    "maintainability": "Empty diff; nothing to maintain or extend."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

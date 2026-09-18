@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-dec85c",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T16:00:58+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "999921850d9a1d92cc24af406a198e965c0d8ee6b0f20f49ce94a029c686e3fd",
+  "wall_s": 65.0,
+  "cost_usd": 0.49999675000000005,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "License header, index.Options.Flags reuse and wrapped errors match siblings; pointer-field config struct and raw syscall.Flock with no build tag are off-pattern for zoekt.",
+    "edge_cases": "Duplicate names, non-directory roots, missing index dir and bare/worktree repos handled; remove silently matches nothing, corrupt shards are skipped silently, and dry run still mkdirs the index dir and creates a lock file.",
+    "scope": "Focused on the new command plus the minimal gitindex change; IsUpToDate/prepareRepo extraction is justified for preview mode, no unrelated edits.",
+    "readability": "main.go flow is clear; prepareRepo's manual closer-close-on-error and the shadowed err declarations are awkward, printHelp's io.Discard-then-SetOutput dance is odd, printHelp returns an always-nil error.",
+    "robustness": "flock guards concurrent runs and preview never deletes; but os.Remove and ReadMetadataPath errors are swallowed, so failed prunes or unreadable shards go unreported, and the repo is opened twice per indexed repo.",
+    "maintainability": "Discovery/inventory/lock split cleanly; -index flag defined three times, applyShardRemovals prints 'Pass -f' even when nothing to remove, and the Name==\"\" guard in SetTemplatesFromOrigin subtly changes semantics for any caller that pre-populates Name."
+  },
+  "flags": []
+}

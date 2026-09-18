@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-06caac",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:58:31+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2a6dc39b33eaaa7560dc0d4285d88af910b7f8464a4ae45e14f371570e382465",
+  "wall_s": 48.5,
+  "cost_usd": 0.10543,
+  "usage": {
+    "input": 35057,
+    "output": 2943,
+    "thinking": 2735,
+    "cache_read": 0,
+    "total": 38000
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 4,
+    "robustness": 2,
+    "maintainability": 3
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "The provided code matches existing conventions, correctly using the OpenAPI models and mirroring UploadTest logic.",
+    "edge_cases": "Fails to implement the error mapping, archive upload toggling, or any other requirements due to missing the core orchestration.",
+    "scope": "Vastly incomplete; provides the test fake and config fields but omits the provisioning client, orchestration function, and command wiring.",
+    "readability": "The provided code is clear, well-structured, and includes appropriate godoc comments for the new test server.",
+    "robustness": "CreateOrFindLoadTest correctly catches and handles 409 conflicts, but the lack of the main flow limits further evaluation.",
+    "maintainability": "The test server is neatly designed for reuse, though extracting clientcfg is somewhat gratuitous without the second client."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-4b36cc",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:41:57+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "06784cd8b1b1a63436167fe19f07490ed76b60d0d0e308bf3b24f7937a4a8e86",
+  "wall_s": 58.5,
+  "cost_usd": 0.51236375,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Mirrors zoekt-git-index flag names/help text and gitindex idioms; io.Writer-based subcommands and no cmd.OptionsFromFlags/profiler differ from siblings but are defensible.",
+    "edge_cases": "Handles duplicate names, non-dir roots, missing -index, unmatched remove targets, .meta sidecars; but pruning deletes whole compound shards holding live repos, and any WalkDir permission error aborts discovery.",
+    "scope": "Refactor into prepareRepository is needed for the read-only preview; README paragraph is small and relevant; no dead code.",
+    "readability": "Clear split across discover/inventory/sync/main with useful doc comments; runSync is long but linear.",
+    "robustness": "O_EXCL lock file has no stale-lock recovery after a crash; IndexState discards the IndexState() error; DeriveNameFromRepoConfig defaults to the new behaviour so unlisted callers silently change.",
+    "maintainability": "Reimplements repo discovery instead of building on gitindex.FindGitRepos; the inverted opt-in flag is a footgun for future callers; otherwise well factored and easy to extend."
+  },
+  "flags": []
+}

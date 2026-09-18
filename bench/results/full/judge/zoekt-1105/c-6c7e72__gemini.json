@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-6c7e72",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:51:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b78bfef19b1f2570c435ff55307e71bd8cf7319238ec5257c30820c33b235f05",
+  "wall_s": 37.0,
+  "cost_usd": 0.133912,
+  "usage": {
+    "input": 37748,
+    "output": 4868,
+    "thinking": 4667,
+    "cache_read": 0,
+    "total": 42616
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Idiomatically structures the commands and cleanly mirrors the conventions and flags of existing zoekt tools.",
+    "edge_cases": "Gracefully handles unreadable directories, path collisions, empty indices, wildcard branches, and concurrent executions.",
+    "scope": "Strictly delivers the requested subcommands, preview/force modes, and name preservation without unrelated refactoring.",
+    "readability": "Logic is well-compartmentalized across files, with clear variable names and intuitive command routing.",
+    "robustness": "Prevents data races with a robust file lock, enforces read-only dry runs, and includes a precise up-to-date check to avoid redundant operations.",
+    "maintainability": "Extends existing gitindex configurations cleanly, preserving backward compatibility while making the new capabilities easy to iterate on."
+  },
+  "flags": []
+}

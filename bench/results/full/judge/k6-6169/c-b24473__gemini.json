@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-b24473",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:15:15+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "34f4cea5a6761e988f899fb3321f0477ee9732cc11587d34808b59e9df06bd91",
+  "wall_s": 51.0,
+  "cost_usd": 0.178182,
+  "usage": {
+    "input": 54507,
+    "output": 5764,
+    "thinking": 5568,
+    "cache_read": 0,
+    "total": 60271
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches existing cloud API client conventions, including error handling and package layout.",
+    "edge_cases": "Handles 0-size archives with explicit JSON nulls, properly buffers request bodies for retries, and maps script abort reasons accurately.",
+    "scope": "Strictly implements the local execution provisioning flow without disrupting other execution paths or adding unrelated changes.",
+    "readability": "Clean structure, clear variable names, and excellent use of internal documentation for new APIs.",
+    "robustness": "Excellent concurrency hygiene, context propagation, crypto-random idempotency keys, and robust 5xx retry logic.",
+    "maintainability": "The new provisioning package is well-encapsulated, making it easy to extend and integrate with the rest of the cloud output."
+  },
+  "flags": []
+}

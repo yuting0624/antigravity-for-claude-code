@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-359ebd",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:17:40+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "34fa87e143d4ce7c5928322444b3b986b450e4ba53da268a241cc1d33f4a8d90",
+  "wall_s": 60.6,
+  "cost_usd": 0.412013,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix's shape, doc-comment style, EqualFold use and 'should be impossible' error comment; adds an isHex guard the prefix version lacks, a small asymmetry.",
+    "edge_cases": "Handles decoded-vs-encoded, escaped pattern requiring literal escape, case-insensitive hex, suffix longer than path, empty suffix; inherits prefix's non-ASCII byte-vs-rune mismatch rather than fixing it.",
+    "scope": "Only touches suffix stripping and removes the now-dead reverse helper; no changes to prefix, query or other operations.",
+    "readability": "Three clear branches iterating from the end with descriptive index names; `iSuffix <= 0` could be `== 0` but otherwise straightforward.",
+    "robustness": "All slice accesses are bounds-guarded (iPath>=3, iSuffix>=3); PathUnescape error returns path unchanged; no panics on short inputs.",
+    "maintainability": "Dedicated suffix function is easier to reason about than reverse-then-prefix; some logic duplicated with trimPathPrefix but that matches the surrounding code's approach."
+  },
+  "flags": []
+}

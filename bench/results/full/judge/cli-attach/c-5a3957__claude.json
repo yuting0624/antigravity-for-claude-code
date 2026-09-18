@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-5a3957",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:45:09+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "26b3cf4f961002bc176a08f167693f228891142d600596c92b4805950fb811e2",
+  "wall_s": 64.6,
+  "cost_usd": 1.15814875,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 2,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.667,
+  "rationale": {
+    "consistency": "Uses cmdutil.FlagErrorf, heredoc, opts structs as the repo does; but unexported structs with exported fields, testify imported into a non-test production file, errors.Join(nil, err) wrapping everywhere, and default alt text mangled (dots to spaces) instead of the file name.",
+    "edge_cases": "Covers symlink/hard-link dupes via os.SameFile, '#' in filenames, code fences/inline code, 404/422/429; but a partial upload failure still creates the issue/PR/comment with a partial body, violating 'if one upload fails nothing is written', and issue edit drops the user's --body on failure.",
+    "scope": "Feature wired into all six commands with help text; carries dead code (isSingleImage, UploadStub, always-nil error from attachAssetsToMarkdown, KeepExistingBody always true) and a rewrite of issue create's return style.",
+    "readability": "references.go is ~770 lines of hand-rolled byte scanning with deep nesting and single-letter indices; client.go repeats near-identical uploadError literals six times.",
+    "robustness": "Bounds checks look careful, file and response bodies closed, no obvious panics; but reference-style detection relies on an AST-count-vs-inline-count heuristic and splitAttachValue does os.Stat during flag parsing.",
+    "maintainability": "Manual markdown parsing duplicates what goldmark already provides and will be fragile to extend; uploader construction is copy-pasted into six call sites; hasDeferredEdits duplicates hasDeferredFlags."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-e073ea",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:17:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "81e0dbdbf416c07e0fba4cda0d3495a25db9caa51206536882db2e4b1a2217bd",
+  "wall_s": 9.5,
+  "cost_usd": 0.058646,
+  "usage": {
+    "input": 24715,
+    "output": 768,
+    "thinking": 573,
+    "cache_read": 0,
+    "total": 25483
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The candidate provided an empty diff, failing to implement any part of the requirement.",
+    "edge_cases": "No code was provided, so no edge cases were handled.",
+    "scope": "The diff is entirely empty, completely missing the requested scope.",
+    "readability": "There is no code to read or evaluate.",
+    "robustness": "No implementation was provided to assess for robustness.",
+    "maintainability": "There is no code to maintain."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

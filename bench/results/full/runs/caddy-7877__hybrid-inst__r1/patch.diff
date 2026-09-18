@@ -1,0 +1,79 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..ddf2aae6b 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -464,12 +464,60 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 	return escapedPath
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// trimPathSuffix is like strings.TrimSuffix, but customized for advanced URI
++// path suffix matching. The string suffix will be trimmed from the end
++// of escapedPath if escapedPath ends with suffix. Rather than a naive 1:1
++// comparison of each byte to determine if escapedPath ends with suffix,
++// both strings are iterated from the end, and if suffix has a '%' encoding
++// at a particular position, escapedPath must also have the same encoding
++// representation for that character. In other words, if the suffix string
++// uses the escaped form for a character, escapedPath must literally use the
++// same escape at that position. Otherwise, all character comparisons are
++// performed in normalized/unescaped space.
++func trimPathSuffix(escapedPath, suffix string) string {
++	iPath := len(escapedPath)
++	iSuffix := len(suffix)
++
++	for iPath > 0 && iSuffix > 0 {
++		if iSuffix >= 3 && suffix[iSuffix-3] == '%' && isHex(suffix[iSuffix-2]) && isHex(suffix[iSuffix-1]) {
++			if iPath < 3 || !strings.EqualFold(escapedPath[iPath-3:iPath], suffix[iSuffix-3:iSuffix]) {
++				return escapedPath
++			}
++			iPath -= 3
++			iSuffix -= 3
++			continue
++		}
++
++		if iPath >= 3 && escapedPath[iPath-3] == '%' {
++			ch, err := url.PathUnescape(escapedPath[iPath-3 : iPath])
++			if err != nil {
++				// should be impossible unless EscapedPath() is returning invalid values!
++				return escapedPath
++			}
++			if !strings.EqualFold(ch, string(suffix[iSuffix-1])) {
++				return escapedPath
++			}
++			iPath -= 3
++			iSuffix--
++			continue
++		}
++
++		if !strings.EqualFold(string(escapedPath[iPath-1]), string(suffix[iSuffix-1])) {
++			return escapedPath
++		}
++		iPath--
++		iSuffix--
+ 	}
+-	return string(r)
++
++	if iSuffix <= 0 {
++		return escapedPath[:iPath]
++	}
++
++	return escapedPath
++}
++
++func isHex(c byte) bool {
++	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

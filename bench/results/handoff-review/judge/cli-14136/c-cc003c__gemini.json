@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-cc003c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:33:35+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "25c547ec0dbc1780178d87bc0a4ac159ad02f8f778eaf1a541e1780d40d76359",
+  "wall_s": 116.4,
+  "cost_usd": 0.244922,
+  "usage": {
+    "input": 41917,
+    "output": 13424,
+    "thinking": 13252,
+    "cache_read": 0,
+    "total": 55341
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches existing codebase conventions and idioms, cleanly integrating variadic command modifiers.",
+    "edge_cases": "Robustly handles existing local branches, path normalization, explicitly blank paths, and exclusive flag validations.",
+    "scope": "Completes all specific requirements including shared target resolution and Git helpers without feature creep.",
+    "readability": "Cleanly structured with clear abstractions (checkoutWorktree) and highly readable git client command setups.",
+    "robustness": "Properly surfaces all git errors and safely applies worktree rules before mutation.",
+    "maintainability": "Highly maintainable through excellent extraction of shared validation and command generation in pr/shared."
+  },
+  "flags": []
+}

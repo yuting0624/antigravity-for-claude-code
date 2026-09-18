@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "k6-6169",
+  "candidate_id": "c-411023",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:57:04+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1824f2101a64a3e1b98b019118d8d8e0e3ecb57a5ad3d80758ac7585bdf8b4cd",
+  "wall_s": 108.4,
+  "cost_usd": 0.208232,
+  "usage": {
+    "input": 53128,
+    "output": 8498,
+    "thinking": 8300,
+    "cache_read": 0,
+    "total": 61626
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches codebase conventions, correctly utilizes existing HTTP/API patterns and error handling idioms.",
+    "edge_cases": "Handles 409 conflict test lookups, conditional archive uploads, and meticulously maps abort reasons to specific API error codes.",
+    "scope": "Strictly implements the requirement without unrelated changes; keeps legacy v1 and push-ref logic completely intact.",
+    "readability": "Cleanly modularized into a new provisioning package; data structures and functions are very easy to follow.",
+    "robustness": "Solid retry loop in HTTPClient, prevents goroutine leaks with context polling, handles unmarshaling and pointers safely.",
+    "maintainability": "Fake server is thorough and well-designed, enabling easy testing; nicely decouples clients and avoids tight coupling."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:30:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 60.5,
+  "cost_usd": 0.36037075,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix's structure, index naming, url.PathUnescape use, EqualFold comparison, and even its error/comment phrasing.",
+    "edge_cases": "Traced: decoded-vs-%2F, %62 mid-token, escaped pattern vs plain path, empty/overlong suffix, hex-case all behave per spec; literal '%' patterns handled sensibly.",
+    "scope": "Only touches the suffix call site and replaces the now-dead reverse helper; prefix, query and other ops untouched.",
+    "readability": "Clear lock-step loop with descriptive booleans; the header comment is a bit long but usefully explains why reverse-then-prefix fails.",
+    "robustness": "All slicing guarded by iPath>=3 / iSuffix>=3 checks; decode failure falls back to unchanged path like the prefix code.",
+    "maintainability": "Some structural duplication with trimPathPrefix, but the two are symmetric and independently understandable; no hidden coupling."
+  },
+  "flags": []
+}

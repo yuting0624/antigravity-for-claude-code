@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-3c50d2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:30:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e60a45611613f02d0f0627c8758bb5f03f520a2feb88136cd6adbe70d008b41c",
+  "wall_s": 71.7,
+  "cost_usd": 1.19206075,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 2,
+    "maintainability": 2
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "Uses cmdutil.FlagErrorf, httpmock, cobra idioms and api field conventions; but adds AuthConfig.ActiveTokenType yet every command bypasses it via ActiveToken+ParseTokenType, and gh.AuthConfig interface is untouched.",
+    "edge_cases": "Good file validation (same-file, empty, '-', sizes, code fences, ref defs), but explicitly violates 'if one upload fails nothing is written': partial uploads still post the body; issue edit swallows the upload error when other edits exist.",
+    "scope": "Wires all six commands and refusals as asked; includes dead code (isSingleImage, UploadStub) and invents partial-success semantics; long help text not documented, only the flag usage string.",
+    "readability": "Well-commented but references.go is a dense 800-line hand-rolled inline scanner with 6-value returns and heavy index arithmetic; command wiring is clear.",
+    "robustness": "Files and response bodies closed, no panics; however partial-failure paths write bodies and issue edit drops uploadErr silently on non-body edits, so users can lose an error entirely.",
+    "maintainability": "Hand-rolled markdown inline parser beside goldmark is a large maintenance burden against the 'parse with goldmark' brief; config/token/uploader construction is copy-pasted across six commands."
+  },
+  "flags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "k6-6169",
+  "candidate_id": "c-9fcda6",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:02:51+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "38be93f575606f2b038a0a08c0edfde2b7484b76db3539a905b9c73e24a98a3c",
+  "wall_s": 153.4,
+  "cost_usd": 0.275632,
+  "usage": {
+    "input": 53030,
+    "output": 14131,
+    "thinking": 13935,
+    "cache_read": 0,
+    "total": 67161
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches existing codebase idioms, uses identical idempotency key logic and HTTP client wrapper patterns.",
+    "edge_cases": "Meticulous handling of JSON nulls, absent URLs, HTTP retries, header overrides, unparsable backend overrides, and 409 conflicts.",
+    "scope": "Strictly adheres to the constraints; introduces provisioning only where needed while keeping v1 active for unmodified paths.",
+    "readability": "Clean package boundaries, well-separated concerns, highly legible retry and polling loops.",
+    "robustness": "Reliable test status polling, safe unauthenticated S3 upload, retries on 5xx, robust type handling for overrides.",
+    "maintainability": "The new provisioning package neatly abstracts orchestration, and output modifications rely on clean interface injection."
+  },
+  "flags": []
+}

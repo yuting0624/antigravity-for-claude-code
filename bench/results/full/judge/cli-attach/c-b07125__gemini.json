@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-b07125",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:42:38+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8135150271c4d346b2dbdceb760b14e45d77dbf0162a1d823033bdf83eaa9453",
+  "wall_s": 32.3,
+  "cost_usd": 0.17315,
+  "usage": {
+    "input": 68845,
+    "output": 2955,
+    "thinking": 2767,
+    "cache_read": 0,
+    "total": 71800
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Follows gh CLI patterns and neatly integrates into the existing command packages.",
+    "edge_cases": "Thoroughly handles file path parsing with '#', duplicate files (via os.SameFile), file metadata validation, and markdown parsing edge cases.",
+    "scope": "Implements exactly the requested attachments functionality and command wirings without unrelated changes.",
+    "readability": "Clean package layout and clear command wiring, though the manual markdown inline scanner is quite dense.",
+    "robustness": "Strong error handling for HTTP responses, rate limits, file system operations, and boundary conditions.",
+    "maintainability": "Logic is well-encapsulated in the attachments package, but the manual string parsing for markdown links adds maintenance burden."
+  },
+  "flags": []
+}

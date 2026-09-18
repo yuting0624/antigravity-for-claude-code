@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-632fd7",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:05:05+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e657cc0f401c643e3cac8a6a57f291678e74d58779053041f569be692ca07167",
+  "wall_s": 30.8,
+  "cost_usd": 0.158932,
+  "usage": {
+    "input": 65342,
+    "output": 2354,
+    "thinking": 2160,
+    "cache_read": 0,
+    "total": 67696
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Follows established k6 package layout and naming conventions, mirroring the v6 client closely.",
+    "edge_cases": "Handles 409 conflicts correctly, maps all required test exit conditions cleanly, and correctly drains/rewinds request bodies on HTTP retries.",
+    "scope": "Implements exactly the requested flow and changes without overstepping boundaries or introducing unrelated refactors.",
+    "readability": "Cleanly factored into logical components with clear, descriptive names and helpful package-level and function-level documentation.",
+    "robustness": "Carefully handles context cancellations, connection draining, request rewinding for retries, and properly scopes the HTTP clients.",
+    "maintainability": "Highly decoupled design; the new fake provisioning server ensures tests will be reliable and easy to maintain."
+  },
+  "flags": []
+}

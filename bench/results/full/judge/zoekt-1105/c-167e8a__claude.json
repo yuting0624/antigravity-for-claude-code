@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-167e8a",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:36:34+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "9eb33c6d66606110a2b1f6f21bd511399dfec8e48d4f1cfe747d2d50178bd5d1",
+  "wall_s": 85.7,
+  "cost_usd": 0.6752405,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Follows sibling layout, license header and flag descriptions, but bypasses cmd.OptionsFromFlags (ctags setup lost) and inverts gitindex naming default so library callers outside the repo see changed behaviour; only zoekt-git-index is patched.",
+    "edge_cases": "Handles duplicate names, root-as-repo, .git suffix, compound shards, missing index dir; misses symlinked roots (silently nothing found), aborts whole discovery on any unreadable dir, treats any dir with objects/ as bare repo, root named list/remove collides with subcommands.",
+    "scope": "Changes are confined to the new command plus the minimal gitindex refactor; extra sync/help subcommands and path-based remove matching are small additions.",
+    "readability": "Clear split into discover/index/main with good comments; describeRepo's manual done() bookkeeping on error paths is a bit clunky.",
+    "robustness": "flock guards -f runs and dry run touches nothing; but IndexState swallows the index-state error, syscall.Flock is Unix-only, and remove reads inventory before taking the lock.",
+    "maintainability": "~/.zoekt index default duplicated in three places and could diverge; NameFromGitConfig semantics well documented, but the default-off opt-out flag is a trap for future callers."
+  },
+  "flags": []
+}

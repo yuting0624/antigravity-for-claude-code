@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-7755fc",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:49:57+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "bbb21b38ac4d4d4f79ccbb278a1c8c712bf858fe53728a011f2fedc1dce4c20d",
+  "wall_s": 129.9,
+  "cost_usd": 0.295682,
+  "usage": {
+    "input": 59011,
+    "output": 14805,
+    "thinking": 14595,
+    "cache_read": 0,
+    "total": 73816
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly mirrors existing v6 API idioms, config apply patterns, and HTTP error classification; extracts shared client configuration cleanly.",
+    "edge_cases": "Handles backend duration parsing fallbacks, safe int32 casting, robust context cancellation, and zero-byte archive omissions flawlessly.",
+    "scope": "Exactly meets the requirements, successfully preserving the legacy v1 paths for standard cloud output and PushRefID without any spillover.",
+    "readability": "Extremely clear separation of concerns, with insightful comments explaining non-obvious maneuvers like the options JSON round-trip.",
+    "robustness": "Implements excellent HTTP retry mechanics with safe body replays, defensive bounds, and strict context timeout adherence.",
+    "maintainability": "Highly modular architecture using dependency injection in expv2 and a dedicated mock server package, making future extension straightforward."
+  },
+  "flags": []
+}

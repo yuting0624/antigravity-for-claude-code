@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-913dad",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:10:04+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ca212b18bcc72c9f5f81b4529bc352863d1e32e31991a4b34d9bb25a54b62893",
+  "wall_s": 98.2,
+  "cost_usd": 0.146466,
+  "usage": {
+    "input": 28539,
+    "output": 7449,
+    "thinking": 7274,
+    "cache_read": 0,
+    "total": 35988
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Perfectly adheres to Caddy module conventions, naming, and configuration parsing patterns.",
+    "edge_cases": "Flawlessly handles malformed cookies, quoting preservation, and precise suffix extraction using semicolon indexing.",
+    "scope": "Meets all requirements but includes a minor unrelated addition of the CookieFilter validator interface assertion.",
+    "readability": "Extremely clean, logical structure with well-named variables and appropriate comments.",
+    "robustness": "Safely handles unexpected types in the zap field and ignores unparseable header values without panicking.",
+    "maintainability": "Action evaluation is cleanly separated from string manipulation, making future modifications trivial."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

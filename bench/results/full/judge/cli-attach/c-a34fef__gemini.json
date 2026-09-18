@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-a34fef",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:37:54+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cce861fbf3aeac0ca0bc93c2c8f14cc17066dad8386c4c07c3aa99c75f8996e8",
+  "wall_s": 70.9,
+  "cost_usd": 0.27531,
+  "usage": {
+    "input": 74961,
+    "output": 10449,
+    "thinking": 10219,
+    "cache_read": 0,
+    "total": 85410
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Flawlessly integrates with existing commands, respects json export compatibility, and matches CLI idioms.",
+    "edge_cases": "Handles symlinks, rate limits, malicious alt text, and correctly degrades videos inside paragraphs.",
+    "scope": "Deliberately proceeds with issue creation on partial upload failure to prevent orphaned assets, deviating from strict instructions.",
+    "readability": "Extremely clear separation of concerns with excellent, informative comments explaining non-obvious logic.",
+    "robustness": "Uses a robust custom scanner coordinated with goldmark AST instead of regex to rewrite markdown safely.",
+    "maintainability": "Attachment logic is cleanly decoupled into an internal package, making future modifications trivial."
+  },
+  "flags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-37d40a",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:30:34+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a427d3c8a75225028b7e05aee966f1627d7d5689186a04a074cf38711c364d1c",
+  "wall_s": 110.4,
+  "cost_usd": 0.142538,
+  "usage": {
+    "input": 41941,
+    "output": 4888,
+    "thinking": 4713,
+    "cache_read": 0,
+    "total": 46829
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Follows project conventions, cleanly structures the Git client extensions, and integrates naturally with Cobra flags.",
+    "edge_cases": "Properly handles empty paths, mutually exclusive flags, existing vs. missing branches, and worktree reuse.",
+    "scope": "Strictly adheres to the constraints; introduces exactly the requested feature and the necessary shared refactoring.",
+    "readability": "Clean extraction of shared logic into WorktreeTarget with easy-to-follow command generation.",
+    "robustness": "Thorough error handling and validation, properly scoping git operations to the correct paths.",
+    "maintainability": "The new shared/worktree package provides a unified foundation for PR and issue checkout features."
+  },
+  "flags": []
+}

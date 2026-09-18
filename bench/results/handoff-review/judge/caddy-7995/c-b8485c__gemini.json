@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b8485c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:27:45+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "254088ed9b2d3341002c4a21ac0341f563dec3f4941ee76f55f1869513f73851",
+  "wall_s": 10.8,
+  "cost_usd": 0.058344,
+  "usage": {
+    "input": 24036,
+    "output": 856,
+    "thinking": 712,
+    "cache_read": 0,
+    "total": 24892
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff provided, scoring 1 on every axis as instructed.",
+    "edge_cases": "Empty diff provided, scoring 1 on every axis as instructed.",
+    "scope": "Empty diff provided, scoring 1 on every axis as instructed.",
+    "readability": "Empty diff provided, scoring 1 on every axis as instructed.",
+    "robustness": "Empty diff provided, scoring 1 on every axis as instructed.",
+    "maintainability": "Empty diff provided, scoring 1 on every axis as instructed."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

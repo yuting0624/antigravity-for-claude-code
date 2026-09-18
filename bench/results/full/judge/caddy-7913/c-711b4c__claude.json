@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-711b4c",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:42:22+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "47f90a6e3fd637f2480ecfadc8585a0a51cf34a58e5a052a7f5e70c659dc61eb",
+  "wall_s": 119.4,
+  "cost_usd": 0.9955520000000002,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Follows Caddy idioms (license header, interface guards, dispenser parsing, humanize sizes, RegisterHandlerDirective); but handler JSON uses time.Duration instead of caddy.Duration and names the chunk field write_max_chunk vs server's max_write_chunk.",
+    "edge_cases": "Hard-deadline cap, chunked Write/ReadFrom with LimitReader fast path, and negative/zero values are handled; but MinRate with Timeout=0 yields an immediately-expired deadline, Write(nil) no longer triggers header write, and write-less responses never arm/refresh the deadline.",
+    "scope": "Implements exactly the requested server fields, Caddyfile options, handler module, directive ordering and standard import; no unrelated edits.",
+    "readability": "Clear small types (IdleDeadline next/progress) with purposeful comments; wrapping blocks are explicit and easy to follow.",
+    "robustness": "SetDeadline errors only logged at debug via a nil-unsafe Logger field (panics if unset); stale HTTP/1 write deadline can persist across keep-alive when a later response writes nothing; no config validation of nonsensical values.",
+    "maintainability": "Shared IdleDeadline/reader/writer types reused by server and handler avoid logic duplication, though the wrapping boilerplate is repeated in two places and read/write Caddyfile parsing is copy-pasted."
+  },
+  "flags": []
+}

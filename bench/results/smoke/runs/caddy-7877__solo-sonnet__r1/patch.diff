@@ -1,0 +1,50 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..6ace22448 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return reverseAtoms(trimPathPrefix(reverseAtoms(escapedPath), reverseAtoms(suffix)))
+ 		})
+ 	}
+ 
+@@ -464,12 +464,31 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 	return escapedPath
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// reverseAtoms reverses s by atom, where an atom is a single byte, except
++// a valid escape sequence ("%xx") is kept together as one atom rather than
++// being reversed byte-by-byte. This lets trimPathPrefix be reused to trim
++// a suffix (by reversing the path and suffix, trimming a prefix, then
++// reversing the result back) without corrupting escape sequences, which a
++// naive byte reversal would otherwise scramble (e.g. "%2F" -> "F2%").
++func reverseAtoms(s string) string {
++	var atoms []string
++	for i := 0; i < len(s); {
++		if s[i] == '%' && i+2 < len(s) && isHexDigit(s[i+1]) && isHexDigit(s[i+2]) {
++			atoms = append(atoms, s[i:i+3])
++			i += 3
++			continue
++		}
++		atoms = append(atoms, s[i:i+1])
++		i++
++	}
++	for i, j := 0, len(atoms)-1; i < j; i, j = i+1, j-1 {
++		atoms[i], atoms[j] = atoms[j], atoms[i]
+ 	}
+-	return string(r)
++	return strings.Join(atoms, "")
++}
++
++func isHexDigit(c byte) bool {
++	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-e4d6b2",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:56:20+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "125f802ed297935e873c3553f3353477ece24c5ae07456375ff8a5cddf76bafe",
+  "wall_s": 121.0,
+  "cost_usd": 0.310294,
+  "usage": {
+    "input": 47957,
+    "output": 17865,
+    "thinking": 17652,
+    "cache_read": 0,
+    "total": 65822
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 2,
+    "edge_cases": 1,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 1,
+    "maintainability": 2
+  },
+  "mean": 2.0,
+  "rationale": {
+    "consistency": "Mixes time.Duration and caddy.Duration for config fields; uses time.ParseDuration instead of idiomatic caddy.ParseDuration.",
+    "edge_cases": "Fails to populate HardDeadline, allowing idle resets to extend indefinitely; Timeout=0 with MinRate>0 instantly times out.",
+    "scope": "Unconditionally defaulting idle timeouts to 1m for all existing configs blatantly violates the 'no behaviour change' constraint.",
+    "readability": "Cleanly structured with clear abstractions like IdleDeadline and mostly easy-to-follow control flow.",
+    "robustness": "Clears hard deadlines if only chunk size is set; stacking wrappers creates race conditions; unsupported deadlines cause log spam.",
+    "maintainability": "IdleDeadline is nicely decoupled, but the design of stacking connection-mutating wrappers without coordination is flawed."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

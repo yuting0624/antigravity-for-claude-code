@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:32:33+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 127.5,
+  "cost_usd": 0.246226,
+  "usage": {
+    "input": 28067,
+    "output": 15841,
+    "thinking": 15632,
+    "cache_read": 0,
+    "total": 43908
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 2,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 2
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Perfectly matches existing codebase conventions, style, and uses standard Caddy HTTP helpers.",
+    "edge_cases": "Fails on UTF-8 characters (EqualFold matches any invalid UTF-8 bytes) and mishandles stacked escapes or literal percent signs.",
+    "scope": "Strictly implements the required suffix stripping logic without any extraneous changes or dead code.",
+    "readability": "The code is well-structured and thoroughly commented, making the flawed reverse-iteration logic easy to follow.",
+    "robustness": "Safe from out-of-bounds panics, though it silently aborts matching on unescape errors rather than falling back.",
+    "maintainability": "Backwards byte-by-byte iteration over variable-length encodings is fundamentally fragile and hard to fix without a complete rewrite."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

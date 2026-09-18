@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-d8de83",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:10:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ec66f5dd46aa039076015647304c90bfc47c1ac942e6830bd28a758fc3a43d82",
+  "wall_s": 58.2,
+  "cost_usd": 0.5701077499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Follows the existing per-option special-case pattern in evaluateGlobalOptionsBlock, same error wrapping, gofmt-aligned struct literals; Helper field kept unexported so no API change.",
+    "edge_cases": "Invalid order errors out with nothing written to globals or options; multiple order lines chain via the local slice; plugin RegisterDirectiveOrder still visible since each adaptation clones directiveOrder.",
+    "scope": "Threads order through Helper/buildSubroute/sortRoutes as needed; also moves named_routes out of the options map, which is justified by the shared-options concurrency requirement but slightly widens the diff.",
+    "readability": "Clear comments on why order stays out of options; the redundant configuredNamedRoutes alias and the now-stale comment on the global directiveOrder var are minor blemishes.",
+    "robustness": "No locks, no global mutation, slices cloned before DeleteFunc/Insert, type assertion checked; nil existingVal degrades gracefully rather than panicking.",
+    "maintainability": "Explicit data flow replaces hidden coupling through the options map, though serversFromPairings now takes seven params and extractNamedRoutes returns four values."
+  },
+  "flags": []
+}

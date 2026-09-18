@@ -1,0 +1,32 @@
+2026-09-16T23:53:44+00:00 lane B start (gap 300s)
+2026-09-16T23:54:39+00:00 lane B start (gap 300s)
+2026-09-16T23:58:07+00:00 lane B start (gap 300s)
+2026-09-16T23:59:37+00:00 lane B -> caddy-7888__hybrid-handoff__r1 (attempt 2)
+2026-09-17T00:12:06+00:00 lane B: caddy-7888__hybrid-handoff__r1 done pass=True $1.292553 in 749s
+2026-09-17T00:19:38+00:00 lane B -> caddy-7913__hybrid-handoff__r1 (attempt 1)
+2026-09-17T01:34:12+00:00 lane B: caddy-7913__hybrid-handoff__r1 interrupted by machine sleep (93s asleep); will retry
+2026-09-17T01:39:13+00:00 lane B -> zoekt-1105__hybrid-handoff__r1 (attempt 2)
+2026-09-17T01:57:30+00:00 lane B: zoekt-1105__hybrid-handoff__r1 done pass=False $0.88915375 in 1097s
+2026-09-17T02:00:22+00:00 lane B: on battery power; not starting new items until mains power returns
+2026-09-17T02:32:25+00:00 lane B: mains power back
+2026-09-17T02:32:25+00:00 lane B -> caddy-7995__hybrid-handoff__r1 (attempt 1)
+2026-09-17T02:50:54+00:00 lane B: caddy-7995__hybrid-handoff__r1 done pass=True $2.5165844999999996 in 1109s
+2026-09-17T03:00:57+00:00 lane B -> cli-attach__hybrid-handoff__r1 (attempt 1)
+2026-09-17T04:45:20+00:00 lane B: cli-attach__hybrid-handoff__r1 done pass=True $12.47954875 in 6263s
+2026-09-17T04:50:21+00:00 lane B -> zoekt-1105__hybrid-handoff__r1 (attempt 3)
+2026-09-17T05:19:38+00:00 lane B: zoekt-1105__hybrid-handoff__r1 done pass=True $2.189343 in 1757s
+2026-09-17T05:19:38+00:00 lane B: on battery power; not starting new items until mains power returns
+2026-09-17T05:49:41+00:00 lane B: mains power back
+2026-09-17T05:49:41+00:00 lane B -> caddy-7995__hybrid-handoff__r2 (attempt 1)
+2026-09-17T06:32:38+00:00 lane B: caddy-7995__hybrid-handoff__r2 done pass=True $3.6661187500000003 in 2577s
+2026-09-17T06:37:39+00:00 lane B -> caddy-7888__hybrid-handoff__r2 (attempt 1)
+2026-09-17T07:00:31+00:00 lane B: caddy-7888__hybrid-handoff__r2 done pass=True $1.7995074999999998 in 1372s
+2026-09-17T07:05:33+00:00 lane B -> caddy-7913__hybrid-handoff__r2 (attempt 1)
+2026-09-17T07:55:44+00:00 lane B: caddy-7913__hybrid-handoff__r2 done pass=True $4.87650625 in 3012s
+2026-09-17T08:00:45+00:00 lane B -> zoekt-1105__hybrid-handoff__r2 (attempt 1)
+2026-09-17T08:22:40+00:00 lane B: zoekt-1105__hybrid-handoff__r2 done pass=True $2.307968 in 1315s
+2026-09-17T08:27:41+00:00 lane B -> cli-attach__hybrid-handoff__r2 (attempt 1)
+2026-09-17T11:49:44+00:00 lane B: cli-attach__hybrid-handoff__r2 interrupted by machine sleep (4614s asleep); will retry
+2026-09-17T11:50:44+00:00 lane B: on battery power; not starting new items until mains power returns
+2026-09-17T12:16:46+00:00 lane B: mains power back
+2026-09-17T13:26:01+00:00 queue complete; lane B exits

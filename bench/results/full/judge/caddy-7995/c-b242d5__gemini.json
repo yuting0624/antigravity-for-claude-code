@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b242d5",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:06:00+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 73.9,
+  "cost_usd": 0.144952,
+  "usage": {
+    "input": 38150,
+    "output": 5721,
+    "thinking": 5523,
+    "cache_read": 0,
+    "total": 43871
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Uses Caddy's `existing` global option parameter idiomatically and leverages standard `maps` and `slices` libraries.",
+    "edge_cases": "Correctly handles a nil `options` map and correctly processes multiple `order` directives within a single Caddyfile.",
+    "scope": "Precisely fixes the mutable state issues and array-aliasing bug without touching unrelated code.",
+    "readability": "The flow of state is straightforward to follow, aided by precise comments explaining the cloning logic.",
+    "robustness": "Completely eliminates data races and cross-adaptation corruption by utilizing deep copies (`maps.Clone`, `slices.Clone`).",
+    "maintainability": "State isolation via the `options` map eliminates global side effects and keeps the lifecycle simple and decoupled."
+  },
+  "flags": []
+}

@@ -1,0 +1,3151 @@
+{
+  "schema": "bench.aggregate/1",
+  "run_id": "handoff-review",
+  "generated_at": "2026-09-18T16:47:04+00:00",
+  "n_runs": 73,
+  "included_from": "full:solo-opus,solo-sonnet;handoff:hybrid-handoff",
+  "tasks": [
+    "caddy-7877",
+    "caddy-7888",
+    "caddy-7913",
+    "caddy-7995",
+    "cli-14136",
+    "cli-attach",
+    "k6-6169",
+    "zoekt-1105"
+  ],
+  "arms": {
+    "hybrid-handoff": {
+      "n": 16,
+      "runs_ok": 16,
+      "excluded": 0,
+      "pass": 16,
+      "pass_rate": 1.0,
+      "hidden_pass": 16,
+      "cost_total_usd": 76.6228,
+      "cost_of_pass_usd": 4.7889,
+      "cost_of_pass_billed_usd": 8.2588,
+      "cost_of_pass_claude_only_usd": 1.3191,
+      "gemini_billed_usd": 111.035,
+      "cost_pass_median": 3.866,
+      "cost_pass_min": 1.5547,
+      "cost_pass_max": 12.4795,
+      "cost_all_median": 3.866,
+      "claude_usd": 21.1053,
+      "gemini_usd": 55.5175,
+      "wall_median_s": 2382.95,
+      "turns_median": 15.5,
+      "delegations_median": 1.5,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 15,
+      "claude_bash_writes": 0,
+      "denials_median": 6.0,
+      "warm_starts": 2,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 15,
+      "slept_runs": 5,
+      "claude_usd_long_context_est": 20.564,
+      "runs_with_200k_requests": 0,
+      "tree_pass": 16,
+      "flaky_retry_passes": 0,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 4,
+          "runs_ok": 4,
+          "excluded": 0,
+          "pass": 4,
+          "pass_rate": 1.0,
+          "hidden_pass": 4,
+          "cost_total_usd": 9.4878,
+          "cost_of_pass_usd": 2.372,
+          "cost_of_pass_billed_usd": 3.7801,
+          "cost_of_pass_claude_only_usd": 0.9638,
+          "gemini_billed_usd": 11.2649,
+          "cost_pass_median": 2.1335,
+          "cost_pass_min": 1.5547,
+          "cost_pass_max": 3.6661,
+          "cost_all_median": 2.1335,
+          "claude_usd": 3.8554,
+          "gemini_usd": 5.6324,
+          "wall_median_s": 968.0,
+          "turns_median": 15.0,
+          "delegations_median": 1.0,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 4,
+          "claude_bash_writes": 0,
+          "denials_median": 6.0,
+          "warm_starts": 2,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 4,
+          "slept_runs": 1,
+          "claude_usd_long_context_est": 3.8489,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 4,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "medium": {
+          "n": 6,
+          "runs_ok": 6,
+          "excluded": 0,
+          "pass": 6,
+          "pass_rate": 1.0,
+          "hidden_pass": 6,
+          "cost_total_usd": 26.1208,
+          "cost_of_pass_usd": 4.3535,
+          "cost_of_pass_billed_usd": 7.2741,
+          "cost_of_pass_claude_only_usd": 1.4328,
+          "gemini_billed_usd": 35.0478,
+          "cost_pass_median": 4.4712,
+          "cost_pass_min": 1.7995,
+          "cost_pass_max": 7.7381,
+          "cost_all_median": 4.4712,
+          "claude_usd": 8.5969,
+          "gemini_usd": 17.5239,
+          "wall_median_s": 2430.1,
+          "turns_median": 19.5,
+          "delegations_median": 2.5,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 5,
+          "claude_bash_writes": 0,
+          "denials_median": 6.0,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 5,
+          "slept_runs": 1,
+          "claude_usd_long_context_est": 8.0745,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 6,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "large": {
+          "n": 6,
+          "runs_ok": 6,
+          "excluded": 0,
+          "pass": 6,
+          "pass_rate": 1.0,
+          "hidden_pass": 6,
+          "cost_total_usd": 41.0142,
+          "cost_of_pass_usd": 6.8357,
+          "cost_of_pass_billed_usd": 12.2292,
+          "cost_of_pass_claude_only_usd": 1.4422,
+          "gemini_billed_usd": 64.7223,
+          "cost_pass_median": 7.3457,
+          "cost_pass_min": 2.1893,
+          "cost_pass_max": 12.4795,
+          "cost_all_median": 7.3457,
+          "claude_usd": 8.653,
+          "gemini_usd": 32.3612,
+          "wall_median_s": 4696.8,
+          "turns_median": 13.0,
+          "delegations_median": 1.0,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 6,
+          "claude_bash_writes": 0,
+          "denials_median": 5.5,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 6,
+          "slept_runs": 3,
+          "claude_usd_long_context_est": 8.6406,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 6,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        }
+      }
+    },
+    "hybrid-handoff-review": {
+      "n": 16,
+      "runs_ok": 16,
+      "excluded": 0,
+      "pass": 15,
+      "pass_rate": 0.9375,
+      "hidden_pass": 16,
+      "cost_total_usd": 82.5869,
+      "cost_of_pass_usd": 5.5058,
+      "cost_of_pass_billed_usd": 9.6735,
+      "cost_of_pass_claude_only_usd": 1.3381,
+      "gemini_billed_usd": 125.0298,
+      "cost_pass_median": 3.6685,
+      "cost_pass_min": 2.3385,
+      "cost_pass_max": 11.4823,
+      "cost_all_median": 3.8537,
+      "claude_usd": 20.072,
+      "gemini_usd": 62.5149,
+      "wall_median_s": 2312.35,
+      "turns_median": 16.0,
+      "delegations_median": 2.5,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 16,
+      "claude_bash_writes": 0,
+      "denials_median": 5.5,
+      "warm_starts": 2,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 14,
+      "slept_runs": 4,
+      "claude_usd_long_context_est": 20.0141,
+      "runs_with_200k_requests": 0,
+      "tree_pass": 15,
+      "flaky_retry_passes": 0,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 4,
+          "runs_ok": 4,
+          "excluded": 0,
+          "pass": 4,
+          "pass_rate": 1.0,
+          "hidden_pass": 4,
+          "cost_total_usd": 11.2044,
+          "cost_of_pass_usd": 2.8011,
+          "cost_of_pass_billed_usd": 4.5186,
+          "cost_of_pass_claude_only_usd": 1.0836,
+          "gemini_billed_usd": 13.7401,
+          "cost_pass_median": 2.8233,
+          "cost_pass_min": 2.3385,
+          "cost_pass_max": 3.2195,
+          "cost_all_median": 2.8233,
+          "claude_usd": 4.3344,
+          "gemini_usd": 6.87,
+          "wall_median_s": 1609.2,
+          "turns_median": 14.5,
+          "delegations_median": 3.5,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 4,
+          "claude_bash_writes": 0,
+          "denials_median": 5.0,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 3,
+          "slept_runs": 2,
+          "claude_usd_long_context_est": 4.3263,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 4,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "medium": {
+          "n": 6,
+          "runs_ok": 6,
+          "excluded": 0,
+          "pass": 6,
+          "pass_rate": 1.0,
+          "hidden_pass": 6,
+          "cost_total_usd": 23.6609,
+          "cost_of_pass_usd": 3.9435,
+          "cost_of_pass_billed_usd": 6.7504,
+          "cost_of_pass_claude_only_usd": 1.1365,
+          "gemini_billed_usd": 33.6835,
+          "cost_pass_median": 4.2197,
+          "cost_pass_min": 2.6659,
+          "cost_pass_max": 5.1444,
+          "cost_all_median": 4.2197,
+          "claude_usd": 6.8191,
+          "gemini_usd": 16.8417,
+          "wall_median_s": 2312.35,
+          "turns_median": 14.0,
+          "delegations_median": 2.5,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 6,
+          "claude_bash_writes": 0,
+          "denials_median": 5.5,
+          "warm_starts": 1,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 6,
+          "slept_runs": 0,
+          "claude_usd_long_context_est": 6.8059,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 6,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "large": {
+          "n": 6,
+          "runs_ok": 6,
+          "excluded": 0,
+          "pass": 5,
+          "pass_rate": 0.8333,
+          "hidden_pass": 6,
+          "cost_total_usd": 47.7216,
+          "cost_of_pass_usd": 9.5443,
+          "cost_of_pass_billed_usd": 17.3049,
+          "cost_of_pass_claude_only_usd": 1.7837,
+          "gemini_billed_usd": 77.6063,
+          "cost_pass_median": 8.9953,
+          "cost_pass_min": 2.9556,
+          "cost_pass_max": 11.4823,
+          "cost_all_median": 9.2943,
+          "claude_usd": 8.9185,
+          "gemini_usd": 38.8031,
+          "wall_median_s": 4352.5,
+          "turns_median": 17.0,
+          "delegations_median": 2.0,
+          "delegations_zero_runs": 0,
+          "agy_writes_runs": 6,
+          "claude_bash_writes": 0,
+          "denials_median": 7.0,
+          "warm_starts": 1,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 5,
+          "slept_runs": 2,
+          "claude_usd_long_context_est": 8.8819,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 5,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        }
+      }
+    },
+    "solo-opus": {
+      "n": 21,
+      "runs_ok": 21,
+      "excluded": 0,
+      "pass": 21,
+      "pass_rate": 1.0,
+      "hidden_pass": 21,
+      "cost_total_usd": 172.5496,
+      "cost_of_pass_usd": 8.2166,
+      "cost_of_pass_billed_usd": 8.2166,
+      "cost_of_pass_claude_only_usd": 8.2166,
+      "gemini_billed_usd": 0.0,
+      "cost_pass_median": 4.3153,
+      "cost_pass_min": 0.6521,
+      "cost_pass_max": 40.9225,
+      "cost_all_median": 4.3153,
+      "claude_usd": 172.5496,
+      "gemini_usd": 0,
+      "wall_median_s": 653.1,
+      "turns_median": 63,
+      "delegations_median": 0,
+      "delegations_zero_runs": 21,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 2,
+      "denials_median": 2,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 19,
+      "slept_runs": 1,
+      "claude_usd_long_context_est": 253.5821,
+      "runs_with_200k_requests": 5,
+      "tree_pass": 21,
+      "flaky_retry_passes": 0,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 5,
+          "runs_ok": 5,
+          "excluded": 0,
+          "pass": 5,
+          "pass_rate": 1.0,
+          "hidden_pass": 5,
+          "cost_total_usd": 9.9226,
+          "cost_of_pass_usd": 1.9845,
+          "cost_of_pass_billed_usd": 1.9845,
+          "cost_of_pass_claude_only_usd": 1.9845,
+          "gemini_billed_usd": 0.0,
+          "cost_pass_median": 2.171,
+          "cost_pass_min": 0.6521,
+          "cost_pass_max": 3.3309,
+          "cost_all_median": 2.171,
+          "claude_usd": 9.9226,
+          "gemini_usd": 0,
+          "wall_median_s": 399.4,
+          "turns_median": 55,
+          "delegations_median": 0,
+          "delegations_zero_runs": 5,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 1,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 5,
+          "slept_runs": 0,
+          "claude_usd_long_context_est": 9.9159,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 5,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "medium": {
+          "n": 8,
+          "runs_ok": 8,
+          "excluded": 0,
+          "pass": 8,
+          "pass_rate": 1.0,
+          "hidden_pass": 8,
+          "cost_total_usd": 35.2872,
+          "cost_of_pass_usd": 4.4109,
+          "cost_of_pass_billed_usd": 4.4109,
+          "cost_of_pass_claude_only_usd": 4.4109,
+          "gemini_billed_usd": 0.0,
+          "cost_pass_median": 4.0746,
+          "cost_pass_min": 1.7874,
+          "cost_pass_max": 9.3262,
+          "cost_all_median": 4.0746,
+          "claude_usd": 35.2872,
+          "gemini_usd": 0,
+          "wall_median_s": 576.35,
+          "turns_median": 60.5,
+          "delegations_median": 0.0,
+          "delegations_zero_runs": 8,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 1.5,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 8,
+          "slept_runs": 0,
+          "claude_usd_long_context_est": 35.2751,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 8,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "large": {
+          "n": 8,
+          "runs_ok": 8,
+          "excluded": 0,
+          "pass": 8,
+          "pass_rate": 1.0,
+          "hidden_pass": 8,
+          "cost_total_usd": 127.3397,
+          "cost_of_pass_usd": 15.9175,
+          "cost_of_pass_billed_usd": 15.9175,
+          "cost_of_pass_claude_only_usd": 15.9175,
+          "gemini_billed_usd": 0.0,
+          "cost_pass_median": 11.8325,
+          "cost_pass_min": 4.3153,
+          "cost_pass_max": 40.9225,
+          "cost_all_median": 11.8325,
+          "claude_usd": 127.3397,
+          "gemini_usd": 0,
+          "wall_median_s": 1487.95,
+          "turns_median": 108.5,
+          "delegations_median": 0.0,
+          "delegations_zero_runs": 8,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 2,
+          "denials_median": 3.0,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 6,
+          "slept_runs": 1,
+          "claude_usd_long_context_est": 208.3911,
+          "runs_with_200k_requests": 5,
+          "tree_pass": 8,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        }
+      }
+    },
+    "solo-sonnet": {
+      "n": 20,
+      "runs_ok": 20,
+      "excluded": 0,
+      "pass": 17,
+      "pass_rate": 0.85,
+      "hidden_pass": 18,
+      "cost_total_usd": 80.5006,
+      "cost_of_pass_usd": 4.7353,
+      "cost_of_pass_billed_usd": 4.7353,
+      "cost_of_pass_claude_only_usd": 4.7353,
+      "gemini_billed_usd": 0.0,
+      "cost_pass_median": 2.2753,
+      "cost_pass_min": 0.4593,
+      "cost_pass_max": 8.8268,
+      "cost_all_median": 2.358,
+      "claude_usd": 80.5006,
+      "gemini_usd": 0,
+      "wall_median_s": 676.4,
+      "turns_median": 69.0,
+      "delegations_median": 0.0,
+      "delegations_zero_runs": 20,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 1,
+      "denials_median": 3.0,
+      "warm_starts": 0,
+      "caps_hit": 2,
+      "tampered": 0,
+      "usage_reconciles": 17,
+      "slept_runs": 0,
+      "claude_usd_long_context_est": 168.6357,
+      "runs_with_200k_requests": 3,
+      "tree_pass": 18,
+      "flaky_retry_passes": 0,
+      "violations": {},
+      "by_size": {
+        "small": {
+          "n": 5,
+          "runs_ok": 5,
+          "excluded": 0,
+          "pass": 4,
+          "pass_rate": 0.8,
+          "hidden_pass": 5,
+          "cost_total_usd": 7.9139,
+          "cost_of_pass_usd": 1.9785,
+          "cost_of_pass_billed_usd": 1.9785,
+          "cost_of_pass_claude_only_usd": 1.9785,
+          "gemini_billed_usd": 0.0,
+          "cost_pass_median": 1.3248,
+          "cost_pass_min": 0.5986,
+          "cost_pass_max": 2.1337,
+          "cost_all_median": 2.0279,
+          "claude_usd": 7.9139,
+          "gemini_usd": 0,
+          "wall_median_s": 485.1,
+          "turns_median": 68,
+          "delegations_median": 0,
+          "delegations_zero_runs": 5,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 1,
+          "warm_starts": 0,
+          "caps_hit": 1,
+          "tampered": 0,
+          "usage_reconciles": 5,
+          "slept_runs": 0,
+          "claude_usd_long_context_est": 11.8607,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 5,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "medium": {
+          "n": 8,
+          "runs_ok": 8,
+          "excluded": 0,
+          "pass": 8,
+          "pass_rate": 1.0,
+          "hidden_pass": 8,
+          "cost_total_usd": 14.5081,
+          "cost_of_pass_usd": 1.8135,
+          "cost_of_pass_billed_usd": 1.8135,
+          "cost_of_pass_claude_only_usd": 1.8135,
+          "gemini_billed_usd": 0.0,
+          "cost_pass_median": 2.457,
+          "cost_pass_min": 0.4593,
+          "cost_pass_max": 2.9531,
+          "cost_all_median": 2.457,
+          "claude_usd": 14.5081,
+          "gemini_usd": 0,
+          "wall_median_s": 630.7,
+          "turns_median": 58.5,
+          "delegations_median": 0.0,
+          "delegations_zero_runs": 8,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 0,
+          "denials_median": 3.0,
+          "warm_starts": 0,
+          "caps_hit": 0,
+          "tampered": 0,
+          "usage_reconciles": 8,
+          "slept_runs": 0,
+          "claude_usd_long_context_est": 21.744,
+          "runs_with_200k_requests": 0,
+          "tree_pass": 8,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        },
+        "large": {
+          "n": 7,
+          "runs_ok": 7,
+          "excluded": 0,
+          "pass": 5,
+          "pass_rate": 0.7143,
+          "hidden_pass": 5,
+          "cost_total_usd": 58.0786,
+          "cost_of_pass_usd": 11.6157,
+          "cost_of_pass_billed_usd": 11.6157,
+          "cost_of_pass_claude_only_usd": 11.6157,
+          "gemini_billed_usd": 0.0,
+          "cost_pass_median": 2.7266,
+          "cost_pass_min": 2.2092,
+          "cost_pass_max": 8.8268,
+          "cost_all_median": 2.7266,
+          "claude_usd": 58.0786,
+          "gemini_usd": 0,
+          "wall_median_s": 870.9,
+          "turns_median": 80,
+          "delegations_median": 0,
+          "delegations_zero_runs": 7,
+          "agy_writes_runs": 0,
+          "claude_bash_writes": 1,
+          "denials_median": 4,
+          "warm_starts": 0,
+          "caps_hit": 1,
+          "tampered": 0,
+          "usage_reconciles": 4,
+          "slept_runs": 0,
+          "claude_usd_long_context_est": 135.0311,
+          "runs_with_200k_requests": 3,
+          "tree_pass": 5,
+          "flaky_retry_passes": 0,
+          "violations": {}
+        }
+      }
+    }
+  },
+  "paired": {
+    "hybrid-handoff_vs_solo-opus": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.5828,
+      "ci95": [
+        0.3919,
+        0.9586
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 1.6525616250000001,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 2.2387967499999997,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 6.307323,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.0913516249999997,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 4.51428825,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 9.580084875,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 8.678363000000001,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.2486555,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@small": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 1.1952,
+      "ci95": [
+        1.0956,
+        2.2677
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 1.6525616250000001,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.0913516249999997,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@medium": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.987,
+      "ci95": [
+        0.7738,
+        1.1059
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 2.2387967499999997,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 6.307323,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 4.51428825,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@large": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.4294,
+      "ci95": [
+        0.2577,
+        0.6746
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 9.580084875,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 8.678363000000001,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.2486555,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.6701,
+      "ci95": [
+        0.5222,
+        1.0242
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.0625,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 2.628071875,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 2.801129375,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 4.772454625,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 2.974148125,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 4.256851875,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 20.6198685,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 10.2388145,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 3.312043,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@small": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 1.4115,
+      "ci95": [
+        1.054,
+        3.6064
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 2.628071875,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 2.974148125,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@medium": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.894,
+      "ci95": [
+        0.5855,
+        1.3837
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 2.801129375,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 4.772454625,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 4.256851875,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@large": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.5996,
+      "ci95": [
+        0.5136,
+        0.7959
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.1667,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 20.6198685,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 10.2388145,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 3.312043,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 8,
+      "point": 1.1497,
+      "ci95": [
+        0.9536,
+        1.3772
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.0625,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 2.628071875,
+          "ref_cop": 1.6525616250000001,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 2.801129375,
+          "ref_cop": 2.2387967499999997,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 4.772454625,
+          "ref_cop": 6.307323,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 2.974148125,
+          "ref_cop": 3.0913516249999997,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 4.256851875,
+          "ref_cop": 4.51428825,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 20.6198685,
+          "ref_cop": 9.580084875,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 10.2388145,
+          "ref_cop": 8.678363000000001,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 3.312043,
+          "ref_cop": 2.2486555,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@small": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 2,
+      "point": 1.1809,
+      "ci95": [
+        0.9621,
+        1.5903
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 2.628071875,
+          "ref_cop": 1.6525616250000001,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 2.974148125,
+          "ref_cop": 3.0913516249999997,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@medium": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 3,
+      "point": 0.9058,
+      "ci95": [
+        0.7567,
+        1.2512
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 2.801129375,
+          "ref_cop": 2.2387967499999997,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 4.772454625,
+          "ref_cop": 6.307323,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 4.256851875,
+          "ref_cop": 4.51428825,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@large": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 3,
+      "point": 1.3962,
+      "ci95": [
+        1.1798,
+        2.1524
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.1667,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 20.6198685,
+          "ref_cop": 9.580084875,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 10.2388145,
+          "ref_cop": 8.678363000000001,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 3.312043,
+          "ref_cop": 2.2486555,
+          "size_class": "large"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.5763,
+      "ci95": [
+        0.4211,
+        0.8287
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.15,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.61013465,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.5142594000000001,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 2.4824815500000006,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.3468019,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 2.6667906,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": null,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 7.34397075,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.403690666666667,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@small": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 0.9969,
+      "ci95": [
+        0.8373,
+        1.1861
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.2,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.61013465,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.3468019,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@medium": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.4111,
+      "ci95": [
+        0.254,
+        0.6196
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.5142594000000001,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 2.4824815500000006,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 2.6667906,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@large": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.7297,
+      "ci95": [
+        0.4861,
+        1.6266
+      ],
+      "boot": 10000,
+      "undefined_draws": 360,
+      "seed": 20260914,
+      "pass_rate_diff": -0.2857,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": null,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 7.34397075,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.403690666666667,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    }
+  },
+  "by_size": {},
+  "judge": {
+    "present": true,
+    "records_ok": 178,
+    "records_failed": 0,
+    "task_means": {
+      "caddy-7995": {
+        "author": {
+          "gemini": 5.0,
+          "claude": 4.333
+        },
+        "hybrid-handoff-review": {
+          "gemini": 5.0,
+          "claude": 3.917
+        },
+        "null": {
+          "gemini": 1.0,
+          "claude": 1.0
+        },
+        "solo-opus": {
+          "claude": 4.278,
+          "gemini": 5.0
+        },
+        "solo-sonnet": {
+          "claude": 3.9443,
+          "gemini": 5.0
+        },
+        "hybrid-handoff": {
+          "claude": 3.5,
+          "gemini": 4.8335
+        }
+      },
+      "caddy-7877": {
+        "hybrid-handoff-review": {
+          "claude": 4.4165,
+          "gemini": 5.0
+        },
+        "author": {
+          "gemini": 4.667,
+          "claude": 4.333
+        },
+        "null": {
+          "claude": 1.0,
+          "gemini": 1.0
+        },
+        "solo-opus": {
+          "claude": 4.75,
+          "gemini": 4.4165
+        },
+        "solo-sonnet": {
+          "gemini": 3.0835,
+          "claude": 4.25
+        },
+        "hybrid-handoff": {
+          "claude": 4.3335,
+          "gemini": 4.3335
+        }
+      },
+      "cli-attach": {
+        "null": {
+          "claude": 1.0,
+          "gemini": 1.0
+        },
+        "hybrid-handoff-review": {
+          "claude": 2.5835,
+          "gemini": 3.3335
+        },
+        "author": {
+          "gemini": 4.833,
+          "claude": 3.5
+        },
+        "solo-opus": {
+          "gemini": 4.75,
+          "claude": 3.333
+        },
+        "solo-sonnet": {
+          "gemini": 3.3335,
+          "claude": 2.25
+        },
+        "hybrid-handoff": {
+          "claude": 3.0835,
+          "gemini": 3.5
+        }
+      },
+      "cli-14136": {
+        "hybrid-handoff-review": {
+          "claude": 3.667,
+          "gemini": 4.25
+        },
+        "null": {
+          "gemini": 1.0,
+          "claude": 1.0
+        },
+        "author": {
+          "gemini": 3.833,
+          "claude": 3.5
+        },
+        "solo-opus": {
+          "claude": 3.7223,
+          "gemini": 4.2223
+        },
+        "solo-sonnet": {
+          "gemini": 4.778,
+          "claude": 3.7223
+        },
+        "hybrid-handoff": {
+          "claude": 3.5,
+          "gemini": 5.0
+        }
+      },
+      "zoekt-1105": {
+        "author": {
+          "claude": 3.167,
+          "gemini": 5.0
+        },
+        "hybrid-handoff-review": {
+          "gemini": 4.9165,
+          "claude": 3.167
+        },
+        "null": {
+          "claude": 1.0,
+          "gemini": 1.0
+        },
+        "solo-sonnet": {
+          "claude": 3.3337,
+          "gemini": 4.7777
+        },
+        "solo-opus": {
+          "claude": 3.5553,
+          "gemini": 5.0
+        },
+        "hybrid-handoff": {
+          "claude": 3.0,
+          "gemini": 4.833
+        }
+      },
+      "caddy-7888": {
+        "null": {
+          "claude": 1.0,
+          "gemini": 1.0
+        },
+        "hybrid-handoff-review": {
+          "claude": 4.1665,
+          "gemini": 4.75
+        },
+        "author": {
+          "claude": 4.5,
+          "gemini": 5.0
+        },
+        "solo-opus": {
+          "gemini": 5.0,
+          "claude": 4.5
+        },
+        "solo-sonnet": {
+          "gemini": 5.0,
+          "claude": 4.3887
+        },
+        "hybrid-handoff": {
+          "claude": 4.0,
+          "gemini": 4.9165
+        }
+      },
+      "k6-6169": {
+        "author": {
+          "claude": 3.167,
+          "gemini": 5.0
+        },
+        "null": {
+          "gemini": 1.0,
+          "claude": 1.0
+        },
+        "hybrid-handoff-review": {
+          "gemini": 5.0,
+          "claude": 3.0
+        },
+        "solo-sonnet": {
+          "gemini": 4.75,
+          "claude": 3.5
+        },
+        "solo-opus": {
+          "claude": 4.0,
+          "gemini": 5.0
+        },
+        "hybrid-handoff": {
+          "gemini": 5.0,
+          "claude": 2.9165
+        }
+      },
+      "caddy-7913": {
+        "hybrid-handoff-review": {
+          "gemini": 4.5835,
+          "claude": 3.0
+        },
+        "null": {
+          "claude": 1.0,
+          "gemini": 1.0
+        },
+        "author": {
+          "claude": 3.0,
+          "gemini": 3.667
+        },
+        "solo-sonnet": {
+          "gemini": 2.4165,
+          "claude": 3.4165
+        },
+        "solo-opus": {
+          "gemini": 4.25,
+          "claude": 4.0835
+        },
+        "hybrid-handoff": {
+          "claude": 3.0,
+          "gemini": 3.75
+        }
+      }
+    },
+    "by_arm": {
+      "author": {
+        "gemini": {
+          "n": 8,
+          "mean": 4.625,
+          "consistency": 4.75,
+          "edge_cases": 4.375,
+          "scope": 4.375,
+          "readability": 4.875,
+          "robustness": 4.625,
+          "maintainability": 4.75
+        },
+        "claude": {
+          "n": 8,
+          "mean": 3.688,
+          "consistency": 3.875,
+          "edge_cases": 3.625,
+          "scope": 3.5,
+          "readability": 3.625,
+          "robustness": 4.0,
+          "maintainability": 3.5
+        }
+      },
+      "hybrid-handoff-review": {
+        "gemini": {
+          "n": 16,
+          "mean": 4.604,
+          "consistency": 4.625,
+          "edge_cases": 4.5,
+          "scope": 4.562,
+          "readability": 4.688,
+          "robustness": 4.625,
+          "maintainability": 4.625
+        },
+        "claude": {
+          "n": 16,
+          "mean": 3.49,
+          "consistency": 3.625,
+          "edge_cases": 3.5,
+          "scope": 3.562,
+          "readability": 3.438,
+          "robustness": 3.625,
+          "maintainability": 3.188
+        }
+      },
+      "null": {
+        "gemini": {
+          "n": 8,
+          "mean": 1.0,
+          "consistency": 1.0,
+          "edge_cases": 1.0,
+          "scope": 1.0,
+          "readability": 1.0,
+          "robustness": 1.0,
+          "maintainability": 1.0
+        },
+        "claude": {
+          "n": 8,
+          "mean": 1.0,
+          "consistency": 1.0,
+          "edge_cases": 1.0,
+          "scope": 1.0,
+          "readability": 1.0,
+          "robustness": 1.0,
+          "maintainability": 1.0
+        }
+      },
+      "solo-opus": {
+        "claude": {
+          "n": 21,
+          "mean": 4.024,
+          "consistency": 4.238,
+          "edge_cases": 4.0,
+          "scope": 3.81,
+          "readability": 4.19,
+          "robustness": 4.19,
+          "maintainability": 3.714
+        },
+        "gemini": {
+          "n": 21,
+          "mean": 4.738,
+          "consistency": 4.762,
+          "edge_cases": 4.619,
+          "scope": 4.714,
+          "readability": 4.952,
+          "robustness": 4.619,
+          "maintainability": 4.762
+        }
+      },
+      "solo-sonnet": {
+        "claude": {
+          "n": 20,
+          "mean": 3.65,
+          "consistency": 3.9,
+          "edge_cases": 3.35,
+          "scope": 3.85,
+          "readability": 3.9,
+          "robustness": 3.5,
+          "maintainability": 3.4
+        },
+        "gemini": {
+          "n": 20,
+          "mean": 4.292,
+          "consistency": 4.7,
+          "edge_cases": 3.8,
+          "scope": 4.1,
+          "readability": 4.75,
+          "robustness": 4.15,
+          "maintainability": 4.25
+        }
+      },
+      "hybrid-handoff": {
+        "claude": {
+          "n": 16,
+          "mean": 3.417,
+          "consistency": 3.625,
+          "edge_cases": 3.5,
+          "scope": 3.312,
+          "readability": 3.375,
+          "robustness": 3.625,
+          "maintainability": 3.062
+        },
+        "gemini": {
+          "n": 16,
+          "mean": 4.521,
+          "consistency": 4.75,
+          "edge_cases": 4.125,
+          "scope": 4.375,
+          "readability": 4.75,
+          "robustness": 4.562,
+          "maintainability": 4.562
+        }
+      }
+    },
+    "anchors": {
+      "null_mean_by_judge": {
+        "gemini": 1.0,
+        "claude": 1.0
+      },
+      "null_max_by_judge": {
+        "gemini": 1.0,
+        "claude": 1.0
+      },
+      "author_rank_by_task": {
+        "gemini": {
+          "caddy-7995": "1/12",
+          "caddy-7877": "5/10",
+          "cli-attach": "1/10",
+          "cli-14136": "9/12",
+          "zoekt-1105": "1/12",
+          "caddy-7888": "2/12",
+          "k6-6169": "3/11",
+          "caddy-7913": "6/10"
+        },
+        "claude": {
+          "caddy-7995": "2/12",
+          "caddy-7877": "6/10",
+          "cli-attach": "1/10",
+          "cli-14136": "10/12",
+          "zoekt-1105": "5/12",
+          "caddy-7888": "1/12",
+          "k6-6169": "5/11",
+          "caddy-7913": "6/10"
+        }
+      }
+    },
+    "agreement": {
+      "n_candidates_both": 89,
+      "spearman_mean": 0.502,
+      "within1_pct": 0.584
+    },
+    "judge_vs_pass_pointbiserial": {
+      "claude": 0.3625,
+      "gemini": 0.1532
+    },
+    "paired_diff": {
+      "hybrid-handoff_vs_solo-opus": {
+        "claude": {
+          "point": -0.611,
+          "ci95": [
+            -0.837,
+            -0.396
+          ],
+          "n_tasks": 8
+        },
+        "gemini": {
+          "point": -0.184,
+          "ci95": [
+            -0.562,
+            0.18
+          ],
+          "n_tasks": 8
+        }
+      },
+      "hybrid-handoff-review_vs_solo-opus": {
+        "claude": {
+          "point": -0.538,
+          "ci95": [
+            -0.774,
+            -0.316
+          ],
+          "n_tasks": 8
+        },
+        "gemini": {
+          "point": -0.101,
+          "ci95": [
+            -0.535,
+            0.222
+          ],
+          "n_tasks": 8
+        }
+      },
+      "solo-sonnet_vs_solo-opus": {
+        "claude": {
+          "point": -0.427,
+          "ci95": [
+            -0.663,
+            -0.215
+          ],
+          "n_tasks": 8
+        },
+        "gemini": {
+          "point": -0.562,
+          "ci95": [
+            -1.122,
+            -0.042
+          ],
+          "n_tasks": 8
+        }
+      },
+      "hybrid-handoff-review_vs_hybrid-handoff": {
+        "claude": {
+          "point": 0.073,
+          "ci95": [
+            -0.115,
+            0.219
+          ],
+          "n_tasks": 8
+        },
+        "gemini": {
+          "point": 0.083,
+          "ci95": [
+            -0.229,
+            0.406
+          ],
+          "n_tasks": 8
+        }
+      }
+    }
+  },
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.5",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "exclusions": [],
+  "sensitivity_no_sleep": {
+    "hybrid-handoff": {
+      "n": 11,
+      "runs_ok": 11,
+      "excluded": 0,
+      "pass": 11,
+      "pass_rate": 1.0,
+      "hidden_pass": 11,
+      "cost_total_usd": 41.2038,
+      "cost_of_pass_usd": 3.7458,
+      "cost_of_pass_billed_usd": 6.451,
+      "cost_of_pass_claude_only_usd": 1.0406,
+      "gemini_billed_usd": 59.5147,
+      "cost_pass_median": 2.6781,
+      "cost_pass_min": 1.5547,
+      "cost_pass_max": 8.0108,
+      "cost_all_median": 2.6781,
+      "claude_usd": 11.4464,
+      "gemini_usd": 29.7574,
+      "wall_median_s": 1352.8,
+      "turns_median": 14,
+      "delegations_median": 1,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 11,
+      "claude_bash_writes": 0,
+      "denials_median": 6,
+      "warm_starts": 1,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 10,
+      "slept_runs": 0,
+      "claude_usd_long_context_est": 10.9149,
+      "runs_with_200k_requests": 0,
+      "tree_pass": 11,
+      "flaky_retry_passes": 0,
+      "violations": {}
+    },
+    "hybrid-handoff-review": {
+      "n": 12,
+      "runs_ok": 12,
+      "excluded": 0,
+      "pass": 11,
+      "pass_rate": 0.9167,
+      "hidden_pass": 12,
+      "cost_total_usd": 54.8218,
+      "cost_of_pass_usd": 4.9838,
+      "cost_of_pass_billed_usd": 8.6695,
+      "cost_of_pass_claude_only_usd": 1.2981,
+      "gemini_billed_usd": 81.0854,
+      "cost_pass_median": 3.6685,
+      "cost_pass_min": 2.6659,
+      "cost_pass_max": 8.9953,
+      "cost_all_median": 3.8537,
+      "claude_usd": 14.2791,
+      "gemini_usd": 40.5427,
+      "wall_median_s": 2078.7,
+      "turns_median": 16.0,
+      "delegations_median": 2.5,
+      "delegations_zero_runs": 0,
+      "agy_writes_runs": 12,
+      "claude_bash_writes": 0,
+      "denials_median": 6.0,
+      "warm_starts": 2,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 12,
+      "slept_runs": 0,
+      "claude_usd_long_context_est": 14.2522,
+      "runs_with_200k_requests": 0,
+      "tree_pass": 11,
+      "flaky_retry_passes": 0,
+      "violations": {}
+    },
+    "solo-opus": {
+      "n": 20,
+      "runs_ok": 20,
+      "excluded": 0,
+      "pass": 20,
+      "pass_rate": 1.0,
+      "hidden_pass": 20,
+      "cost_total_usd": 157.6203,
+      "cost_of_pass_usd": 7.881,
+      "cost_of_pass_billed_usd": 7.881,
+      "cost_of_pass_claude_only_usd": 7.881,
+      "gemini_billed_usd": 0.0,
+      "cost_pass_median": 4.2947,
+      "cost_pass_min": 0.6521,
+      "cost_pass_max": 40.9225,
+      "cost_all_median": 4.2947,
+      "claude_usd": 157.6203,
+      "gemini_usd": 0,
+      "wall_median_s": 632.4,
+      "turns_median": 63.0,
+      "delegations_median": 0.0,
+      "delegations_zero_runs": 20,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 2,
+      "denials_median": 2.0,
+      "warm_starts": 0,
+      "caps_hit": 0,
+      "tampered": 0,
+      "usage_reconciles": 18,
+      "slept_runs": 0,
+      "claude_usd_long_context_est": 231.1193,
+      "runs_with_200k_requests": 4,
+      "tree_pass": 20,
+      "flaky_retry_passes": 0,
+      "violations": {}
+    },
+    "solo-sonnet": {
+      "n": 20,
+      "runs_ok": 20,
+      "excluded": 0,
+      "pass": 17,
+      "pass_rate": 0.85,
+      "hidden_pass": 18,
+      "cost_total_usd": 80.5006,
+      "cost_of_pass_usd": 4.7353,
+      "cost_of_pass_billed_usd": 4.7353,
+      "cost_of_pass_claude_only_usd": 4.7353,
+      "gemini_billed_usd": 0.0,
+      "cost_pass_median": 2.2753,
+      "cost_pass_min": 0.4593,
+      "cost_pass_max": 8.8268,
+      "cost_all_median": 2.358,
+      "claude_usd": 80.5006,
+      "gemini_usd": 0,
+      "wall_median_s": 676.4,
+      "turns_median": 69.0,
+      "delegations_median": 0.0,
+      "delegations_zero_runs": 20,
+      "agy_writes_runs": 0,
+      "claude_bash_writes": 1,
+      "denials_median": 3.0,
+      "warm_starts": 0,
+      "caps_hit": 2,
+      "tampered": 0,
+      "usage_reconciles": 17,
+      "slept_runs": 0,
+      "claude_usd_long_context_est": 168.6357,
+      "runs_with_200k_requests": 3,
+      "tree_pass": 18,
+      "flaky_retry_passes": 0,
+      "violations": {}
+    }
+  },
+  "paired_billed": {
+    "hybrid-handoff_vs_solo-opus": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 1.0051,
+      "ci95": [
+        0.6895,
+        1.5732
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 2.5966137,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 3.757588325,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 10.67014225,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 4.9635225,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 7.394625975,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 17.297331924999998,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 15.50391965,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 3.88643715,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@small": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 1.9048,
+      "ci95": [
+        1.759,
+        3.5632
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 2.5966137,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 4.9635225,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@medium": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 1.6491,
+      "ci95": [
+        1.3091,
+        1.8562
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 3.757588325,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 10.67014225,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 7.394625975,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@large": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.7683,
+      "ci95": [
+        0.4653,
+        1.2051
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 17.297331924999998,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 15.50391965,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 3.88643715,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 1.1773,
+      "ci95": [
+        0.9347,
+        1.7282
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.0625,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 4.263180674999999,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 4.7276318250000005,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 8.2012759,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 4.774062125,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 7.322393975000001,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 38.1933683,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 18.538501150000002,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 5.627169050000001,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@small": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 2.2769,
+      "ci95": [
+        1.6919,
+        5.8502
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 4.263180674999999,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 4.774062125,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@medium": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 1.5304,
+      "ci95": [
+        1.0062,
+        2.3354
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 4.7276318250000005,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 8.2012759,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 7.322393975000001,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@large": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 1.0872,
+      "ci95": [
+        0.9404,
+        1.441
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.1667,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 38.1933683,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 18.538501150000002,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 5.627169050000001,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 8,
+      "point": 1.1713,
+      "ci95": [
+        0.9711,
+        1.4027
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.0625,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 4.263180674999999,
+          "ref_cop": 2.5966137,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 4.7276318250000005,
+          "ref_cop": 3.757588325,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 8.2012759,
+          "ref_cop": 10.67014225,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 4.774062125,
+          "ref_cop": 4.9635225,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 7.322393975000001,
+          "ref_cop": 7.394625975,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 38.1933683,
+          "ref_cop": 17.297331924999998,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 18.538501150000002,
+          "ref_cop": 15.50391965,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 5.627169050000001,
+          "ref_cop": 3.88643715,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@small": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 2,
+      "point": 1.1954,
+      "ci95": [
+        0.9618,
+        1.6418
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 4.263180674999999,
+          "ref_cop": 2.5966137,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 4.774062125,
+          "ref_cop": 4.9635225,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@medium": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 3,
+      "point": 0.928,
+      "ci95": [
+        0.7686,
+        1.2582
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 4.7276318250000005,
+          "ref_cop": 3.757588325,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 8.2012759,
+          "ref_cop": 10.67014225,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 7.322393975000001,
+          "ref_cop": 7.394625975,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@large": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 3,
+      "point": 1.415,
+      "ci95": [
+        1.1957,
+        2.208
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.1667,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 38.1933683,
+          "ref_cop": 17.297331924999998,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 18.538501150000002,
+          "ref_cop": 15.50391965,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 5.627169050000001,
+          "ref_cop": 3.88643715,
+          "size_class": "large"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.5763,
+      "ci95": [
+        0.4211,
+        0.8287
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.15,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.61013465,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.5142594000000001,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 2.4824815500000006,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.3468019,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 2.6667906,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": null,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 7.34397075,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.403690666666667,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@small": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 0.9969,
+      "ci95": [
+        0.8373,
+        1.1861
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.2,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.61013465,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.3468019,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@medium": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.4111,
+      "ci95": [
+        0.254,
+        0.6196
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.5142594000000001,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 2.4824815500000006,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 2.6667906,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@large": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.7297,
+      "ci95": [
+        0.4861,
+        1.6266
+      ],
+      "boot": 10000,
+      "undefined_draws": 360,
+      "seed": 20260914,
+      "pass_rate_diff": -0.2857,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": null,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 7.34397075,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.403690666666667,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    }
+  },
+  "paired_claude_only": {
+    "hybrid-handoff_vs_solo-opus": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.1605,
+      "ci95": [
+        0.093,
+        0.3377
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.708509625,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.72000575,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 1.9445035,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 1.2191801249999998,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 1.63395075,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 1.8628378749999999,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 1.8528065000000002,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 0.6108735000000001,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@small": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 0.4857,
+      "ci95": [
+        0.4321,
+        0.9723
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.708509625,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 1.2191801249999998,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@medium": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.3248,
+      "ci95": [
+        0.2386,
+        0.3796
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.72000575,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 1.9445035,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 1.63395075,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff_vs_solo-opus@large": {
+      "arm": "hybrid-handoff",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.0906,
+      "ci95": [
+        0.0501,
+        0.144
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 1.8628378749999999,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 1.8528065000000002,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 0.6108735000000001,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.1629,
+      "ci95": [
+        0.1059,
+        0.3284
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.0625,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.9929628749999999,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.874627875,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 1.3436331250000002,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 1.174234625,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 1.191309875,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 3.0463685,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 1.9391275000000001,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 0.9969169999999999,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@small": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 0.546,
+      "ci95": [
+        0.4161,
+        1.3626
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.9929628749999999,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 1.174234625,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@medium": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.2577,
+      "ci95": [
+        0.1648,
+        0.4321
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.874627875,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 1.3436331250000002,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 1.191309875,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_solo-opus@large": {
+      "arm": "hybrid-handoff-review",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.1121,
+      "ci95": [
+        0.0819,
+        0.2078
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.1667,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 3.0463685,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 1.9391275000000001,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 0.9969169999999999,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 8,
+      "point": 1.0144,
+      "ci95": [
+        0.8494,
+        1.2326
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.0625,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.9929628749999999,
+          "ref_cop": 0.708509625,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.874627875,
+          "ref_cop": 0.72000575,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 1.3436331250000002,
+          "ref_cop": 1.9445035,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 1.174234625,
+          "ref_cop": 1.2191801249999998,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 1.191309875,
+          "ref_cop": 1.63395075,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 3.0463685,
+          "ref_cop": 1.8628378749999999,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 1.9391275000000001,
+          "ref_cop": 1.8528065000000002,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 0.9969169999999999,
+          "ref_cop": 0.6108735000000001,
+          "size_class": "large"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@small": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 2,
+      "point": 1.1242,
+      "ci95": [
+        0.9631,
+        1.4015
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.9929628749999999,
+          "ref_cop": 0.708509625,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 1.174234625,
+          "ref_cop": 1.2191801249999998,
+          "size_class": "small"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@medium": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 3,
+      "point": 0.7932,
+      "ci95": [
+        0.691,
+        1.2148
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.874627875,
+          "ref_cop": 0.72000575,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 1.3436331250000002,
+          "ref_cop": 1.9445035,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 1.191309875,
+          "ref_cop": 1.63395075,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "hybrid-handoff-review_vs_hybrid-handoff@large": {
+      "arm": "hybrid-handoff-review",
+      "ref": "hybrid-handoff",
+      "n_tasks": 3,
+      "point": 1.2368,
+      "ci95": [
+        1.0466,
+        1.6353
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.1667,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": 3.0463685,
+          "ref_cop": 1.8628378749999999,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 1.9391275000000001,
+          "ref_cop": 1.8528065000000002,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 0.9969169999999999,
+          "ref_cop": 0.6108735000000001,
+          "size_class": "large"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 8,
+      "point": 0.5763,
+      "ci95": [
+        0.4211,
+        0.8287
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.15,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.61013465,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.5142594000000001,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 2.4824815500000006,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.3468019,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 2.6667906,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-attach",
+          "arm_cop": null,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 7.34397075,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.403690666666667,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@small": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 2,
+      "point": 0.9969,
+      "ci95": [
+        0.8373,
+        1.1861
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": -0.2,
+      "per_task": [
+        {
+          "task_id": "caddy-7877",
+          "arm_cop": 0.61013465,
+          "ref_cop": 0.7287248749999999,
+          "size_class": "small"
+        },
+        {
+          "task_id": "caddy-7995",
+          "arm_cop": 3.3468019,
+          "ref_cop": 2.8217320000000004,
+          "size_class": "small"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@medium": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.4111,
+      "ci95": [
+        0.254,
+        0.6196
+      ],
+      "boot": 10000,
+      "undefined_draws": 0,
+      "seed": 20260914,
+      "pass_rate_diff": 0.0,
+      "per_task": [
+        {
+          "task_id": "caddy-7888",
+          "arm_cop": 0.5142594000000001,
+          "ref_cop": 2.024355083333333,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "caddy-7913",
+          "arm_cop": 2.4824815500000006,
+          "ref_cop": 8.151014374999999,
+          "size_class": "medium"
+        },
+        {
+          "task_id": "cli-14136",
+          "arm_cop": 2.6667906,
+          "ref_cop": 4.304048250000001,
+          "size_class": "medium"
+        }
+      ]
+    },
+    "solo-sonnet_vs_solo-opus@large": {
+      "arm": "solo-sonnet",
+      "ref": "solo-opus",
+      "n_tasks": 3,
+      "point": 0.7297,
+      "ci95": [
+        0.4861,
+        1.6266
+      ],
+      "boot": 10000,
+      "undefined_draws": 360,
+      "seed": 20260914,
+      "pass_rate_diff": -0.2857,
+      "per_task": [
+        {
+          "task_id": "cli-attach",
+          "arm_cop": null,
+          "ref_cop": 37.177185124999994,
+          "size_class": "large"
+        },
+        {
+          "task_id": "k6-6169",
+          "arm_cop": 7.34397075,
+          "ref_cop": 12.864748916666663,
+          "size_class": "large"
+        },
+        {
+          "task_id": "zoekt-1105",
+          "arm_cop": 2.403690666666667,
+          "ref_cop": 4.797041083333334,
+          "size_class": "large"
+        }
+      ]
+    }
+  }
+}

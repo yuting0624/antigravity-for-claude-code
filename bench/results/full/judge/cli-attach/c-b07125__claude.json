@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-b07125",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:46:10+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8135150271c4d346b2dbdceb760b14e45d77dbf0162a1d823033bdf83eaa9453",
+  "wall_s": 60.9,
+  "cost_usd": 1.1061922499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 2,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.667,
+  "rationale": {
+    "consistency": "Uses FlagErrorf, heredoc, ghinstance/gh conventions; but ships a testing.go importing `testing` in a production package, reuses PRRepository for Issue, and plumbs Config ad hoc per command.",
+    "edge_cases": "Validates size, type, dir/non-regular/empty, dup via SameFile, video alt, code spans, ref defs; but a mid-batch upload failure still writes a partial body (spec: nothing written) and default alt strips extension rather than using file name.",
+    "scope": "Focused on the feature, but leaves dead code: unused isSingleImage, unused UploadStub type, StubUploadToHost's unused t param; extra databaseId added to several existing queries.",
+    "readability": "client.go repeats the same uploadError construction five times; attach.go's argIdx walk to map ToAppend back to assets is convoluted; references.go is 600 lines of hand-rolled byte scanning beside goldmark.",
+    "robustness": "Files/responses closed, nil-safe Flag receiver, mutex around shared error; but partial uploads are committed and reported as error, and params[\"body\"].(string) is an unchecked assertion.",
+    "maintainability": "Uploader construction plus token-type lookup duplicated across six commands; hasDeferredEdits duplicates hasDeferredFlags; attachAssetsToMarkdown re-parses via newAttachableMarkdown; uploadError fields unused."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-a7e094",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:03:17+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "772e9ad3ca7f489f784a00de54fb40413f633da512592742afc22fba64cf7284",
+  "wall_s": 73.0,
+  "cost_usd": 0.5877797500000002,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Uses slices/maps helpers and lowercase comment style like surrounding code; unexported helper method on Helper fits existing patterns.",
+    "edge_cases": "Handles chained order lines via existing, nil options map, invalid order leaving no residue, plugin init order preserved; caller-supplied 'order' of wrong type falls back to global.",
+    "scope": "Focused on order isolation, but cloning the whole options map changes semantics for every option, and the RegisterDirectiveOrder loop rewrite is a small extra refactor (justified by aliasing fix).",
+    "readability": "Clear names and explanatory comments; type juggling with adaptedDirectiveOrder in append is slightly awkward but correct.",
+    "robustness": "No shared mutable state per adaptation, default order cloned so never aliased, no locks or panics; per-Setup map clone is cheap.",
+    "maintainability": "Order is threaded explicitly through buildSubroute/sortRoutes; the unexported-type-in-options trick is a bit magical but documented; global still exists for plugins only."
+  },
+  "flags": []
+}

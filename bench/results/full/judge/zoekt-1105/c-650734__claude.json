@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-650734",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:48:50+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b8fd0ff5636b15c123011e83dcb24c4425554acad462334f63415576af4f0cd1",
+  "wall_s": 76.1,
+  "cost_usd": 0.5950212500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Reuses index.ReadMetadataPath/IndexFilePaths and gitindex idioms; FlagSet-per-subcommand and returned errors differ from siblings' global flag/log.Fatal but fit a subcommand tool; odd 2026 Sourcegraph header.",
+    "edge_cases": "Handles root-is-repo, bare .git, .git files, duplicate names across roots, tombstones, compound shards, missing index dir, non-dir root; subcommand -h exits 1 and a root literally named list/remove is misparsed.",
+    "scope": "Core ask delivered; adds up-to-date preview via new public gitindex.BranchVersions and a loop refactor of indexGitRepo, plus a sync alias and remove-by-source path: modest but purposeful creep.",
+    "readability": "Small well-named functions, doc comments explain non-obvious choices (lock file left behind, shared shards); usage text hand-rolled but clear.",
+    "robustness": "Non-blocking flock before planning, dry run never mkdirs or writes, errors wrapped; but NameFromConfig defaults to the new behaviour so any un-updated caller silently changes name semantics, and isUpToDate errors are swallowed under -f.",
+    "maintainability": "isUpToDate duplicates IncrementalSkipIndexing logic; '-index' and 'no index directory' repeated per subcommand; inverted default on the new gitindex option is a footgun for future callers despite the comment."
+  },
+  "flags": []
+}

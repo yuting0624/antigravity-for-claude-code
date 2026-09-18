@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-526972",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:21:30+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "041d8e141715439bfecf4cd832a0a04d7f2f1037f6f3661dcc3ff71f9a4e2715",
+  "wall_s": 51.3,
+  "cost_usd": 0.135228,
+  "usage": {
+    "input": 28620,
+    "output": 6499,
+    "thinking": 6314,
+    "cache_read": 0,
+    "total": 35119
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Seamlessly aligns with Caddy module conventions, surrounding filter implementations, and idiomatic Go practices.",
+    "edge_cases": "Accurately handles quoted values, empty values, missing semicolons, malformed cookies, and missing equal signs.",
+    "scope": "Strictly adheres to the constraints and implements exactly the requested Set-Cookie functionality with no fluff.",
+    "readability": "The logic is exceptionally clear, backed by well-written docstrings and a clean parsing helper function.",
+    "robustness": "Uses safe string slicing and gracefully handles unexpected Zap field interface types without panicking.",
+    "maintainability": "The separation of header parsing from the main filter loop makes the component highly extensible and testable."
+  },
+  "flags": []
+}

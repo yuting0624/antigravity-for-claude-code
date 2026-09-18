@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-fea178",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:47:43+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a400781feaa7abafb7157bbfb0013ed3ec265aa29e0a86bd55362421a33dbff6",
+  "wall_s": 76.7,
+  "cost_usd": 0.109048,
+  "usage": {
+    "input": 28604,
+    "output": 4320,
+    "thinking": 4089,
+    "cache_read": 0,
+    "total": 32924
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches Caddy's idioms perfectly, extracting a helper to share logic with the prefix matcher.",
+    "edge_cases": "Elegantly handles valid and invalid percent-encoded sequences without splitting multi-byte escapes.",
+    "scope": "Strictly fixes the suffix bug by correctly reusing the prefix logic; no unrelated changes.",
+    "readability": "The boundary detection and loop logic are very clear, well-named, and easy to follow.",
+    "robustness": "Safely avoids invalid states, correctly identifies logical character boundaries, and prevents panics.",
+    "maintainability": "Removes the deeply flawed reverse() hack, replacing it with a reusable and testable matching primitive."
+  },
+  "flags": []
+}

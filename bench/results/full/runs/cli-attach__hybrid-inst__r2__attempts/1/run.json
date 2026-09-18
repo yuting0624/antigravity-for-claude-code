@@ -1,0 +1,711 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-attach__hybrid-inst__r2",
+  "task_id": "cli-attach",
+  "arm": "hybrid-inst",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "C",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-16T10:55:42+00:00",
+  "ended_at": "2026-09-16T13:22:01+00:00",
+  "agent_wall_s": 8777.5,
+  "agent_active_s": 7560.9,
+  "suspended_s": 1216.7,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "00cb939532726c1db8830d239340ee4e10ef9f0b3bb09f485fdedeb31db17b92"
+  },
+  "claude": {
+    "session_id": "3be05991-9fac-4ee9-b948-309428d20680",
+    "subtype": "success",
+    "is_error": true,
+    "num_turns": 81,
+    "num_turns_source": "result",
+    "duration_ms": 7555342,
+    "duration_api_ms": 1144617,
+    "total_cost_usd": 15.317872500000004,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 122,
+      "cache_creation_input_tokens": 1320004,
+      "cache_read_input_tokens": 9489491,
+      "output_tokens": 92811,
+      "output_tokens_details": {
+        "thinking_tokens": 40489
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 1320004
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2082,
+        "outputTokens": 27,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0022170000000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 122,
+        "outputTokens": 92811,
+        "cacheReadInputTokens": 9489491,
+        "cacheCreationInputTokens": 1320004,
+        "webSearchRequests": 0,
+        "costUSD": 15.315655500000004,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 40489,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 15.315656,
+    "recomputed_vs_reported_gap": -0.0001,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 62,
+      "input": 122,
+      "output": 92811,
+      "cache_creation": 1320004,
+      "cache_read": 9489491,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 61,
+          "input": 122,
+          "output": 92811,
+          "cache_creation": 1320004,
+          "cache_read": 9489491
+        },
+        "<synthetic>": {
+          "turns": 1,
+          "input": 0,
+          "output": 0,
+          "cache_creation": 0,
+          "cache_read": 0
+        }
+      },
+      "tool_calls": {
+        "Bash": 60,
+        "Read": 11,
+        "Write": 8,
+        "Edit": 1
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 9,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 122,
+        "transcript": 122,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 92811,
+        "transcript": 92811,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 1320004,
+        "transcript": 1320004,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 9489491,
+        "transcript": 9489491,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 5,
+    "denied_tools": {
+      "Bash:agy-delegate": 2,
+      "Write": 1,
+      "Bash:ls": 2
+    },
+    "result_head": "API Error: getaddrinfo ENOTFOUND oauth2.googleapis.com",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 10,
+    "usage_lines": 10,
+    "signal_only": 0,
+    "succeeded": 10,
+    "zero_usage_lines": 0,
+    "signals": {
+      "TIMEOUT": 2
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 10,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 9,
+        "input": 5979183,
+        "output": 428354,
+        "thinking": 325381,
+        "cache_read": 39361674,
+        "usd": 9.04284
+      },
+      "flash-lo": {
+        "calls": 1,
+        "input": 59031,
+        "output": 623,
+        "thinking": 0,
+        "cache_read": 64779,
+        "usd": 0.051468
+      }
+    },
+    "totals": {
+      "input": 6038214,
+      "output": 428977,
+      "thinking": 325381,
+      "cache_read": 39426453,
+      "total": 6467191
+    },
+    "invariant_ok": true,
+    "shadow_usd": 9.094308,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "9ddbe48a-c61b-408f-9713-c0f6739088c2",
+      "6c260cb0-3964-40fb-ac75-bda457b8b4cb",
+      "196ef36f-e885-4f9d-86ca-4f0d8e2f7922",
+      "bb5b1788-cb2a-4425-9b64-09ecc19fb61e",
+      "5d30a519-2c47-4b8c-b158-d3b5d33666ee",
+      "6ad845c7-8434-448f-ae4c-4cc936ef6458",
+      "8af41296-c949-40c8-b0c9-8b786fe8297c",
+      "0985d0c0-7e5a-4442-b93a-d41930f06f3b",
+      "d71d2e04-7172-4601-ab1b-6bd210f07e94",
+      "71f71772-6f83-4c22-a174-862944497299"
+    ],
+    "agy_duration_s_sum": 5768.91,
+    "wrapper_calls_in_transcript": 7,
+    "trace_audit": {
+      "9ddbe48a-c61b-408f-9713-c0f6739088c2": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 79,
+          "GENERIC": 78,
+          "SYSTEM_MESSAGE": 3,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 38,
+          "manage_task": 4,
+          "view_file": 15,
+          "grep_search": 17,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T10:59:13Z",
+        "last_step_at": "2026-09-16T11:07:35Z"
+      },
+      "6c260cb0-3964-40fb-ac75-bda457b8b4cb": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 5,
+          "GENERIC": 4
+        },
+        "tool_calls": {
+          "run_command": 3,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T11:08:39Z",
+        "last_step_at": "2026-09-16T11:09:26Z"
+      },
+      "196ef36f-e885-4f9d-86ca-4f0d8e2f7922": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 49,
+          "GENERIC": 48,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 24,
+          "view_file": 12,
+          "replace_file_content": 3,
+          "grep_search": 5,
+          "find_by_name": 3,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T11:12:40Z",
+        "last_step_at": "2026-09-16T11:20:54Z"
+      },
+      "bb5b1788-cb2a-4425-9b64-09ecc19fb61e": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 36,
+          "GENERIC": 35,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 17,
+          "run_command": 9,
+          "replace_file_content": 9
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 9,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T11:21:10Z",
+        "last_step_at": "2026-09-16T11:26:34Z"
+      },
+      "5d30a519-2c47-4b8c-b158-d3b5d33666ee": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 53,
+          "GENERIC": 52,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 19,
+          "find_by_name": 1,
+          "grep_search": 12,
+          "run_command": 14,
+          "write_to_file": 6
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T11:29:58Z",
+        "last_step_at": "2026-09-16T11:43:04Z"
+      },
+      "6ad845c7-8434-448f-ae4c-4cc936ef6458": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 81,
+          "GENERIC": 80,
+          "CHECKPOINT": 3
+        },
+        "tool_calls": {
+          "list_dir": 2,
+          "view_file": 32,
+          "run_command": 24,
+          "grep_search": 11,
+          "find_by_name": 3,
+          "replace_file_content": 7,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 8,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T11:48:33Z",
+        "last_step_at": "2026-09-16T12:01:50Z"
+      },
+      "8af41296-c949-40c8-b0c9-8b786fe8297c": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 64,
+          "GENERIC": 63,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 29,
+          "grep_search": 12,
+          "find_by_name": 1,
+          "run_command": 18,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T12:04:45Z",
+        "last_step_at": "2026-09-16T12:15:21Z"
+      },
+      "0985d0c0-7e5a-4442-b93a-d41930f06f3b": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 56,
+          "GENERIC": 55,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 22,
+          "grep_search": 9,
+          "find_by_name": 2,
+          "run_command": 16,
+          "replace_file_content": 6
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T12:19:11Z",
+        "last_step_at": "2026-09-16T12:27:26Z"
+      },
+      "d71d2e04-7172-4601-ab1b-6bd210f07e94": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 92,
+          "GENERIC": 91,
+          "CHECKPOINT": 3
+        },
+        "tool_calls": {
+          "view_file": 47,
+          "grep_search": 16,
+          "find_by_name": 1,
+          "run_command": 17,
+          "replace_file_content": 10
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 10,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T12:27:41Z",
+        "last_step_at": "2026-09-16T12:40:00Z"
+      },
+      "71f71772-6f83-4c22-a174-862944497299": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 53,
+          "GENERIC": 53,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 38,
+          "grep_search": 8,
+          "find_by_name": 1,
+          "run_command": 2,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T12:40:12Z",
+        "last_step_at": "2026-09-16T12:54:08Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 55
+  },
+  "writes": {
+    "claude_tool": 8,
+    "claude_bash": 7,
+    "agy": 3,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 193,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "agy-delegate": 1
+    },
+    "gate_allows": 59,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [
+      "cat .agy-prompts/attachments-core.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 15m --digest - 2>&1 | tail -30",
+      "cat .agy-prompts/references.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 14m --digest - 2>&1 | tail -30",
+      "cat .agy-prompts/cmd-comment.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 14m --digest - 2>&1 | tail -25",
+      "cat .agy-prompts/cmd-issue-create.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 14m --digest - 2>&1 | tail -20",
+      "cat .agy-prompts/cmd-pr-create.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 14m --digest - 2>&1 | tail -20",
+      "cat .agy-prompts/cmd-issue-edit.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 14m --digest - 2>&1 | tail -20",
+      "cat .agy-prompts/cmd-pr-edit.md | agy-delegate --tier flash --yolo --dir /Users/linyuting/.cache/agy-bench/work/cli-attach__hybrid-inst__r2 --timeout 14m --digest - 2>&1 | tail -20"
+    ],
+    "claude_bash_files": [
+      "internal/attachments/attach.go",
+      "internal/attachments/client.go",
+      "internal/attachments/flags.go",
+      "internal/attachments/references.go",
+      "internal/attachments/testsupport.go",
+      "internal/attachments/userasset.go",
+      "pkg/cmd/issue/comment/comment.go",
+      "pkg/cmd/pr/comment/comment.go",
+      "pkg/cmd/pr/shared/commentable.go",
+      "pkg/cmd/issue/create/create.go",
+      "pkg/cmd/pr/create/create.go",
+      "pkg/cmd/issue/edit/edit.go",
+      "pkg/cmd/pr/edit/edit.go"
+    ],
+    "agy_files": [
+      "PROBE.txt",
+      "internal/config/auth_config.go",
+      "internal/gh/gh.go",
+      "internal/ghinstance/host.go",
+      "pkg/httpmock/legacy.go",
+      "api/queries_issue.go",
+      "api/queries_pr.go",
+      "api/queries_repo.go",
+      "api/query_builder.go"
+    ],
+    "claude_tool_files": [
+      ".agy-prompts/attachments-core.md",
+      "internal/attachments/references.go",
+      ".agy-prompts/references.md",
+      ".agy-prompts/cmd-comment.md",
+      ".agy-prompts/cmd-issue-create.md",
+      ".agy-prompts/cmd-pr-create.md",
+      ".agy-prompts/cmd-pr-edit.md",
+      ".agy-prompts/cmd-issue-edit.md"
+    ]
+  },
+  "outcome": {
+    "build_ok": false,
+    "build_stderr_tail": "# github.com/cli/cli/v2/pkg/cmd/issue/edit\npkg/cmd/issue/edit/edit.go:532:1: syntax error: non-declaration statement outside function body\n# github.com/cli/cli/v2/pkg/cmd/pr/edit\npkg/cmd/pr/edit/edit.go:4:2: \"context\" imported and not used\npkg/cmd/pr/edit/edit.go:60:6: declared and not used: attachFlag\n",
+    "vet_ok": false,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": null,
+    "full_suite": null,
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 28,
+    "code_added": 1836,
+    "code_removed": 37,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 990,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/attachments/testsupport.go",
+      "internal/config/auth_config.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "3b377874e2d208e4aecb97d64d2e507ebc5ab162cf630c83d7253a063cd746e0"
+  },
+  "diff_files": {
+    ".agy-prompts/attachments-core.md": {
+      "added": 277,
+      "removed": 0,
+      "class": "doc"
+    },
+    ".agy-prompts/cmd-comment.md": {
+      "added": 134,
+      "removed": 0,
+      "class": "doc"
+    },
+    ".agy-prompts/cmd-issue-create.md": {
+      "added": 101,
+      "removed": 0,
+      "class": "doc"
+    },
+    ".agy-prompts/cmd-issue-edit.md": {
+      "added": 110,
+      "removed": 0,
+      "class": "doc"
+    },
+    ".agy-prompts/cmd-pr-create.md": {
+      "added": 104,
+      "removed": 0,
+      "class": "doc"
+    },
+    ".agy-prompts/cmd-pr-edit.md": {
+      "added": 109,
+      "removed": 0,
+      "class": "doc"
+    },
+    ".agy-prompts/references.md": {
+      "added": 155,
+      "removed": 0,
+      "class": "doc"
+    },
+    "api/queries_issue.go": {
+      "added": 19,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/queries_pr.go": {
+      "added": 23,
+      "removed": 3,
+      "class": "code"
+    },
+    "api/queries_repo.go": {
+      "added": 4,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/query_builder.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/attach.go": {
+      "added": 83,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/client.go": {
+      "added": 266,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/flags.go": {
+      "added": 100,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/references.go": {
+      "added": 715,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/testsupport.go": {
+      "added": 72,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/userasset.go": {
+      "added": 154,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/config/auth_config.go": {
+      "added": 28,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/gh/gh.go": {
+      "added": 16,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/ghinstance/host.go": {
+      "added": 8,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/comment/comment.go": {
+      "added": 12,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/create/create.go": {
+      "added": 62,
+      "removed": 4,
+      "class": "code"
+    },
+    "pkg/cmd/issue/edit/edit.go": {
+      "added": 77,
+      "removed": 3,
+      "class": "code"
+    },
+    "pkg/cmd/pr/comment/comment.go": {
+      "added": 16,
+      "removed": 4,
+      "class": "code"
+    },
+    "pkg/cmd/pr/create/create.go": {
+      "added": 67,
+      "removed": 12,
+      "class": "code"
+    },
+    "pkg/cmd/pr/edit/edit.go": {
+      "added": 14,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/commentable.go": {
+      "added": 91,
+      "removed": 9,
+      "class": "code"
+    },
+    "pkg/httpmock/legacy.go": {
+      "added": 7,
+      "removed": 2,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 15.317872500000004,
+    "gemini_usd": 9.094308,
+    "total_usd": 24.412180500000005
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "suspended"
+}

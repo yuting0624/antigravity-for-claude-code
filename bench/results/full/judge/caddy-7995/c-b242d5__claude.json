@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b242d5",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:04:46+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 44.4,
+  "cost_usd": 0.46108225,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Uses the existing `existing any` accumulator idiom for global options, slices helpers, and comment style; fits the package well.",
+    "edge_cases": "Invalid order leaves no state since nothing global is written; multiple order lines accumulate via existing; nil options handled after maps.Clone; plugin order preserved via clone of directiveOrder.",
+    "scope": "Focused on the order state; RegisterDirectiveOrder rewrite is justified by the aliasing bug with defaultDirectiveOrder, but the extra delete(options, \"order\") is redundant once the map is cloned.",
+    "readability": "Clear helper name directiveOrderFor and documented nil sentinel on buildSubroute; comments are a bit chatty and conversational in places.",
+    "robustness": "No shared mutable order state: global only written at init, per-adaptation slice is cloned before in-place DeleteFunc, options map cloned so callers' maps are untouched.",
+    "maintainability": "Single accessor for the effective order removes hidden global coupling; bool->[]string parameter is explicit, though nil-means-no-sort is a slightly implicit contract."
+  },
+  "flags": []
+}

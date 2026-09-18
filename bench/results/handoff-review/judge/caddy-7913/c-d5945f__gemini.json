@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-d5945f",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T11:02:53+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2897bb3c071f9d839afd84e19fc10d59eaba638c46ae3d051e4583f2668cbb27",
+  "wall_s": 142.5,
+  "cost_usd": 0.34181,
+  "usage": {
+    "input": 44647,
+    "output": 21043,
+    "thinking": 20815,
+    "cache_read": 0,
+    "total": 65690
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches Caddy's directive registration, JSON unmarshaling, package layout, and wrapper patterns.",
+    "edge_cases": "Safely handles time.Duration overflow, unit parsing, lack of SetDeadline support, and chunk boundaries.",
+    "scope": "Implements all idle timeout and rate floor features exactly as requested without unrelated modifications.",
+    "readability": "Cleanly abstracts deadline math, uses clear naming, and integrates well into the HTTP handlers.",
+    "robustness": "Safe against panics, gracefully skips unsupported controllers, and reliably bounds chunked reads and writes.",
+    "maintainability": "Decoupled timeout logic and cleanly modular middleware make future extensions and testing easy."
+  },
+  "flags": []
+}

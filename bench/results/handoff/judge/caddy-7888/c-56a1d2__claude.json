@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-56a1d2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:05:46+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b4807bf640a8b9a4306803dcdde8dda9c73e026511c610f0084467df8da59c01",
+  "wall_s": 28.1,
+  "cost_usd": 0.22077124999999997,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely (struct, Validate, module ID, labelled loop, interface assertions); extra []string branch departs from how sibling filters handle arrays.",
+    "edge_cases": "Unparseable lines pass through, exact name match, quoting preserved, delete drops the whole value, suffix kept verbatim via Cut; leading whitespace before name is silently dropped on rewrite.",
+    "scope": "Delivers the feature, but adds speculative []string handling and an unrelated Validator assertion for CookieFilter.",
+    "readability": "Clear names and flow; LINES label matches existing OUTER style; struct doc is terse but adequate.",
+    "robustness": "No panics: type switch guards Interface, ParseSetCookie errors handled, unknown types returned unchanged.",
+    "maintainability": "UnmarshalCaddyfile is a near-verbatim copy of CookieFilter's with no shared helper; otherwise straightforward to extend."
+  },
+  "flags": []
+}

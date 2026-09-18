@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-087ba6",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:49:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cf380e3f6d2c458cbcdc3178fc0d3a60057565b65c08e187de62f637c803d782",
+  "wall_s": 16.8,
+  "cost_usd": 0.16995575,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter's structure, module ID pattern, action types, OUTER-label loop and interface guards; minor receiver-name mix (f vs m).",
+    "edge_cases": "Handles unparsable lines, no-attribute lines, quoted replace, exact-name match, delete; leading whitespace before name would be dropped on rewrite, and quoted hash loses quoting (acceptable).",
+    "scope": "Only adds the new filter, registration and guards; no unrelated edits.",
+    "readability": "Clear flow; suffix preservation via strings.Cut is obvious; doc comment states first-match semantics.",
+    "robustness": "No panics; non-array fields pass through; default switch arm safely passes line through.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's; a shared helper would avoid drift between the two filters."
+  },
+  "flags": []
+}

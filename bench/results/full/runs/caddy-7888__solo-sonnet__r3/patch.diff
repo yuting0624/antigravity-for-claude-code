@@ -1,0 +1,216 @@
+diff --git a/modules/logging/filters.go b/modules/logging/filters.go
+index 309f473f6..6ada8b696 100644
+--- a/modules/logging/filters.go
++++ b/modules/logging/filters.go
+@@ -39,6 +39,7 @@ func init() {
+ 	caddy.RegisterModule(IPMaskFilter{})
+ 	caddy.RegisterModule(QueryFilter{})
+ 	caddy.RegisterModule(CookieFilter{})
++	caddy.RegisterModule(SetCookieFilter{})
+ 	caddy.RegisterModule(RegexpFilter{})
+ 	caddy.RegisterModule(RenameFilter{})
+ 	caddy.RegisterModule(MultiRegexpFilter{})
+@@ -564,6 +565,180 @@ OUTER:
+ 	return in
+ }
+ 
++// SetCookieFilter is a Caddy log field filter that filters
++// cookies set via the Set-Cookie response header.
++//
++// This filter updates the logged Set-Cookie header values
++// to remove, replace or hash cookies containing sensitive data. For instance,
++// it can be used to redact any kind of secrets, such as session IDs.
++//
++// Unlike the Cookie request header, each Set-Cookie header value carries
++// exactly one cookie along with its attributes (e.g. `name=value; Path=/;
++// Secure`). Only the leading `name=value` pair is transformed; the
++// attributes are preserved verbatim.
++//
++// If several actions are configured for the same cookie name, only the first
++// will be applied.
++type SetCookieFilter struct {
++	// A list of actions to apply to the cookies.
++	Actions []cookieFilterAction `json:"actions"`
++}
++
++// Validate checks that action types are correct.
++func (f *SetCookieFilter) Validate() error {
++	for _, a := range f.Actions {
++		if err := a.Type.IsValid(); err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
++// CaddyModule returns the Caddy module information.
++func (SetCookieFilter) CaddyModule() caddy.ModuleInfo {
++	return caddy.ModuleInfo{
++		ID:  "caddy.logging.encoders.filter.set_cookie",
++		New: func() caddy.Module { return new(SetCookieFilter) },
++	}
++}
++
++// UnmarshalCaddyfile sets up the module from Caddyfile tokens.
++func (m *SetCookieFilter) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
++	d.Next() // consume filter name
++	for d.NextBlock(0) {
++		cfa := cookieFilterAction{}
++		switch d.Val() {
++		case "replace":
++			if !d.NextArg() {
++				return d.ArgErr()
++			}
++
++			cfa.Type = replaceAction
++			cfa.Name = d.Val()
++
++			if !d.NextArg() {
++				return d.ArgErr()
++			}
++			cfa.Value = d.Val()
++
++		case "hash":
++			if !d.NextArg() {
++				return d.ArgErr()
++			}
++
++			cfa.Type = hashAction
++			cfa.Name = d.Val()
++
++		case "delete":
++			if !d.NextArg() {
++				return d.ArgErr()
++			}
++
++			cfa.Type = deleteAction
++			cfa.Name = d.Val()
++
++		default:
++			return d.Errf("unrecognized subdirective %s", d.Val())
++		}
++
++		m.Actions = append(m.Actions, cfa)
++	}
++	return nil
++}
++
++// setCookieParts holds the parsed components of a single Set-Cookie
++// header value: the leading name=value pair, and the attribute suffix
++// (starting with the first ';', if any) preserved verbatim.
++type setCookieParts struct {
++	name   string
++	value  string
++	quoted bool
++	suffix string
++}
++
++// parseSetCookie extracts the name=value pair from the front of a
++// Set-Cookie header value, leaving the attribute suffix untouched.
++// It reports false if s doesn't look like a valid Set-Cookie value.
++func parseSetCookie(s string) (setCookieParts, bool) {
++	nameValue, suffix := s, ""
++	if i := strings.IndexByte(s, ';'); i >= 0 {
++		nameValue, suffix = s[:i], s[i:]
++	}
++
++	eq := strings.IndexByte(nameValue, '=')
++	if eq < 0 {
++		return setCookieParts{}, false
++	}
++
++	name, value := nameValue[:eq], nameValue[eq+1:]
++	if name == "" {
++		return setCookieParts{}, false
++	}
++
++	quoted := false
++	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
++		quoted = true
++		value = value[1 : len(value)-1]
++	}
++
++	return setCookieParts{name: name, value: value, quoted: quoted, suffix: suffix}, true
++}
++
++// formatSetCookie reassembles a Set-Cookie header value from a
++// (possibly transformed) name and value, restoring the original
++// quoting of the value and the untouched attribute suffix.
++func formatSetCookie(name, value string, quoted bool, suffix string) string {
++	if quoted {
++		value = `"` + value + `"`
++	}
++	return name + "=" + value + suffix
++}
++
++// Filter filters the input field.
++func (m SetCookieFilter) Filter(in zapcore.Field) zapcore.Field {
++	cookiesSlice, ok := in.Interface.(internal.LoggableStringArray)
++	if !ok {
++		return in
++	}
++
++	newArray := make(internal.LoggableStringArray, 0, len(cookiesSlice))
++
++OUTER:
++	for _, s := range cookiesSlice {
++		parts, ok := parseSetCookie(s)
++		if !ok {
++			newArray = append(newArray, s)
++			continue
++		}
++
++		for _, a := range m.Actions {
++			if parts.name != a.Name {
++				continue
++			}
++
++			switch a.Type {
++			case replaceAction:
++				newArray = append(newArray, formatSetCookie(parts.name, a.Value, parts.quoted, parts.suffix))
++				continue OUTER
++
++			case hashAction:
++				newArray = append(newArray, formatSetCookie(parts.name, hash(parts.value), parts.quoted, parts.suffix))
++				continue OUTER
++
++			case deleteAction:
++				continue OUTER
++			}
++		}
++
++		newArray = append(newArray, s)
++	}
++
++	in.Interface = newArray
++
++	return in
++}
++
+ // RegexpFilter is a Caddy log field filter that
+ // replaces the field matching the provided regexp
+ // with the indicated string. If the field is an
+@@ -879,6 +1054,7 @@ var (
+ 	_ LogFieldFilter = (*IPMaskFilter)(nil)
+ 	_ LogFieldFilter = (*QueryFilter)(nil)
+ 	_ LogFieldFilter = (*CookieFilter)(nil)
++	_ LogFieldFilter = (*SetCookieFilter)(nil)
+ 	_ LogFieldFilter = (*RegexpFilter)(nil)
+ 	_ LogFieldFilter = (*RenameFilter)(nil)
+ 	_ LogFieldFilter = (*MultiRegexpFilter)(nil)
+@@ -889,6 +1065,7 @@ var (
+ 	_ caddyfile.Unmarshaler = (*IPMaskFilter)(nil)
+ 	_ caddyfile.Unmarshaler = (*QueryFilter)(nil)
+ 	_ caddyfile.Unmarshaler = (*CookieFilter)(nil)
++	_ caddyfile.Unmarshaler = (*SetCookieFilter)(nil)
+ 	_ caddyfile.Unmarshaler = (*RegexpFilter)(nil)
+ 	_ caddyfile.Unmarshaler = (*RenameFilter)(nil)
+ 	_ caddyfile.Unmarshaler = (*MultiRegexpFilter)(nil)
+@@ -898,5 +1075,6 @@ var (
+ 	_ caddy.Provisioner = (*MultiRegexpFilter)(nil)
+ 
+ 	_ caddy.Validator = (*QueryFilter)(nil)
++	_ caddy.Validator = (*SetCookieFilter)(nil)
+ 	_ caddy.Validator = (*MultiRegexpFilter)(nil)
+ )

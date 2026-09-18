@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-363d23",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:19:43+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "efb3cedecd158dd336a623789988729064dcbd2374541326ed7ab2e457db8b4c",
+  "wall_s": 30.0,
+  "cost_usd": 0.21772475000000002,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Follows surrounding style: small helper funcs, same comment voice, byte-indexed loop, same escape guard (len >= i+3) as prefix code; gofmt-clean.",
+    "edge_cases": "Decoded suffix vs %2F/%62 paths, literal %xx suffix, empty suffix, suffix equal to whole path, and positions inside escapes are all handled; prefix behaviour is byte-for-byte preserved via -1/len mapping.",
+    "scope": "Only the suffix path changes; extracting matchPathPrefix is the minimal refactor to share logic. Removing now-dead reverse() is reasonable cleanup but slightly beyond the strict ask.",
+    "readability": "Clear names (matchPathPrefix/trimPathSuffix), explanatory doc comment on why every start position is tried and why escapes are skipped; logic is easy to follow.",
+    "robustness": "No new panics: slicing guarded by length checks, PathUnescape error path propagates as -1; O(n*m) scan is bounded by path length.",
+    "maintainability": "Single shared comparison routine for prefix and suffix eliminates the reverse-string hack and any future divergence between the two rules."
+  },
+  "flags": []
+}

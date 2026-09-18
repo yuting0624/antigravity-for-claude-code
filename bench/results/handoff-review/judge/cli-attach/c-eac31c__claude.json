@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-eac31c",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:44:14+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "eed0cfb92c071666feaef212a4fb60e92f833e97dae1355a25a6c6af97eef4ec",
+  "wall_s": 7.1,
+  "cost_usd": 0.06124874999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; nothing implemented to compare against codebase conventions.",
+    "edge_cases": "Empty diff; none of the size limits, duplicate-file, code-fence or refusal cases are handled.",
+    "scope": "Empty diff; none of the requested attachments package, API changes or command wiring delivered.",
+    "readability": "Empty diff; no code to read.",
+    "robustness": "Empty diff; no failure handling or upload logic exists.",
+    "maintainability": "Empty diff; nothing to extend or maintain."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

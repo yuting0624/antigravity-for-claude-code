@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-75db7b",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:19:19+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7bf6fb9e4c10406d226e07888bb5db8dac78699310df64978d1002721e68b4a7",
+  "wall_s": 83.9,
+  "cost_usd": 0.178416,
+  "usage": {
+    "input": 46062,
+    "output": 7191,
+    "thinking": 7003,
+    "cache_read": 0,
+    "total": 53253
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches codebase conventions, including idiomatic Git client copying and import aliasing for shared packages.",
+    "edge_cases": "Handles empty paths, mutually exclusive flags, existing branches, and worktree reuse edge cases gracefully.",
+    "scope": "Implements exactly what was requested without unrelated refactoring, correctly centralizing worktree logic.",
+    "readability": "Clear names, well-structured logic, and self-documenting git operations make it very easy to follow.",
+    "robustness": "Correctly validates paths, handles Git command failures safely, and properly isolates worktree operations via client copies.",
+    "maintainability": "Extracting worktree resolution and Git commands into the shared package significantly improves cross-command maintainability."
+  },
+  "flags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-1151c4",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:59:08+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "850c429c77162004307690853763bd726b20500474ccd60732e1a5abcb7b388e",
+  "wall_s": 211.5,
+  "cost_usd": 0.26495,
+  "usage": {
+    "input": 43573,
+    "output": 14817,
+    "thinking": 14619,
+    "cache_read": 0,
+    "total": 58390
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Matches Caddy's configuration parsing and module registration conventions, though parseRate is duplicated.",
+    "edge_cases": "Per-route handler fails to clamp to the server's hard timeout, and configuring a zero timeout with a minimum rate causes immediate deadline failures.",
+    "scope": "Implements all requested server options, per-route handlers, chunking, and minimum transfer rate logic without unrelated changes.",
+    "readability": "Clean abstraction of IdleDeadline and wrappers; clear loop structures and highly idiomatic naming.",
+    "robustness": "Properly bounds chunked ReadFrom using LimitReader and safely ignores ErrNotSupported on SetDeadline.",
+    "maintainability": "Highly modular with core logic in a separate file, making it easy to extend, despite minor parsing duplication."
+  },
+  "flags": []
+}

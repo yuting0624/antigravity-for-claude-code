@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-3c30c0",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:15:59+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b1cab95f2dd92da5db5dc9b985b287a53d565916098440c6821b10ee5bde77ab",
+  "wall_s": 133.5,
+  "cost_usd": 0.209312,
+  "usage": {
+    "input": 43762,
+    "output": 10149,
+    "thinking": 9983,
+    "cache_read": 0,
+    "total": 53911
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Code fully matches the repository's idiomatic style, gracefully extending existing patterns.",
+    "edge_cases": "Handles relative paths, empty worktree paths, existing branches, and worktree reuse thoroughly.",
+    "scope": "Implements the exact requirements without any unrelated refactoring or scope creep.",
+    "readability": "Clean extraction of shared logic, straightforward flow control, and clear variable naming.",
+    "robustness": "Securely checks for symlink edge cases in worktree paths and avoids panics on unexpected inputs.",
+    "maintainability": "Properly modularizes path validation and worktree logic into a shared package for reusability."
+  },
+  "flags": []
+}

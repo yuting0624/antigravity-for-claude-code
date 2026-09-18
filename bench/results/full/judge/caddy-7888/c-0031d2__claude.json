@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-0031d2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:13:50+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "38ef7b4d0426a7d6dac8acb57fd01d71127cdde6e9ac5b6f43acab266b4804d8",
+  "wall_s": 24.6,
+  "cost_usd": 0.2614055,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: reuses cookieFilterAction, same module ID scheme, same Caddyfile subdirectives, interface guards added, registered beside cookie filter.",
+    "edge_cases": "Unparseable lines pass through, delete drops whole value, quoting preserved, attributes kept verbatim via Cut on ';', exact name match; no handling of non-array input but that matches the field shape.",
+    "scope": "Focused on the feature; only stray change is adding a caddy.Validator guard for the existing CookieFilter, which is unrelated though harmless.",
+    "readability": "Clear doc comments, small helper replaceSetCookieValue with a precise comment, labelled continue matches existing CookieFilter style.",
+    "robustness": "No panics: ParseSetCookie errors handled, defensive !found check, non-array input returned unchanged, no shared mutable state.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's rather than a shared helper; otherwise small, self-contained and easy to extend."
+  },
+  "flags": []
+}

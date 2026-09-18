@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-fa157d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:08:22+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2e9009fd45de3a12a1dc8988d8df6f127b0990a864784e9f6150b7aa9c5ea7c4",
+  "wall_s": 268.5,
+  "cost_usd": 0.280104,
+  "usage": {
+    "input": 50760,
+    "output": 14882,
+    "thinking": 14675,
+    "cache_read": 0,
+    "total": 65642
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 1,
+    "maintainability": 3
+  },
+  "mean": 2.667,
+  "rationale": {
+    "consistency": "Adheres to Caddy configuration and module registration conventions, using existing standard library and Caddy helpers.",
+    "edge_cases": "Overwrites explicit 0 timeouts to 1m in App.Provision; per-route handler misses hard deadline caps, allowing infinite deadline pushing.",
+    "scope": "Violates scope by removing existing ReadTimeout and WriteTimeout functionality from the request_body directive.",
+    "readability": "IdleDeadline struct cleanly encapsulates the math; the chunking loops are structurally clear and easy to follow.",
+    "robustness": "Fails to compile: w.ResponseWriterWrapper.ReadFrom is invalid because http.ResponseWriter does not define a ReadFrom method.",
+    "maintainability": "Good separation of concerns with IdleDeadline, but compile errors and missing context in the per-route handler reflect coupling oversights."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

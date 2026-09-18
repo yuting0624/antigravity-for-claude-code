@@ -2,3 +2,6 @@
 *.pyc
 __pycache__/
 /tmp/agy-delegate.err
+bench/results/**/raw/
+bench/results/**/attempts/*/raw/
+bench/results/plumbing/

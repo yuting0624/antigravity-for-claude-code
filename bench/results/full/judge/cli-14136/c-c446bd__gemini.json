@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-c446bd",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:29:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "d5c85990aae8bb7a4f133fb1e66779ca0705a67ef2822bdc96e33c95ae76d7d2",
+  "wall_s": 52.0,
+  "cost_usd": 0.173014,
+  "usage": {
+    "input": 43937,
+    "output": 7095,
+    "thinking": 6898,
+    "cache_read": 0,
+    "total": 51032
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly matches codebase conventions, correctly utilizing the existing git.Client patterns and refactoring shared logic cleanly.",
+    "edge_cases": "Handles all edge cases, including blank worktree paths, mutually exclusive flags, path normalisation, and proper branch checkout/sync logic.",
+    "scope": "Strictly adheres to the requirement, modifying only the necessary files and removing redundant code (e.g., localBranchExists).",
+    "readability": "Clear structure and descriptive variable names; comments explain worktree logic well.",
+    "robustness": "Safely handles paths with spaces through string arrays, properly manages context, and handles command failures safely.",
+    "maintainability": "Extracts shared worktree functions into a dedicated package and unifies the git worktree command execution cleanly."
+  },
+  "flags": []
+}

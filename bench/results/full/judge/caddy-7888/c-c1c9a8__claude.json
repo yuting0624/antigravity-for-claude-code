@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-c1c9a8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:24:30+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "40af4ee9578267884aec656911a6e9fec643ee841790243d5e6344f16cd2f043",
+  "wall_s": 30.2,
+  "cost_usd": 0.23374775,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: reuses cookieFilterAction, filterAction constants, hash(), OUTER-label loop, Validate, registration order and interface guards.",
+    "edge_cases": "Handles no '=', quoted values, empty/unmatched names, non-array field, exact-case matching; but hand-rolled parser doesn't trim leading whitespace and is more lenient than net/http Set-Cookie parsing.",
+    "scope": "Only adds the new filter, its registration and guards; no unrelated edits or refactors.",
+    "readability": "Clear names and doc comments; parseSetCookieNameValue's five return values are a bit heavy but documented.",
+    "robustness": "All slice indexing bounds-checked, no panics on malformed input, unparseable values pass through, non-array fields returned untouched.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's (~45 lines) rather than a shared helper; custom parser is small and isolated but diverges from stdlib semantics."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-3a47c8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:59:53+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e36746db86e7ff85a173ea601c060996dbdc00690d137b8c3054c71afe7facfa",
+  "wall_s": 81.7,
+  "cost_usd": 0.96128375,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (SDK calls, idempotency key, authCtx, httperr classification) but several lines exceed k6's 120-col lll limit, ResponseError is a pointer type unlike v6's value type, and the fake-server package is named provtest inside a dir named test.",
+    "edge_cases": "Handles 409 create-or-find, missing upload URL, archive-size int32 overflow, aborted/completed while waiting, ctx cancellation and retry exhaustion; unknown abort reasons are sent as code 0 rather than omitted, and mid-test threshold aborts are mapped to 8036 by assumption.",
+    "scope": "Implements the requested flow and leaves v1/PushRefID paths intact; adds an unrequested runtime-config→output-config mapping (incl. a guessed MaxSamplesPerPackage→MaxTimeSeriesInBatch) and a small clientcfg constant refactor.",
+    "readability": "Clear names, focused functions and useful comments; runtimeConfigFromAPI is repetitive pointer-copy boilerplate and long signatures hurt scanning.",
+    "robustness": "HTTPClient retries with GetBody reset, drains/closes bodies, stops timers, notify has a timeout; WaitForTestRunReady aborts on the first fetch error, the test helper panics on encode failure, and untagged config fields are still visible to envconfig.",
+    "maintainability": "closeResponse/authCtx duplicated from v6, the output constructs its own provisioning client from config instead of receiving one, and provisioningMode boolean branching plus two metricsClient construction paths add coupling."
+  },
+  "flags": []
+}

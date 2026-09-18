@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-7801c6",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:52:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e3cdd2aee3a230181d6f48d292964b779e2df9085c35025be23b0b987f57529f",
+  "wall_s": 39.8,
+  "cost_usd": 0.26398174999999996,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: reuses cookieFilterAction, Validate, module ID naming, receiver names, init registration and interface assertions in the right spots.",
+    "edge_cases": "Unparseable lines, no-match, delete, quoted values, empty/nil field all handled; exact name match. Minor: rebuilding from c.Name drops any leading whitespace or space before the first ';' rather than being fully verbatim.",
+    "scope": "Focused on the one filter; the extra []string case in the type switch is unrequested but harmless, no unrelated edits.",
+    "readability": "Clear flow and names; the delete branch handled outside the switch plus an unreachable default inside it is slightly awkward, otherwise easy to follow.",
+    "robustness": "No panics possible, input slice is not mutated, stdlib http.ParseSetCookie does the parsing, unknown action types fall through safely.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's rather than a shared helper; this matches existing codebase practice but doubles the maintenance surface for the Caddyfile shape."
+  },
+  "flags": []
+}

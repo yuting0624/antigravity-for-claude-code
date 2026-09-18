@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b242d5",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:27:29+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 55.3,
+  "cost_usd": 0.168666,
+  "usage": {
+    "input": 38055,
+    "output": 7713,
+    "thinking": 7538,
+    "cache_read": 0,
+    "total": 45768
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Modern slices and maps packages are used idiomatically, perfectly matching Go 1.21+ conventions.",
+    "edge_cases": "Clones the options map and handles multiple 'order' occurrences via the 'existing' parameter securely.",
+    "scope": "Strictly solves the concurrency and state-leakage issues without any unrelated refactoring.",
+    "readability": "Helper functions and comments clearly explain the transition from global to local state.",
+    "robustness": "Completely eliminates race conditions and dirty state on error by isolating the directive order to the adaptation scope.",
+    "maintainability": "Vastly improves architectural safety by removing global state mutation during runtime operations."
+  },
+  "flags": []
+}

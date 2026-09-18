@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-3c30c0",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:13:45+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b1cab95f2dd92da5db5dc9b985b287a53d565916098440c6821b10ee5bde77ab",
+  "wall_s": 69.5,
+  "cost_usd": 0.6807862499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses cmdutil.FlagErrorf/MutuallyExclusive, variadic CommandModifier like Pull, prShared alias; matches surrounding idioms well.",
+    "edge_cases": "Blank path, requires --checkout, --list exclusivity, relative→absolute, cross-repo remote, ff-only pull warning and reuse-of-existing-worktree all handled; Abs computed twice harmlessly.",
+    "scope": "Core feature done, but also folds worktreeCheckoutCmds into a new shared WorktreeCheckoutCommands used only by pr checkout and swaps localBranchExists for HasLocalBranch; mild gratuitous refactor.",
+    "readability": "Clear names and doc comments; WorktreeAdd's empty-string sentinel and WorktreeCheckoutCommands returning a one-element [][]string are slightly awkward.",
+    "robustness": "Errors propagate, no panics; sentinel arg in WorktreeAdd could silently pick the wrong mode on an accidental empty remote branch.",
+    "maintainability": "Git arg lists for worktree add are now duplicated between git.Client.WorktreeAdd and shared.WorktreeCheckoutCommands, and the two commands take different code paths for the same operation."
+  },
+  "flags": []
+}

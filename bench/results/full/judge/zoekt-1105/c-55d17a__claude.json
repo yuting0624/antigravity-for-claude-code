@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-55d17a",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:46:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "0a1490e6bd55697ffec8b782f06d1662c7369aa856245a4b4645fa8fa21355b0",
+  "wall_s": 58.4,
+  "cost_usd": 0.51386675,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Follows sibling cmd layout, license header, gitindex.Options usage and index.Options.Flags; writes to io.Writers instead of log and uses sort.Slice where the codebase is on modern Go, minor deviations.",
+    "edge_cases": "Handles duplicate roots, missing/non-dir roots, root-is-repo, .git files (worktrees), tombstoned and compound shards, companion .meta files; root '/' or a '.git' root yields odd names, remove -f on a missing index dir gives a confusing lock error.",
+    "scope": "Core requirement delivered plus a small README note; but the dry-run 'Up to date' preview re-implements ~100 lines of gitindex's private branch-expansion/commit-resolution logic, which was not asked for.",
+    "readability": "Clear names and helpful comments; small units; naming a function `sync` and a type `record` is slightly vague but not confusing.",
+    "robustness": "flock via golang.org/x/sys/unix is Unix-only in a repo that otherwise avoids platform-specific syscalls; NameFromGitConfig defaults to the new behaviour so any unupdated IndexGitRepo caller silently changes; otherwise sound error handling and lock release.",
+    "maintainability": "Duplicated copies of expandBranches/getCommit/plainOpenRepo will drift from gitindex; inverted opt-out flag polarity is a hidden trap for future callers; shard inventory/records model is otherwise reusable and tidy."
+  },
+  "flags": []
+}

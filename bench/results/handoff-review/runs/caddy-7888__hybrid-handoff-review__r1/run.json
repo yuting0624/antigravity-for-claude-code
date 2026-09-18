@@ -1,0 +1,380 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "handoff-review",
+  "run_key": "caddy-7888__hybrid-handoff-review__r1",
+  "task_id": "caddy-7888",
+  "arm": "hybrid-handoff-review",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-18T01:03:33+00:00",
+  "ended_at": "2026-09-18T01:25:42+00:00",
+  "agent_wall_s": 1322.3,
+  "agent_active_s": 1322.3,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.5",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 30,
+    "max_turns": 150,
+    "wall_s": 9000,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "12ba74ef9a4667169627270f8f848bdade1373f524a8b7a24bbc1a0c1f0d3fa9",
+    "appendix": "hybrid-handoff-review-appendix.md",
+    "appendix_sha256": "469a9f93b1f3d91009f4df9ffe2994db421e3072ebd8f9246d8a9ffa7aec7d07",
+    "sent_sha256": "74a0a253a1ed1c570d4a807b138a14a77692c689444290a0510b881160e99669"
+  },
+  "claude": {
+    "session_id": "70d80070-fd3a-419f-b358-278618229191",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 10,
+    "num_turns_source": "result",
+    "duration_ms": 1321804,
+    "duration_api_ms": 93884,
+    "total_cost_usd": 0.8406235000000001,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 20,
+      "cache_creation_input_tokens": 94180,
+      "cache_read_input_tokens": 138721,
+      "output_tokens": 7219,
+      "output_tokens_details": {
+        "thinking_tokens": 1312
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 94180
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1943,
+        "outputTokens": 24,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002063,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 20,
+        "outputTokens": 7219,
+        "cacheReadInputTokens": 138721,
+        "cacheCreationInputTokens": 94180,
+        "webSearchRequests": 0,
+        "costUSD": 0.8385605000000002,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 1312,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 0.838561,
+    "recomputed_vs_reported_gap": -0.0025,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "long_context": {
+      "usd_long_context_est": 0.83856,
+      "requests": 10,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    },
+    "transcript": {
+      "present": true,
+      "turns": 10,
+      "input": 20,
+      "output": 7219,
+      "cache_creation": 94180,
+      "cache_read": 138721,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 10,
+          "input": 20,
+          "output": 7219,
+          "cache_creation": 94180,
+          "cache_read": 138721
+        }
+      },
+      "tool_calls": {
+        "Bash": 9
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 20,
+        "transcript": 20,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 7219,
+        "transcript": 7219,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 94180,
+        "transcript": 94180,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 138721,
+        "transcript": 138721,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 4,
+    "denied_tools": {
+      "Bash:agy-delegate": 2,
+      "Bash:cat": 1,
+      "Bash:go": 1
+    },
+    "result_head": "**Pass.**\n\n- `go build ./...`, `go vet ./...`, `go test -count=1 ./...` — all green (full suite, no cache).\n- Working tree: one modified file, `modules/logging/filters.go`, 145 insertions and zero deletions — so nothing pre-existing was removed and `modules/logging/filters_test.go` is untouched.\n- Changes are uncommitted; no commits, branches or tags created.\n\nOne deviation to flag: the first two ",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 2,
+    "usage_lines": 2,
+    "signal_only": 0,
+    "succeeded": 2,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 2,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 2,
+        "input": 992512,
+        "output": 109175,
+        "thinking": 90771,
+        "cache_read": 8953003,
+        "usd": 1.825265
+      }
+    },
+    "totals": {
+      "input": 992512,
+      "output": 109175,
+      "thinking": 90771,
+      "cache_read": 8953003,
+      "total": 1101687
+    },
+    "invariant_ok": true,
+    "shadow_usd": 1.825265,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "8053d217-1d0f-424c-945d-c01f12fe65b5",
+      "a13071ba-547f-4031-92a7-79cad791e7fc"
+    ],
+    "agy_duration_s_sum": 1201.466,
+    "wrapper_calls_in_transcript": 4,
+    "trace_audit": {
+      "8053d217-1d0f-424c-945d-c01f12fe65b5": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 68,
+          "GENERIC": 67,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "find_by_name": 2,
+          "view_file": 13,
+          "run_command": 42,
+          "grep_search": 7,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T01:04:37Z",
+        "last_step_at": "2026-09-18T01:14:17Z"
+      },
+      "a13071ba-547f-4031-92a7-79cad791e7fc": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 68,
+          "GENERIC": 67,
+          "CHECKPOINT": 2,
+          "SYSTEM_MESSAGE": 3
+        },
+        "tool_calls": {
+          "run_command": 35,
+          "view_file": 19,
+          "grep_search": 9,
+          "find_by_name": 1,
+          "manage_task": 1,
+          "schedule": 1,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-18T01:14:56Z",
+        "last_step_at": "2026-09-18T01:25:00Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 4
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 2,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 23,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "cat": 1,
+      "go": 1
+    },
+    "gate_allows": 7,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "modules/logging/filters.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 0.9,
+      "passed_tests": 27,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 1,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 5.4,
+      "passed_tests": 1178,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 47,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 1,
+    "code_added": 145,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "efba68d7d616f4d7f06f1b5d376f38d4f1876c5871de906b1437102e9765ef1f"
+  },
+  "diff_files": {
+    "modules/logging/filters.go": {
+      "added": 145,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 0.8406235000000001,
+    "gemini_usd": 1.825265,
+    "total_usd": 2.6658885
+  },
+  "notes": [],
+  "prices_lock_sha256": "79eb1b3e8dd948a381a49ba3adbf3a035a38fe8041f0bc0e5aca854472ea5ffe",
+  "scheduler_class": "final"
+}

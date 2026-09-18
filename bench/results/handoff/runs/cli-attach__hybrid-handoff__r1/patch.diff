@@ -1,0 +1,2354 @@
+diff --git a/api/queries_issue.go b/api/queries_issue.go
+index a13bb48cc..179823c41 100644
+--- a/api/queries_issue.go
++++ b/api/queries_issue.go
+@@ -57,6 +57,21 @@ type Issue struct {
+ 	Blocking         LinkedIssueConnection
+ 
+ 	ClosedByPullRequestsReferences ClosedByPullRequestsReferences
++	Repository                     *PRRepository
++}
++
++func (issue *Issue) RepositoryDatabaseID() int64 {
++	if issue.Repository != nil {
++		return issue.Repository.DatabaseID
++	}
++	return 0
++}
++
++func (issue *Issue) RepositoryViewerPermission() string {
++	if issue.Repository != nil {
++		return issue.Repository.ViewerPermission
++	}
++	return ""
+ }
+ 
+ // IssueType represents an issue type configured for a repository.
+diff --git a/api/queries_pr.go b/api/queries_pr.go
+index 10994958a..d7e33828d 100644
+--- a/api/queries_pr.go
++++ b/api/queries_pr.go
+@@ -252,9 +252,25 @@ type Workflow struct {
+ }
+ 
+ type PRRepository struct {
+-	ID            string `json:"id"`
+-	Name          string `json:"name"`
+-	NameWithOwner string `json:"nameWithOwner"`
++	ID               string `json:"id"`
++	Name             string `json:"name"`
++	NameWithOwner    string `json:"nameWithOwner"`
++	DatabaseID       int64  `json:"databaseId,omitempty"`
++	ViewerPermission string `json:"viewerPermission,omitempty"`
++}
++
++func (pr *PullRequest) RepositoryDatabaseID() int64 {
++	if pr.Repository != nil {
++		return pr.Repository.DatabaseID
++	}
++	return 0
++}
++
++func (pr *PullRequest) RepositoryViewerPermission() string {
++	if pr.Repository != nil {
++		return pr.Repository.ViewerPermission
++	}
++	return ""
+ }
+ 
+ type AutoMergeRequest struct {
+diff --git a/api/queries_repo.go b/api/queries_repo.go
+index 3e0b75648..447bbad46 100644
+--- a/api/queries_repo.go
++++ b/api/queries_repo.go
+@@ -29,6 +29,7 @@ const (
+ // Repository contains information about a GitHub repo
+ type Repository struct {
+ 	ID                       string
++	DatabaseID               int64 `json:"databaseId"`
+ 	Name                     string
+ 	NameWithOwner            string
+ 	Owner                    RepositoryOwner
+@@ -323,6 +324,7 @@ func IssueRepoInfo(client *Client, repo ghrepo.Interface) (*Repository, error) {
+ 	query IssueRepositoryInfo($owner: String!, $name: String!) {
+ 		repository(owner: $owner, name: $name) {
+ 			id
++			databaseId
+ 			name
+ 			owner { login }
+ 			hasIssuesEnabled
+@@ -360,6 +362,7 @@ func GitHubRepo(client *Client, repo ghrepo.Interface) (*Repository, error) {
+ 	query := `
+ 	fragment repo on Repository {
+ 		id
++		databaseId
+ 		name
+ 		owner { login }
+ 		hasIssuesEnabled
+@@ -498,6 +501,7 @@ func RepoNetwork(client *Client, repos []ghrepo.Interface) (RepoNetworkResult, e
+ 	err := client.GraphQL(hostname, fmt.Sprintf(`
+ 	fragment repo on Repository {
+ 		id
++		databaseId
+ 		name
+ 		owner { login }
+ 		viewerPermission
+diff --git a/api/query_builder.go b/api/query_builder.go
+index d988cdc67..455cfa438 100644
+--- a/api/query_builder.go
++++ b/api/query_builder.go
+@@ -394,6 +394,8 @@ func IssueGraphQL(fields []string) string {
+ 			q = append(q, `headRepositoryOwner{id,login,...on User{name}}`)
+ 		case "headRepository":
+ 			q = append(q, `headRepository{id,name,nameWithOwner}`)
++		case "repository":
++			q = append(q, `repository{id,name,nameWithOwner,databaseId,viewerPermission}`)
+ 		case "assignees":
+ 			q = append(q, `assignees(first:100){nodes{id,login,name,databaseId},totalCount}`)
+ 		case "assignedActors":
+diff --git a/internal/attachments/attach.go b/internal/attachments/attach.go
+new file mode 100644
+index 000000000..76bebc315
+--- /dev/null
++++ b/internal/attachments/attach.go
+@@ -0,0 +1,72 @@
++package attachments
++
++import (
++	"context"
++	"strings"
++)
++
++func appendParagraph(md, addition string) string {
++	if addition == "" {
++		return md
++	}
++	trimmed := strings.TrimRight(md, " \t\r\n")
++	if trimmed == "" {
++		return addition
++	}
++	return trimmed + "\n\n" + addition
++}
++
++func (u *Uploader) UploadAndAttach(ctx context.Context, body string, assets []UserAsset) (string, int, error) {
++	if len(assets) == 0 {
++		return body, 0, nil
++	}
++
++	args := make([]attachmentArg, len(assets))
++	for i, a := range assets {
++		args[i] = attachmentArg{
++			Path:            a.Path(),
++			Alt:             a.getAsset().alt,
++			RendersAsPlayer: a.rendersAsPlayer(),
++		}
++	}
++
++	attachable, err := newAttachableMarkdown(body, args)
++	if err != nil {
++		return body, 0, err
++	}
++
++	var uploadedCount int
++	var uploadErr error
++	for i, a := range assets {
++		url, err := u.upload(ctx, a)
++		if err != nil {
++			uploadErr = err
++			break
++		}
++		args[i].URL = url
++		uploadedCount++
++	}
++
++	if uploadedCount == 0 {
++		return body, 0, uploadErr
++	}
++
++	attachable.attachmentArgs = args
++
++	res, err := attachAssetsToMarkdown(attachable)
++	if err != nil {
++		return body, uploadedCount, err
++	}
++
++	out := res.Rewritten
++	for _, item := range res.ToAppend {
++		for _, a := range assets {
++			if a.Path() == item.Path {
++				out = appendParagraph(out, a.markdown(item.URL))
++				break
++			}
++		}
++	}
++
++	return out, uploadedCount, uploadErr
++}
+diff --git a/internal/attachments/client.go b/internal/attachments/client.go
+new file mode 100644
+index 000000000..f111f192a
+--- /dev/null
++++ b/internal/attachments/client.go
+@@ -0,0 +1,234 @@
++package attachments
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"os"
++	"strconv"
++	"strings"
++
++	"github.com/cli/cli/v2/internal/gh"
++	"github.com/cli/cli/v2/internal/ghinstance"
++)
++
++var openFile = func(path string) (io.ReadCloser, error) {
++	return os.Open(path)
++}
++
++type uploadError struct {
++	StatusCode int
++	Path       string
++	msg        string
++}
++
++func (e *uploadError) Error() string {
++	return e.msg
++}
++
++type Uploader struct {
++	httpClient       *http.Client
++	host             string
++	targetRepository int64
++}
++
++func checkHost(host string) error {
++	if ghinstance.IsEnterprise(host) {
++		return errors.New("attaching files is not supported on GitHub Enterprise Server")
++	}
++	return nil
++}
++
++func NewUploader(httpClient *http.Client, tokenType gh.TokenType, host string, targetRepository int64, viewerPermission string) (*Uploader, error) {
++	if err := checkHost(host); err != nil {
++		return nil, err
++	}
++	switch tokenType {
++	case gh.TokenTypeOAuth, gh.TokenTypePersonalAccess, gh.TokenTypeFineGrainedPAT:
++	default:
++		return nil, errors.New("unsupported authentication type")
++	}
++	if targetRepository <= 0 {
++		return nil, errors.New("could not determine which repository to attach files to")
++	}
++	if viewerPermission == "" {
++		return nil, errors.New("could not determine your permission on the repository to attach files")
++	}
++	switch viewerPermission {
++	case "WRITE", "ADMIN", "MAINTAIN":
++	default:
++		return nil, errors.New("attaching files requires write access to the repository")
++	}
++	return &Uploader{
++		httpClient:       httpClient,
++		host:             host,
++		targetRepository: targetRepository,
++	}, nil
++}
++
++func (u *Uploader) upload(ctx context.Context, a UserAsset) (string, error) {
++	f, err := openFile(a.Path())
++	if err != nil {
++		return "", &uploadError{
++			StatusCode: 0,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("failed to upload %s: %v", a.Path(), err),
++		}
++	}
++	defer f.Close()
++
++	endpoint := fmt.Sprintf("%suser-attachments/assets?content_type=%s&name=%s&repository_id=%d",
++		ghinstance.UserAssetUploadPrefix(u.host),
++		url.QueryEscape(a.ContentType()),
++		url.QueryEscape(a.Basename()),
++		u.targetRepository,
++	)
++
++	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, f)
++	if err != nil {
++		return "", &uploadError{
++			StatusCode: 0,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("failed to upload %s: %v", a.Path(), err),
++		}
++	}
++
++	req.Header.Set("Content-Type", "application/octet-stream")
++	req.Header.Set("Accept", "application/vnd.github+json")
++	req.ContentLength = a.Size()
++
++	resp, err := u.httpClient.Do(req)
++	if err != nil {
++		return "", &uploadError{
++			StatusCode: 0,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("failed to upload %s: %v", a.Path(), err),
++		}
++	}
++	defer resp.Body.Close()
++
++	bodyBytes, err := io.ReadAll(resp.Body)
++	if err != nil {
++		return "", &uploadError{
++			StatusCode: resp.StatusCode,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("failed to upload %s: %v", a.Path(), err),
++		}
++	}
++
++	cleanMsg := func(s string) string {
++		return strings.ReplaceAll(strings.ReplaceAll(s, "\r", " "), "\n", " ")
++	}
++
++	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
++		var result struct {
++			URL string `json:"url"`
++		}
++		if err := json.Unmarshal(bodyBytes, &result); err != nil {
++			return "", &uploadError{
++				StatusCode: 0,
++				Path:       a.Path(),
++				msg:        cleanMsg(fmt.Sprintf("failed to upload %s: %v", a.Path(), err)),
++			}
++		}
++		if result.URL == "" {
++			return "", &uploadError{
++				StatusCode: 0,
++				Path:       a.Path(),
++				msg:        fmt.Sprintf("failed to upload %s: the server returned no asset URL", a.Path()),
++			}
++		}
++		return result.URL, nil
++	}
++
++	if resp.StatusCode == http.StatusNotFound {
++		return "", &uploadError{
++			StatusCode: resp.StatusCode,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("could not upload %s: attaching files requires write access to the repository", a.Path()),
++		}
++	}
++
++	if resp.StatusCode == http.StatusRequestEntityTooLarge {
++		return "", &uploadError{
++			StatusCode: resp.StatusCode,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("failed to upload %s: HTTP 413: Payload Too Large", a.Path()),
++		}
++	}
++
++	if resp.StatusCode == http.StatusUnprocessableEntity {
++		var valErr struct {
++			Message string `json:"message"`
++			Errors  []struct {
++				Resource string `json:"resource"`
++				Field    string `json:"field"`
++				Code     string `json:"code"`
++				Message  string `json:"message"`
++			} `json:"errors"`
++		}
++		if err := json.Unmarshal(bodyBytes, &valErr); err == nil && (valErr.Message != "" || len(valErr.Errors) > 0) {
++			var sb strings.Builder
++			sb.WriteString(fmt.Sprintf("could not upload %s", a.Path()))
++			if valErr.Message != "" {
++				sb.WriteString(": ")
++				sb.WriteString(valErr.Message)
++			}
++			for _, e := range valErr.Errors {
++				if e.Message != "" {
++					sb.WriteString("; ")
++					sb.WriteString(e.Message)
++				} else if e.Resource != "" && e.Field != "" && e.Code != "" {
++					sb.WriteString(fmt.Sprintf("; %s.%s is %s", e.Resource, e.Field, e.Code))
++				}
++			}
++			return "", &uploadError{
++				StatusCode: resp.StatusCode,
++				Path:       a.Path(),
++				msg:        cleanMsg(sb.String()),
++			}
++		}
++		return "", &uploadError{
++			StatusCode: resp.StatusCode,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("could not upload %s", a.Path()),
++		}
++	}
++
++	if resp.StatusCode == http.StatusTooManyRequests {
++		ra := resp.Header.Get("Retry-After")
++		if ra == "" {
++			return "", &uploadError{
++				StatusCode: resp.StatusCode,
++				Path:       a.Path(),
++				msg:        fmt.Sprintf("could not upload %s: rate limited; wait and try again", a.Path()),
++			}
++		}
++		if _, err := strconv.Atoi(ra); err == nil {
++			return "", &uploadError{
++				StatusCode: resp.StatusCode,
++				Path:       a.Path(),
++				msg:        fmt.Sprintf("could not upload %s: rate limited; retry after %s seconds", a.Path(), ra),
++			}
++		}
++		return "", &uploadError{
++			StatusCode: resp.StatusCode,
++			Path:       a.Path(),
++			msg:        fmt.Sprintf("could not upload %s: rate limited; retry after %s", a.Path(), ra),
++		}
++	}
++
++	statusText := http.StatusText(resp.StatusCode)
++	if statusText == "" {
++		statusText = fmt.Sprintf("status %d", resp.StatusCode)
++	}
++	return "", &uploadError{
++		StatusCode: resp.StatusCode,
++		Path:       a.Path(),
++		msg:        fmt.Sprintf("failed to upload %s: HTTP %d: %s", a.Path(), resp.StatusCode, statusText),
++	}
++}
+diff --git a/internal/attachments/flags.go b/internal/attachments/flags.go
+new file mode 100644
+index 000000000..32de9c8bc
+--- /dev/null
++++ b/internal/attachments/flags.go
+@@ -0,0 +1,94 @@
++package attachments
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"strings"
++
++	"github.com/spf13/cobra"
++	"github.com/spf13/pflag"
++)
++
++const flagName = "attach"
++
++type Flag struct {
++	flag   *pflag.Flag
++	values []string
++}
++
++func AddFlag(cmd *cobra.Command) *Flag {
++	f := &Flag{}
++	cmd.Flags().StringArrayVar(&f.values, flagName, nil, "Attach an image or video `file`, in '<file>#<image alt text>' format")
++	f.flag = cmd.Flags().Lookup(flagName)
++	return f
++}
++
++func (f *Flag) Changed() bool {
++	return f != nil && f.flag != nil && f.flag.Changed
++}
++
++func splitPathAlt(raw string) (string, string) {
++	if !strings.Contains(raw, "#") {
++		return raw, ""
++	}
++
++	if _, err := os.Stat(raw); err == nil {
++		return raw, ""
++	}
++
++	// Find all hash positions
++	var hashIndices []int
++	for i := 0; i < len(raw); i++ {
++		if raw[i] == '#' {
++			hashIndices = append(hashIndices, i)
++		}
++	}
++
++	// Check candidate paths from longest to shortest
++	for i := len(hashIndices) - 1; i >= 0; i-- {
++		idx := hashIndices[i]
++		candPath := raw[:idx]
++		candAlt := raw[idx+1:]
++		if _, err := os.Stat(candPath); err == nil {
++			return candPath, candAlt
++		}
++	}
++
++	// Fallback to the last hash delimiter
++	lastIdx := hashIndices[len(hashIndices)-1]
++	return raw[:lastIdx], raw[lastIdx+1:]
++}
++
++func (f *Flag) UserAssets() ([]UserAsset, error) {
++	if f == nil || len(f.values) == 0 {
++		return nil, nil
++	}
++
++	var assets []UserAsset
++	for _, raw := range f.values {
++		if raw == "" {
++			return nil, errors.New("cannot attach an empty path; --attach needs a file path")
++		}
++		if raw == "-" {
++			return nil, errors.New("cannot attach standard input; --attach needs a file path")
++		}
++
++		path, alt := splitPathAlt(raw)
++		a, err := newAsset(path, alt)
++		if err != nil {
++			return nil, err
++		}
++
++		// Duplicate check
++		for _, prev := range assets {
++			if os.SameFile(prev.getAsset().info, a.getAsset().info) {
++				return nil, fmt.Errorf("%s and %s are the same file; attached files must be unique", prev.Path(), a.Path())
++			}
++		}
++
++		assets = append(assets, a)
++	}
++
++	return assets, nil
++}
+diff --git a/internal/attachments/references.go b/internal/attachments/references.go
+new file mode 100644
+index 000000000..fd439a249
+--- /dev/null
++++ b/internal/attachments/references.go
+@@ -0,0 +1,557 @@
++package attachments
++
++import (
++	"fmt"
++	"net/url"
++	"path/filepath"
++	"sort"
++	"strings"
++
++	"github.com/yuin/goldmark"
++	"github.com/yuin/goldmark/ast"
++	"github.com/yuin/goldmark/parser"
++	"github.com/yuin/goldmark/text"
++)
++
++type attachmentArg struct {
++	Path            string
++	URL             string
++	Alt             string
++	RendersAsPlayer bool
++}
++
++type attachableMarkdown struct {
++	markdown       string
++	attachmentArgs []attachmentArg
++}
++
++type attachResult struct {
++	Rewritten string
++	ToAppend  []attachmentArg
++}
++
++type replacement struct {
++	start      int
++	end        int
++	text       string
++	assetIndex int
++}
++
++func unescapeMarkdownPath(s string) string {
++	if strings.HasPrefix(s, "<") && strings.HasSuffix(s, ">") {
++		s = s[1 : len(s)-1]
++	}
++	if u, err := url.PathUnescape(s); err == nil {
++		s = u
++	}
++	var buf strings.Builder
++	for i := 0; i < len(s); i++ {
++		if s[i] == '\\' && i+1 < len(s) {
++			buf.WriteByte(s[i+1])
++			i++
++		} else {
++			buf.WriteByte(s[i])
++		}
++	}
++	return buf.String()
++}
++
++func matchAsset(rawDest string, args []attachmentArg) (int, bool) {
++	if strings.HasPrefix(rawDest, "#") || strings.HasPrefix(rawDest, "//") {
++		return -1, false
++	}
++	if idx := strings.Index(rawDest, ":"); idx != -1 {
++		isWinDrive := (idx == 1) && ((rawDest[0] >= 'a' && rawDest[0] <= 'z') || (rawDest[0] >= 'A' && rawDest[0] <= 'Z'))
++		if !isWinDrive {
++			return -1, false
++		}
++	}
++
++	normDest := unescapeMarkdownPath(rawDest)
++
++	for i, arg := range args {
++		if rawDest == arg.Path || normDest == arg.Path {
++			return i, true
++		}
++		if filepath.Clean(normDest) == filepath.Clean(arg.Path) {
++			if strings.TrimSpace(normDest) == normDest || strings.TrimSpace(arg.Path) == arg.Path {
++				return i, true
++			}
++		}
++		absNorm, err1 := filepath.Abs(normDest)
++		absArg, err2 := filepath.Abs(arg.Path)
++		if err1 == nil && err2 == nil && absNorm == absArg {
++			return i, true
++		}
++	}
++	return -1, false
++}
++
++func findLinkDetails(markdown string, n ast.Node) (labelStart, labelEnd, destStart, destEnd, fullEnd int, ok bool) {
++	pos := n.Pos()
++	if n.Kind() == ast.KindImage {
++		if pos >= len(markdown) || markdown[pos] != '!' {
++			return 0, 0, 0, 0, 0, false
++		}
++		pos++
++	}
++	if pos >= len(markdown) || markdown[pos] != '[' {
++		return 0, 0, 0, 0, 0, false
++	}
++	labelStart = pos + 1
++	depth := 1
++	i := pos + 1
++	for i < len(markdown) && depth > 0 {
++		if markdown[i] == '`' {
++			run := 0
++			for i+run < len(markdown) && markdown[i+run] == '`' {
++				run++
++			}
++			j := i + run
++			found := false
++			for j < len(markdown) {
++				if markdown[j] == '`' {
++					closeRun := 0
++					for j+closeRun < len(markdown) && markdown[j+closeRun] == '`' {
++						closeRun++
++					}
++					if closeRun == run {
++						i = j + closeRun
++						found = true
++						break
++					}
++					j += closeRun
++				} else {
++					j++
++				}
++			}
++			if !found {
++				i += run
++			}
++			continue
++		}
++		if markdown[i] == '\\' {
++			i += 2
++			continue
++		}
++		if markdown[i] == '[' {
++			depth++
++			i++
++			continue
++		}
++		if markdown[i] == ']' {
++			depth--
++			if depth == 0 {
++				labelEnd = i
++				break
++			}
++			i++
++			continue
++		}
++		i++
++	}
++	if depth != 0 || labelEnd+1 >= len(markdown) || markdown[labelEnd+1] != '(' {
++		return 0, 0, 0, 0, 0, false
++	}
++	destStart = labelEnd + 2
++	for destStart < len(markdown) && (markdown[destStart] == ' ' || markdown[destStart] == '\t' || markdown[destStart] == '\r' || markdown[destStart] == '\n') {
++		destStart++
++	}
++	if destStart >= len(markdown) {
++		return 0, 0, 0, 0, 0, false
++	}
++	if markdown[destStart] == '<' {
++		destEnd = destStart + 1
++		for destEnd < len(markdown) {
++			if markdown[destEnd] == '\\' {
++				destEnd += 2
++			} else if markdown[destEnd] == '>' {
++				destEnd++
++				break
++			} else if markdown[destEnd] == '\r' || markdown[destEnd] == '\n' {
++				return 0, 0, 0, 0, 0, false
++			} else {
++				destEnd++
++			}
++		}
++	} else {
++		destEnd = destStart
++		pDepth := 0
++		for destEnd < len(markdown) {
++			c := markdown[destEnd]
++			if c == '\\' {
++				destEnd += 2
++			} else if c == '(' {
++				pDepth++
++				destEnd++
++			} else if c == ')' {
++				if pDepth == 0 {
++					break
++				}
++				pDepth--
++				destEnd++
++			} else if c == ' ' || c == '\t' || c == '\r' || c == '\n' {
++				break
++			} else {
++				destEnd++
++			}
++		}
++	}
++
++	j := destEnd
++	for j < len(markdown) {
++		c := markdown[j]
++		if c == '\\' {
++			j += 2
++		} else if c == '"' || c == '\'' {
++			quote := c
++			j++
++			for j < len(markdown) {
++				if markdown[j] == '\\' {
++					j += 2
++				} else if markdown[j] == quote {
++					j++
++					break
++				} else {
++					j++
++				}
++			}
++		} else if c == '(' {
++			j++
++			for j < len(markdown) {
++				if markdown[j] == '\\' {
++					j += 2
++				} else if markdown[j] == ')' {
++					j++
++					break
++				} else {
++					j++
++				}
++			}
++		} else if c == ')' {
++			fullEnd = j + 1
++			break
++		} else {
++			j++
++		}
++	}
++
++	return labelStart, labelEnd, destStart, destEnd, fullEnd, true
++}
++
++func newAttachableMarkdown(markdown string, attachmentArgs []attachmentArg) (*attachableMarkdown, error) {
++	pctx := parser.NewContext()
++	doc := goldmark.New().Parser().Parse(text.NewReader([]byte(markdown)), parser.WithContext(pctx))
++
++	var offending []string
++	seenOffending := make(map[string]bool)
++
++	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
++		if !entering {
++			return ast.WalkContinue, nil
++		}
++		if n.Kind() == ast.KindImage {
++			img := n.(*ast.Image)
++			if img.Reference != nil {
++				rawDest := string(img.Destination)
++				idx, matched := matchAsset(rawDest, attachmentArgs)
++				if matched && attachmentArgs[idx].RendersAsPlayer {
++					p := attachmentArgs[idx].Path
++					if !seenOffending[p] {
++						seenOffending[p] = true
++						offending = append(offending, p)
++					}
++				}
++			}
++		}
++		return ast.WalkContinue, nil
++	})
++
++	if len(offending) > 0 {
++		return nil, fmt.Errorf("cannot embed a video as a reference-style image: %s", strings.Join(offending, ", "))
++	}
++
++	return &attachableMarkdown{
++		markdown:       markdown,
++		attachmentArgs: attachmentArgs,
++	}, nil
++}
++
++func attachAssetsToMarkdown(v *attachableMarkdown) (*attachResult, error) {
++	markdown := v.markdown
++	args := v.attachmentArgs
++
++	pctx := parser.NewContext()
++	doc := goldmark.New().Parser().Parse(text.NewReader([]byte(markdown)), parser.WithContext(pctx))
++
++	// Pre-pass: collect reference usages
++	usedLabels := make(map[string]bool)
++	usedDestinations := make(map[string]bool)
++	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
++		if !entering {
++			return ast.WalkContinue, nil
++		}
++		if n.Kind() == ast.KindImage {
++			img := n.(*ast.Image)
++			if img.Reference != nil {
++				usedLabels[strings.ToLower(string(img.Reference.Value))] = true
++				usedDestinations[string(img.Destination)] = true
++			}
++		} else if n.Kind() == ast.KindLink {
++			lnk := n.(*ast.Link)
++			if lnk.Reference != nil {
++				usedLabels[strings.ToLower(string(lnk.Reference.Value))] = true
++				usedDestinations[string(lnk.Destination)] = true
++			}
++		}
++		return ast.WalkContinue, nil
++	})
++
++	var reps []replacement
++
++	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
++		if !entering {
++			return ast.WalkContinue, nil
++		}
++		if n.Kind() == ast.KindLinkReferenceDefinition {
++			def := n.(*ast.LinkReferenceDefinition)
++			lbl := strings.ToLower(string(def.Label))
++			rawDest := string(def.Destination)
++			if !usedLabels[lbl] && !usedDestinations[rawDest] {
++				return ast.WalkContinue, nil
++			}
++			assetIndex, matched := matchAsset(rawDest, args)
++			if !matched || args[assetIndex].URL == "" {
++				return ast.WalkContinue, nil
++			}
++			// Check if multi-line inside blockquote
++			if def.Parent() != nil && def.Parent().Kind() == ast.KindBlockquote && def.Lines() != nil && def.Lines().Len() > 1 {
++				return ast.WalkContinue, nil
++			}
++			// Find destination span in definition
++			pos := def.Pos()
++			for pos < len(markdown) && markdown[pos] != '[' {
++				pos++
++			}
++			if pos >= len(markdown) {
++				return ast.WalkContinue, nil
++			}
++			// Find closing ']' of label
++			k := pos + 1
++			for k < len(markdown) {
++				if markdown[k] == '\\' {
++					k += 2
++					continue
++				}
++				if markdown[k] == ']' {
++					break
++				}
++				k++
++			}
++			if k >= len(markdown) || k+1 >= len(markdown) || markdown[k+1] != ':' {
++				return ast.WalkContinue, nil
++			}
++			dStart := k + 2
++			for dStart < len(markdown) && (markdown[dStart] == ' ' || markdown[dStart] == '\t') {
++				dStart++
++			}
++			if dStart >= len(markdown) {
++				return ast.WalkContinue, nil
++			}
++			var dEnd int
++			if markdown[dStart] == '<' {
++				dEnd = dStart + 1
++				for dEnd < len(markdown) {
++					if markdown[dEnd] == '\\' {
++						dEnd += 2
++					} else if markdown[dEnd] == '>' {
++						dEnd++
++						break
++					} else if markdown[dEnd] == '\r' || markdown[dEnd] == '\n' {
++						return ast.WalkContinue, nil
++					} else {
++						dEnd++
++					}
++				}
++			} else {
++				dEnd = dStart
++				for dEnd < len(markdown) && markdown[dEnd] != ' ' && markdown[dEnd] != '\t' && markdown[dEnd] != '\r' && markdown[dEnd] != '\n' {
++					dEnd++
++				}
++			}
++			reps = append(reps, replacement{
++				start:      dStart,
++				end:        dEnd,
++				text:       args[assetIndex].URL,
++				assetIndex: assetIndex,
++			})
++			return ast.WalkContinue, nil
++		}
++
++		if n.Kind() == ast.KindImage || n.Kind() == ast.KindLink {
++			// Skip reference style usages
++			if n.Kind() == ast.KindImage && n.(*ast.Image).Reference != nil {
++				return ast.WalkContinue, nil
++			}
++			if n.Kind() == ast.KindLink && n.(*ast.Link).Reference != nil {
++				return ast.WalkContinue, nil
++			}
++
++			ls, le, ds, de, fe, ok := findLinkDetails(markdown, n)
++			if !ok {
++				return ast.WalkContinue, nil
++			}
++			rawDest := markdown[ds:de]
++			assetIndex, matched := matchAsset(rawDest, args)
++			if !matched || args[assetIndex].URL == "" {
++				return ast.WalkContinue, nil
++			}
++			arg := args[assetIndex]
++
++			if n.Kind() == ast.KindImage && arg.RendersAsPlayer {
++				// Video embed
++				isAlone := (n.Parent() != nil && n.Parent().Kind() == ast.KindParagraph && n.Parent().ChildCount() == 1)
++				if isAlone {
++					// Replace whole embed with bare URL
++					reps = append(reps, replacement{
++						start:      n.Pos(),
++						end:        fe,
++						text:       arg.URL,
++						assetIndex: assetIndex,
++					})
++				} else {
++					// Degrades to link
++					// Destination replacement
++					reps = append(reps, replacement{
++						start:      ds,
++						end:        de,
++						text:       arg.URL,
++						assetIndex: assetIndex,
++					})
++					// Alt text if empty
++					if ls == le {
++						fallbackAlt := strings.ReplaceAll(arg.Alt, `\`, `\\`)
++						fallbackAlt = strings.ReplaceAll(fallbackAlt, `[`, `\[`)
++						fallbackAlt = strings.ReplaceAll(fallbackAlt, `]`, `\]`)
++						reps = append(reps, replacement{
++							start:      ls,
++							end:        le,
++							text:       fallbackAlt,
++							assetIndex: assetIndex,
++						})
++					}
++					// Bang handling
++					bangPos := n.Pos()
++					if bangPos > 0 && markdown[bangPos-1] == '!' {
++						if bangPos >= 2 && markdown[bangPos-2] == '\\' {
++							reps = append(reps, replacement{
++								start:      bangPos,
++								end:        bangPos + 1,
++								text:       "",
++								assetIndex: assetIndex,
++							})
++						} else {
++							reps = append(reps, replacement{
++								start:      bangPos - 1,
++								end:        bangPos + 1,
++								text:       "\\!",
++								assetIndex: assetIndex,
++							})
++						}
++					} else {
++						reps = append(reps, replacement{
++							start:      bangPos,
++							end:        bangPos + 1,
++							text:       "",
++							assetIndex: assetIndex,
++						})
++					}
++				}
++			} else {
++				// Normal image or link destination replacement
++				reps = append(reps, replacement{
++					start:      ds,
++					end:        de,
++					text:       arg.URL,
++					assetIndex: assetIndex,
++				})
++			}
++		}
++
++		return ast.WalkContinue, nil
++	})
++
++	// Sort replacements by start ascending, then by end descending (larger intervals first)
++	sort.SliceStable(reps, func(i, j int) bool {
++		if reps[i].start != reps[j].start {
++			return reps[i].start < reps[j].start
++		}
++		return reps[i].end > reps[j].end
++	})
++
++	// Filter out swallowed replacements
++	var activeReps []replacement
++	referencedAssets := make(map[int]bool)
++
++	lastEnd := -1
++	for _, r := range reps {
++		if r.start < lastEnd {
++			// Swallowed by earlier replacement!
++			continue
++		}
++		activeReps = append(activeReps, r)
++		referencedAssets[r.assetIndex] = true
++		if r.end > lastEnd {
++			lastEnd = r.end
++		}
++	}
++
++	// Apply replacements
++	var sb strings.Builder
++	idx := 0
++	for _, r := range activeReps {
++		if r.start > idx {
++			sb.WriteString(markdown[idx:r.start])
++		}
++		sb.WriteString(r.text)
++		idx = r.end
++	}
++	if idx < len(markdown) {
++		sb.WriteString(markdown[idx:])
++	}
++
++	// Determine unreferenced assets
++	var toAppend []attachmentArg
++	for i, arg := range args {
++		if arg.URL == "" {
++			continue
++		}
++		if !referencedAssets[i] {
++			toAppend = append(toAppend, arg)
++		}
++	}
++
++	return &attachResult{
++		Rewritten: sb.String(),
++		ToAppend:  toAppend,
++	}, nil
++}
++
++func isSingleImage(markdown string, targetURL string) bool {
++	doc := goldmark.New().Parser().Parse(text.NewReader([]byte(markdown)))
++	if doc.ChildCount() != 1 {
++		return false
++	}
++	p, ok := doc.FirstChild().(*ast.Paragraph)
++	if !ok {
++		return false
++	}
++	if p.ChildCount() != 1 {
++		return false
++	}
++	img, ok := p.FirstChild().(*ast.Image)
++	if !ok {
++		return false
++	}
++	return string(img.Destination) == targetURL
++}
+diff --git a/internal/attachments/test_helpers.go b/internal/attachments/test_helpers.go
+new file mode 100644
+index 000000000..f7e21edc6
+--- /dev/null
++++ b/internal/attachments/test_helpers.go
+@@ -0,0 +1,69 @@
++package attachments
++
++import (
++	"fmt"
++	"net/http"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/cli/cli/v2/pkg/httpmock"
++)
++
++type UploadStub struct {
++	Name   string
++	Status int
++	Body   string
++}
++
++func StubUpload(reg *httpmock.Registry, repoID int64, name string, status int, body string) {
++	StubUploadToHost(nil, reg, "", repoID, name, status, body)
++}
++
++func StubUploadToHost(t testing.TB, reg *httpmock.Registry, host string, repoID int64, name string, status int, body string) {
++	matcher := func(req *http.Request) bool {
++		if !strings.EqualFold(req.Method, "POST") {
++			return false
++		}
++		if strings.TrimPrefix(req.URL.Path, "/") != "user-attachments/assets" {
++			return false
++		}
++		if host != "" && req.URL.Host != host {
++			return false
++		}
++		if repoID > 0 && req.URL.Query().Get("repository_id") != fmt.Sprintf("%d", repoID) {
++			return false
++		}
++		if name != "" && req.URL.Query().Get("name") != name {
++			return false
++		}
++		return true
++	}
++	reg.Register(matcher, httpmock.StatusStringResponse(status, body))
++}
++
++func NewTestAssets(t testing.TB, names ...string) []UserAsset {
++	t.Helper()
++	t.Chdir(t.TempDir())
++	assets := make([]UserAsset, 0, len(names))
++	for _, raw := range names {
++		path, alt := splitPathAlt(raw)
++		if !filepath.IsAbs(path) && !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../") {
++			path = "./" + path
++		}
++		dir := filepath.Dir(path)
++		if err := os.MkdirAll(dir, 0o755); err != nil {
++			t.Fatalf("failed to create directory for test asset: %v", err)
++		}
++		if err := os.WriteFile(path, []byte("asset-bytes"), 0o600); err != nil {
++			t.Fatalf("failed to write test asset: %v", err)
++		}
++		a, err := newAsset(path, alt)
++		if err != nil {
++			t.Fatalf("failed to create test asset: %v", err)
++		}
++		assets = append(assets, a)
++	}
++	return assets
++}
+diff --git a/internal/attachments/userasset.go b/internal/attachments/userasset.go
+new file mode 100644
+index 000000000..28345d045
+--- /dev/null
++++ b/internal/attachments/userasset.go
+@@ -0,0 +1,173 @@
++package attachments
++
++import (
++	"errors"
++	"fmt"
++	"io/fs"
++	"os"
++	"path/filepath"
++	"strings"
++)
++
++const (
++	maxImageBytes = 10 * 1024 * 1024
++	maxVideoBytes = 100 * 1024 * 1024
++)
++
++type UserAsset interface {
++	Path() string
++	ContentType() string
++	Basename() string
++	Size() int64
++	markdown(url string) string
++	rendersAsPlayer() bool
++	getAsset() *asset
++}
++
++type asset struct {
++	path        string
++	alt         string
++	contentType string
++	info        os.FileInfo
++}
++
++func (a *asset) Path() string {
++	return a.path
++}
++
++func (a *asset) ContentType() string {
++	return a.contentType
++}
++
++func (a *asset) Basename() string {
++	return filepath.Base(a.path)
++}
++
++func (a *asset) Size() int64 {
++	if a.info != nil {
++		return a.info.Size()
++	}
++	return 0
++}
++
++func (a *asset) getAsset() *asset {
++	return a
++}
++
++type imageAsset struct {
++	asset
++}
++
++func (a *imageAsset) rendersAsPlayer() bool {
++	return false
++}
++
++func (a *imageAsset) markdown(url string) string {
++	if a.alt == "" {
++		return fmt.Sprintf("![](%s)", url)
++	}
++	escaped := a.alt
++	escaped = strings.ReplaceAll(escaped, "\\", "\\\\")
++	escaped = strings.ReplaceAll(escaped, "[", "\\[")
++	escaped = strings.ReplaceAll(escaped, "]", "\\]")
++	escaped = strings.ReplaceAll(escaped, "\r", " ")
++	escaped = strings.ReplaceAll(escaped, "\n", " ")
++	return fmt.Sprintf("![%s](%s)", escaped, url)
++}
++
++type videoAsset struct {
++	asset
++}
++
++func (a *videoAsset) rendersAsPlayer() bool {
++	return true
++}
++
++func (a *videoAsset) markdown(url string) string {
++	return url
++}
++
++func newAsset(path, alt string) (UserAsset, error) {
++	info, err := os.Stat(path)
++	if err != nil {
++		if pe, ok := err.(*fs.PathError); ok {
++			return nil, fmt.Errorf("%s: %w", path, pe.Err)
++		}
++		return nil, fmt.Errorf("%s: %w", path, err)
++	}
++
++	if info.IsDir() {
++		return nil, fmt.Errorf("%s is a directory", path)
++	}
++	if !info.Mode().IsRegular() {
++		return nil, fmt.Errorf("%s is not a regular file", path)
++	}
++	if info.Size() == 0 {
++		return nil, fmt.Errorf("%s is empty", path)
++	}
++
++	ext := strings.ToLower(filepath.Ext(path))
++	var contentType string
++	isVideo := false
++
++	switch ext {
++	case ".png":
++		contentType = "image/png"
++	case ".jpg", ".jpeg":
++		contentType = "image/jpeg"
++	case ".gif":
++		contentType = "image/gif"
++	case ".webp":
++		contentType = "image/webp"
++	case ".svg":
++		contentType = "image/svg+xml"
++	case ".mp4":
++		contentType = "video/mp4"
++		isVideo = true
++	case ".mov":
++		contentType = "video/quicktime"
++		isVideo = true
++	case ".webm":
++		contentType = "video/webm"
++		isVideo = true
++	default:
++		return nil, fmt.Errorf("%s is not a supported file type (supported: png, jpg, jpeg, gif, webp, svg, mp4, mov, webm)", path)
++	}
++
++	if isVideo {
++		if alt != "" {
++			return nil, errors.New("cannot set alt text on video")
++		}
++		if info.Size() > maxVideoBytes {
++			return nil, fmt.Errorf("%s: videos must be at most 100.0 MB", path)
++		}
++		alt = filepath.Base(path)
++		return &videoAsset{
++			asset: asset{
++				path:        path,
++				alt:         alt,
++				contentType: contentType,
++				info:        info,
++			},
++		}, nil
++	}
++
++	if info.Size() > maxImageBytes {
++		return nil, fmt.Errorf("%s: images must be at most 10.0 MB", path)
++	}
++
++	if alt == "" {
++		base := filepath.Base(path)
++		nameWithoutExt := base[:len(base)-len(filepath.Ext(base))]
++		alt = strings.ReplaceAll(nameWithoutExt, ".", " ")
++	}
++
++	return &imageAsset{
++		asset: asset{
++			path:        path,
++			alt:         alt,
++			contentType: contentType,
++			info:        info,
++		},
++	}, nil
++}
+diff --git a/internal/config/config.go b/internal/config/config.go
+index dadfa284b..f5ea6cfd5 100644
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -6,6 +6,7 @@ import (
+ 	"os"
+ 	"path/filepath"
+ 	"slices"
++	"strings"
+ 
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/keyring"
+@@ -265,6 +266,27 @@ func (c *AuthConfig) HasActiveToken(hostname string) bool {
+ 	return token != ""
+ }
+ 
++// ActiveTokenType returns the type of the active token for the given hostname.
++func (c *AuthConfig) ActiveTokenType(hostname string) gh.TokenType {
++	token, _ := c.ActiveToken(hostname)
++	switch {
++	case strings.HasPrefix(token, "gho_"):
++		return gh.TokenTypeOAuth
++	case strings.HasPrefix(token, "ghp_"):
++		return gh.TokenTypePersonalAccess
++	case strings.HasPrefix(token, "github_pat_"):
++		return gh.TokenTypeFineGrainedPAT
++	case strings.HasPrefix(token, "ghu_"):
++		return gh.TokenTypeUserToServer
++	case strings.HasPrefix(token, "ghs_"):
++		return gh.TokenTypeServerToServer
++	case strings.HasPrefix(token, "ghr_"):
++		return gh.TokenTypeRefresh
++	default:
++		return gh.TokenTypeUnknown
++	}
++}
++
+ // HasEnvToken returns true when a token has been specified in an
+ // environment variable, else returns false.
+ func (c *AuthConfig) HasEnvToken() bool {
+diff --git a/internal/gh/gh.go b/internal/gh/gh.go
+index 759a931f2..5c06413d9 100644
+--- a/internal/gh/gh.go
++++ b/internal/gh/gh.go
+@@ -99,6 +99,18 @@ type Migration interface {
+ 	Do(*ghConfig.Config) error
+ }
+ 
++type TokenType int
++
++const (
++	TokenTypeUnknown TokenType = iota
++	TokenTypeOAuth
++	TokenTypePersonalAccess
++	TokenTypeFineGrainedPAT
++	TokenTypeUserToServer
++	TokenTypeServerToServer
++	TokenTypeRefresh
++)
++
+ // AuthConfig is used for interacting with some persistent configuration for gh,
+ // with knowledge on how to access encrypted storage when necessary.
+ // Behavior is scoped to authentication specific tasks.
+@@ -110,6 +122,9 @@ type AuthConfig interface {
+ 	// general configuration, and finally encrypted storage.
+ 	ActiveToken(hostname string) (token string, source string)
+ 
++	// ActiveTokenType returns the type of the active token for the given hostname.
++	ActiveTokenType(hostname string) TokenType
++
+ 	// HasEnvToken returns true when a token has been specified in an environment variable, else returns false.
+ 	HasEnvToken() bool
+ 
+diff --git a/internal/ghinstance/host.go b/internal/ghinstance/host.go
+index dfea6dd94..b8912d955 100644
+--- a/internal/ghinstance/host.go
++++ b/internal/ghinstance/host.go
+@@ -69,6 +69,18 @@ func RESTPrefix(hostname string) string {
+ 	return fmt.Sprintf("https://api.%s/", hostname)
+ }
+ 
++func UserAssetUploadPrefix(hostname string) string {
++	scheme := "https://"
++	if strings.EqualFold(hostname, localhost) {
++		scheme = "http://"
++	}
++	return fmt.Sprintf("%suploads.%s/", scheme, hostname)
++}
++
++func IsEnterprise(hostname string) bool {
++	return ghauth.IsEnterprise(hostname)
++}
++
+ func GistPrefix(hostname string) string {
+ 	prefix := "https://"
+ 	if strings.EqualFold(hostname, localhost) {
+diff --git a/pkg/cmd/issue/comment/comment.go b/pkg/cmd/issue/comment/comment.go
+index 9b7791656..4237e40c7 100644
+--- a/pkg/cmd/issue/comment/comment.go
++++ b/pkg/cmd/issue/comment/comment.go
+@@ -2,6 +2,7 @@ package comment
+ 
+ import (
+ 	"github.com/MakeNowJust/heredoc"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/pkg/cmd/issue/shared"
+ 	issueShared "github.com/cli/cli/v2/pkg/cmd/issue/shared"
+@@ -14,6 +15,8 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 	opts := &prShared.CommentableOptions{
+ 		IO:                        f.IOStreams,
+ 		HttpClient:                f.HttpClient,
++		Config:                    f.Config,
++		KeepExistingBody:          true,
+ 		EditSurvey:                prShared.CommentableEditSurvey(f.Config, f.IOStreams),
+ 		InteractiveEditSurvey:     prShared.CommentableInteractiveEditSurvey(f.Config, f.IOStreams),
+ 		ConfirmSubmitSurvey:       prShared.CommentableConfirmSubmitSurvey(f.Prompter),
+@@ -67,6 +70,9 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 				if opts.EditLast || opts.DeleteLast {
+ 					fields = append(fields, "comments")
+ 				}
++				if opts.AttachFlag.Changed() {
++					fields = append(fields, "repository")
++				}
+ 
+ 				issue, err := issueShared.FindIssueOrPR(httpClient, baseRepo, issueNumber, fields)
+ 				if err != nil {
+@@ -93,6 +99,8 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*prShared.CommentableOptions) e
+ 		},
+ 	}
+ 
++	opts.AttachFlag = attachments.AddFlag(cmd)
++
+ 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "The comment body `text`")
+ 	cmd.Flags().StringVarP(&bodyFile, "body-file", "F", "", "Read body text from `file` (use \"-\" to read from standard input)")
+ 	cmd.Flags().BoolP("editor", "e", false, "Skip prompts and open the text editor to write the body in")
+diff --git a/pkg/cmd/issue/create/create.go b/pkg/cmd/issue/create/create.go
+index 23f332d70..b23a46cce 100644
+--- a/pkg/cmd/issue/create/create.go
++++ b/pkg/cmd/issue/create/create.go
+@@ -1,6 +1,7 @@
+ package create
+ 
+ import (
++	"context"
+ 	"errors"
+ 	"fmt"
+ 	"net/http"
+@@ -8,6 +9,7 @@ import (
+ 
+ 	"github.com/MakeNowJust/heredoc"
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/browser"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+@@ -43,6 +45,9 @@ type CreateOptions struct {
+ 	Body        string
+ 	Interactive bool
+ 
++	AttachFlag *attachments.Flag
++	Assets     []attachments.UserAsset
++
+ 	Assignees []string
+ 	Labels    []string
+ 	Projects  []string
+@@ -130,6 +135,17 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 
+ 			opts.Interactive = !opts.EditorMode && !(titleProvided && bodyProvided)
+ 
++			if opts.AttachFlag.Changed() {
++				if opts.WebMode {
++					return cmdutil.FlagErrorf("`--attach` is not supported when using `--web`")
++				}
++				assets, err := opts.AttachFlag.UserAssets()
++				if err != nil {
++					return err
++				}
++				opts.Assets = assets
++			}
++
+ 			if opts.Interactive && !opts.IO.CanPrompt() {
+ 				return cmdutil.FlagErrorf("must provide `--title` and `--body` when not running interactively")
+ 			}
+@@ -141,6 +157,8 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 		},
+ 	}
+ 
++	opts.AttachFlag = attachments.AddFlag(cmd)
++
+ 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Supply a title. Will prompt for one otherwise.")
+ 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Supply a body. Will prompt for one otherwise.")
+ 	cmd.Flags().StringVarP(&bodyFile, "body-file", "F", "", "Read body text from `file` (use \"-\" to read from standard input)")
+@@ -258,6 +276,19 @@ func createRun(opts *CreateOptions) (err error) {
+ 		return
+ 	}
+ 
++	var uploader *attachments.Uploader
++	if len(opts.Assets) > 0 {
++		var cfg gh.Config
++		cfg, err = opts.Config()
++		if err != nil {
++			return
++		}
++		uploader, err = attachments.NewUploader(httpClient, cfg.Authentication().ActiveTokenType(baseRepo.RepoHost()), baseRepo.RepoHost(), repo.DatabaseID, repo.ViewerPermission)
++		if err != nil {
++			return
++		}
++	}
++
+ 	action := prShared.SubmitAction
+ 	templateNameForSubmit := ""
+ 	var openURL string
+@@ -327,7 +358,7 @@ func createRun(opts *CreateOptions) (err error) {
+ 			return
+ 		}
+ 
+-		allowPreview := !tb.HasMetadata() && prShared.ValidURL(openURL)
++		allowPreview := len(opts.Assets) == 0 && !tb.HasMetadata() && prShared.ValidURL(openURL)
+ 		action, err = prShared.ConfirmIssueSubmission(opts.Prompter, allowPreview, repo.ViewerCanTriage())
+ 		if err != nil {
+ 			err = fmt.Errorf("unable to confirm: %w", err)
+@@ -350,7 +381,7 @@ func createRun(opts *CreateOptions) (err error) {
+ 				return
+ 			}
+ 
+-			action, err = prShared.ConfirmIssueSubmission(opts.Prompter, !tb.HasMetadata(), false)
++			action, err = prShared.ConfirmIssueSubmission(opts.Prompter, len(opts.Assets) == 0 && !tb.HasMetadata(), false)
+ 			if err != nil {
+ 				return
+ 			}
+@@ -393,6 +424,15 @@ func createRun(opts *CreateOptions) (err error) {
+ 		}
+ 		return opts.Browser.Browse(openURL)
+ 	} else if action == prShared.SubmitAction {
++		var uploadErr error
++		if uploader != nil {
++			var uploaded int
++			tb.Body, uploaded, uploadErr = uploader.UploadAndAttach(context.Background(), tb.Body, opts.Assets)
++			if uploaded == 0 && uploadErr != nil {
++				return uploadErr
++			}
++		}
++
+ 		params := map[string]interface{}{
+ 			"title": tb.Title,
+ 			"body":  tb.Body,
+@@ -409,6 +449,9 @@ func createRun(opts *CreateOptions) (err error) {
+ 		var newIssue *api.Issue
+ 		newIssue, err = api.IssueCreate(apiClient, repo, params)
+ 		if err != nil {
++			if uploadErr != nil {
++				return fmt.Errorf("%w\n%w", uploadErr, err)
++			}
+ 			return
+ 		}
+ 
+@@ -422,6 +465,9 @@ func createRun(opts *CreateOptions) (err error) {
+ 		}
+ 
+ 		fmt.Fprintln(opts.IO.Out, newIssue.URL)
++		if uploadErr != nil {
++			return uploadErr
++		}
+ 	} else {
+ 		panic("Unreachable state")
+ 	}
+diff --git a/pkg/cmd/issue/edit/edit.go b/pkg/cmd/issue/edit/edit.go
+index 5cf52d92e..81125b23f 100644
+--- a/pkg/cmd/issue/edit/edit.go
++++ b/pkg/cmd/issue/edit/edit.go
+@@ -1,6 +1,8 @@
+ package edit
+ 
+ import (
++	"context"
++	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"sort"
+@@ -10,6 +12,7 @@ import (
+ 
+ 	"github.com/MakeNowJust/heredoc"
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+@@ -23,6 +26,7 @@ import (
+ 
+ type EditOptions struct {
+ 	HttpClient func() (*http.Client, error)
++	Config     func() (gh.Config, error)
+ 	IO         *iostreams.IOStreams
+ 	BaseRepo   func() (ghrepo.Interface, error)
+ 	Prompter   prShared.EditPrompter
+@@ -47,6 +51,9 @@ type EditOptions struct {
+ 	AddBlocking     []string
+ 	RemoveBlocking  []string
+ 
++	AttachFlag *attachments.Flag
++	Assets     []attachments.UserAsset
++
+ 	prShared.Editable
+ }
+ 
+@@ -54,6 +61,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 	opts := &EditOptions{
+ 		IO:                 f.IOStreams,
+ 		HttpClient:         f.HttpClient,
++		Config:             f.Config,
+ 		DetermineEditor:    func() (string, error) { return cmdutil.DetermineEditor(f.Config) },
+ 		FieldsToEditSurvey: prShared.FieldsToEditSurvey,
+ 		EditFieldsSurvey:   prShared.EditFieldsSurvey,
+@@ -195,7 +203,19 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 				flags.Changed("parent") || opts.RemoveParent ||
+ 				len(opts.AddSubIssues) > 0 || len(opts.RemoveSubIssues) > 0 ||
+ 				len(opts.AddBlockedBy) > 0 || len(opts.RemoveBlockedBy) > 0 ||
+-				len(opts.AddBlocking) > 0 || len(opts.RemoveBlocking) > 0
++				len(opts.AddBlocking) > 0 || len(opts.RemoveBlocking) > 0 ||
++				opts.AttachFlag.Changed()
++
++			if opts.AttachFlag.Changed() {
++				if len(opts.IssueNumbers) > 1 {
++					return cmdutil.FlagErrorf("`--attach` cannot be used when editing multiple issues")
++				}
++				assets, err := opts.AttachFlag.UserAssets()
++				if err != nil {
++					return err
++				}
++				opts.Assets = assets
++			}
+ 
+ 			// Drop into interactive mode only if the user passed no edit flags at all.
+ 			if !opts.Editable.Dirty() && !hasDeferredFlags {
+@@ -222,6 +242,8 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 		},
+ 	}
+ 
++	opts.AttachFlag = attachments.AddFlag(cmd)
++
+ 	cmd.Flags().StringVarP(&opts.Editable.Title.Value, "title", "t", "", "Set the new title.")
+ 	cmd.Flags().StringVarP(&opts.Editable.Body.Value, "body", "b", "", "Set the new body.")
+ 	cmd.Flags().StringVarP(&bodyFile, "body-file", "F", "", "Read body text from `file` (use \"-\" to read from standard input)")
+@@ -279,6 +301,9 @@ func editRun(opts *EditOptions) error {
+ 	}
+ 
+ 	lookupFields := []string{"id", "number", "title", "body", "url"}
++	if len(opts.Assets) > 0 {
++		lookupFields = append(lookupFields, "repository")
++	}
+ 	if editable.Assignees.Edited {
+ 		// TODO ApiActorsSupported
+ 		if issueFeatures.ApiActorsSupported {
+@@ -353,6 +378,47 @@ func editRun(opts *EditOptions) error {
+ 		}
+ 	}
+ 
++	var uploadErr error
++	if len(opts.Assets) > 0 {
++		issue := issues[0]
++		repoID := issue.RepositoryDatabaseID()
++		if repoID == 0 {
++			return errors.New("could not determine which repository to attach files to")
++		}
++		cfg, err := opts.Config()
++		if err != nil {
++			return err
++		}
++		authCfg := cfg.Authentication()
++		tokenType := authCfg.ActiveTokenType(baseRepo.RepoHost())
++		uploader, err := attachments.NewUploader(httpClient, tokenType, baseRepo.RepoHost(), repoID, issue.RepositoryViewerPermission())
++		if err != nil {
++			return err
++		}
++		initialBody := issue.Body
++		if editable.Body.Edited {
++			initialBody = editable.Body.Value
++		}
++		newBody, uploaded, err := uploader.UploadAndAttach(context.Background(), initialBody, opts.Assets)
++		if err != nil {
++			uploadErr = err
++		}
++		if uploaded > 0 {
++			editable.Body.Value = newBody
++			editable.Body.Edited = true
++		} else {
++			editable.Body.Edited = false
++			hasDeferred := opts.RemoveIssueType ||
++				opts.Parent != "" || opts.RemoveParent ||
++				len(opts.AddSubIssues) > 0 || len(opts.RemoveSubIssues) > 0 ||
++				len(opts.AddBlockedBy) > 0 || len(opts.RemoveBlockedBy) > 0 ||
++				len(opts.AddBlocking) > 0 || len(opts.RemoveBlocking) > 0
++			if !editable.Dirty() && !hasDeferred {
++				return uploadErr
++			}
++		}
++	}
++
+ 	for _, issue := range issues {
+ 		// Copy variables to capture in the go routine below.
+ 		editable := editable.Clone()
+@@ -451,7 +517,15 @@ func editRun(opts *EditOptions) error {
+ 	}
+ 
+ 	if len(failedIssueErrors) > 0 {
+-		return fmt.Errorf("failed to update %s", text.Pluralize(len(failedIssueErrors), "issue"))
++		updateErr := fmt.Errorf("failed to update %s", text.Pluralize(len(failedIssueErrors), "issue"))
++		if uploadErr != nil {
++			return fmt.Errorf("%w\n%w", uploadErr, updateErr)
++		}
++		return updateErr
++	}
++
++	if uploadErr != nil {
++		return uploadErr
+ 	}
+ 
+ 	return nil
+diff --git a/pkg/cmd/pr/comment/comment.go b/pkg/cmd/pr/comment/comment.go
+index 2eed7d353..d7f1a2de7 100644
+--- a/pkg/cmd/pr/comment/comment.go
++++ b/pkg/cmd/pr/comment/comment.go
+@@ -2,6 +2,7 @@ package comment
+ 
+ import (
+ 	"github.com/MakeNowJust/heredoc"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/pkg/cmd/pr/shared"
+ 	"github.com/cli/cli/v2/pkg/cmdutil"
+@@ -12,6 +13,8 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 	opts := &shared.CommentableOptions{
+ 		IO:                        f.IOStreams,
+ 		HttpClient:                f.HttpClient,
++		Config:                    f.Config,
++		KeepExistingBody:          true,
+ 		EditSurvey:                shared.CommentableEditSurvey(f.Config, f.IOStreams),
+ 		InteractiveEditSurvey:     shared.CommentableInteractiveEditSurvey(f.Config, f.IOStreams),
+ 		ConfirmSubmitSurvey:       shared.CommentableConfirmSubmitSurvey(f.Prompter),
+@@ -47,6 +50,9 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 			if opts.EditLast || opts.DeleteLast {
+ 				fields = append(fields, "comments")
+ 			}
++			if opts.AttachFlag.Changed() {
++				fields = append(fields, "repository")
++			}
+ 			finder := shared.NewFinder(f)
+ 			opts.RetrieveCommentable = func() (shared.Commentable, ghrepo.Interface, error) {
+ 				return finder.Find(shared.FindOptions{
+@@ -72,6 +78,8 @@ func NewCmdComment(f *cmdutil.Factory, runF func(*shared.CommentableOptions) err
+ 		},
+ 	}
+ 
++	opts.AttachFlag = attachments.AddFlag(cmd)
++
+ 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "The comment body `text`")
+ 	cmd.Flags().StringVarP(&bodyFile, "body-file", "F", "", "Read body text from `file` (use \"-\" to read from standard input)")
+ 	cmd.Flags().BoolP("editor", "e", false, "Skip prompts and open the text editor to write the body in")
+diff --git a/pkg/cmd/pr/create/create.go b/pkg/cmd/pr/create/create.go
+index 1a3eba7d8..486ee0497 100644
+--- a/pkg/cmd/pr/create/create.go
++++ b/pkg/cmd/pr/create/create.go
+@@ -17,6 +17,7 @@ import (
+ 	"github.com/cli/cli/v2/api"
+ 	ghContext "github.com/cli/cli/v2/context"
+ 	"github.com/cli/cli/v2/git"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/browser"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+@@ -45,6 +46,9 @@ type CreateOptions struct {
+ 	Finder           shared.PRFinder
+ 	TitledEditSurvey func(string, string) (string, string, error)
+ 
++	AttachFlag *attachments.Flag
++	Assets     []attachments.UserAsset
++
+ 	TitleProvided bool
+ 	BodyProvided  bool
+ 
+@@ -331,6 +335,20 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 				return cmdutil.FlagErrorf("`--dry-run` is not supported when using `--web`")
+ 			}
+ 
++			if opts.AttachFlag.Changed() {
++				if opts.WebMode {
++					return cmdutil.FlagErrorf("`--attach` is not supported when using `--web`")
++				}
++				if opts.DryRun {
++					return cmdutil.FlagErrorf("`--attach` is not supported when using `--dry-run`")
++				}
++				assets, err := opts.AttachFlag.UserAssets()
++				if err != nil {
++					return err
++				}
++				opts.Assets = assets
++			}
++
+ 			if runF != nil {
+ 				return runF(opts)
+ 			}
+@@ -338,6 +356,8 @@ func NewCmdCreate(f *cmdutil.Factory, runF func(*CreateOptions) error) *cobra.Co
+ 		},
+ 	}
+ 
++	opts.AttachFlag = attachments.AddFlag(cmd)
++
+ 	fl := cmd.Flags()
+ 	fl.BoolVarP(&opts.IsDraft, "draft", "d", false, "Mark pull request as a draft")
+ 	fl.StringVarP(&opts.Title, "title", "t", "", "Title for the pull request")
+@@ -429,6 +449,19 @@ func createRun(opts *CreateOptions) error {
+ 		return err
+ 	}
+ 
++	if len(opts.Assets) > 0 {
++		cfg, err := opts.Config()
++		if err != nil {
++			return err
++		}
++		authCfg := cfg.Authentication()
++		tokenType := authCfg.ActiveTokenType(ctx.PRRefs.BaseRepo().RepoHost())
++		_, err = attachments.NewUploader(httpClient, tokenType, ctx.PRRefs.BaseRepo().RepoHost(), ctx.PRRefs.BaseRepo().DatabaseID, ctx.PRRefs.BaseRepo().ViewerPermission)
++		if err != nil {
++			return err
++		}
++	}
++
+ 	// TODO ApiActorsSupported
+ 	if issueFeatures.ApiActorsSupported {
+ 		state.ApiActorsSupported = true
+@@ -586,7 +619,7 @@ func createRun(opts *CreateOptions) error {
+ 			return err
+ 		}
+ 
+-		allowPreview := !state.HasMetadata() && shared.ValidURL(openURL) && !opts.DryRun
++		allowPreview := len(opts.Assets) == 0 && !state.HasMetadata() && shared.ValidURL(openURL) && !opts.DryRun
+ 		allowMetadata := ctx.PRRefs.BaseRepo().ViewerCanTriage()
+ 		action, err = shared.ConfirmPRSubmission(opts.Prompter, allowPreview, allowMetadata, state.Draft)
+ 		if err != nil {
+@@ -605,7 +638,7 @@ func createRun(opts *CreateOptions) error {
+ 				return err
+ 			}
+ 
+-			action, err = shared.ConfirmPRSubmission(opts.Prompter, !state.HasMetadata() && !opts.DryRun, false, state.Draft)
++			action, err = shared.ConfirmPRSubmission(opts.Prompter, len(opts.Assets) == 0 && !state.HasMetadata() && !opts.DryRun, false, state.Draft)
+ 			if err != nil {
+ 				return err
+ 			}
+@@ -1036,6 +1069,25 @@ func getRemotes(opts *CreateOptions) (ghContext.Remotes, error) {
+ func submitPR(opts CreateOptions, ctx CreateContext, state shared.IssueMetadataState, projectV1Support gh.ProjectsV1Support) error {
+ 	client := ctx.Client
+ 
++	var uploadErr error
++	if len(opts.Assets) > 0 {
++		cfg, err := opts.Config()
++		if err != nil {
++			return err
++		}
++		authCfg := cfg.Authentication()
++		tokenType := authCfg.ActiveTokenType(ctx.PRRefs.BaseRepo().RepoHost())
++		uploader, err := attachments.NewUploader(client.HTTP(), tokenType, ctx.PRRefs.BaseRepo().RepoHost(), ctx.PRRefs.BaseRepo().DatabaseID, ctx.PRRefs.BaseRepo().ViewerPermission)
++		if err != nil {
++			return err
++		}
++		var uploaded int
++		state.Body, uploaded, uploadErr = uploader.UploadAndAttach(context.Background(), state.Body, opts.Assets)
++		if uploaded == 0 && uploadErr != nil {
++			return fmt.Errorf("%w\nno pull request was created", uploadErr)
++		}
++	}
++
+ 	params := map[string]interface{}{
+ 		"title":               state.Title,
+ 		"body":                state.Body,
+@@ -1069,10 +1121,19 @@ func submitPR(opts CreateOptions, ctx CreateContext, state shared.IssueMetadataS
+ 		fmt.Fprintln(opts.IO.Out, pr.URL)
+ 	}
+ 	if err != nil {
++		var prErr error
+ 		if pr != nil {
+-			return fmt.Errorf("pull request update failed: %w", err)
++			prErr = fmt.Errorf("pull request update failed: %w", err)
++		} else {
++			prErr = fmt.Errorf("pull request create failed: %w", err)
++		}
++		if uploadErr != nil {
++			return fmt.Errorf("%w\n%w", uploadErr, prErr)
+ 		}
+-		return fmt.Errorf("pull request create failed: %w", err)
++		return prErr
++	}
++	if uploadErr != nil {
++		return uploadErr
+ 	}
+ 	return nil
+ }
+diff --git a/pkg/cmd/pr/edit/edit.go b/pkg/cmd/pr/edit/edit.go
+index af5e04631..60699277b 100644
+--- a/pkg/cmd/pr/edit/edit.go
++++ b/pkg/cmd/pr/edit/edit.go
+@@ -1,6 +1,8 @@
+ package edit
+ 
+ import (
++	"context"
++	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"slices"
+@@ -9,6 +11,7 @@ import (
+ 
+ 	"github.com/MakeNowJust/heredoc"
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	fd "github.com/cli/cli/v2/internal/featuredetection"
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+@@ -23,6 +26,7 @@ import (
+ 
+ type EditOptions struct {
+ 	HttpClient func() (*http.Client, error)
++	Config     func() (gh.Config, error)
+ 	IO         *iostreams.IOStreams
+ 
+ 	Finder          shared.PRFinder
+@@ -36,6 +40,9 @@ type EditOptions struct {
+ 	SelectorArg string
+ 	Interactive bool
+ 
++	AttachFlag *attachments.Flag
++	Assets     []attachments.UserAsset
++
+ 	shared.Editable
+ }
+ 
+@@ -43,6 +50,7 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 	opts := &EditOptions{
+ 		IO:              f.IOStreams,
+ 		HttpClient:      f.HttpClient,
++		Config:          f.Config,
+ 		Surveyor:        surveyor{P: f.Prompter},
+ 		Fetcher:         fetcher{},
+ 		EditorRetriever: editorRetriever{config: f.Config},
+@@ -189,7 +197,15 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 				// see the `Editable.MilestoneId` method.
+ 			}
+ 
+-			if !opts.Editable.Dirty() {
++			if opts.AttachFlag.Changed() {
++				assets, err := opts.AttachFlag.UserAssets()
++				if err != nil {
++					return err
++				}
++				opts.Assets = assets
++			}
++
++			if !opts.Editable.Dirty() && !opts.AttachFlag.Changed() {
+ 				opts.Interactive = true
+ 			}
+ 
+@@ -205,6 +221,8 @@ func NewCmdEdit(f *cmdutil.Factory, runF func(*EditOptions) error) *cobra.Comman
+ 		},
+ 	}
+ 
++	opts.AttachFlag = attachments.AddFlag(cmd)
++
+ 	cmd.Flags().StringVarP(&opts.Editable.Title.Value, "title", "t", "", "Set the new title.")
+ 	cmd.Flags().StringVarP(&opts.Editable.Body.Value, "body", "b", "", "Set the new body.")
+ 	cmd.Flags().StringVarP(&bodyFile, "body-file", "F", "", "Read body text from `file` (use \"-\" to read from standard input)")
+@@ -265,6 +283,10 @@ func editRun(opts *EditOptions) error {
+ 		Detector: opts.Detector,
+ 	}
+ 
++	if len(opts.Assets) > 0 {
++		findOptions.Fields = append(findOptions.Fields, "repository")
++	}
++
+ 	issueFeatures, err := opts.Detector.IssueFeatures()
+ 	if err != nil {
+ 		return err
+@@ -282,6 +304,24 @@ func editRun(opts *EditOptions) error {
+ 		return err
+ 	}
+ 
++	var uploader *attachments.Uploader
++	if len(opts.Assets) > 0 {
++		repoID := pr.RepositoryDatabaseID()
++		if repoID == 0 {
++			return errors.New("could not determine which repository to attach files to")
++		}
++		cfg, err := opts.Config()
++		if err != nil {
++			return err
++		}
++		authCfg := cfg.Authentication()
++		tokenType := authCfg.ActiveTokenType(repo.RepoHost())
++		uploader, err = attachments.NewUploader(httpClient, tokenType, repo.RepoHost(), repoID, pr.RepositoryViewerPermission())
++		if err != nil {
++			return err
++		}
++	}
++
+ 	editable := opts.Editable
+ 	editable.Reviewers.Selectable = true
+ 	editable.Title.Default = pr.Title
+@@ -353,15 +393,47 @@ func editRun(opts *EditOptions) error {
+ 		}
+ 	}
+ 
++	var uploadErr error
++	if uploader != nil {
++		initialBody := pr.Body
++		if editable.Body.Edited {
++			initialBody = editable.Body.Value
++		}
++		newBody, uploaded, err := uploader.UploadAndAttach(context.Background(), initialBody, opts.Assets)
++		if err != nil {
++			uploadErr = err
++		}
++		if uploaded > 0 {
++			editable.Body.Value = newBody
++			editable.Body.Edited = true
++		} else {
++			editable.Body.Edited = false
++		}
++	}
++
++	if len(opts.Assets) > 0 && !editable.Dirty() {
++		if uploadErr != nil {
++			return fmt.Errorf("%w\nthe pull request was not changed", uploadErr)
++		}
++		return errors.New("the pull request was not changed")
++	}
++
+ 	opts.IO.StartProgressIndicator()
+ 	err = updatePullRequest(httpClient, repo, pr.ID, pr.Number, editable)
+ 	opts.IO.StopProgressIndicator()
+ 	if err != nil {
++		if uploadErr != nil {
++			return fmt.Errorf("%w\n%w", uploadErr, err)
++		}
+ 		return err
+ 	}
+ 
+ 	fmt.Fprintln(opts.IO.Out, pr.URL)
+ 
++	if uploadErr != nil {
++		return uploadErr
++	}
++
+ 	return nil
+ }
+ 
+diff --git a/pkg/cmd/pr/shared/commentable.go b/pkg/cmd/pr/shared/commentable.go
+index 015d84a4b..f36565fd3 100644
+--- a/pkg/cmd/pr/shared/commentable.go
++++ b/pkg/cmd/pr/shared/commentable.go
+@@ -2,12 +2,14 @@ package shared
+ 
+ import (
+ 	"bufio"
++	"context"
+ 	"errors"
+ 	"fmt"
+ 	"io"
+ 	"net/http"
+ 
+ 	"github.com/cli/cli/v2/api"
++	"github.com/cli/cli/v2/internal/attachments"
+ 	"github.com/cli/cli/v2/internal/gh"
+ 	"github.com/cli/cli/v2/internal/ghrepo"
+ 	"github.com/cli/cli/v2/internal/text"
+@@ -32,11 +34,14 @@ type Commentable interface {
+ 	Link() string
+ 	Identifier() string
+ 	CurrentUserComments() []api.Comment
++	RepositoryDatabaseID() int64
++	RepositoryViewerPermission() string
+ }
+ 
+ type CommentableOptions struct {
+ 	IO                        *iostreams.IOStreams
+ 	HttpClient                func() (*http.Client, error)
++	Config                    func() (gh.Config, error)
+ 	RetrieveCommentable       func() (Commentable, ghrepo.Interface, error)
+ 	EditSurvey                func(string) (string, error)
+ 	InteractiveEditSurvey     func(string) (string, error)
+@@ -47,6 +52,10 @@ type CommentableOptions struct {
+ 	Interactive               bool
+ 	InputType                 InputType
+ 	Body                      string
++	BodyProvided              bool
++	KeepExistingBody          bool
++	AttachFlag                *attachments.Flag
++	Assets                    []attachments.UserAsset
+ 	EditLast                  bool
+ 	DeleteLast                bool
+ 	DeleteLastConfirmed       bool
+@@ -56,13 +65,29 @@ type CommentableOptions struct {
+ }
+ 
+ func CommentablePreRun(cmd *cobra.Command, opts *CommentableOptions) error {
++	if opts.AttachFlag != nil && opts.AttachFlag.Changed() {
++		if web, _ := cmd.Flags().GetBool("web"); web {
++			return cmdutil.FlagErrorf("`--attach` is not supported when using `--web`")
++		}
++		if opts.DeleteLast {
++			return cmdutil.FlagErrorf("`--attach` is not supported when using `--delete-last`")
++		}
++		assets, err := opts.AttachFlag.UserAssets()
++		if err != nil {
++			return err
++		}
++		opts.Assets = assets
++	}
++
+ 	inputFlags := 0
+ 	if cmd.Flags().Changed("body") {
+ 		opts.InputType = InputTypeInline
++		opts.BodyProvided = true
+ 		inputFlags++
+ 	}
+ 	if cmd.Flags().Changed("body-file") {
+ 		opts.InputType = InputTypeInline
++		opts.BodyProvided = true
+ 		inputFlags++
+ 	}
+ 	if web, _ := cmd.Flags().GetBool("web"); web {
+@@ -94,10 +119,13 @@ func CommentablePreRun(cmd *cobra.Command, opts *CommentableOptions) error {
+ 	}
+ 
+ 	if inputFlags == 0 {
+-		if !opts.IO.CanPrompt() {
++		if len(opts.Assets) > 0 {
++			opts.InputType = InputTypeInline
++		} else if !opts.IO.CanPrompt() {
+ 			return cmdutil.FlagErrorf("flags required when not running interactively")
++		} else {
++			opts.Interactive = true
+ 		}
+-		opts.Interactive = true
+ 	} else if inputFlags > 1 {
+ 		return cmdutil.FlagErrorf("specify only one of `--body`, `--body-file`, `--editor`, or `--web`")
+ 	}
+@@ -148,6 +176,22 @@ func CommentableRun(opts *CommentableOptions) error {
+ 	return createComment(commentable, opts)
+ }
+ 
++func newCommentUploader(opts *CommentableOptions, commentable Commentable) (*attachments.Uploader, error) {
++	httpClient, err := opts.HttpClient()
++	if err != nil {
++		return nil, err
++	}
++	if opts.Config == nil {
++		return nil, errors.New("missing config")
++	}
++	cfg, err := opts.Config()
++	if err != nil {
++		return nil, err
++	}
++	tokenType := cfg.Authentication().ActiveTokenType(opts.Host)
++	return attachments.NewUploader(httpClient, tokenType, opts.Host, commentable.RepositoryDatabaseID(), commentable.RepositoryViewerPermission())
++}
++
+ func createComment(commentable Commentable, opts *CommentableOptions) error {
+ 	switch opts.InputType {
+ 	case InputTypeWeb:
+@@ -157,6 +201,12 @@ func createComment(commentable Commentable, opts *CommentableOptions) error {
+ 		}
+ 		return opts.OpenInBrowser(openURL)
+ 	case InputTypeEditor:
++		if len(opts.Assets) > 0 {
++			if _, err := newCommentUploader(opts, commentable); err != nil {
++				return err
++			}
++		}
++
+ 		var body string
+ 		var err error
+ 		if opts.Interactive {
+@@ -180,6 +230,19 @@ func createComment(commentable Commentable, opts *CommentableOptions) error {
+ 		}
+ 	}
+ 
++	var uploadErr error
++	if len(opts.Assets) > 0 {
++		uploader, err := newCommentUploader(opts, commentable)
++		if err != nil {
++			return err
++		}
++		var uploaded int
++		opts.Body, uploaded, uploadErr = uploader.UploadAndAttach(context.Background(), opts.Body, opts.Assets)
++		if uploaded == 0 && uploadErr != nil {
++			return fmt.Errorf("%w\nno comment was posted", uploadErr)
++		}
++	}
++
+ 	httpClient, err := opts.HttpClient()
+ 	if err != nil {
+ 		return err
+@@ -189,6 +252,9 @@ func createComment(commentable Commentable, opts *CommentableOptions) error {
+ 	params := api.CommentCreateInput{Body: opts.Body, SubjectId: commentable.Identifier()}
+ 	url, err := api.CommentCreate(apiClient, opts.Host, params)
+ 	if err != nil {
++		if uploadErr != nil {
++			return fmt.Errorf("%w\n%w", uploadErr, err)
++		}
+ 		return err
+ 	}
+ 
+@@ -196,7 +262,7 @@ func createComment(commentable Commentable, opts *CommentableOptions) error {
+ 		fmt.Fprintln(opts.IO.Out, url)
+ 	}
+ 
+-	return nil
++	return uploadErr
+ }
+ 
+ func updateComment(commentable Commentable, opts *CommentableOptions) error {
+@@ -215,6 +281,12 @@ func updateComment(commentable Commentable, opts *CommentableOptions) error {
+ 		}
+ 		return opts.OpenInBrowser(openURL)
+ 	case InputTypeEditor:
++		if len(opts.Assets) > 0 {
++			if _, err := newCommentUploader(opts, commentable); err != nil {
++				return err
++			}
++		}
++
+ 		var body string
+ 		var err error
+ 		initialValue := lastComment.Content()
+@@ -239,15 +311,36 @@ func updateComment(commentable Commentable, opts *CommentableOptions) error {
+ 		}
+ 	}
+ 
++	targetBody := opts.Body
++	if opts.KeepExistingBody && !opts.BodyProvided && opts.InputType != InputTypeEditor {
++		targetBody = lastComment.Content()
++	}
++
++	var uploadErr error
++	if len(opts.Assets) > 0 {
++		uploader, err := newCommentUploader(opts, commentable)
++		if err != nil {
++			return err
++		}
++		var uploaded int
++		targetBody, uploaded, uploadErr = uploader.UploadAndAttach(context.Background(), targetBody, opts.Assets)
++		if uploaded == 0 && uploadErr != nil {
++			return fmt.Errorf("%w\nthe comment was not changed", uploadErr)
++		}
++	}
++
+ 	httpClient, err := opts.HttpClient()
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+ 	apiClient := api.NewClientFromHTTP(httpClient)
+-	params := api.CommentUpdateInput{Body: opts.Body, CommentId: lastComment.Identifier()}
++	params := api.CommentUpdateInput{Body: targetBody, CommentId: lastComment.Identifier()}
+ 	url, err := api.CommentUpdate(apiClient, opts.Host, params)
+ 	if err != nil {
++		if uploadErr != nil {
++			return fmt.Errorf("%w\n%w", uploadErr, err)
++		}
+ 		return err
+ 	}
+ 
+@@ -255,7 +348,7 @@ func updateComment(commentable Commentable, opts *CommentableOptions) error {
+ 		fmt.Fprintln(opts.IO.Out, url)
+ 	}
+ 
+-	return nil
++	return uploadErr
+ }
+ 
+ func deleteComment(commentable Commentable, opts *CommentableOptions) error {
+diff --git a/pkg/httpmock/legacy.go b/pkg/httpmock/legacy.go
+index 1484734f3..c4686e387 100644
+--- a/pkg/httpmock/legacy.go
++++ b/pkg/httpmock/legacy.go
+@@ -7,19 +7,24 @@ import (
+ // TODO: clean up methods in this file when there are no more callers
+ 
+ func (r *Registry) StubRepoInfoResponse(owner, repo, branch string) {
++	r.StubRepoInfoResponseWithPermission(owner, repo, branch, "WRITE")
++}
++
++func (r *Registry) StubRepoInfoResponseWithPermission(owner, repo, branch, permission string) {
+ 	r.Register(
+ 		GraphQL(`query RepositoryInfo\b`),
+ 		StringResponse(fmt.Sprintf(`
+ 		{ "data": { "repository": {
+ 			"id": "REPOID",
++			"databaseId": 1234,
+ 			"name": "%s",
+ 			"owner": {"login": "%s"},
+ 			"description": "",
+ 			"defaultBranchRef": {"name": "%s"},
+ 			"hasIssuesEnabled": true,
+-			"viewerPermission": "WRITE"
++			"viewerPermission": "%s"
+ 		} } }
+-		`, repo, owner, branch)))
++		`, repo, owner, branch, permission)))
+ }
+ 
+ func (r *Registry) StubIssueRepoInfoResponse(owner, repo string) {

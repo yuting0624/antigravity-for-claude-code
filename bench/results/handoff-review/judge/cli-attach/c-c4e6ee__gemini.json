@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-c4e6ee",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:44:07+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "02bc1c9883996cc615d5730e5f6fc363755e8a40c545e427ca88d5e7d9801cbf",
+  "wall_s": 129.8,
+  "cost_usd": 0.276478,
+  "usage": {
+    "input": 67349,
+    "output": 11815,
+    "thinking": 11617,
+    "cache_read": 0,
+    "total": 79164
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 2,
+    "readability": 2,
+    "robustness": 1,
+    "maintainability": 2
+  },
+  "mean": 2.167,
+  "rationale": {
+    "consistency": "Follows existing patterns for commands, configuration, and GraphQL queries nicely.",
+    "edge_cases": "Violates 'nothing is written' on partial upload failure, and fails to treat --attach as body input for issue/PR creation.",
+    "scope": "Attempts all requirements but introduces a critical build failure by accessing non-existent struct fields on an interface.",
+    "readability": "The manual byte-offset scanning and markdown rewriting logic in references.go is overly dense and hard to parse.",
+    "robustness": "Fails to compile due to calling DatabaseID on ghrepo.Interface in PR create, and partial upload errors leave broken state.",
+    "maintainability": "Rewriting markdown via manual byte calculations instead of standard AST transformation will be very fragile to maintain."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

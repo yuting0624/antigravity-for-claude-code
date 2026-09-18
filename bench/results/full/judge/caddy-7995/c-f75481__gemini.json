@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-f75481",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:13:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "d638f257c7667443299f7ded1fd04218901ed3be245545a10d6702d3f3cc517a",
+  "wall_s": 48.4,
+  "cost_usd": 0.133378,
+  "usage": {
+    "input": 39923,
+    "output": 4461,
+    "thinking": 4266,
+    "cache_read": 0,
+    "total": 44384
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches Caddy's conventions perfectly, utilizing slices.Clone, maps.Clone, and proper unexported struct field scoping.",
+    "edge_cases": "Handles nil options maps, multiple order directives, and invalid options gracefully without leaking polluted global state.",
+    "scope": "Focused entirely on the prompt's requirements, fixing the race conditions without changing the exported API or refactoring unrelated code.",
+    "readability": "Excellent use of comments to explain the non-obvious choices around map cloning and directive order scoping.",
+    "robustness": "Eliminates global state mutation during adaptations, preventing race conditions and ensuring thread-safe Caddyfile parsing.",
+    "maintainability": "Cleanly decouples the process-wide directive order from the adaptation-specific order, preventing future regressions."
+  },
+  "flags": []
+}

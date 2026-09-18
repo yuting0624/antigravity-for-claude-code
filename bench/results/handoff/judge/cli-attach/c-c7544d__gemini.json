@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-attach",
+  "candidate_id": "c-c7544d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:12:47+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1b55cb45d4e1dcb244750e18fd326c290f50a57b774b026d9ee48acf5d16cb95",
+  "wall_s": 153.3,
+  "cost_usd": 0.291838,
+  "usage": {
+    "input": 65957,
+    "output": 13327,
+    "thinking": 13134,
+    "cache_read": 0,
+    "total": 79284
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 4,
+    "readability": 2,
+    "robustness": 2,
+    "maintainability": 2
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "Adheres to CLI package conventions but introduces uncharacteristic manual byte-scanning for markdown parsing.",
+    "edge_cases": "Fails to abort resource creation on partial upload failures, violating the 'nothing is written' requirement.",
+    "scope": "Implements all requested features including flags, validation, and markdown rewriting without unrelated changes.",
+    "readability": "The manual Markdown byte-scanning logic in findLinkDetails is dense, complex, and lacks clarifying comments.",
+    "robustness": "Handles API limits well but relies on a fragile byte-replacement strategy with an explicit blockquote workaround.",
+    "maintainability": "The complex index arithmetic and tight coupling to Goldmark's AST will be difficult to extend or debug."
+  },
+  "flags": [
+    "suspicious_test_workaround"
+  ]
+}

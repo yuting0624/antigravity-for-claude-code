@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-a84f6c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:40:51+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "3bc65d2c7d0f17a69d2e00747269a6479feaca972d61fb6c4b7ef4980f73b7c7",
+  "wall_s": 93.8,
+  "cost_usd": 0.282854,
+  "usage": {
+    "input": 74209,
+    "output": 11203,
+    "thinking": 11003,
+    "cache_read": 0,
+    "total": 85412
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Perfectly aligns with the gh codebase's architectural patterns, testing strategies, and GraphQL query extensions.",
+    "edge_cases": "Thoroughly handles markdown parsing and API errors, but fails to prevent interactive body prompts in create commands when --attach is provided alone.",
+    "scope": "Implements the feature richly, but misses `--attach alone counts as body input` for create commands and intentionally diverges from failing atomically if one upload fails.",
+    "readability": "Exceptionally clean, with complex AST manipulations logically structured, abstracted, and well-commented.",
+    "robustness": "Safely reads file metadata upfront, streams uploads without ballooning memory, and manages context properly.",
+    "maintainability": "The attachments package provides a tight boundary with high cohesion, making future extensions trivial."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

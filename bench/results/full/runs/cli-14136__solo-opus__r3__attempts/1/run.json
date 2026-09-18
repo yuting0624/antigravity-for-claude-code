@@ -1,0 +1,348 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-14136__solo-opus__r3",
+  "task_id": "cli-14136",
+  "arm": "solo-opus",
+  "rep": 3,
+  "attempt": 1,
+  "lane": "C",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-15T23:31:56+00:00",
+  "ended_at": "2026-09-15T23:52:02+00:00",
+  "agent_wall_s": 1205.3,
+  "agent_active_s": 206.8,
+  "suspended_s": 998.6,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": null,
+    "plugin_sha": null
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 30,
+    "max_turns": 150,
+    "wall_s": 9000,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "878ec79131936101a7c822ed364755f664c0191cd2e27b82963d81b2eab23e89",
+    "appendix": null,
+    "appendix_sha256": null,
+    "sent_sha256": "878ec79131936101a7c822ed364755f664c0191cd2e27b82963d81b2eab23e89"
+  },
+  "claude": {
+    "session_id": "4d68d4de-61bb-42dc-b51b-0488da59cbaa",
+    "subtype": "success",
+    "is_error": true,
+    "num_turns": 20,
+    "num_turns_source": "result",
+    "duration_ms": 206406,
+    "duration_api_ms": 106378,
+    "total_cost_usd": 1.086825,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 26,
+      "cache_creation_input_tokens": 97362,
+      "cache_read_input_tokens": 587509,
+      "output_tokens": 7315,
+      "output_tokens_details": {
+        "thinking_tokens": 5178
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 97362
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1428,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0015530000000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 26,
+        "outputTokens": 7315,
+        "cacheReadInputTokens": 587509,
+        "cacheCreationInputTokens": 97362,
+        "webSearchRequests": 0,
+        "costUSD": 1.0852719999999998,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 5178,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 1.085272,
+    "recomputed_vs_reported_gap": -0.0014,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 14,
+      "input": 26,
+      "output": 7315,
+      "cache_creation": 97362,
+      "cache_read": 587509,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 13,
+          "input": 26,
+          "output": 7315,
+          "cache_creation": 97362,
+          "cache_read": 587509
+        },
+        "<synthetic>": {
+          "turns": 1,
+          "input": 0,
+          "output": 0,
+          "cache_creation": 0,
+          "cache_read": 0
+        }
+      },
+      "tool_calls": {
+        "Bash": 15,
+        "Read": 4
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 26,
+        "transcript": 26,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 7315,
+        "transcript": 7315,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 97362,
+        "transcript": 97362,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 587509,
+        "transcript": 587509,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 1,
+    "denied_tools": {
+      "Bash:timeout": 1
+    },
+    "result_head": "API Error: getaddrinfo ENOTFOUND oauth2.googleapis.com",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 0,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 44,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "timeout": 1
+    },
+    "gate_allows": 14,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "# github.com/cli/cli/v2/pkg/cmd/issue/develop\n# [github.com/cli/cli/v2/pkg/cmd/issue/develop]\nvet: pkg/cmd/issue/develop/develop_test.go:72:5: unknown field Worktree in struct literal of type DevelopOptions\n# github.com/cli/cli/v2/pkg/cmd/pr/shared\n# [github.com/cli/cli/v2/pkg/cmd/pr/shared]\nvet: pkg/cmd/pr/shared/worktree_test.go:88:19: undefined: ResolveWorktreeTarget\n",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 242.7,
+      "passed_tests": 8,
+      "failed_tests": [
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout.Test_checkoutRun/checkout_with_ssh_remote_URL",
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout.Test_checkoutRun"
+      ],
+      "failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/issue/develop",
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "build_failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/issue/develop",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "packages": 3,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 1152.6,
+      "passed_tests": 7098,
+      "failed_tests": [
+        "github.com/cli/cli/v2/pkg/cmd/attestation/inspect.TestNewInspectCmd_PrintOutputJSONFormat/Print_output_in_JSON_format",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/inspect.TestNewInspectCmd_PrintOutputJSONFormat",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_invalid_signature",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyAttestations",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_valid_artifact_and_JSON_lines_file_containing_multiple_Sigstore_bundles",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegration",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier/with_invalid_bundle_version",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationCustomIssuer",
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout.Test_checkoutRun/checkout_with_ssh_remote_URL",
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout.Test_checkoutRun",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow/with_owner_and_valid_reusable_workflow_SAN",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow/with_owner_and_valid_reusable_workflow_SAN_regex",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow/with_owner_and_valid_reusable_signer_repo",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow/with_repo_and_valid_reusable_workflow_SAN",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow/with_repo_and_valid_reusable_workflow_SAN_regex",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow/with_repo_and_valid_reusable_signer_repo",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify.TestVerifyIntegrationReusableWorkflow",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification.TestLiveSigstoreVerifier"
+      ],
+      "failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/attestation/inspect",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verification",
+        "github.com/cli/cli/v2/pkg/cmd/attestation/verify",
+        "github.com/cli/cli/v2/pkg/cmd/issue/develop",
+        "github.com/cli/cli/v2/pkg/cmd/pr/checkout",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "build_failed_packages": [
+        "github.com/cli/cli/v2/pkg/cmd/issue/develop",
+        "github.com/cli/cli/v2/pkg/cmd/pr/shared"
+      ],
+      "packages": 308,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 0,
+    "code_added": 0,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "diff_files": {},
+  "cost": {
+    "claude_usd": 1.086825,
+    "gemini_usd": 0.0,
+    "total_usd": 1.086825
+  },
+  "notes": [
+    "post hoc 2026-09-16T01:25Z: final message was an API error (API Error: getaddrinfo ENOTFOUND oauth2.googleapis.com); classified suspended and rerun"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "suspended"
+}

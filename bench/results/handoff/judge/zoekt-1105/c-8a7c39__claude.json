@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-8a7c39",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:44:58+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290cec7a8665a74769f60f85e0cd659be0bc481db3d6994e367c16d562d8bbe4",
+  "wall_s": 115.5,
+  "cost_usd": 0.7962410000000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Follows package-main layout and %w error wrapping, but re-implements discovery instead of building on gitindex.FindGitRepos and hand-rolls the index flags/largeFiles flag rather than reusing the shared cmd helpers siblings use; unconditional x/sys/unix flock makes the command unix-only.",
+    "edge_cases": "Handles gitfile worktrees, bare roots, symlinked/duplicate roots, missing index dir and renamed repos; but no-root case returns a bare error rather than printing usage, a .git symlink escaping the os.Root aborts the walk, and one compound/unreadable shard aborts the whole sync.",
+    "scope": "Delivers sync/list/remove/lock, but also adds a DryRun field to shared gitindex.Options, a 'sync' alias, and source-path selectors for remove; the Name-precedence flip in setTemplatesFromRepo likely alters zoekt-git-index naming (caller-set base name now beats zoekt.name/origin URL).",
+    "readability": "Small, well-named functions and clear plan/apply split; minor smells: loop var shadows the imported path package, duplicated sort comparators, two identical Name/Source struct shapes.",
+    "robustness": "flock with EINTR retry and errors.Join aggregation are solid; lock is only taken with -f (fine for dry runs). Weak points: any unreadable or multi-repo shard fails the entire run, shards with empty Source are silently pruned, and the gitindex name-precedence change risks regressing existing callers.",
+    "maintainability": "Plan/apply separation and io.Writer plumbing ease testing, but flag definitions duplicate the cmd package, repositoryKey/repositorySpec duplicate each other, and DryRun plus the deferred Name restore add subtle coupling inside the shared indexer."
+  },
+  "flags": []
+}

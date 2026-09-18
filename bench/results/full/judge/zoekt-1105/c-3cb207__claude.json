@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-3cb207",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:40:25+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8303caa08b9d9362dd8796dd6f0416f2bbb7bf50962791d94a76652738b53a2b",
+  "wall_s": 90.7,
+  "cost_usd": 0.60101925,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Idiomatic Go and flag usage, but reimplements discovery instead of building on gitindex.FindGitRepos, adds a unix-only flock file with no build tag, and the unconditional name-preservation silently changes zoekt-git-index naming for repos with an origin remote.",
+    "edge_cases": "Covers root-as-repo, bare repos, worktree .git files and duplicate names; but no-root exits with an error and no usage text, a dry run still creates the index dir and lock file, and any walk error (e.g. permission denied) aborts the whole sync.",
+    "scope": "Delivers sync/list/remove, lock and DryRun; however the gitindex change is an implicit behaviour change for existing callers rather than an opt-in, and Repository.Root is set but unused.",
+    "readability": "Small, well-named functions with useful doc comments; help text is clear. Flag definitions duplicated verbatim in newSyncFlagSet and runSync hurt clarity.",
+    "robustness": "Non-blocking flock is sound and released; but shard metadata read errors are swallowed silently, IndexGitRepo is invoked twice per repo, a shadowed root yields an empty path in one error message, and one failing repo aborts pruning.",
+    "maintainability": "Modular split across files, but the eight sync flags must be kept in sync in two places, and DryRun overloads the meaning of IndexGitRepo's bool return, a subtle contract future callers may miss."
+  },
+  "flags": []
+}

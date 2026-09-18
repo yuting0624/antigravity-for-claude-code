@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-fe6896",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:34:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e13a942f14ecdf43dbead87e6794525e3a61973f37ae4e1f327167f3726ff6f8",
+  "wall_s": 60.1,
+  "cost_usd": 0.597727,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Follows cmdutil flag-validation idioms, mirrors pr checkout's blank-path check and develop's existing pull-warning pattern; but the requested git-client helper is absent, command strings stay hand-built in pr/shared instead.",
+    "edge_cases": "Blank path, --list exclusivity, --checkout requirement, relative->absolute, reuse-existing-worktree and existing-vs-new local branch all handled; ff-only pull scoped via WithRepoDir. Help text does not state the constraints as required.",
+    "scope": "Focused feature plus a needed helper move, but replaces localBranchExists (show-ref) with HasLocalBranch (rev-parse) in non-worktree pr checkout paths too, altering existing git invocations; no git.Client worktree helper as specified.",
+    "readability": "Clear structure; shared helpers well commented. WorktreeCheckoutCommands' unnamed bool return and the always-passed WorktreeTarget param on checkoutBranch are slightly opaque.",
+    "robustness": "Validation runs before any API mutation, errors propagate, no panics; runGitCommands wraps git errors normally. Path safety checks preserved verbatim.",
+    "maintainability": "Shared resolve/validate logic deduplicated is good, but callers must interpret a bool to append sync commands, and worktree add argv is still built in pr/shared rather than a git.Client method, leaving coupling the requirement aimed to remove."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

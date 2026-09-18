@@ -1,0 +1,751 @@
+diff --git a/caddyconfig/httpcaddyfile/directives.go b/caddyconfig/httpcaddyfile/directives.go
+index fa911b09e..1d7f9d860 100644
+--- a/caddyconfig/httpcaddyfile/directives.go
++++ b/caddyconfig/httpcaddyfile/directives.go
+@@ -60,6 +60,7 @@ var defaultDirectiveOrder = []string{
+ 	"header",
+ 	"copy_response_headers", // only in reverse_proxy's handle_response
+ 	"request_body",
++	"timeouts",
+ 
+ 	"redir",
+ 
+diff --git a/caddyconfig/httpcaddyfile/serveroptions.go b/caddyconfig/httpcaddyfile/serveroptions.go
+index be0bc2b51..ece7e200f 100644
+--- a/caddyconfig/httpcaddyfile/serveroptions.go
++++ b/caddyconfig/httpcaddyfile/serveroptions.go
+@@ -43,6 +43,9 @@ type serverOptions struct {
+ 	ReadHeaderTimeout         caddy.Duration
+ 	WriteTimeout              caddy.Duration
+ 	IdleTimeout               caddy.Duration
++	ReadIdleTimeout           caddy.Duration
++	WriteIdleTimeout          caddy.Duration
++	MaxWriteChunk             int
+ 	KeepAliveInterval         caddy.Duration
+ 	KeepAliveIdle             caddy.Duration
+ 	KeepAliveCount            int
+@@ -138,6 +141,16 @@ func unmarshalCaddyfileServerOptions(d *caddyfile.Dispenser) (any, error) {
+ 					}
+ 					serverOpts.ReadTimeout = caddy.Duration(dur)
+ 
++				case "read_body_idle":
++					if !d.NextArg() {
++						return nil, d.ArgErr()
++					}
++					dur, err := caddy.ParseDuration(d.Val())
++					if err != nil {
++						return nil, d.Errf("parsing read_body_idle timeout duration: %v", err)
++					}
++					serverOpts.ReadIdleTimeout = caddy.Duration(dur)
++
+ 				case "read_header":
+ 					if !d.NextArg() {
+ 						return nil, d.ArgErr()
+@@ -158,6 +171,26 @@ func unmarshalCaddyfileServerOptions(d *caddyfile.Dispenser) (any, error) {
+ 					}
+ 					serverOpts.WriteTimeout = caddy.Duration(dur)
+ 
++				case "write_idle":
++					if !d.NextArg() {
++						return nil, d.ArgErr()
++					}
++					dur, err := caddy.ParseDuration(d.Val())
++					if err != nil {
++						return nil, d.Errf("parsing write_idle timeout duration: %v", err)
++					}
++					serverOpts.WriteIdleTimeout = caddy.Duration(dur)
++
++				case "write_max_chunk":
++					if !d.NextArg() {
++						return nil, d.ArgErr()
++					}
++					size, err := humanize.ParseBytes(d.Val())
++					if err != nil {
++						return nil, d.Errf("parsing write_max_chunk: %v", err)
++					}
++					serverOpts.MaxWriteChunk = int(size)
++
+ 				case "idle":
+ 					if !d.NextArg() {
+ 						return nil, d.ArgErr()
+@@ -391,6 +424,9 @@ func applyServerOptions(
+ 		server.ReadHeaderTimeout = opts.ReadHeaderTimeout
+ 		server.WriteTimeout = opts.WriteTimeout
+ 		server.IdleTimeout = opts.IdleTimeout
++		server.ReadIdleTimeout = opts.ReadIdleTimeout
++		server.WriteIdleTimeout = opts.WriteIdleTimeout
++		server.MaxWriteChunk = opts.MaxWriteChunk
+ 		server.KeepAliveInterval = opts.KeepAliveInterval
+ 		server.KeepAliveIdle = opts.KeepAliveIdle
+ 		server.KeepAliveCount = opts.KeepAliveCount
+diff --git a/caddytest/integration/caddyfile_adapt/timeouts.caddyfiletest b/caddytest/integration/caddyfile_adapt/timeouts.caddyfiletest
+new file mode 100644
+index 000000000..a949e1302
+--- /dev/null
++++ b/caddytest/integration/caddyfile_adapt/timeouts.caddyfiletest
+@@ -0,0 +1,69 @@
++{
++	servers {
++		timeouts {
++			read_body_idle 30s
++			write_idle 45s
++			write_max_chunk 32KB
++		}
++	}
++}
++
++example.com {
++	timeouts {
++		read_timeout 10s 1KB
++		write_timeout 20s
++		write_max_chunk 16KB
++	}
++	respond "hello"
++}
++----------
++{
++	"apps": {
++		"http": {
++			"servers": {
++				"srv0": {
++					"listen": [
++						":443"
++					],
++					"read_idle_timeout": 30000000000,
++					"write_idle_timeout": 45000000000,
++					"max_write_chunk": 32000,
++					"routes": [
++						{
++							"match": [
++								{
++									"host": [
++										"example.com"
++									]
++								}
++							],
++							"handle": [
++								{
++									"handler": "subroute",
++									"routes": [
++										{
++											"handle": [
++												{
++													"handler": "timeouts",
++													"max_write_chunk": 16000,
++													"read_min_rate": 1000,
++													"read_timeout": 10000000000,
++													"write_timeout": 20000000000
++												},
++												{
++													"body": "hello",
++													"handler": "static_response"
++												}
++											]
++										}
++									]
++								}
++							],
++							"terminal": true
++						}
++					]
++				}
++			}
++		}
++	}
++}
+diff --git a/modules/caddyhttp/app.go b/modules/caddyhttp/app.go
+index 04ee7b18b..bb353fc07 100644
+--- a/modules/caddyhttp/app.go
++++ b/modules/caddyhttp/app.go
+@@ -404,6 +404,12 @@ func (app *App) Provision(ctx caddy.Context) error {
+ 		if srv.IdleTimeout == 0 {
+ 			srv.IdleTimeout = defaultIdleTimeout
+ 		}
++		if srv.ReadIdleTimeout == 0 {
++			srv.ReadIdleTimeout = defaultReadIdleTimeout
++		}
++		if srv.WriteIdleTimeout == 0 {
++			srv.WriteIdleTimeout = defaultWriteIdleTimeout
++		}
+ 		if srv.ReadHeaderTimeout == 0 {
+ 			srv.ReadHeaderTimeout = defaultReadHeaderTimeout // see #6663
+ 		}
+@@ -885,6 +891,12 @@ const (
+ 	// several complaints without this).
+ 	defaultIdleTimeout = caddy.Duration(5 * time.Minute)
+ 
++	// defaultReadIdleTimeout and defaultWriteIdleTimeout are the default
++	// idle-reset read and write deadlines, which cut off connections that
++	// stop making progress. A negative configured value disables them.
++	defaultReadIdleTimeout  = caddy.Duration(1 * time.Minute)
++	defaultWriteIdleTimeout = caddy.Duration(1 * time.Minute)
++
+ 	// defaultReadHeaderTimeout is the default timeout for
+ 	// reading HTTP headers from clients. Headers are generally
+ 	// small, often less than 1 KB, so it shouldn't take a
+diff --git a/modules/caddyhttp/idletimeout.go b/modules/caddyhttp/idletimeout.go
+new file mode 100644
+index 000000000..78ccd539c
+--- /dev/null
++++ b/modules/caddyhttp/idletimeout.go
+@@ -0,0 +1,227 @@
++// Copyright 2015 Matthew Holt and The Caddy Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package caddyhttp
++
++import (
++	"io"
++	"net/http"
++	"time"
++
++	"go.uber.org/zap"
++	"go.uber.org/zap/zapcore"
++)
++
++// DefaultMaxWriteChunk is the default maximum number of bytes written in a single
++// underlying Write or ReadFrom call before resetting the idle deadline.
++const DefaultMaxWriteChunk = 64 * 1024
++
++// IdleDeadline configures idle-reset deadlines for reading or writing.
++//
++// Caddy hard read/write timeouts bound a whole transfer, so a slowloris client
++// that keeps trickling bytes defeats them from below. These types provide
++// idle-reset deadlines: the deadline is pushed forward on every successful read
++// or write, so a stalled connection is cut while a slow-but-progressing one
++// survives. An optional minimum transfer rate additionally catches a trickle
++// that never stalls but never sustains a useful rate.
++type IdleDeadline struct {
++	Start        time.Time     // when the transfer started; zero means set on first use
++	Timeout      time.Duration // idle window, reset on every successful read/write
++	HardDeadline time.Time     // optional absolute ceiling; zero means none
++	MinRate      int64         // optional minimum transfer rate in bytes/second; 0 disables
++}
++
++// next computes the deadline to set before the next read or write,
++// given the total number of bytes transferred so far. A zero time
++// means no deadline at all. If MinRate is set, the deadline grows
++// from Start in proportion to the bytes already transferred, so a
++// transfer that sustains the rate always stays ahead of it; otherwise
++// the deadline is simply the idle window from now. A non-zero
++// HardDeadline always caps the result.
++func (d IdleDeadline) next(transferred int64) time.Time {
++	if d.Timeout <= 0 && d.MinRate <= 0 {
++		return d.HardDeadline // zero time means no deadline
++	}
++	var t time.Time
++	if d.MinRate > 0 {
++		start := d.Start
++		if start.IsZero() {
++			start = time.Now()
++		}
++		credit := time.Duration(float64(transferred) / float64(d.MinRate) * float64(time.Second))
++		t = start.Add(d.Timeout + credit)
++	} else {
++		t = time.Now().Add(d.Timeout)
++	}
++	if !d.HardDeadline.IsZero() && t.After(d.HardDeadline) {
++		t = d.HardDeadline
++	}
++	return t
++}
++
++// IdleTimeoutReader wraps a request body and resets the read deadline on
++// the underlying connection before every read, so that a client which keeps
++// making progress is never cut off, but one which stalls (or, with a MinRate,
++// merely trickles) is.
++type IdleTimeoutReader struct {
++	io.ReadCloser
++
++	// Ctrl forwards the deadline to the underlying connection; it works
++	// for HTTP/1.1, HTTP/2 and HTTP/3 alike.
++	Ctrl *http.ResponseController
++
++	// Deadline describes the idle window, optional hard ceiling and
++	// optional minimum read rate.
++	Deadline IdleDeadline
++
++	// Logger, if not nil, receives errors from setting the deadline.
++	Logger *zap.Logger
++
++	read       int64
++	started    bool
++	deadlineNA bool
++}
++
++// Read implements io.Reader. It refreshes the read deadline before
++// delegating to the wrapped body.
++func (r *IdleTimeoutReader) Read(p []byte) (int, error) {
++	if !r.started {
++		r.started = true
++		if r.Deadline.Start.IsZero() {
++			r.Deadline.Start = time.Now()
++		}
++	}
++	if !r.deadlineNA {
++		if err := r.Ctrl.SetReadDeadline(r.Deadline.next(r.read)); err != nil {
++			// the underlying connection doesn't support deadlines; there is no
++			// point trying again for every subsequent read, nor logging it again
++			r.deadlineNA = true
++			if r.Logger != nil {
++				if c := r.Logger.Check(zapcore.ErrorLevel, "could not set read deadline"); c != nil {
++					c.Write(zap.Error(err))
++				}
++			}
++		}
++	}
++	n, err := r.ReadCloser.Read(p)
++	r.read += int64(n)
++	return n, err
++}
++
++// IdleTimeoutWriter wraps a response writer and resets the write deadline on
++// the underlying connection before every chunk it writes, so that a client
++// which keeps consuming the response is never cut off, but one which stalls
++// (or, with a MinRate, merely trickles) is.
++type IdleTimeoutWriter struct {
++	*ResponseWriterWrapper
++
++	// Ctrl forwards the deadline to the underlying connection; it works
++	// for HTTP/1.1, HTTP/2 and HTTP/3 alike.
++	Ctrl *http.ResponseController
++
++	// Deadline describes the idle window, optional hard ceiling and
++	// optional minimum write rate.
++	Deadline IdleDeadline
++
++	// MaxChunk is the largest number of bytes handed to the underlying
++	// writer in one call. If zero, DefaultMaxWriteChunk is used.
++	MaxChunk int
++
++	// Logger, if not nil, receives errors from setting the deadline.
++	Logger *zap.Logger
++
++	written    int64
++	started    bool
++	deadlineNA bool
++}
++
++func (w *IdleTimeoutWriter) maxChunk() int {
++	if w.MaxChunk > 0 {
++		return w.MaxChunk
++	}
++	return DefaultMaxWriteChunk
++}
++
++func (w *IdleTimeoutWriter) setDeadline() {
++	if !w.started {
++		w.started = true
++		if w.Deadline.Start.IsZero() {
++			w.Deadline.Start = time.Now()
++		}
++	}
++	if w.deadlineNA {
++		return
++	}
++	if err := w.Ctrl.SetWriteDeadline(w.Deadline.next(w.written)); err != nil {
++		// the underlying connection doesn't support deadlines; there is no
++		// point trying again for every subsequent chunk, nor logging it again
++		w.deadlineNA = true
++		if w.Logger != nil {
++			if c := w.Logger.Check(zapcore.ErrorLevel, "could not set write deadline"); c != nil {
++				c.Write(zap.Error(err))
++			}
++		}
++	}
++}
++
++// Write implements http.ResponseWriter. It splits p into chunks of at most
++// MaxChunk bytes and refreshes the write deadline before each one, since a
++// deadline bounds the whole write call it precedes, not just a stall inside it.
++func (w *IdleTimeoutWriter) Write(p []byte) (int, error) {
++	chunk := w.maxChunk()
++	total := 0
++	for {
++		w.setDeadline()
++		end := len(p)
++		if end-total > chunk {
++			end = total + chunk
++		}
++		n, err := w.ResponseWriterWrapper.Write(p[total:end])
++		total += n
++		w.written += int64(n)
++		if err != nil {
++			return total, err
++		}
++		if total >= len(p) {
++			return total, nil
++		}
++	}
++}
++
++// ReadFrom reads data from src and writes it to the underlying ResponseWriter
++// until EOF or error. Chunking is required because SetWriteDeadline bounds the
++// entire write call it precedes, not just a stall inside it, so one giant
++// ReadFrom could run far past a single deadline window.
++func (w *IdleTimeoutWriter) ReadFrom(src io.Reader) (int64, error) {
++	chunk := int64(w.maxChunk())
++	var total int64
++	for {
++		w.setDeadline()
++		n, err := w.ResponseWriterWrapper.ReadFrom(io.LimitReader(src, chunk))
++		total += n
++		w.written += n
++		if err != nil {
++			return total, err
++		}
++		if n < chunk {
++			return total, nil
++		}
++	}
++}
++
++var (
++	_ io.ReadCloser       = (*IdleTimeoutReader)(nil)
++	_ http.ResponseWriter = (*IdleTimeoutWriter)(nil)
++	_ io.ReaderFrom       = (*IdleTimeoutWriter)(nil)
++)
+diff --git a/modules/caddyhttp/server.go b/modules/caddyhttp/server.go
+index d8077463b..7d7309d2f 100644
+--- a/modules/caddyhttp/server.go
++++ b/modules/caddyhttp/server.go
+@@ -79,6 +79,38 @@ type Server struct {
+ 	// 5m is applied to help avoid resource exhaustion.
+ 	IdleTimeout caddy.Duration `json:"idle_timeout,omitempty"`
+ 
++	// ReadIdleTimeout is how long to allow a read from a client's upload to
++	// make no progress before the connection is cut. Unlike ReadTimeout, which
++	// bounds the whole upload, this deadline is reset on every successful read,
++	// so a slow-but-progressing client survives while a stalled one does not.
++	// This is what defeats slowloris uploads, which keep a hard timeout at bay
++	// by trickling bytes. If ReadTimeout is also set, the reset deadline is
++	// never pushed past it. Default 1m; set to a negative value to disable.
++	ReadIdleTimeout caddy.Duration `json:"read_idle_timeout,omitempty"`
++
++	// WriteIdleTimeout is the same as ReadIdleTimeout but for writing the
++	// response to the client: the deadline is reset on every successful write
++	// and, if WriteTimeout is also set, never pushed past it.
++	// Default 1m; set to a negative value to disable.
++	WriteIdleTimeout caddy.Duration `json:"write_idle_timeout,omitempty"`
++
++	// ReadMinRate is an optional minimum read rate, in bytes per second, for
++	// request bodies. When set, the allowed deadline grows from the start of
++	// the transfer in proportion to the bytes received, so a client that never
++	// stalls but never sustains this rate is still cut off, while one at or
++	// above it completes even if it exceeds the idle window. 0 disables.
++	ReadMinRate int64 `json:"read_min_rate,omitempty"`
++
++	// WriteMinRate is the same as ReadMinRate but for writing responses. 0 disables.
++	WriteMinRate int64 `json:"write_min_rate,omitempty"`
++
++	// MaxWriteChunk is the largest number of bytes written to the connection in
++	// a single call while a write idle deadline is in effect. A deadline bounds
++	// the whole write it precedes, not just a stall inside it, so large writes
++	// are split into chunks with the deadline reset between them.
++	// If zero, DefaultMaxWriteChunk (64 KiB) is used.
++	MaxWriteChunk int `json:"max_write_chunk,omitempty"`
++
+ 	// KeepAliveInterval is the interval at which TCP keepalive packets
+ 	// are sent to keep the connection alive at the TCP layer when no other
+ 	// data is being transmitted.
+@@ -532,6 +564,48 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 		}
+ 	}
+ 
++	// apply idle-reset read/write deadlines: unlike the hard ReadTimeout and
++	// WriteTimeout, which bound a whole transfer, these are pushed forward on
++	// every successful read or write, so a stalled connection is cut while a
++	// slow-but-progressing one survives (and a hard timeout, if configured,
++	// still caps how far they can be pushed)
++	if s.ReadIdleTimeout > 0 || s.WriteIdleTimeout > 0 {
++		ctrl := http.NewResponseController(w) //nolint:bodyclose
++		if s.ReadIdleTimeout > 0 && r.Body != nil {
++			deadline := IdleDeadline{
++				Start:   start,
++				Timeout: time.Duration(s.ReadIdleTimeout),
++				MinRate: s.ReadMinRate,
++			}
++			if s.ReadTimeout > 0 {
++				deadline.HardDeadline = start.Add(time.Duration(s.ReadTimeout))
++			}
++			r.Body = &IdleTimeoutReader{
++				ReadCloser: r.Body,
++				Ctrl:       ctrl,
++				Deadline:   deadline,
++				Logger:     s.logger,
++			}
++		}
++		if s.WriteIdleTimeout > 0 {
++			deadline := IdleDeadline{
++				Start:   start,
++				Timeout: time.Duration(s.WriteIdleTimeout),
++				MinRate: s.WriteMinRate,
++			}
++			if s.WriteTimeout > 0 {
++				deadline.HardDeadline = start.Add(time.Duration(s.WriteTimeout))
++			}
++			w = &IdleTimeoutWriter{
++				ResponseWriterWrapper: &ResponseWriterWrapper{ResponseWriter: w},
++				Ctrl:                  ctrl,
++				Deadline:              deadline,
++				MaxChunk:              s.MaxWriteChunk,
++				Logger:                s.logger,
++			}
++		}
++	}
++
+ 	// set the Server header
+ 	h := w.Header()
+ 	h["Server"] = serverHeader
+diff --git a/modules/caddyhttp/standard/imports.go b/modules/caddyhttp/standard/imports.go
+index 6617941c6..792467598 100644
+--- a/modules/caddyhttp/standard/imports.go
++++ b/modules/caddyhttp/standard/imports.go
+@@ -21,5 +21,6 @@ import (
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy/forwardauth"
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/templates"
++	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/timeouts"
+ 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/tracing"
+ )
+diff --git a/modules/caddyhttp/timeouts/caddyfile.go b/modules/caddyhttp/timeouts/caddyfile.go
+new file mode 100644
+index 000000000..a519c109b
+--- /dev/null
++++ b/modules/caddyhttp/timeouts/caddyfile.go
+@@ -0,0 +1,103 @@
++// Copyright 2015 Matthew Holt and The Caddy Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package timeouts
++
++import (
++	"time"
++
++	"github.com/dustin/go-humanize"
++
++	"github.com/caddyserver/caddy/v2"
++	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
++	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
++)
++
++func init() {
++	httpcaddyfile.RegisterHandlerDirective("timeouts", parseCaddyfile)
++}
++
++// parseCaddyfile sets up the timeouts handler from Caddyfile tokens.
++// These deadlines are reset on every successful read or write, so a
++// stalled connection is cut while a slow-but-progressing one survives;
++// the optional minimum rate also catches a trickle that never stalls.
++//
++// Syntax:
++//
++//	timeouts {
++//	    read_timeout    <duration> [<min_rate>]
++//	    write_timeout   <duration> [<min_rate>]
++//	    write_max_chunk <size>
++//	}
++func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
++	h.Next() // consume directive name
++
++	t := new(Timeouts)
++
++	for h.NextBlock(0) {
++		switch h.Val() {
++		case "read_timeout":
++			args := h.RemainingArgs()
++			if len(args) < 1 || len(args) > 2 {
++				return nil, h.ArgErr()
++			}
++			dur, err := caddy.ParseDuration(args[0])
++			if err != nil {
++				return nil, h.Errf("parsing read_timeout duration: %v", err)
++			}
++			t.ReadTimeout = time.Duration(dur)
++			if len(args) == 2 {
++				rate, err := humanize.ParseBytes(args[1])
++				if err != nil {
++					return nil, h.Errf("parsing read_timeout minimum rate: %v", err)
++				}
++				t.ReadMinRate = int64(rate)
++			}
++
++		case "write_timeout":
++			args := h.RemainingArgs()
++			if len(args) < 1 || len(args) > 2 {
++				return nil, h.ArgErr()
++			}
++			dur, err := caddy.ParseDuration(args[0])
++			if err != nil {
++				return nil, h.Errf("parsing write_timeout duration: %v", err)
++			}
++			t.WriteTimeout = time.Duration(dur)
++			if len(args) == 2 {
++				rate, err := humanize.ParseBytes(args[1])
++				if err != nil {
++					return nil, h.Errf("parsing write_timeout minimum rate: %v", err)
++				}
++				t.WriteMinRate = int64(rate)
++			}
++
++		case "write_max_chunk":
++			var sizeStr string
++			if !h.AllArgs(&sizeStr) {
++				return nil, h.ArgErr()
++			}
++			size, err := humanize.ParseBytes(sizeStr)
++			if err != nil {
++				return nil, h.Errf("parsing write_max_chunk: %v", err)
++			}
++			t.MaxWriteChunk = int(size)
++
++		default:
++			return nil, h.Errf("unrecognized timeouts subdirective '%s'", h.Val())
++		}
++	}
++
++	return t, nil
++}
+diff --git a/modules/caddyhttp/timeouts/timeouts.go b/modules/caddyhttp/timeouts/timeouts.go
+new file mode 100644
+index 000000000..6a70b9dc9
+--- /dev/null
++++ b/modules/caddyhttp/timeouts/timeouts.go
+@@ -0,0 +1,115 @@
++// Copyright 2015 Matthew Holt and The Caddy Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package timeouts
++
++import (
++	"net/http"
++	"time"
++
++	"go.uber.org/zap"
++
++	"github.com/caddyserver/caddy/v2"
++	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
++)
++
++func init() {
++	caddy.RegisterModule(Timeouts{})
++}
++
++// Timeouts is a middleware that applies idle-reset read and write deadlines to a single route.
++// These deadlines are reset on every successful read or write, so a stalled connection is cut
++// while a slow-but-progressing one survives; the optional minimum rate also catches a trickle
++// that never stalls.
++type Timeouts struct {
++	// ReadTimeout is the idle timeout duration for reading the request body.
++	// The deadline is reset on every successful read, allowing slow-but-progressing
++	// transfers to survive while stalled connections are cut.
++	ReadTimeout time.Duration `json:"read_timeout,omitempty"`
++
++	// ReadMinRate is the optional minimum transfer rate in bytes per second for reading
++	// the request body. If configured, it ensures that a trickle transfer that never stalls
++	// but never sustains a useful rate is eventually timed out.
++	ReadMinRate int64 `json:"read_min_rate,omitempty"`
++
++	// WriteTimeout is the idle timeout duration for writing the response body.
++	// The deadline is reset on every successful write, allowing slow-but-progressing
++	// transfers to survive while stalled connections are cut.
++	WriteTimeout time.Duration `json:"write_timeout,omitempty"`
++
++	// WriteMinRate is the optional minimum transfer rate in bytes per second for writing
++	// the response body. If configured, it ensures that a trickle transfer that never stalls
++	// but never sustains a useful rate is eventually timed out.
++	WriteMinRate int64 `json:"write_min_rate,omitempty"`
++
++	// MaxWriteChunk is the maximum number of bytes written in a single chunk before
++	// resetting the write deadline. If zero, DefaultMaxWriteChunk is used.
++	MaxWriteChunk int `json:"max_write_chunk,omitempty"`
++
++	logger *zap.Logger
++}
++
++// CaddyModule returns the Caddy module information.
++func (Timeouts) CaddyModule() caddy.ModuleInfo {
++	return caddy.ModuleInfo{
++		ID:  "http.handlers.timeouts",
++		New: func() caddy.Module { return new(Timeouts) },
++	}
++}
++
++// Provision sets up the Timeouts middleware handler.
++func (t *Timeouts) Provision(ctx caddy.Context) error {
++	t.logger = ctx.Logger()
++	return nil
++}
++
++// ServeHTTP implements caddyhttp.MiddlewareHandler. It wraps the request body and/or
++// response writer with idle-reset deadlines, so a stalled connection is cut while a
++// slow-but-progressing one survives; the optional minimum rate also catches a trickle
++// that never stalls.
++func (t Timeouts) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
++	if t.ReadTimeout <= 0 && t.WriteTimeout <= 0 {
++		return next.ServeHTTP(w, r)
++	}
++	logger := t.logger
++	if logger == nil {
++		logger = zap.NewNop()
++	}
++	ctrl := http.NewResponseController(w) //nolint:bodyclose
++	start := time.Now()
++	if t.ReadTimeout > 0 && r.Body != nil {
++		r.Body = &caddyhttp.IdleTimeoutReader{
++			ReadCloser: r.Body,
++			Ctrl:       ctrl,
++			Deadline:   caddyhttp.IdleDeadline{Start: start, Timeout: t.ReadTimeout, MinRate: t.ReadMinRate},
++			Logger:     logger,
++		}
++	}
++	if t.WriteTimeout > 0 {
++		w = &caddyhttp.IdleTimeoutWriter{
++			ResponseWriterWrapper: &caddyhttp.ResponseWriterWrapper{ResponseWriter: w},
++			Ctrl:                  ctrl,
++			Deadline:              caddyhttp.IdleDeadline{Start: start, Timeout: t.WriteTimeout, MinRate: t.WriteMinRate},
++			MaxChunk:              t.MaxWriteChunk,
++			Logger:                logger,
++		}
++	}
++	return next.ServeHTTP(w, r)
++}
++
++// Interface guards
++var (
++	_ caddy.Provisioner           = (*Timeouts)(nil)
++	_ caddyhttp.MiddlewareHandler = (*Timeouts)(nil)
++)

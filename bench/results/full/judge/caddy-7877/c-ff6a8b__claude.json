@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-ff6a8b",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:45:28+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1c8175231bd3fca655d18558c3f320813c300a6eab4e49a958803755c4342974",
+  "wall_s": 64.1,
+  "cost_usd": 0.41615100000000005,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Mirrors trimPathPrefix's structure, doc-comment style and EqualFold usage; introduces a stricter isHex-based escape check than the prefix's simpler '%' heuristic, a small stylistic divergence.",
+    "edge_cases": "Handles decoded-suffix vs %xx path, escaped suffix requiring literal escape, case-insensitive hex, empty suffix, suffix longer than path, and same-position escapes on both sides.",
+    "scope": "Only touches the suffix call site, adds the new helper, and removes the now-dead reverse(); nothing else changed.",
+    "readability": "Clear backward-iteration loop with well-placed comments explaining the escape-alignment rule; names (endsEscape, isHex) are self-explanatory.",
+    "robustness": "All slicing guarded by i>=3 in endsEscape; PathUnescape error returns path unchanged; no possible negative indices or panics.",
+    "maintainability": "Small, focused helpers; some logic duplication with trimPathPrefix is inherent to the mirrored design rather than a shared abstraction, but easy to follow and extend."
+  },
+  "flags": []
+}

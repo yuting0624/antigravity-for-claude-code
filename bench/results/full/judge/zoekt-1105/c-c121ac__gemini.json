@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-c121ac",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:55:11+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c3f1c6fed61e28c5f3a0b49dc448c824d9085ecda57fc2261a4921f4bd16d945",
+  "wall_s": 8.2,
+  "cost_usd": 0.05653,
+  "usage": {
+    "input": 24269,
+    "output": 666,
+    "thinking": 572,
+    "cache_read": 0,
+    "total": 24935
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff provided.",
+    "edge_cases": "Empty diff provided.",
+    "scope": "Empty diff provided.",
+    "readability": "Empty diff provided.",
+    "robustness": "Empty diff provided.",
+    "maintainability": "Empty diff provided."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

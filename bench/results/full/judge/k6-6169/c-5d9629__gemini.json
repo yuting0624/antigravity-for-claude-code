@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-5d9629",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:03:51+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "660e9d6c7a3b138e30c269ec837532cb1502137c8fad33bf072ff9e8e713ca73",
+  "wall_s": 51.6,
+  "cost_usd": 0.168298,
+  "usage": {
+    "input": 55097,
+    "output": 4842,
+    "thinking": 4660,
+    "cache_read": 0,
+    "total": 59939
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 5
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Excellent adherence to Go and k6 conventions, matching the existing project layout and idioms.",
+    "edge_cases": "Handles conflicts, retries, and context cancellation well, but misses the 401/403 classification.",
+    "scope": "Implements the orchestration properly but forgets the specific 401/403 error mapping despite the comment.",
+    "readability": "Cleanly structured, easy to follow, and provides helpful, clear comments throughout.",
+    "robustness": "Correctly handles retry logic and stream body resets, but the missing auth error typing reduces resilience.",
+    "maintainability": "Well-factored with a dedicated fake server for testing and a clear separation of concerns."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

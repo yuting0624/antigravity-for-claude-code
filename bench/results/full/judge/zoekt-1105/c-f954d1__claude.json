@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-f954d1",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:56:34+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2f8a374c715c5ace8b44bd7c01d6c6ea2a79fa5642a50d75ae23bc4238b2a1d2",
+  "wall_s": 83.1,
+  "cost_usd": 0.6554584999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Reuses sibling flag names and index.Options.Flags, but reimplements gitindex expandBranches/getCommit and index.IncrementalSkipIndexing instead of using them, and matches errors by string rather than errors.Is(plumbing.ErrReferenceNotFound).",
+    "edge_cases": "Handles duplicate names, root-as-repo, .git files, bare repos, compound shards, .meta sidecars, missing index dir, no roots/args; but aborts whole sync on first repo failure and -h exits 1.",
+    "scope": "Core requirement met with minimal gitindex change; adds an unrequested ~80-line branch-resolution preview path, an extra explicit sync subcommand, and source-path matching in remove.",
+    "readability": "Well-named helpers with doc comments; sync loop has redundant force/non-force branches printing the same thing, and help text is duplicated between top-level and Usage.",
+    "robustness": "flock guards -f runs and dry runs never write; but gitindex now lets caller name override git config for all callers (zoekt-git-index had to be changed to compensate), corrupt shards are silently skipped, and unix.Flock breaks non-unix builds.",
+    "maintainability": "Clean file split, but repositoryBranches/indexUpToDate duplicate gitindex and index internals and will drift silently (\"mirroring how gitindex records them\"); brittle error-string comparisons."
+  },
+  "flags": []
+}

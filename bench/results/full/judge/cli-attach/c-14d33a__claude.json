@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-14d33a",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:23:13+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8a950c753b6c285559cb2cab010f58a711667e86b7a45a04a7fb2c77114d297a",
+  "wall_s": 81.6,
+  "cost_usd": 1.359373,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 2,
+    "readability": 2,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "Uses FlagErrorf/heredoc/httpmock idioms, but getAsset() naming is un-Go-like, create commands restructure RunE while edit commands use a var, and hasDeferredFlags is silently rewritten with changed semantics.",
+    "edge_cases": "Covers ext/size/empty/dir/symlink dedupe, '#' in names, 404/422/429; but partial upload failure still posts a body (spec says nothing is written) and default alt strips extension rather than using the file name.",
+    "scope": "Re-indents whole RunE bodies in two create commands, alters --parent detection, adds unused UploadStub, unread uploadError fields, possibly unused isSingleImage, and an odd URL-scrubbing hack on errors.",
+    "readability": "references.go is ~950 lines of hand-rolled byte-index link parsing on top of goldmark; client.go repeats the same uploadError literal many times; '\\\\!' degrade logic is opaque.",
+    "robustness": "Files and bodies are closed, no obvious panics; but code-span/reference detection is heuristic, error text is scrubbed by string matching, and partial writes leak on mid-batch failure.",
+    "maintainability": "Reimplements CommonMark inline parsing instead of relying on goldmark positions, threads uploadErr through every caller, always-true KeepExistingBody knob and dead code add hidden coupling."
+  },
+  "flags": [
+    "unrelated_changes",
+    "generated_code_smell"
+  ]
+}

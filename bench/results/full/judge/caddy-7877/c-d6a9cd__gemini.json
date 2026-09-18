@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-d6a9cd",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:38:27+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cea5132cd46e62fc88a2e073a78287961de215940f239ae7f8e6e07f337c565c",
+  "wall_s": 120.1,
+  "cost_usd": 0.236152,
+  "usage": {
+    "input": 27998,
+    "output": 15013,
+    "thinking": 14781,
+    "cache_read": 0,
+    "total": 43011
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 3,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Using string(byte) on path characters is a Go pitfall that incorrectly encodes >127 byte values as UTF-8 runes instead of 1-byte strings.",
+    "edge_cases": "Fails on percent-encoded multibyte characters due to the string(byte) bug, and applies case-insensitivity to the entire string instead of just hex digits.",
+    "scope": "Implements the requested suffix stripping but improperly changes the matching semantics to fully case-insensitive based on an incorrect assumption.",
+    "readability": "The logic is easy to follow, and the inline comments clearly explain the intention behind each step of the backwards iteration.",
+    "robustness": "Correctly guards against out-of-bounds slice access during escape lookbacks and handles unescape errors safely without panicking.",
+    "maintainability": "Removing the broken reverse() approach is an improvement, and the logic is self-contained without adding complex dependencies."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

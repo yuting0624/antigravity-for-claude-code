@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-dec85c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T16:02:37+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "999921850d9a1d92cc24af406a198e965c0d8ee6b0f20f49ce94a029c686e3fd",
+  "wall_s": 99.1,
+  "cost_usd": 0.18672,
+  "usage": {
+    "input": 35298,
+    "output": 9677,
+    "thinking": 9474,
+    "cache_read": 0,
+    "total": 44975
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Follows Go idioms, project structure, and gitindex package conventions perfectly, notably avoiding variable shadowing with thoughtful assignments.",
+    "edge_cases": "Handles repository name collisions and edge cases like roots being repos, but creating the index directory and lock file on a dry run slightly violates the 'never write' constraint.",
+    "scope": "Implements the discovery logic, sync previews, shard pruning, and required subcommands exactly as specified without unrelated changes.",
+    "readability": "Code is clearly structured, nicely separated across files by concern, and uses descriptive naming throughout.",
+    "robustness": "Properly manages resources with deferred closers, uses non-blocking file locks for concurrency, and checks errors consistently.",
+    "maintainability": "Extracted functions like prepareRepo avoid duplication, and the subcommand routing is easy to extend."
+  },
+  "flags": []
+}

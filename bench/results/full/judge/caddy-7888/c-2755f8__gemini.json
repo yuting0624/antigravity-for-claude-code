@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-2755f8",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:16:08+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "550f95521d4a1c25f6c26944ac0b83974f892bee509944047927654e83853acf",
+  "wall_s": 22.7,
+  "cost_usd": 0.08481,
+  "usage": {
+    "input": 28953,
+    "output": 2242,
+    "thinking": 2047,
+    "cache_read": 0,
+    "total": 31195
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Follows module registration, Caddyfile unmarshaling, and interface implementation conventions perfectly.",
+    "edge_cases": "Correctly parses header lines, handles unparseable values, respects original quoting, and accurately matches case.",
+    "scope": "Implements exactly the requested hash, replace, and delete actions for Set-Cookie header values without overreaching.",
+    "readability": "Clean structure with clear separation of string mutation logic and array processing; comments are helpful and well-placed.",
+    "robustness": "Safe slice indexing and error checking; IndexByte and string manipulations properly check bounds and handle missing segments without panicking.",
+    "maintainability": "Adding new actions or modifying existing ones is straightforward; adheres strictly to the existing pattern for filters, making it highly maintainable."
+  },
+  "flags": []
+}

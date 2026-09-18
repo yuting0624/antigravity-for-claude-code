@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-5d9629",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:02:59+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "660e9d6c7a3b138e30c269ec837532cb1502137c8fad33bf072ff9e8e713ca73",
+  "wall_s": 48.1,
+  "cost_usd": 0.79674125,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "CreateOrFindLoadTest mirrors v6 idioms well, but provisioning errors aren't 401/403-classified like v6 despite the requirement and the CheckResponse comment claiming so; raw HTTP used while an SDK APIClient is built and never used.",
+    "edge_cases": "Handles 409, nil upload URL, aborted/completed during wait, ctx cancel, empty body EOF; misses typed 401/403, always sets secrets config even when endpoint empty, int32 truncation of archive size, non-abort errors get code 0 rather than null.",
+    "scope": "Core flow is in place; extras include an unused apiClient field, a new clientcfg constants package not adopted by v6, and runtime-config tuning mapping beyond the stated ask.",
+    "readability": "Clear names, focused functions, helpful doc comments; the CheckResponse comment describes behaviour (httperr classification) the code does not implement.",
+    "robustness": "Retry/body-replay and context handling are sound, but lazyInitProvisioning sets provisioningMode before a fallible client build, leaving a nil notifier that StopWithTestError dereferences; ignored GetBody errors.",
+    "maintainability": "Notify only needs a raw client yet the output builds a full provisioning+v6 client; two http.Clients plus dead SDK client in Client; retry constants duplicated rather than shared with v6."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

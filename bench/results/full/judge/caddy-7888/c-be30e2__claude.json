@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-be30e2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:23:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a60e6da2b1a5d2dd3c08c905b8d85b51e0f25761cd6df89ead6fb5cfeff46780",
+  "wall_s": 21.2,
+  "cost_usd": 0.19055525,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: reuses cookieFilterAction, same module ID style, Validate, Caddyfile block shape, interface assertions added in all three var blocks.",
+    "edge_cases": "Handles missing '=', empty name, quoted values, empty suffix, non-array field, first-match-wins; does not trim whitespace around name/value nor validate cookie-name tokens, so oddly formatted lines are treated as parseable.",
+    "scope": "Exactly the requested filter plus registration and compile-time assertions; no unrelated edits.",
+    "readability": "Clear helpers with doc comments; formatSetCookie takes four loose params rather than the setCookieParts struct it was built for.",
+    "robustness": "All slicing is bounds-checked, no panics on malformed input, unknown field types pass through unchanged.",
+    "maintainability": "UnmarshalCaddyfile is copied verbatim from CookieFilter instead of shared; otherwise small, self-contained helpers are easy to extend."
+  },
+  "flags": []
+}

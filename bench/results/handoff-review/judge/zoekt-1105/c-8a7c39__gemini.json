@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-8a7c39",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:55:38+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290cec7a8665a74769f60f85e0cd659be0bc481db3d6994e367c16d562d8bbe4",
+  "wall_s": 27.9,
+  "cost_usd": 0.101274,
+  "usage": {
+    "input": 36339,
+    "output": 2383,
+    "thinking": 2141,
+    "cache_read": 0,
+    "total": 38722
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Highly idiomatic Go, perfectly matching the codebase's conventions, flags usage, and package layout.",
+    "edge_cases": "Thoroughly handles bare repositories, duplicate names/sources, symlinks, and EINTR during locking.",
+    "scope": "Implements exactly the requested functionality with minimal, precise changes to the shared gitindex package.",
+    "readability": "Clear, concise functions with excellent naming and well-placed comments explaining non-obvious logic.",
+    "robustness": "Uses non-blocking locks, defers cleanup properly, ordered shard deletion for consistency, and aggregates errors effectively.",
+    "maintainability": "Well-separated concerns (discovery, planning, applying, CLI routing) make the command trivial to extend."
+  },
+  "flags": []
+}

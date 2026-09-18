@@ -1,0 +1,30 @@
+2026-09-16T23:53:29+00:00 lane A start (gap 300s)
+2026-09-16T23:53:29+00:00 lane A -> caddy-7888__hybrid-handoff__r1 (attempt 1)
+2026-09-16T23:54:36+00:00 lane A start (gap 300s)
+2026-09-16T23:54:36+00:00 lane A reclaimed interrupted item caddy-7888__hybrid-handoff__r1 (attempt 1)
+2026-09-16T23:58:05+00:00 lane A start (gap 300s)
+2026-09-17T00:00:05+00:00 lane A -> caddy-7877__hybrid-handoff__r1 (attempt 1)
+2026-09-17T00:14:26+00:00 lane A: caddy-7877__hybrid-handoff__r1 done pass=True $1.7503819999999999 in 861s
+2026-09-17T00:19:28+00:00 lane A -> zoekt-1105__hybrid-handoff__r1 (attempt 1)
+2026-09-17T01:24:15+00:00 lane A: zoekt-1105__hybrid-handoff__r1 interrupted by machine sleep (93s asleep); will retry
+2026-09-17T01:39:41+00:00 lane A -> caddy-7913__hybrid-handoff__r1 (attempt 2)
+2026-09-17T02:55:28+00:00 lane A: caddy-7913__hybrid-handoff__r1 done pass=True $7.73813975 in 4547s
+2026-09-17T03:00:29+00:00 lane A -> cli-14136__hybrid-handoff__r1 (attempt 1)
+2026-09-17T03:38:00+00:00 lane A: cli-14136__hybrid-handoff__r1 done pass=True $4.96266025 in 2251s
+2026-09-17T03:43:01+00:00 lane A -> k6-6169__hybrid-handoff__r1 (attempt 1)
+2026-09-17T05:22:20+00:00 lane A: k6-6169__hybrid-handoff__r1 done pass=True $9.345890500000001 in 5958s
+2026-09-17T05:22:20+00:00 lane A: on battery power; not starting new items until mains power returns
+2026-09-17T05:49:22+00:00 lane A: mains power back
+2026-09-17T05:49:22+00:00 lane A -> caddy-7877__hybrid-handoff__r2 (attempt 1)
+2026-09-17T06:00:11+00:00 lane A: caddy-7877__hybrid-handoff__r2 done pass=True $1.5547412500000002 in 649s
+2026-09-17T06:01:41+00:00 lane A: on battery power; not starting new items until mains power returns
+2026-09-17T06:13:29+00:00 lane A: mains power back
+2026-09-17T06:13:29+00:00 lane A -> cli-14136__hybrid-handoff__r2 (attempt 1)
+2026-09-17T06:58:29+00:00 lane A: cli-14136__hybrid-handoff__r2 done pass=True $4.06591625 in 2700s
+2026-09-17T07:06:01+00:00 lane A -> k6-6169__hybrid-handoff__r2 (attempt 1)
+2026-09-17T09:08:04+00:00 lane A: k6-6169__hybrid-handoff__r2 done pass=True $8.0108355 in 7323s
+2026-09-17T10:32:02+00:00 lane A: on battery power; not starting new items until mains power returns
+2026-09-17T12:16:33+00:00 lane A: mains power back
+2026-09-17T12:16:33+00:00 lane A -> cli-attach__hybrid-handoff__r2 (attempt 2)
+2026-09-17T13:25:40+00:00 lane A: cli-attach__hybrid-handoff__r2 done pass=True $6.680621 in 4148s
+2026-09-17T13:25:40+00:00 queue complete; lane A exits

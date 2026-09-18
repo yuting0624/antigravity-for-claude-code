@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-e4d6b2",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:54:19+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "125f802ed297935e873c3553f3353477ece24c5ae07456375ff8a5cddf76bafe",
+  "wall_s": 118.7,
+  "cost_usd": 0.95105625,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 2,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "License headers, interface guards, module registration, humanize sizes and nolint comments match siblings; but handler JSON uses time.Duration instead of caddy.Duration, time.ParseDuration instead of caddy.ParseDuration, and no UnmarshalCaddyfile method.",
+    "edge_cases": "Nil body and chunk-loop termination handled, but HardDeadline is never populated from ReadTimeout/WriteTimeout so the idle reset can push past the hard cap; MinRate without Timeout yields an already-expired deadline; per-route write_max_chunk alone clears the server write deadline.",
+    "scope": "Focused on the requested files and options; only stray item is the HardDeadline field that production code never wires.",
+    "readability": "Clear names, small shared IdleDeadline.next, good doc comments; the IdleDeadline type comment is muddled.",
+    "robustness": "Deadline is only reset after successful writes/reads, so any handler gap over the 1m default (SSE, slow upstream streaming) fails its next write; unsupported controllers log a warning on every read/write; zero deadline silently clears Go's hard timeout.",
+    "maintainability": "Deadline math is centralized and reused by server and handler, but the two wrapping blocks are duplicated verbatim and the unused HardDeadline field invites confusion."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-0daf72",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:42:07+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a0481cf26e5cd57174c5e49a318c89cba73ea4ebc1b79316eea2b3e695456e6f",
+  "wall_s": 40.4,
+  "cost_usd": 0.31540349999999995,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Follows surrounding naming (trimPathPrefix/trimPathSuffix), url.PathUnescape, EqualFold; doc comments match existing style.",
+    "edge_cases": "Decoded-vs-encoded, escaped-pattern-literal, case-insensitive hex, non-match, empty suffix, partial mid-path matches all handled; scanner skips %xx atomically so it never starts inside an escape.",
+    "scope": "Only touches suffix path; refactors prefix into matchPathPrefix without behaviour change and removes now-dead reverse helper.",
+    "readability": "matchPathPrefix extraction is clean; the suffix scan loop is slightly clever and would benefit from a comment on why escapes are skipped as units.",
+    "robustness": "Bounds checks on i+3 and prefix loop; invalid escape returns no-match rather than panicking; O(n*m) scan is fine for paths.",
+    "maintainability": "Prefix and suffix share one comparison routine, so rule changes live in one place; no duplication."
+  },
+  "flags": []
+}

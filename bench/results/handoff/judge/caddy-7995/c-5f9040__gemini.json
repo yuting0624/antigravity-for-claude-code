@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-5f9040",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:59:57+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ee834d479a1ded0643395b3dc0ffcad289dfc6d6aedd5d1f1ec544de069ce979",
+  "wall_s": 179.7,
+  "cost_usd": 0.31946,
+  "usage": {
+    "input": 37948,
+    "output": 20297,
+    "thinking": 20124,
+    "cache_read": 0,
+    "total": 58245
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 4,
+    "maintainability": 5
+  },
+  "mean": 4.667,
+  "rationale": {
+    "consistency": "Matches Caddy's idioms and uses modern slices functions appropriately.",
+    "edge_cases": "Flawlessly handles multiple order options by stacking on existingVal, and gracefully falls back to default.",
+    "scope": "Fixes the core issues, but unnecessarily rewrites RegisterDirectiveOrder, altering its original validation logic.",
+    "readability": "Cleanly isolates global option extraction and handles map cloning transparently.",
+    "robustness": "Effectively isolates state per adaptation, but the rewritten RegisterDirectiveOrder loses a protection against plugin-to-plugin ordering.",
+    "maintainability": "Variadic options parameter cleanly preserves backward compatibility for tests or internal callers."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

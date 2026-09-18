@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-d8de83",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:11:59+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ec66f5dd46aa039076015647304c90bfc47c1ac942e6830bd28a758fc3a43d82",
+  "wall_s": 93.9,
+  "cost_usd": 0.206434,
+  "usage": {
+    "input": 40307,
+    "output": 10485,
+    "thinking": 10305,
+    "cache_read": 0,
+    "total": 50792
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Code fully matches conventions, idioms, and structure of the surrounding Go codebase.",
+    "edge_cases": "Perfectly handles underlying slice array mutations and map concurrency panics by cloning correctly and isolating state.",
+    "scope": "Addresses the exact requirements without any unrelated refactoring, correctly adapting options map hygiene.",
+    "readability": "Variable names are clear, and newly added comments excellently explain the non-obvious concurrency and state isolation design choices.",
+    "robustness": "Completely eliminates global state mutation during adaptation, making it fully thread-safe and resilient to invalid inputs.",
+    "maintainability": "Vastly improves maintainability by removing global state side-effects and explicitly threading local state through the call stack."
+  },
+  "flags": []
+}

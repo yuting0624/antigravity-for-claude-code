@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-a22215",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:27:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c572859c05004df87a6245b97a3bbce220364298b9c7fc3ebdca671598cda646",
+  "wall_s": 95.5,
+  "cost_usd": 0.200854,
+  "usage": {
+    "input": 44465,
+    "output": 9327,
+    "thinking": 9076,
+    "cache_read": 0,
+    "total": 53792
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches gh CLI conventions perfectly, including context usage and adopting the idiomatic CommandModifier pattern for git operations.",
+    "edge_cases": "Handles relative paths, blank values, mutual exclusivity, symlink path safety, existing worktree reuse, and fast-forward cleanly.",
+    "scope": "Delivers precisely the requested features and refactoring without unnecessary changes or dead code.",
+    "readability": "Excellent structure and naming; cleanly separates the worktree git abstraction from the domain command logic with clear godocs.",
+    "robustness": "Validates the worktree path before hitting the GitHub API to create the linked branch, avoiding orphaned remote branches on local failure.",
+    "maintainability": "Beautifully extracts and centralizes the worktree resolution and git logic into shared packages, preventing duplication."
+  },
+  "flags": []
+}

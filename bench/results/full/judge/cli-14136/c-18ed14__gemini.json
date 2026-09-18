@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-18ed14",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:12:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "15b67edb04296544caf04411b6a7cf0113ef656667876f4f7833bc5e3ed45ccc",
+  "wall_s": 56.3,
+  "cost_usd": 0.13588,
+  "usage": {
+    "input": 42932,
+    "output": 4168,
+    "thinking": 3970,
+    "cache_read": 0,
+    "total": 47100
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly follows existing patterns, cleanly integrates flags with Cobra, and respects the execution style differences between the two commands.",
+    "edge_cases": "Accurately handles absolute path normalizations, path rule validations, existing vs. new branches, and new vs. reused worktrees.",
+    "scope": "Implements exactly what was requested with zero unrelated changes, strictly following all provided constraints.",
+    "readability": "Features excellent variable and function names, with clean control flow and helpful contextual comments.",
+    "robustness": "Securely builds git commands with array arguments preventing shell injection, and safely scopes the worktree operations using a cloned client.",
+    "maintainability": "Cleanly abstracts worktree validation to a shared package and adds a reusable Git client helper, eliminating logic duplication."
+  },
+  "flags": []
+}

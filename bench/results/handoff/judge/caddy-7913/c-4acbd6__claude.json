@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-4acbd6",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:11:57+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "931cf8827363ff38e5451d76de57b8198a09e4904f0871503c29f88c262d9f35",
+  "wall_s": 113.0,
+  "cost_usd": 1.03360025,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "Module/directive registration, license headers and humanize usage match siblings; but handler uses time.Duration fields plus hand-rolled Marshal/UnmarshalJSON instead of caddy.Duration, and struct fields lack the doc comments Caddy generates docs from.",
+    "edge_cases": "Hard-deadline clamp, rate floor, chunked Write/ReadFrom and EOF are covered; but when the route handler wraps the always-present server wrapper, the inner looser deadline is set last and governs blocking I/O, defeating the tighter route timeout. No way to disable idle timeouts.",
+    "scope": "Delivers all requested pieces; adds an undocumented positional `timeouts <r> [<w>]` form, a silent 1-minute default when read_timeout/write_timeout has no arg, a redundant Unwrap and a strconv fallback after humanize.ParseBytes.",
+    "readability": "IdleDeadline.deadline is compact and clear; wrapper code is cluttered with nil guards on fields that are never nil in practice, and the near-identical 40-line wrap blocks in server.go and timeouts.go read as copy-paste.",
+    "robustness": "Deadline-set failures are logged at debug rather than aborting; nil-safe throughout; but layered wrappers do not combine deadlines with min(), ReadFrom relies on a short-read heuristic to stop, and every write on every request now issues two deadline calls once defaults apply.",
+    "maintainability": "Shared IdleDeadline math is a good seam; however wrapper construction is duplicated across server and handler, the 64KiB default is applied in three places, and the custom JSON codec is extra surface to keep in sync with the struct."
+  },
+  "flags": []
+}

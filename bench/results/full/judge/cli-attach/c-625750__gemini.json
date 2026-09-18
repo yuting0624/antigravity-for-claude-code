@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-625750",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:35:53+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ca6c290932812f7925bf65aa46231a33c5739f29649c0e43e5ee108b6878f1bb",
+  "wall_s": 24.7,
+  "cost_usd": 0.111648,
+  "usage": {
+    "input": 41472,
+    "output": 2392,
+    "thinking": 2232,
+    "cache_read": 0,
+    "total": 43864
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 5,
+    "robustness": 1,
+    "maintainability": 3
+  },
+  "mean": 2.667,
+  "rationale": {
+    "consistency": "API and config additions are highly idiomatic and perfectly match existing repository conventions.",
+    "edge_cases": "Fails to implement any of the required file validation, command, or upload edge cases.",
+    "scope": "Extremely incomplete; implements only API struct additions and misses all core attachment and command logic.",
+    "readability": "The limited code provided is clear, well-named, and appropriately commented.",
+    "robustness": "Missing all file handling, upload logic, and HTTP request error management.",
+    "maintainability": "The API additions are cleanly integrated, though the overall feature is largely missing."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

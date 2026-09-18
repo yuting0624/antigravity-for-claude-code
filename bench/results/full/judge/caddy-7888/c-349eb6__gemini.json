@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-349eb6",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:16:49+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "231a06d64c36f4eda1c6ec0624793db2816ab191463d6ef938dc25ce882b7ac9",
+  "wall_s": 18.7,
+  "cost_usd": 0.078478,
+  "usage": {
+    "input": 28457,
+    "output": 1797,
+    "thinking": 1564,
+    "cache_read": 0,
+    "total": 30254
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly mirrors the conventions of existing Caddy logging modules and reuses existing types where appropriate.",
+    "edge_cases": "Accurately parses malformed Set-Cookie strings, handles values with or without attributes, and elegantly preserves original quoting.",
+    "scope": "Implements exactly the requested functionality with no unnecessary refactoring or extraneous additions.",
+    "readability": "The logic is straightforward and readable, with helpful comments explaining the dummy Response parser and attribute preservation.",
+    "robustness": "Safe string cutting and array bound checks guarantee no panics, even on highly malformed header values.",
+    "maintainability": "Self-contained and clean implementation that seamlessly fits into the existing filter architecture."
+  },
+  "flags": []
+}

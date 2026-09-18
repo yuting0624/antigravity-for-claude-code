@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-8fd5d8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:11:14+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1daf5d3f20a6bc901039064ecd1d19ab8a7b8a99b7273f6072c3c08a721b9716",
+  "wall_s": 32.2,
+  "cost_usd": 0.8112647500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Mirrors v6 client idioms (authCtx, closeResponse, idempotency key, httperr classification, errUnknown); new clientcfg package is a small deviation from the asked layout but coherent.",
+    "edge_cases": "Handles 409 find-by-name, nil vs empty archive with explicit null size, int32 overflow, missing upload URL, aborted/completed-before-start, PushRefID short-circuit; unknown abort reasons are sent with code 0, which the backend may reject.",
+    "scope": "Stays on the local-execution path; extracting retry constants into clientcfg and re-aliasing them in v6 is a minor gratuitous refactor, and runtime-config tuning override goes slightly beyond the brief.",
+    "readability": "Clear names and well-placed comments explaining non-obvious wire behaviour; lazyInitProvisioning name is a bit awkward but flow is easy to follow.",
+    "robustness": "Retries with context-aware backoff, bodies drained/closed, rewinds GetBody on retry, atomic hit counter in fake server; notify uses context.Background with only the http timeout as bound.",
+    "maintainability": "Injectable metricsPusher/notifier interfaces and a single ProvisionLocalExecution entry point; some duplication of closeResponse/drainAndClose/checkResponse across packages and the provisioning Client embedding a v6 client is mild coupling."
+  },
+  "flags": []
+}

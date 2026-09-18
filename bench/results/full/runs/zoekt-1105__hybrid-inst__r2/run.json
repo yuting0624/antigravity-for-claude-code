@@ -1,0 +1,610 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "zoekt-1105__hybrid-inst__r2",
+  "task_id": "zoekt-1105",
+  "arm": "hybrid-inst",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "D",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-16T02:09:57+00:00",
+  "ended_at": "2026-09-16T03:40:47+00:00",
+  "agent_wall_s": 5446.6,
+  "agent_active_s": 5255.8,
+  "suspended_s": 190.8,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "57b09fccfdb1a9784276dac8965e7711d063e6a12fec20aa6817282b4ed74352",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "bc6cb53e479427332ec15fb6d5aca5d3e257082d90416fa00645b4c3858261c6"
+  },
+  "claude": {
+    "session_id": "d9cf1b22-e1b4-4044-9891-32a842f27255",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 59,
+    "num_turns_source": "result",
+    "duration_ms": 5255243,
+    "duration_api_ms": 713711,
+    "total_cost_usd": 7.519206,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 86,
+      "cache_creation_input_tokens": 763892,
+      "cache_read_input_tokens": 2706092,
+      "output_tokens": 55588,
+      "output_tokens_details": {
+        "thinking_tokens": 24032
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 763892
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1580,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001705,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 86,
+        "outputTokens": 55588,
+        "cacheReadInputTokens": 2706092,
+        "cacheCreationInputTokens": 763892,
+        "webSearchRequests": 0,
+        "costUSD": 7.517500999999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 24032,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 7.517501,
+    "recomputed_vs_reported_gap": -0.0002,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 43,
+      "input": 86,
+      "output": 55588,
+      "cache_creation": 763892,
+      "cache_read": 2706092,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 43,
+          "input": 86,
+          "output": 55588,
+          "cache_creation": 763892,
+          "cache_read": 2706092
+        }
+      },
+      "tool_calls": {
+        "Bash": 47,
+        "Read": 9,
+        "Write": 2
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 2,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 86,
+        "transcript": 86,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 55588,
+        "transcript": 55588,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 763892,
+        "transcript": 763892,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 2706092,
+        "transcript": 2706092,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 5,
+    "denied_tools": {
+      "Bash:agy-delegate": 3,
+      "Bash:find": 1,
+      "Bash:git": 1
+    },
+    "result_head": "Done. `zoekt-local-sync` is implemented and everything is green.\n\n**What landed (uncommitted):**\n\n- `cmd/zoekt-local-sync/discover.go` — `discoverRepositories(roots)` walks each root (a root that is itself a repo counts), detects work trees (`.git` dir *or* file) and bare repos (`objects/` plus `HEAD` or a `.git` suffix), does not descend into a found repo, names repos from their root-relative pat",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 7.517501,
+      "requests": 43,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    }
+  },
+  "agy": {
+    "delegations": 14,
+    "usage_lines": 10,
+    "signal_only": 4,
+    "succeeded": 6,
+    "zero_usage_lines": 0,
+    "signals": {
+      "QUOTA_EXHAUSTED": 1,
+      "AGY_FAILED": 3
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 10,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 8,
+        "input": 3216248,
+        "output": 231597,
+        "thinking": 191846,
+        "cache_read": 12774329,
+        "usd": 4.238749
+      },
+      "pro": {
+        "calls": 2,
+        "input": 532863,
+        "output": 34801,
+        "thinking": 23858,
+        "cache_read": 1758333,
+        "usd": 5.000004
+      }
+    },
+    "totals": {
+      "input": 3749111,
+      "output": 266398,
+      "thinking": 215704,
+      "cache_read": 14532662,
+      "total": 4015509
+    },
+    "invariant_ok": true,
+    "shadow_usd": 9.238753,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [
+      "no_cached_rate_for:gemini_pro"
+    ],
+    "conversation_ids": [
+      "fb7eff8a-5c54-4cc6-963c-c2773846a188",
+      "342584b0-823f-4ba1-96cb-066cd25ce0b4",
+      "52aad425-1bcd-45e1-9803-a149c89fec7c",
+      "879a35be-a0e8-4cb1-a719-e7b5d9d86339",
+      "a115fbc3-f979-47d6-aee7-ae7a2ff519e4",
+      "70e46d72-7141-4f75-83e1-cb30521d89f2",
+      "936a78a9-9859-4ccd-b713-759c9dd516bc",
+      "1d2c56ec-2a80-4c41-91c4-1e73323f75cd",
+      "998f32bd-e5be-4190-9159-e70a485df799",
+      "4fa7cd4f-a3ff-41da-ac19-c2dffa2926a6"
+    ],
+    "agy_duration_s_sum": 4377.0,
+    "wrapper_calls_in_transcript": 13,
+    "trace_audit": {
+      "fb7eff8a-5c54-4cc6-963c-c2773846a188": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 54,
+          "GENERIC": 52,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 35,
+          "find_by_name": 1,
+          "manage_task": 1,
+          "view_file": 11,
+          "grep_search": 2,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T02:15:50Z",
+        "last_step_at": "2026-09-16T02:21:37Z"
+      },
+      "342584b0-823f-4ba1-96cb-066cd25ce0b4": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 35,
+          "GENERIC": 33,
+          "SYSTEM_MESSAGE": 2,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 17,
+          "manage_task": 4,
+          "list_dir": 3,
+          "view_file": 8,
+          "grep_search": 1,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T02:21:46Z",
+        "last_step_at": "2026-09-16T02:29:03Z"
+      },
+      "52aad425-1bcd-45e1-9803-a149c89fec7c": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 52,
+          "GENERIC": 51,
+          "SYSTEM_MESSAGE": 4,
+          "ERROR_MESSAGE": 2,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 22,
+          "manage_task": 5,
+          "view_file": 17,
+          "grep_search": 7
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T02:30:32Z",
+        "last_step_at": "2026-09-16T02:37:57Z"
+      },
+      "879a35be-a0e8-4cb1-a719-e7b5d9d86339": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 51,
+          "GENERIC": 50,
+          "SYSTEM_MESSAGE": 4,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 22,
+          "manage_task": 7,
+          "view_file": 14,
+          "grep_search": 7
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T02:41:06Z",
+        "last_step_at": "2026-09-16T02:47:19Z"
+      },
+      "a115fbc3-f979-47d6-aee7-ae7a2ff519e4": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 38,
+          "GENERIC": 37,
+          "SYSTEM_MESSAGE": 7
+        },
+        "tool_calls": {
+          "run_command": 30,
+          "manage_task": 6,
+          "view_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T02:50:30Z",
+        "last_step_at": "2026-09-16T02:57:44Z"
+      },
+      "70e46d72-7141-4f75-83e1-cb30521d89f2": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 34,
+          "GENERIC": 30,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "view_file": 9,
+          "find_by_name": 1,
+          "run_command": 17,
+          "manage_task": 3,
+          "list_dir": 1,
+          "grep_search": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T02:57:58Z",
+        "last_step_at": "2026-09-16T03:02:32Z"
+      },
+      "936a78a9-9859-4ccd-b713-759c9dd516bc": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 36,
+          "GENERIC": 34,
+          "CHECKPOINT": 1,
+          "ERROR_MESSAGE": 1
+        },
+        "tool_calls": {
+          "view_file": 20,
+          "grep_search": 6,
+          "find_by_name": 1,
+          "write_to_file": 1,
+          "run_command": 6
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T03:09:06Z",
+        "last_step_at": "2026-09-16T03:18:01Z"
+      },
+      "1d2c56ec-2a80-4c41-91c4-1e73323f75cd": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 23,
+          "GENERIC": 24,
+          "SYSTEM_MESSAGE": 3
+        },
+        "tool_calls": {
+          "view_file": 8,
+          "run_command": 16,
+          "manage_task": 3,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T03:18:10Z",
+        "last_step_at": "2026-09-16T03:22:31Z"
+      },
+      "998f32bd-e5be-4190-9159-e70a485df799": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 33,
+          "GENERIC": 32,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 13,
+          "run_command": 11,
+          "grep_search": 7,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T03:23:31Z",
+        "last_step_at": "2026-09-16T03:31:46Z"
+      },
+      "4fa7cd4f-a3ff-41da-ac19-c2dffa2926a6": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 26,
+          "GENERIC": 25,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 12,
+          "run_command": 9,
+          "find_by_name": 2,
+          "replace_file_content": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T03:33:27Z",
+        "last_step_at": "2026-09-16T03:39:31Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 9
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 5,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 138,
+    "gate_blocks": 3,
+    "blocked_heads": {
+      "agy-delegate": 2,
+      "git": 1
+    },
+    "gate_allows": 44,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "cmd/zoekt-git-index/main.go",
+      "gitindex/index.go",
+      "cmd/zoekt-local-sync/discover.go",
+      "cmd/zoekt-local-sync/index.go",
+      "cmd/zoekt-local-sync/main.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 3.3,
+      "passed_tests": 100,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 2,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 9.1,
+      "passed_tests": 1123,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 56,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 5,
+    "code_added": 798,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "cmd/zoekt-git-index/main.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "affd07590ca48ca9d46afba6a2f9f0752164f67e26a9d0efca200132196ae3f6"
+  },
+  "diff_files": {
+    "cmd/zoekt-git-index/main.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/discover.go": {
+      "added": 123,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/index.go": {
+      "added": 214,
+      "removed": 0,
+      "class": "code"
+    },
+    "cmd/zoekt-local-sync/main.go": {
+      "added": 449,
+      "removed": 0,
+      "class": "code"
+    },
+    "gitindex/index.go": {
+      "added": 10,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 7.519206,
+    "gemini_usd": 9.238753,
+    "total_usd": 16.757959
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:51+00:00",
+    "reaccounted at 2026-09-17T14:49:01+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

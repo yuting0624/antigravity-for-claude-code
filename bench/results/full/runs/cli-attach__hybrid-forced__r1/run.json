@@ -1,0 +1,830 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-attach__hybrid-forced__r1",
+  "task_id": "cli-attach",
+  "arm": "hybrid-forced",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "C",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-15T17:42:49+00:00",
+  "ended_at": "2026-09-15T20:45:58+00:00",
+  "agent_wall_s": 10986.4,
+  "agent_active_s": 10986.4,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d",
+    "appendix": "hybrid-forced-appendix.md",
+    "appendix_sha256": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "sent_sha256": "c8a2a5211d3b4c3365ab99324634860fd4edc58f9d25f10c12fed49239cec3d2"
+  },
+  "claude": {
+    "session_id": "949b556b-e92b-437d-ba3f-cf5e5f357223",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 83,
+    "num_turns_source": "result",
+    "duration_ms": 10985914,
+    "duration_api_ms": 1496758,
+    "total_cost_usd": 26.43164050000001,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 136,
+      "cache_creation_input_tokens": 3080404,
+      "cache_read_input_tokens": 9694814,
+      "output_tokens": 76358,
+      "output_tokens_details": {
+        "thinking_tokens": 30840
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 3080404
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2113,
+        "outputTokens": 27,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002248,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 138,
+        "outputTokens": 89656,
+        "cacheReadInputTokens": 9869555,
+        "cacheCreationInputTokens": 3080404,
+        "webSearchRequests": 0,
+        "costUSD": 26.42939250000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 43280,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 26.429392,
+    "recomputed_vs_reported_gap": -0.0001,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 69,
+      "input": 138,
+      "output": 89656,
+      "cache_creation": 3080404,
+      "cache_read": 9869555,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 69,
+          "input": 138,
+          "output": 89656,
+          "cache_creation": 3080404,
+          "cache_read": 9869555
+        }
+      },
+      "tool_calls": {
+        "Bash": 72,
+        "Read": 10
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0,
+      "background_delegations": 1,
+      "bash_cap_backgrounds": 4
+    },
+    "warm_start": false,
+    "usage_reconciles": false,
+    "usage_reconciliation": {
+      "input": {
+        "result": 136,
+        "transcript": 138,
+        "rel": 0.0145
+      },
+      "output": {
+        "result": 76358,
+        "transcript": 89656,
+        "rel": 0.1483
+      },
+      "cache_creation": {
+        "result": 3080404,
+        "transcript": 3080404,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 9694814,
+        "transcript": 9869555,
+        "rel": 0.0177
+      }
+    },
+    "permission_denials": 4,
+    "denied_tools": {
+      "Bash:ls": 1,
+      "Read": 1,
+      "Bash:cat": 1,
+      "Bash:agy-delegate": 1
+    },
+    "result_head": "Done. `--attach` is implemented end to end, all work delegated through `agy-delegate` and verified by me.\n\n**Gate (run by me, fresh):**\n- `go build ./...` — clean\n- `go vet ./...` — clean\n- `gofmt -l internal pkg api` — clean\n- `go test -count=1 ./...` — all packages pass\n- No `_test.go` file or `testdata` fixture was modified; no commits, branches or tags created.\n\n**What landed**\n\nNew package `i",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 44.937785,
+      "requests": 69,
+      "requests_over_200k": 33,
+      "ctx_tokens_over_200k_share": 0.6613
+    }
+  },
+  "agy": {
+    "delegations": 18,
+    "usage_lines": 16,
+    "signal_only": 2,
+    "succeeded": 13,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 1,
+      "TIMEOUT": 3,
+      "QUOTA_EXHAUSTED": 1
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 16,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 16,
+        "input": 7955706,
+        "output": 573770,
+        "thinking": 453349,
+        "cache_read": 46340184,
+        "usd": 11.593931
+      }
+    },
+    "totals": {
+      "input": 7955706,
+      "output": 573770,
+      "thinking": 453349,
+      "cache_read": 46340184,
+      "total": 8529476
+    },
+    "invariant_ok": true,
+    "shadow_usd": 11.593931,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "b7c188c2-dbf1-447b-8465-4243d9e01b75",
+      "ae7ded46-4946-4a87-8ec0-9403db6e87e0",
+      "13b7aef7-19d2-4ead-aff6-1e3c900fe4da",
+      "1bb9f4d5-6f6a-4a52-aad2-613f5496618c",
+      "7f54a56a-3652-4673-ace7-093e6dfbc8a5",
+      "9b827575-fc11-4458-b1ff-475a44b56030",
+      "3c921329-2ee6-4feb-98d2-6ea1727300b0",
+      "0f331b7b-effe-41c5-a511-8ac3363ba994",
+      "4fb5723e-bb29-428c-9d06-e3e8c52728c9",
+      "1cf440b2-ffe8-44c9-b006-c929756ded7e",
+      "0959eb9c-6b85-46fb-b9bd-491af133b388",
+      "14014002-5a84-4c53-a01e-bea9e64b1eea",
+      "c45572d5-2984-40f5-9e2c-36258ee6e764",
+      "2a20ab5f-1ea8-4a8d-ac17-ca25d8b2cf5e",
+      "e03deb44-fbf2-4620-8241-9fc0de58f767",
+      "3d77c3a5-02c8-4134-9b25-f62c5a65cb1b"
+    ],
+    "agy_duration_s_sum": 8985.517,
+    "wrapper_calls_in_transcript": 17,
+    "trace_audit": {
+      "b7c188c2-dbf1-447b-8465-4243d9e01b75": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 39,
+          "ERROR_MESSAGE": 1,
+          "GENERIC": 36
+        },
+        "tool_calls": {
+          "run_command": 17,
+          "grep_search": 6,
+          "view_file": 10,
+          "find_by_name": 1,
+          "list_dir": 1,
+          "replace_file_content": 1,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T17:45:41Z",
+        "last_step_at": "2026-09-15T17:50:36Z"
+      },
+      "ae7ded46-4946-4a87-8ec0-9403db6e87e0": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 23,
+          "GENERIC": 21,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 14,
+          "manage_task": 3,
+          "view_file": 3,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T17:50:49Z",
+        "last_step_at": "2026-09-15T17:53:13Z"
+      },
+      "13b7aef7-19d2-4ead-aff6-1e3c900fe4da": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 8,
+          "GENERIC": 7
+        },
+        "tool_calls": {
+          "view_file": 2,
+          "replace_file_content": 1,
+          "run_command": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T17:53:44Z",
+        "last_step_at": "2026-09-15T17:54:57Z"
+      },
+      "1bb9f4d5-6f6a-4a52-aad2-613f5496618c": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 64,
+          "GENERIC": 62,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 13,
+          "find_by_name": 1,
+          "list_dir": 3,
+          "grep_search": 18,
+          "run_command": 26,
+          "replace_file_content": 1,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T17:55:23Z",
+        "last_step_at": "2026-09-15T18:02:08Z"
+      },
+      "7f54a56a-3652-4673-ace7-093e6dfbc8a5": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 65,
+          "ERROR_MESSAGE": 1,
+          "GENERIC": 61,
+          "CHECKPOINT": 2,
+          "SYSTEM_MESSAGE": 3
+        },
+        "tool_calls": {
+          "view_file": 29,
+          "grep_search": 14,
+          "run_command": 6,
+          "replace_file_content": 9,
+          "manage_task": 3,
+          "schedule": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 9,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T18:02:20Z",
+        "last_step_at": "2026-09-15T18:12:12Z"
+      },
+      "9b827575-fc11-4458-b1ff-475a44b56030": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 32,
+          "GENERIC": 30,
+          "SYSTEM_MESSAGE": 1
+        },
+        "tool_calls": {
+          "view_file": 6,
+          "run_command": 19,
+          "grep_search": 2,
+          "find_by_name": 1,
+          "list_dir": 1,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T18:21:23Z",
+        "last_step_at": "2026-09-15T18:28:19Z"
+      },
+      "3c921329-2ee6-4feb-98d2-6ea1727300b0": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 48,
+          "GENERIC": 46,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "find_by_name": 2,
+          "view_file": 16,
+          "grep_search": 7,
+          "run_command": 15,
+          "write_to_file": 6,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 7,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T18:31:23Z",
+        "last_step_at": "2026-09-15T18:41:13Z"
+      },
+      "0f331b7b-effe-41c5-a511-8ac3363ba994": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 71,
+          "GENERIC": 70,
+          "CHECKPOINT": 2,
+          "SYSTEM_MESSAGE": 1
+        },
+        "tool_calls": {
+          "view_file": 27,
+          "run_command": 37,
+          "replace_file_content": 4,
+          "write_to_file": 1,
+          "manage_task": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 5,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T18:43:55Z",
+        "last_step_at": "2026-09-15T18:56:32Z"
+      },
+      "4fb5723e-bb29-428c-9d06-e3e8c52728c9": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 54,
+          "GENERIC": 52,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 24,
+          "find_by_name": 1,
+          "grep_search": 14,
+          "run_command": 10,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T18:58:23Z",
+        "last_step_at": "2026-09-15T19:07:30Z"
+      },
+      "1cf440b2-ffe8-44c9-b006-c929756ded7e": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 63,
+          "GENERIC": 62,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 31,
+          "grep_search": 9,
+          "list_dir": 1,
+          "find_by_name": 1,
+          "run_command": 14,
+          "replace_file_content": 6
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T19:08:58Z",
+        "last_step_at": "2026-09-15T19:19:20Z"
+      },
+      "0959eb9c-6b85-46fb-b9bd-491af133b388": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 81,
+          "GENERIC": 80,
+          "CHECKPOINT": 3
+        },
+        "tool_calls": {
+          "view_file": 43,
+          "grep_search": 10,
+          "find_by_name": 2,
+          "run_command": 16,
+          "list_dir": 1,
+          "replace_file_content": 8
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 8,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T19:19:28Z",
+        "last_step_at": "2026-09-15T19:32:31Z"
+      },
+      "14014002-5a84-4c53-a01e-bea9e64b1eea": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 38,
+          "GENERIC": 38,
+          "CHECKPOINT": 1,
+          "ERROR_MESSAGE": 1
+        },
+        "tool_calls": {
+          "find_by_name": 2,
+          "view_file": 24,
+          "grep_search": 11,
+          "run_command": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T19:34:20Z",
+        "last_step_at": "2026-09-15T19:49:18Z"
+      },
+      "c45572d5-2984-40f5-9e2c-36258ee6e764": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 53,
+          "GENERIC": 53,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 35,
+          "grep_search": 11,
+          "run_command": 1,
+          "find_by_name": 1,
+          "replace_file_content": 5
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 5,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T19:49:21Z",
+        "last_step_at": "2026-09-15T20:03:59Z"
+      },
+      "2a20ab5f-1ea8-4a8d-ac17-ca25d8b2cf5e": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 36,
+          "GENERIC": 35,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 24,
+          "find_by_name": 1,
+          "grep_search": 9,
+          "run_command": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T20:05:05Z",
+        "last_step_at": "2026-09-15T20:18:12Z"
+      },
+      "e03deb44-fbf2-4620-8241-9fc0de58f767": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 50,
+          "GENERIC": 48,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "view_file": 26,
+          "grep_search": 6,
+          "find_by_name": 1,
+          "run_command": 10,
+          "replace_file_content": 6
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 6,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T20:20:46Z",
+        "last_step_at": "2026-09-15T20:34:22Z"
+      },
+      "3d77c3a5-02c8-4134-9b25-f62c5a65cb1b": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 20,
+          "GENERIC": 19
+        },
+        "tool_calls": {
+          "view_file": 7,
+          "grep_search": 1,
+          "run_command": 7,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T20:39:59Z",
+        "last_step_at": "2026-09-15T20:44:22Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 61
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 11,
+    "agy_background": 2,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 213,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "cat": 1
+    },
+    "gate_allows": 71,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "internal/ghinstance/host.go",
+      "internal/config/auth_config.go",
+      "internal/gh/gh.go",
+      "api/queries_issue.go",
+      "api/queries_pr.go",
+      "api/queries_repo.go",
+      "api/query_builder.go",
+      "pkg/httpmock/legacy.go",
+      "internal/attachments/attach.go",
+      "internal/attachments/client.go",
+      "internal/attachments/flags.go",
+      "internal/attachments/references.go",
+      "internal/attachments/testing.go",
+      "internal/attachments/userasset.go",
+      "pkg/cmd/issue/comment/comment.go",
+      "pkg/cmd/pr/comment/comment.go",
+      "pkg/cmd/pr/shared/commentable.go",
+      "pkg/cmd/issue/create/create.go",
+      "pkg/cmd/pr/create/create.go",
+      "pkg/cmd/pr/edit/edit.go",
+      "pkg/cmd/issue/edit/edit.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 1.1,
+      "passed_tests": 951,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 11,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 30.8,
+      "passed_tests": 7803,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 309,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 21,
+    "code_added": 2217,
+    "code_removed": 161,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/attachments/testing.go",
+      "internal/config/auth_config.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "4b758a23ca527856c0027a9c5174e8a337e785ebcaaeb7d3a313e25b1a5c56cd"
+  },
+  "diff_files": {
+    "api/queries_issue.go": {
+      "added": 16,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/queries_pr.go": {
+      "added": 19,
+      "removed": 3,
+      "class": "code"
+    },
+    "api/queries_repo.go": {
+      "added": 4,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/query_builder.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/attach.go": {
+      "added": 81,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/client.go": {
+      "added": 231,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/flags.go": {
+      "added": 86,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/references.go": {
+      "added": 955,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/testing.go": {
+      "added": 66,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/userasset.go": {
+      "added": 173,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/config/auth_config.go": {
+      "added": 28,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/gh/gh.go": {
+      "added": 23,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/ghinstance/host.go": {
+      "added": 9,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/comment/comment.go": {
+      "added": 13,
+      "removed": 2,
+      "class": "code"
+    },
+    "pkg/cmd/issue/create/create.go": {
+      "added": 90,
+      "removed": 33,
+      "class": "code"
+    },
+    "pkg/cmd/issue/edit/edit.go": {
+      "added": 92,
+      "removed": 24,
+      "class": "code"
+    },
+    "pkg/cmd/pr/comment/comment.go": {
+      "added": 13,
+      "removed": 2,
+      "class": "code"
+    },
+    "pkg/cmd/pr/create/create.go": {
+      "added": 129,
+      "removed": 72,
+      "class": "code"
+    },
+    "pkg/cmd/pr/edit/edit.go": {
+      "added": 70,
+      "removed": 5,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/commentable.go": {
+      "added": 110,
+      "removed": 18,
+      "class": "code"
+    },
+    "pkg/httpmock/legacy.go": {
+      "added": 7,
+      "removed": 2,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 26.43164050000001,
+    "gemini_usd": 11.593931,
+    "total_usd": 38.02557150000001
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:50+00:00",
+    "reaccounted at 2026-09-17T14:49:00+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

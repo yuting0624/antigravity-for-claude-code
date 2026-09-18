@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-8d9e6e",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:01:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "4ac3c9e32d535a675ee0d62eef2a379903e70f8d996f2908bbdc2a930e678972",
+  "wall_s": 35.3,
+  "cost_usd": 0.46039325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Follows existing patterns: per-option special cases in evaluateGlobalOptionsBlock, slices helpers, typed-assertion errors like 'servers'/'log'; comments match house style.",
+    "edge_cases": "Multiple order options chain via existingVal; invalid order errors before any state changes; nil existingVal falls back to a cloned default; plugin init order preserved via Clone.",
+    "scope": "All changes serve the requirement; options-map copy and RegisterDirectiveOrder clone are justified by reuse/aliasing concerns, though the latter is a slight opportunistic cleanup.",
+    "readability": "Threading 'order' explicitly is clear; parameter position varies between functions and some comments are wordy, but intent is easy to follow.",
+    "robustness": "No global mutation, no locks, per-adaptation cloned slices, options map copied, type mismatch returns error rather than panicking; race-free by construction.",
+    "maintainability": "Explicit parameter beats hidden global, but the 'order' string special case in evaluateGlobalOptionsBlock couples it to parseOptOrder's contract; extra positional param on several helpers adds mild churn."
+  },
+  "flags": []
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b242d5",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:00:56+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7382a67f51ea042a75517f5e6d0fba04809f6e6d5553f05f224a1d4d9a42ef99",
+  "wall_s": 58.2,
+  "cost_usd": 0.52490475,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Uses the existing `existing` parameter pattern from parseOptCertIssuer, slices helpers already imported, and Caddy's conversational comment style; no exported API changes.",
+    "edge_cases": "Handles nil options, invalid directive/positional (errors before any state is touched), chained order options in one file, First/Last/Before/After, and falls back to plugin order when options lacks a valid []string.",
+    "scope": "All edits serve the requirement; the RegisterDirectiveOrder rewrite and options clone go slightly past the minimum but are justified by 'default order never mutated' and shared-map safety. Silently deleting a caller-supplied 'order' key is a small semantic change.",
+    "readability": "Threading `order []string` through buildSubroute (nil = keep written order) is clearer than the old bool; directiveOrderFor centralizes lookup. Comments are somewhat chatty but explain the non-obvious ownership.",
+    "robustness": "No global writes after init; parseOptOrder clones before DeleteFunc, options map is cloned so shared/reused maps can't race or leak state; also fixes the latent append-into-defaultDirectiveOrder backing array bug.",
+    "maintainability": "Explicit order parameter removes hidden dependence on package state; per-adaptation order lives in options['order'] which is string-keyed coupling but matches existing conventions."
+  },
+  "flags": []
+}

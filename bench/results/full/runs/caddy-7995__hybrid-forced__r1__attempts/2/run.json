@@ -1,0 +1,350 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "caddy-7995__hybrid-forced__r1",
+  "task_id": "caddy-7995",
+  "arm": "hybrid-forced",
+  "rep": 1,
+  "attempt": 1,
+  "lane": "A",
+  "size_class": "small",
+  "status": "ok",
+  "failure_class": null,
+  "violations": [],
+  "started_at": "2026-09-15T09:53:49+00:00",
+  "ended_at": "2026-09-15T10:00:15+00:00",
+  "agent_wall_s": 383.1,
+  "agent_active_s": 383.0,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 8,
+    "max_turns": 80,
+    "wall_s": 2700,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "5759194aa07a5afe5182428dd1a810afc1e5000bc59b35dccac1ea5a8f104c2d",
+    "appendix": "hybrid-forced-appendix.md",
+    "appendix_sha256": "3f4873401d357828bdea17e9287ae2177cfab6c005f251f71ad9f3d0f1e03784",
+    "sent_sha256": "ca295c05237e9e2fa41b24f55dbb7c673f1168917a7bbaa99922192753a38548"
+  },
+  "claude": {
+    "session_id": "216e7221-e60d-48f5-b3f1-6c8a3a99e7e8",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 30,
+    "num_turns_source": "result",
+    "duration_ms": 382607,
+    "duration_api_ms": 367924,
+    "total_cost_usd": 1.86061775,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 44,
+      "cache_creation_input_tokens": 89293,
+      "cache_read_input_tokens": 958069,
+      "output_tokens": 24195,
+      "output_tokens_details": {
+        "thinking_tokens": 10313
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 89293
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1475,
+        "outputTokens": 26,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0016049999999999999,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 52,
+        "outputTokens": 27970,
+        "cacheReadInputTokens": 978568,
+        "cacheCreationInputTokens": 107235,
+        "webSearchRequests": 0,
+        "costUSD": 1.85901275,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 10378,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 1.859013,
+    "recomputed_vs_reported_gap": -0.0009,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 26,
+      "input": 52,
+      "output": 25141,
+      "cache_creation": 107235,
+      "cache_read": 978568,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 22,
+          "input": 44,
+          "output": 24195,
+          "cache_creation": 89293,
+          "cache_read": 958069
+        }
+      },
+      "tool_calls": {
+        "Bash": 28,
+        "Agent": 1,
+        "ToolSearch": 1,
+        "Skill": 1
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 0,
+      "sidechain_turns": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": false,
+    "usage_reconciliation": {
+      "input": {
+        "result": 44,
+        "transcript": 52,
+        "rel": 0.1538
+      },
+      "output": {
+        "result": 24195,
+        "transcript": 25141,
+        "rel": 0.0376
+      },
+      "cache_creation": {
+        "result": 89293,
+        "transcript": 107235,
+        "rel": 0.1673
+      },
+      "cache_read": {
+        "result": 958069,
+        "transcript": 978568,
+        "rel": 0.0209
+      }
+    },
+    "permission_denials": 5,
+    "denied_tools": {
+      "Bash:agy-delegate": 1,
+      "Bash:ls": 2,
+      "Bash:which": 1,
+      "Bash:agy": 1
+    },
+    "result_head": "I'm blocked on the one thing that actually changes files. Here's the situation and the complete, verified-by-reading change so it can be applied.\n\n## Blocker\n\nThe session policy requires all file edits go through `agy-delegate`, but that wrapper does not exist in this environment:\n\n- `command -v agy-delegate agy-job agy-doctor` → nothing; only `/Users/linyuting/.cache/agy-bench/bin/agy` is present",
+    "errors": []
+  },
+  "agy": {
+    "delegations": 0,
+    "usage_lines": 0,
+    "signal_only": 0,
+    "succeeded": 0,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 0,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {},
+    "totals": {
+      "input": 0,
+      "output": 0,
+      "thinking": 0,
+      "cache_read": 0,
+      "total": 0
+    },
+    "invariant_ok": true,
+    "shadow_usd": 0.0,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [],
+    "agy_duration_s_sum": 0,
+    "wrapper_calls_in_transcript": 4,
+    "trace_audit": {},
+    "executor_web_access": false,
+    "executor_write_steps": 0
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "events": 75,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "agy-delegate": 1,
+      "agy": 1
+    },
+    "gate_allows": 26,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 1.5,
+      "passed_tests": 1,
+      "failed_tests": [
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderIsolation",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderAfterError",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderWithReusedOptions",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrder",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrderWithReusedOptions",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestRegisterDirectiveOrderWithOrderOption"
+      ],
+      "failed_packages": [
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+      ],
+      "build_failed_packages": [],
+      "packages": 1,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "full_suite": {
+      "pass": false,
+      "rc": 1,
+      "timed_out": false,
+      "seconds": 8.5,
+      "passed_tests": 1277,
+      "failed_tests": [
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderIsolation",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderAfterError",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderWithReusedOptions",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrder",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrderWithReusedOptions",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestRegisterDirectiveOrderWithOrderOption",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestMatcherSyntax",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestGlobalCertIssuerAppliesToImplicitACMEIssuer",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestParsePKIApp_noPKIAppWhenNoInternalIssuerConfigured",
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAutomationPoliciesAllowSameHostOnDifferentPorts"
+      ],
+      "failed_packages": [
+        "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+      ],
+      "build_failed_packages": [],
+      "packages": 48,
+      "stderr_tail": "",
+      "flaky_retry": {
+        "groups": [
+          {
+            "package": "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile",
+            "tests": [
+              "TestAdaptDirectiveOrderAfterError",
+              "TestAdaptDirectiveOrderIsolation",
+              "TestAdaptDirectiveOrderWithReusedOptions",
+              "TestAutomationPoliciesAllowSameHostOnDifferentPorts",
+              "TestConcurrentAdaptDirectiveOrder",
+              "TestConcurrentAdaptDirectiveOrderWithReusedOptions",
+              "TestGlobalCertIssuerAppliesToImplicitACMEIssuer",
+              "TestMatcherSyntax",
+              "TestParsePKIApp_noPKIAppWhenNoInternalIssuerConfigured",
+              "TestRegisterDirectiveOrderWithOrderOption"
+            ],
+            "pass": false,
+            "failed": [
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderIsolation",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderAfterError",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAdaptDirectiveOrderWithReusedOptions",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrder",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestConcurrentAdaptDirectiveOrderWithReusedOptions",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestRegisterDirectiveOrderWithOrderOption",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestMatcherSyntax",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestGlobalCertIssuerAppliesToImplicitACMEIssuer",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestParsePKIApp_noPKIAppWhenNoInternalIssuerConfigured",
+              "github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile.TestAutomationPoliciesAllowSameHostOnDifferentPorts"
+            ]
+          }
+        ],
+        "all_passed_on_retry": false
+      },
+      "failed_tests_before_retry": null
+    },
+    "hidden_pass": false,
+    "tree_pass": false,
+    "pass": false,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 0,
+    "code_added": 0,
+    "code_removed": 0,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "diff_files": {},
+  "cost": {
+    "claude_usd": 1.86061775,
+    "gemini_usd": 0.0,
+    "total_usd": 1.86061775
+  },
+  "notes": [],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d"
+}

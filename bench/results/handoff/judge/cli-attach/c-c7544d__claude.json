@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-attach",
+  "candidate_id": "c-c7544d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:10:13+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1b55cb45d4e1dcb244750e18fd326c290f50a57b774b026d9ee48acf5d16cb95",
+  "wall_s": 56.9,
+  "cost_usd": 1.04934725,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 2,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.667,
+  "rationale": {
+    "consistency": "Command wiring follows existing cobra/opts patterns, but a non-_test file imports testing/httpmock, an unexported error type has exported fields, and IsEnterprise is a needless wrapper over ghauth.",
+    "edge_cases": "Covers symlink/hardlink dupes, empty/dir/size limits, alt-on-video, reference defs and code spans; but partial-upload success still posts the body, contradicting 'if one upload fails nothing is written'.",
+    "scope": "Delivers all six commands and the package, but adds dead code (isSingleImage, UploadStub), an always-true KeepExistingBody option, and unrequested partial-upload semantics.",
+    "readability": "references.go is a 550-line hand-rolled byte scanner with deep nesting and little commentary; client.go repeats near-identical uploadError literals a dozen times.",
+    "robustness": "Resources closed and status codes handled, but partial uploads write content anyway, pr edit silently drops a user --body when uploads fail, and fullEnd can stay 0 producing bad splices.",
+    "maintainability": "findLinkDetails reimplements CommonMark parsing beside goldmark, NewUploader is built twice in pr create, the deferred-flag list is duplicated in issue edit, and error construction is copy-pasted."
+  },
+  "flags": []
+}

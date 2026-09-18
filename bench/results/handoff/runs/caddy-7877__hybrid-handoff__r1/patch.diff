@@ -1,0 +1,126 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..650965f39 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -419,17 +419,10 @@ func buildQueryString(qs string, repl *caddy.Replacer) string {
+ 	return sb.String()
+ }
+ 
+-// trimPathPrefix is like strings.TrimPrefix, but customized for advanced URI
+-// path prefix matching. The string prefix will be trimmed from the beginning
+-// of escapedPath if escapedPath starts with prefix. Rather than a naive 1:1
+-// comparison of each byte to determine if escapedPath starts with prefix,
+-// both strings are iterated in lock-step, and if prefix has a '%' encoding
+-// at a particular position, escapedPath must also have the same encoding
+-// representation for that character. In other words, if the prefix string
+-// uses the escaped form for a character, escapedPath must literally use the
+-// same escape at that position. Otherwise, all character comparisons are
+-// performed in normalized/unescaped space.
+-func trimPathPrefix(escapedPath, prefix string) string {
++// matchPathPrefix checks if escapedPath starts with prefix according to the
++// normalized/unescaped comparison rules. If it matches, it returns the number of
++// bytes consumed from escapedPath and true. Otherwise it returns 0 and false.
++func matchPathPrefix(escapedPath, prefix string) (int, bool) {
+ 	var iPath, iPrefix int
+ 	for iPath < len(escapedPath) && iPrefix < len(prefix) {
+ 		prefixCh := prefix[iPrefix]
+@@ -440,7 +433,7 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 			ch, err = url.PathUnescape(escapedPath[iPath : iPath+3])
+ 			if err != nil {
+ 				// should be impossible unless EscapedPath() is returning invalid values!
+-				return escapedPath
++				return 0, false
+ 			}
+ 			iPath += 2
+ 		}
+@@ -448,28 +441,72 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 		// prefix comparisons are case-insensitive to consistency with
+ 		// path matcher, which is case-insensitive for good reasons
+ 		if !strings.EqualFold(ch, string(prefixCh)) {
+-			return escapedPath
++			return 0, false
+ 		}
+ 
+ 		iPath++
+ 		iPrefix++
+ 	}
+ 
+-	// if we iterated through the entire prefix, we found it, so trim it
++	// if we iterated through the entire prefix, we found it
+ 	if iPrefix >= len(prefix) {
+-		return escapedPath[iPath:]
++		return iPath, true
+ 	}
+ 
+-	// otherwise we did not find the prefix
++	return 0, false
++}
++
++// trimPathPrefix is like strings.TrimPrefix, but customized for advanced URI
++// path prefix matching. The string prefix will be trimmed from the beginning
++// of escapedPath if escapedPath starts with prefix. Rather than a naive 1:1
++// comparison of each byte to determine if escapedPath starts with prefix,
++// both strings are iterated in lock-step, and if prefix has a '%' encoding
++// at a particular position, escapedPath must also have the same encoding
++// representation for that character. In other words, if the prefix string
++// uses the escaped form for a character, escapedPath must literally use the
++// same escape at that position. Otherwise, all character comparisons are
++// performed in normalized/unescaped space.
++func trimPathPrefix(escapedPath, prefix string) string {
++	if n, ok := matchPathPrefix(escapedPath, prefix); ok {
++		return escapedPath[n:]
++	}
+ 	return escapedPath
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// trimPathSuffix is like strings.TrimSuffix, but customized for advanced URI
++// path suffix matching. It follows the same contract as trimPathPrefix:
++// character comparisons are performed in normalized/unescaped space unless
++// the suffix pattern explicitly specifies a '%xx' escape, which must then match
++// literally (case-insensitively).
++func trimPathSuffix(escapedPath, suffix string) string {
++	if suffix == "" {
++		return escapedPath
++	}
++	boundaries := pathBoundaries(escapedPath)
++	for i := len(boundaries) - 1; i >= 0; i-- {
++		start := boundaries[i]
++		if n, ok := matchPathPrefix(escapedPath[start:], suffix); ok && start+n == len(escapedPath) {
++			return escapedPath[:start]
++		}
++	}
++	return escapedPath
++}
++
++func pathBoundaries(escapedPath string) []int {
++	boundaries := make([]int, 0, len(escapedPath)+1)
++	i := 0
++	for i < len(escapedPath) {
++		boundaries = append(boundaries, i)
++		if escapedPath[i] == '%' && i+3 <= len(escapedPath) {
++			if _, err := url.PathUnescape(escapedPath[i : i+3]); err == nil {
++				i += 3
++				continue
++			}
++		}
++		i++
+ 	}
+-	return string(r)
++	boundaries = append(boundaries, len(escapedPath))
++	return boundaries
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

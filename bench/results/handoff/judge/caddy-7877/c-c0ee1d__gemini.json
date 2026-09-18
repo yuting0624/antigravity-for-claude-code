@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T13:42:41+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 199.4,
+  "cost_usd": 0.303308,
+  "usage": {
+    "input": 27970,
+    "output": 20614,
+    "thinking": 20427,
+    "cache_read": 0,
+    "total": 48584
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Cleanly replaces the unused reverse wrapper, matches idiomatic Go naming and control flow, and leverages standard case-folding.",
+    "edge_cases": "Flawlessly synchronizes byte-by-byte matching, perfectly handling mixed escapes, partial sequences, and invalid percent encodings.",
+    "scope": "Directly implements the requested suffix stripping logic without over-engineering or touching unrelated code.",
+    "readability": "The logic is straightforward, variables are well-named, and the comment brilliantly explains why the naive approach fails.",
+    "robustness": "Safe index math, avoids panics, and properly handles decoding errors by gracefully falling back.",
+    "maintainability": "Highly cohesive and decoupled loop logic that avoids complex regular expressions or fragile string manipulation."
+  },
+  "flags": []
+}

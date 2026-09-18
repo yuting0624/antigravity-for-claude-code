@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-c4e6ee",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:41:57+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "02bc1c9883996cc615d5730e5f6fc363755e8a40c545e427ca88d5e7d9801cbf",
+  "wall_s": 57.4,
+  "cost_usd": 1.0677322500000002,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 2,
+    "robustness": 2,
+    "maintainability": 2
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "Uses cmdutil.FlagErrorf and existing query patterns, but imports `testing` into a production package, mixes 'failed to upload'/'could not upload' phrasing, and handles nil Config differently in commentable vs create/edit.",
+    "edge_cases": "Covers dup files via os.SameFile, empty/'-' values, size/type/dir/empty checks and refusal ordering; but partial uploads are still written (spec says nothing written on failure), and a failed upload sets Body.Edited=false, silently dropping a user-supplied --body on edit.",
+    "scope": "Feature wired everywhere asked, but carries dead code (isSingleImage, UploadStub, unused *testing.T param, KeepExistingBody always true) and extra behaviours (inline video→link degrade, reference-video refusal) not requested.",
+    "readability": "references.go is ~600 lines of hand-rolled byte scanning over source instead of using goldmark segments; client.go is a long status-code ladder; the same '%w\\n%w' wrap block is repeated ~10 times.",
+    "robustness": "CommentableRun calls opts.Config() with no nil guard; create/edit swallow config errors and surface a misleading 'unsupported authentication type'; findMatchingArg does os.Stat per candidate during markdown rewriting; NewTestAssets chdirs globally.",
+    "maintainability": "Upload/error plumbing is copy-pasted across six commands, hasDeferredFlags is duplicated in issue edit, and the custom markdown span-finder is fragile to any CommonMark edge case goldmark already handles."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

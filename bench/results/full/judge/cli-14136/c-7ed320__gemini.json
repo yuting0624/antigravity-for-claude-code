@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-7ed320",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:22:52+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "290c82693690a2ba331ef6b28f654d8532f662ac9c002cd5f78464eda226c822",
+  "wall_s": 48.8,
+  "cost_usd": 0.12782,
+  "usage": {
+    "input": 43756,
+    "output": 3359,
+    "thinking": 3098,
+    "cache_read": 0,
+    "total": 47115
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Follows existing patterns perfectly, correctly utilizes the git package, and integrates seamlessly with CLI conventions.",
+    "edge_cases": "Properly validates paths, mutually exclusive flags, checks existing branches before action, and safely scopes pulls via a copied git client.",
+    "scope": "Fulfills all requirements directly, extracts the worktree module accurately, and avoids any unrelated refactors.",
+    "readability": "The extracted WorktreeTarget and logic into the shared package are extremely clean; command abstractions are clear and well-named.",
+    "robustness": "Correctly prevents fast-forwarding non-existent branches, guards against invalid symlinks, and properly isolates git commands per-worktree.",
+    "maintainability": "Excellent reuse of worktree path resolution between both issue develop and pr checkout commands, centralizing worktree logic perfectly."
+  },
+  "flags": []
+}

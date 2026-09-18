@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-1151c4",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:55:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "850c429c77162004307690853763bd726b20500474ccd60732e1a5abcb7b388e",
+  "wall_s": 60.5,
+  "cost_usd": 0.7036625,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 2,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "License headers, module registration, caddyfile.go split and standard import match siblings; but handler JSON fields use time.Duration not caddy.Duration, ServeHTTP has a value receiver, and struct fields lack doc comments.",
+    "edge_cases": "Rate-only config (timeout 0, MinRate>0) yields deadline==Start on first call and fails immediately; hard deadline anchored at handler start, not connection start; no 1-minute server default applied in Provision.",
+    "scope": "Covers all requested surfaces, but adds unrequested positional args to the directive and rate args to server timeouts; server-level 1m default is only honored when the Caddyfile subdirective omits its value.",
+    "readability": "Clear structure and names; calculate() is easy to follow; minor dead code (io.EOF branch after io.Copy) and repeated chunk-size defaulting.",
+    "robustness": "No panics, nil-body and nil-Ctrl guards, ErrNotSupported tolerated; but instant-failure bug for rate-only configs and double wrapping when server and route both enable it.",
+    "maintainability": "parseRate is copy-pasted into two packages and chunk-size defaulting is duplicated; exported mutable IdleDeadline fields leak internals; otherwise shared reader/writer reused cleanly by both layers."
+  },
+  "flags": []
+}

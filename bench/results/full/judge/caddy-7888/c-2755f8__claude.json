@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-2755f8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:15:45+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "550f95521d4a1c25f6c26944ac0b83974f892bee509944047927654e83853acf",
+  "wall_s": 29.3,
+  "cost_usd": 0.22891025,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: reuses cookieFilterAction/filterAction, same Validate/CaddyModule/Unmarshal shape, registered beside cookie, interface guards added in all three blocks.",
+    "edge_cases": "Handles unparseable lines, exact name match, quoted-value preservation, delete-from-array, non-array passthrough; hash of empty value noted. Whitespace-only value would duplicate padding (minor, unlikely).",
+    "scope": "Only adds the new filter, registration and guards; no unrelated changes or refactors.",
+    "readability": "Clear split into Filter/filterLine/replaceSetCookieValue; whitespace-preservation arithmetic is a bit verbose but commented.",
+    "robustness": "No panics: all slicing is bounded, parse failure passes through, redundant defensive checks on '=' and name. Leading/trailing whitespace math is slightly fragile but safe.",
+    "maintainability": "UnmarshalCaddyfile is a verbatim copy of CookieFilter's rather than a shared helper; otherwise small, self-contained and easy to extend."
+  },
+  "flags": []
+}

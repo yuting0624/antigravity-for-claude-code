@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-66cda3",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:22:10+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "7b79a4c38cea6213cc47c712551983e40320cc59a4cd0a9338df8ee5261945a3",
+  "wall_s": 40.0,
+  "cost_usd": 0.342584,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: same action types, OUTER-label loop, dummy http.Response parse trick, Validate, module ID, interface guards and init registration; receiver names copy the existing f/m mix.",
+    "edge_cases": "Unparsable lines pass through via len(cookies)!=1; exact case-sensitive name match; quoting restored via c.Quoted; attributes copied verbatim from first ';'. Leading whitespace before the name is silently trimmed on rewrite, a minor normalisation.",
+    "scope": "Adds filter, registration, guards and a Caddyfile adapt fixture; extracts the cookie unmarshaller into a shared helper, a small justified refactor rather than a gratuitous one, with a negligible partial-append-on-error behaviour change.",
+    "readability": "Clear names, doc comment explains attribute preservation and first-action-wins; replaceSetCookieValue is a focused helper with an accurate comment.",
+    "robustness": "No panics on bad input: Cookies() tolerates junk, IndexByte guarded, non-array fields returned untouched; no shared mutable state.",
+    "maintainability": "Shared unmarshalCookieFilterActions removes 40 lines of duplication; Filter logic is a near-copy of CookieFilter's action loop, so future action types must be added in two places."
+  },
+  "flags": []
+}

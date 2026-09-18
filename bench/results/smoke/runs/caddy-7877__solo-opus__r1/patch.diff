@@ -1,0 +1,95 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..7f6f41c1a 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -464,12 +464,76 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 	return escapedPath
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// trimPathSuffix is like strings.TrimSuffix, but customized for advanced URI
++// path suffix matching, using the same comparison rules as trimPathPrefix:
++// the suffix is compared in normalized/unescaped space, except where the
++// suffix itself uses a '%' escape, in which case escapedPath must literally
++// use the same escape at that position.
++//
++// Because a percent-encoding is a multi-byte sequence which can only be read
++// from left to right, the position where the suffix would have to begin is
++// first located by counting how many characters (escape sequences counting as
++// one) the path and the suffix consist of; the remainder of the path is then
++// compared with the suffix using the same routine as for prefixes.
++func trimPathSuffix(escapedPath, suffix string) string {
++	pathChars, suffixChars := countPathChars(escapedPath), countSuffixChars(suffix)
++	if suffixChars == 0 || pathChars < suffixChars {
++		return escapedPath
++	}
++
++	// skip the characters of the path which the suffix cannot cover,
++	// so that the comparison starts on a character boundary
++	start := 0
++	for range pathChars - suffixChars {
++		start += pathCharLen(escapedPath, start)
++	}
++
++	// the suffix matches only if it consumes the rest of the path exactly
++	if trimPathPrefix(escapedPath[start:], suffix) != "" {
++		return escapedPath
+ 	}
+-	return string(r)
++
++	return escapedPath[:start]
++}
++
++// countPathChars returns the number of characters in escapedPath,
++// counting a percent-encoded sequence as a single character.
++func countPathChars(escapedPath string) int {
++	var count int
++	for i := 0; i < len(escapedPath); i += pathCharLen(escapedPath, i) {
++		count++
++	}
++	return count
++}
++
++// pathCharLen returns the length in bytes of the character
++// at position i of escapedPath, which is 3 for a percent-encoded
++// sequence and 1 otherwise.
++func pathCharLen(escapedPath string, i int) int {
++	if escapedPath[i] == '%' && len(escapedPath) >= i+3 &&
++		isHex(escapedPath[i+1]) && isHex(escapedPath[i+2]) {
++		return 3
++	}
++	return 1
++}
++
++// countSuffixChars returns the number of characters the suffix pattern
++// consists of; as in trimPathPrefix, a '%' begins an escape sequence which
++// has to be matched literally, and thus stands for a single character.
++func countSuffixChars(suffix string) int {
++	var count int
++	for i := 0; i < len(suffix); count++ {
++		if suffix[i] == '%' && len(suffix) >= i+3 {
++			i += 3
++		} else {
++			i++
++		}
++	}
++	return count
++}
++
++func isHex(c byte) bool {
++	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-a34fef",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:36:43+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cce861fbf3aeac0ca0bc93c2c8f14cc17066dad8386c4c07c3aa99c75f8996e8",
+  "wall_s": 50.0,
+  "cost_usd": 1.1504382499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Follows cobra/cmdutil/heredoc/httpmock idioms; but a non-test testing.go imports `testing` into production code and a package-level openFile var is swapped for tests.",
+    "edge_cases": "Covers extensions, size limits, dir/irregular/empty, SameFile dedup, empty/'-' values, code fences, ref definitions, video-alone paragraphs; but partial uploads still write the body and edit continues after upload failure, contrary to 'nothing is written'.",
+    "scope": "Adds KeepExistingBody knob no caller sets false, hasDeferredEdits refactor, a StopProgressIndicator fix and RepoNetwork databaseId beyond the ask; otherwise on target.",
+    "readability": "Clear names, but a 746-line hand-rolled inline link scanner beside goldmark and very verbose, repeated prose comments weigh it down.",
+    "robustness": "No panics seen, bodies/files closed; but ContentLength from earlier Stat, partial-success writes and edits proceeding on upload failure weaken the all-or-nothing guarantee.",
+    "maintainability": "newUploader is duplicated five times across command packages; custom markdown scanner duplicates goldmark's job and will be hard to keep correct; unexported-method interface limits extension."
+  },
+  "flags": []
+}

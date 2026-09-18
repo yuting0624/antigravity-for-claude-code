@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-attach",
+  "candidate_id": "c-263903",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:04:38+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a534fab413db7e5860b79905e154603273b0e2f2b9c3cd9738384ec7fa56e418",
+  "wall_s": 51.2,
+  "cost_usd": 1.21856975,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 5,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses cmdutil.MutuallyExclusive/FlagErrorf, heredoc.Docf, api.HandleHTTPError, ghinstance helpers and httpmock idioms; but test.go pulls testing/testify into a production package and mimics maintainer TODO initials.",
+    "edge_cases": "Very thorough: SameFile dedupe, '#' in filenames via stat, '-' refused, video alt refused, code spans/fences, reference defs, blockquote continuation, escaped alt re-parse check, 404-as-permission, Retry-After, GetBody for redirects.",
+    "scope": "Deliberately writes the body after a partial upload failure, contrary to 'if one upload fails nothing is written'; unused UploadStub type; hasDeferredEdits refactor and extra databaseId selections beyond the ask.",
+    "readability": "Clear names and structure, but comments are dense and prose-heavy, references.go is 800 lines of hand-rolled link scanning, and issue-edit's nothingWritten heuristic is hard to follow.",
+    "robustness": "Bounds-checked edits, bodies/files closed, ctx threaded, nil Repository guarded, ordered refusals before any request; nil AttachFlag would panic and openFile is a mutable global test hook.",
+    "maintainability": "Well-split package, but uploader construction is copy-pasted across five commands, the bespoke position scanner is fragile against goldmark changes, and nothingWritten couples to Editable.Dirty semantics."
+  },
+  "flags": []
+}

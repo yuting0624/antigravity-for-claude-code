@@ -1,0 +1,6 @@
+2026-09-16T14:13:00+00:00 lane E start (gap 300s)
+2026-09-16T14:13:00+00:00 lane E -> caddy-7888__solo-sonnet__r3 (attempt 1)
+2026-09-16T14:15:47+00:00 lane E: caddy-7888__solo-sonnet__r3 done pass=True $0.5823750000000001 in 167s
+2026-09-16T16:17:55+00:00 lane E -> cli-attach__hybrid-forced__r2 (attempt 2)
+2026-09-16T18:17:31+00:00 lane E: cli-attach__hybrid-forced__r2 done pass=True $26.958000000000002 in 7176s
+2026-09-16T18:21:01+00:00 STOP present; lane E exits

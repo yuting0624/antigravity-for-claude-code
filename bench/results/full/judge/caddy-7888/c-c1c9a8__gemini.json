@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-c1c9a8",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:25:08+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "40af4ee9578267884aec656911a6e9fec643ee841790243d5e6344f16cd2f043",
+  "wall_s": 38.1,
+  "cost_usd": 0.111044,
+  "usage": {
+    "input": 28618,
+    "output": 4484,
+    "thinking": 4292,
+    "cache_read": 0,
+    "total": 33102
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Properly follows Caddy module conventions, struct tags, interfaces, and unmarshaling patterns used by other filters.",
+    "edge_cases": "Gracefully handles quoted values, missing semicolons, missing equal signs, and unparseable lines.",
+    "scope": "Strictly implements the required set_cookie log field filter without any unrelated changes.",
+    "readability": "The parseSetCookieNameValue helper is cleanly extracted and well-commented, keeping the main loop easy to read.",
+    "robustness": "Uses safe slice pre-allocation, robust substring indexing, and ignores fields of the wrong type without panicking.",
+    "maintainability": "Decoupled parsing and action application make it straightforward to add new actions in the future."
+  },
+  "flags": []
+}

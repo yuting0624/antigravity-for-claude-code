@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-14d33a",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:24:32+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "8a950c753b6c285559cb2cab010f58a711667e86b7a45a04a7fb2c77114d297a",
+  "wall_s": 79.5,
+  "cost_usd": 0.212794,
+  "usage": {
+    "input": 74183,
+    "output": 5369,
+    "thinking": 5200,
+    "cache_read": 0,
+    "total": 79552
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Seamlessly integrates with the existing CLI structure, GraphQL queries, and httpmock patterns.",
+    "edge_cases": "Handles markdown and file path edge cases well, but fails the requirement to abort on partial upload failures.",
+    "scope": "Strictly implements the requested feature set without unrelated changes.",
+    "readability": "The markdown byte-level AST manipulation is dense but reasonably well-structured.",
+    "robustness": "Violates transactionality by intentionally proceeding to create or update issues/PRs even if an upload fails midway.",
+    "maintainability": "The new attachments package encapsulates the logic nicely, keeping command handlers clean."
+  },
+  "flags": []
+}

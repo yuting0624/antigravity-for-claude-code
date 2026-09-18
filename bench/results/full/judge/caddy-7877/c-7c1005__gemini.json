@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-7c1005",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 2,
+  "judged_at": "2026-09-16T14:25:48+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "da7c72440625f46494b9d0aa7e1923fe00fc3472392ff0029d26528c8c75115d",
+  "wall_s": 153.5,
+  "cost_usd": 0.303266,
+  "usage": {
+    "input": 27967,
+    "output": 20611,
+    "thinking": 20425,
+    "cache_read": 0,
+    "total": 48578
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 2,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 2
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Adheres closely to the surrounding package conventions and seamlessly integrates into the Rewrite handler.",
+    "edge_cases": "Backward parsing is semantically unsound, failing on %252F overlaps and aborting literal matches near invalid escapes.",
+    "scope": "Strictly implements the required suffix matching logic with zero unrelated changes or dead code.",
+    "readability": "The code is clearly structured and well-commented, making the flawed algorithm easy to follow.",
+    "robustness": "Safe against bounds panics and handles invalid input gracefully, though it creates minor GC pressure in a hot loop.",
+    "maintainability": "Parsing left-to-right encodings backward is a brittle anti-pattern; fixing the bugs requires a complete rewrite."
+  },
+  "flags": []
+}

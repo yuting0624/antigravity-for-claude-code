@@ -1,0 +1,24 @@
+2026-09-17T23:21:40+00:00 lane B start (gap 300s)
+2026-09-17T23:32:42+00:00 lane B -> caddy-7877__hybrid-handoff-review__r1 (attempt 1)
+2026-09-18T01:22:49+00:00 lane B: caddy-7877__hybrid-handoff-review__r1 done pass=True $2.9176772499999997 in 6606s
+2026-09-18T01:31:21+00:00 lane B -> caddy-7913__hybrid-handoff-review__r1 (attempt 1)
+2026-09-18T02:10:40+00:00 lane B: caddy-7913__hybrid-handoff-review__r1 done pass=True $4.400508 in 2359s
+2026-09-18T02:15:41+00:00 lane B -> cli-14136__hybrid-handoff-review__r1 (attempt 1)
+2026-09-18T02:57:03+00:00 lane B: cli-14136__hybrid-handoff-review__r1 done pass=True $4.4747695 in 2482s
+2026-09-18T03:02:04+00:00 lane B -> k6-6169__hybrid-handoff-review__r1 (attempt 1)
+2026-09-18T05:48:21+00:00 lane B: k6-6169__hybrid-handoff-review__r1 done pass=True $11.48230675 in 9977s
+2026-09-18T05:48:21+00:00 lane B: on battery power; not starting new items until mains power returns
+2026-09-18T05:50:05+00:00 lane B start (gap 300s)
+2026-09-18T05:50:05+00:00 lane B: on battery power; not starting new items until mains power returns
+2026-09-18T05:57:06+00:00 lane B: mains power back
+2026-09-18T05:57:06+00:00 lane B -> cli-attach__hybrid-handoff-review__r1 (attempt 2)
+2026-09-18T07:14:39+00:00 lane B: cli-attach__hybrid-handoff-review__r1 done pass=True $11.02666925 in 4653s
+2026-09-18T07:19:40+00:00 lane B -> caddy-7888__hybrid-handoff-review__r2 (attempt 1)
+2026-09-18T07:42:26+00:00 lane B: caddy-7888__hybrid-handoff-review__r2 done pass=True $2.93637025 in 1366s
+2026-09-18T07:42:26+00:00 lane B: on battery power; not starting new items until mains power returns
+2026-09-18T08:04:28+00:00 lane B: mains power back
+2026-09-18T08:04:28+00:00 lane B -> k6-6169__hybrid-handoff-review__r2 (attempt 1)
+2026-09-18T09:26:21+00:00 lane B: k6-6169__hybrid-handoff-review__r2 done pass=True $8.99532225 in 4913s
+2026-09-18T09:31:22+00:00 lane B -> cli-attach__hybrid-handoff-review__r2 (attempt 1)
+2026-09-18T10:40:23+00:00 lane B: cli-attach__hybrid-handoff-review__r2 done pass=False $9.59319925 in 4141s
+2026-09-18T10:40:23+00:00 queue complete; lane B exits

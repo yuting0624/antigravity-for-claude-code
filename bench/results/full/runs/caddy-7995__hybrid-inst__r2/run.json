@@ -1,0 +1,440 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "caddy-7995__hybrid-inst__r2",
+  "task_id": "caddy-7995",
+  "arm": "hybrid-inst",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "C",
+  "size_class": "small",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-15T14:53:46+00:00",
+  "ended_at": "2026-09-15T15:20:22+00:00",
+  "agent_wall_s": 1591.0,
+  "agent_active_s": 1591.0,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 8,
+    "max_turns": 80,
+    "wall_s": 2700,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "5759194aa07a5afe5182428dd1a810afc1e5000bc59b35dccac1ea5a8f104c2d",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "3b00265d97af1553b173f01e57ede288a6f9a2623b3952d8636b226c20ddb2cf"
+  },
+  "claude": {
+    "session_id": "fc6b0a98-4ae0-4218-8491-11ada96c70fe",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 44,
+    "num_turns_source": "result",
+    "duration_ms": 1590559,
+    "duration_api_ms": 396240,
+    "total_cost_usd": 3.605695,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 80,
+      "cache_creation_input_tokens": 264538,
+      "cache_read_input_tokens": 2588187,
+      "output_tokens": 26251,
+      "output_tokens_details": {
+        "thinking_tokens": 10318
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 264538
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1444,
+        "outputTokens": 24,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.001564,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 80,
+        "outputTokens": 26251,
+        "cacheReadInputTokens": 2588187,
+        "cacheCreationInputTokens": 264538,
+        "webSearchRequests": 0,
+        "costUSD": 3.6041309999999998,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 10318,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 3.604131,
+    "recomputed_vs_reported_gap": -0.0004,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 40,
+      "input": 80,
+      "output": 26251,
+      "cache_creation": 264538,
+      "cache_read": 2588187,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 40,
+          "input": 80,
+          "output": 26251,
+          "cache_creation": 264538,
+          "cache_read": 2588187
+        }
+      },
+      "tool_calls": {
+        "Bash": 33,
+        "Read": 8,
+        "Write": 2
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 2,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 80,
+        "transcript": 80,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 26251,
+        "transcript": 26251,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 264538,
+        "transcript": 264538,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 2588187,
+        "transcript": 2588187,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 5,
+    "denied_tools": {
+      "Bash:cat": 1,
+      "Bash:ls": 2,
+      "Read": 1,
+      "Bash:git": 1
+    },
+    "result_head": "Done. The `order` global option is now scoped to a single adaptation.\n\n**What changed** (4 files, uncommitted, no exported API change, no locks):\n\n- `caddyconfig/httpcaddyfile/options.go` — `parseOptOrder` is now pure: it builds on `existingVal` (the order accumulated by earlier `order` lines in the *same* adaptation, falling back to the process-wide `directiveOrder`) on a clone, and only returns ",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 3.604131,
+      "requests": 40,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    }
+  },
+  "agy": {
+    "delegations": 4,
+    "usage_lines": 4,
+    "signal_only": 0,
+    "succeeded": 4,
+    "zero_usage_lines": 0,
+    "signals": {},
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 4,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 3,
+        "input": 901130,
+        "output": 56763,
+        "thinking": 36917,
+        "cache_read": 6641403,
+        "usd": 1.386814
+      },
+      "flash-lo": {
+        "calls": 1,
+        "input": 52292,
+        "output": 536,
+        "thinking": 0,
+        "cache_read": 22935,
+        "usd": 0.042949
+      }
+    },
+    "totals": {
+      "input": 953422,
+      "output": 57299,
+      "thinking": 36917,
+      "cache_read": 6664338,
+      "total": 1010721
+    },
+    "invariant_ok": true,
+    "shadow_usd": 1.429763,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "a11719b8-8ebc-41c8-8fc4-3e2e35c64179",
+      "5550c023-9a1c-42aa-ab8b-d0472e2c5087",
+      "3d633045-64a3-4bee-8e29-87e5672e15e8",
+      "3a26621a-573e-4037-83cd-c90d23648268"
+    ],
+    "agy_duration_s_sum": 968.53,
+    "wrapper_calls_in_transcript": 4,
+    "trace_audit": {
+      "a11719b8-8ebc-41c8-8fc4-3e2e35c64179": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 52,
+          "GENERIC": 51,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 20,
+          "view_file": 19,
+          "grep_search": 4,
+          "replace_file_content": 8
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 8,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T14:57:14Z",
+        "last_step_at": "2026-09-15T15:02:10Z"
+      },
+      "5550c023-9a1c-42aa-ab8b-d0472e2c5087": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 24,
+          "GENERIC": 23
+        },
+        "tool_calls": {
+          "view_file": 16,
+          "grep_search": 6,
+          "run_command": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T15:03:10Z",
+        "last_step_at": "2026-09-15T15:05:11Z"
+      },
+      "3d633045-64a3-4bee-8e29-87e5672e15e8": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 3,
+          "GENERIC": 2
+        },
+        "tool_calls": {
+          "run_command": 1,
+          "view_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T15:05:41Z",
+        "last_step_at": "2026-09-15T15:06:22Z"
+      },
+      "3a26621a-573e-4037-83cd-c90d23648268": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 57,
+          "GENERIC": 56,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 19,
+          "grep_search": 9,
+          "run_command": 19,
+          "replace_file_content": 9
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 9,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T15:06:53Z",
+        "last_step_at": "2026-09-15T15:15:02Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 17
+  },
+  "writes": {
+    "claude_tool": 0,
+    "claude_bash": 0,
+    "agy": 1,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 96,
+    "gate_blocks": 2,
+    "blocked_heads": {
+      "cat": 1,
+      "git": 1
+    },
+    "gate_allows": 31,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "caddyconfig/httpcaddyfile/builtins.go",
+      "caddyconfig/httpcaddyfile/directives.go",
+      "caddyconfig/httpcaddyfile/httptype.go",
+      "caddyconfig/httpcaddyfile/options.go"
+    ],
+    "claude_tool_files": []
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 7.7,
+      "passed_tests": 7,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 1,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 14.4,
+      "passed_tests": 1287,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 48,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 4,
+    "code_added": 51,
+    "code_removed": 19,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [],
+    "stray_binaries": [],
+    "patch_sha256": "de8d04508dc7afdee176aed217aa02382b830d84cec18d25fd22032f5b2a60a9"
+  },
+  "diff_files": {
+    "caddyconfig/httpcaddyfile/builtins.go": {
+      "added": 1,
+      "removed": 1,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/directives.go": {
+      "added": 22,
+      "removed": 8,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/httptype.go": {
+      "added": 17,
+      "removed": 4,
+      "class": "code"
+    },
+    "caddyconfig/httpcaddyfile/options.go": {
+      "added": 11,
+      "removed": 6,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 3.605695,
+    "gemini_usd": 1.429763,
+    "total_usd": 5.035458
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:54+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:50+00:00",
+    "reaccounted at 2026-09-17T14:49:00+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

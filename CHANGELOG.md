@@ -3,6 +3,63 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.28.1
+
+- **A real-PR replay benchmark, and the README claim it replaces.** `bench/` runs
+  Claude Code alone against Claude Code + this plugin on merged pull requests from
+  public Go repositories (caddy, cli/cli, k6, zoekt; 52–2,242 lines; merged after the
+  models' training cutoff), replayed from the parent commit with the PR's tests restored
+  before scoring, one verification-only Bash policy in every arm, per-write attribution
+  by a tree-fingerprint hook, blinded two-family judging with the author's patch and an
+  empty patch as unlabelled anchors, and a pre-registered protocol (tag
+  `bench/protocol-v1`). Measured over 75 runs (n ≥ 2 per task × arm): delegating the
+  implementation to agy cost **1.33× (hybrid-forced) and 1.68× (hybrid-inst) a solo
+  Opus 5 run per passing task** at the pre-registered deck, 1.75× and 2.08× at the unit
+  prices the project was billed, with equal test outcomes and 3.8–4.6× the wall-clock;
+  Sonnet 5 alone cost 0.58×. README's "Measured results" now says so, with the table
+  regenerated from `bench/results/full/aggregate.json` by `tests/check-bench-claims.py`
+  (a quoted number can no longer drift from its record); the n = 1 ADK A/B stays in
+  `docs/AB-RESULTS.md` as history. Full write-up, deviations log and per-run records:
+  `docs/BENCHMARK.md`.
+- **The configuration that does save: hand the whole task over and only verify.** A
+  pre-registered follow-up (`bench/PROTOCOL-handoff.md`, tag `bench/protocol-handoff-v1`)
+  added `hybrid-handoff` — Claude with no file reading or editing, one delegation of the
+  whole requirement to agy, verification by running the tests — on the same eight tasks:
+  16/16 passes at **0.58× solo Opus 5 per passing task** (95% CI 0.39–0.96) at the deck,
+  0.43× on large tasks (0.26–0.67), a loss on small ones, the Claude side alone 0.16×;
+  1.01× at the billed Gemini rates; 3.6× the wall-clock. The blinded Claude judge rated
+  those patches 0.6 of 5 below solo (dead code, duplicated helpers; past the
+  pre-registered margin, the Gemini judge within it), so the protocol records the saving
+  as real at equal test outcomes and not as quality-neutral. README leads with it,
+  caveat included; the per-file result above stands. Checking these records found two gaps in write
+  attribution (a piped `printf … | agy-delegate` counted as a Claude write; Claude Code
+  fires no `PostToolUse` on an error result, so a wrapper call that exited non-zero after
+  writing went unattributed); both studies were re-accounted — write columns changed,
+  costs, passes and exclusions did not. `tests/check-bench-claims.py --fix` rewrites the
+  quoted tables from their aggregates.
+- **A self-review pass does not buy the quality back.** A second pre-registered follow-up
+  (`bench/PROTOCOL-handoff-review.md`, tag `bench/protocol-handoff-review-v1`) added one
+  checklist review by agy in a fresh conversation after the hand-off: 15/16 passes,
+  0.67× solo Opus 5 per passing task (95% CI 0.52–1.02; 0.60× on large tasks), Claude
+  judge 3.49 against the hand-off's 3.42 (paired +0.07, CI −0.12 to +0.22) and
+  solo-opus's 4.02. The reviewer left in place the dead code and copy-pasted helpers the
+  checklist named. The plain hand-off stays the cheaper configuration at the same judged
+  quality; the harness gained a launchd `postrun` agent (judge and analyze when the
+  queue finishes), multi-run merges and paired per-task judge differences in `analyze`,
+  and a sleep rule for executor deaths.
+- **Two facts from the billing export worth acting on** (not changed here, recorded in
+  `bench/prices.lock.json` `_observed_billing`): this Vertex project bills Gemini 3.8
+  Flash at $1.50 / $7.50 / $0.15 per Mtok — twice `prices.json`'s promotional
+  `gemini_flash` — and Claude Sonnet 5 at $2 / $10, which Claude Code's own cost figure
+  already uses; `prices.json` says 3 / 15. Opus 5 matched the deck in both context tiers.
+- **Two agy behaviours the harness had to work around**: in a directory agy has never
+  seen, the agent runs in its last project root or scratch directory until
+  `agy --new-project` is issued there (measured: 450 s → 119 s for the same delegation);
+  and under `--dangerously-skip-permissions` the executor may `search_web` for the
+  upstream file or pull request (2 of 33 hybrid runs; excluded by the protocol).
+- Test suite: 343 checks plus a 53-check harness suite run as a child; five fixtures pin
+  the doc-claims guard.
+
 ## 0.27.4
 
 - **CI refuses a CHANGELOG entry filed under a section that has already shipped.** #77

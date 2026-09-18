@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-attach",
+  "candidate_id": "c-eac31c",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:44:23+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "eed0cfb92c071666feaef212a4fb60e92f833e97dae1355a25a6c6af97eef4ec",
+  "wall_s": 9.2,
+  "cost_usd": 0.057406,
+  "usage": {
+    "input": 24659,
+    "output": 674,
+    "thinking": 461,
+    "cache_read": 0,
+    "total": 25333
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The diff is empty, providing no code to evaluate for consistency.",
+    "edge_cases": "The diff is empty, handling no edge cases.",
+    "scope": "The diff is empty, failing to implement any part of the requirement.",
+    "readability": "The diff is empty, providing no code to evaluate for readability.",
+    "robustness": "The diff is empty, providing no code to evaluate for robustness.",
+    "maintainability": "The diff is empty, providing no code to evaluate for maintainability."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

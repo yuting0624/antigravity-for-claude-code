@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-167a90",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:25:32+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "96db4a589bd1b05554b0a47a186a50b6c0226d3a8d944564b6d59b68b426bab2",
+  "wall_s": 59.6,
+  "cost_usd": 1.2107679999999998,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 2,
+    "readability": 2,
+    "robustness": 3,
+    "maintainability": 2
+  },
+  "mean": 2.5,
+  "rationale": {
+    "consistency": "Cobra/flag wiring and api field additions follow surrounding style, but stub.go imports testing into a production package, omitempty on decode-only structs, and an always-true KeepExistingBody option are off-convention.",
+    "edge_cases": "Covers dup files via os.SameFile, empty/'-' values, size/type/dir/empty checks, code spans/fences, reference defs and escapes; but deliberately writes a body after a partial upload failure, contrary to 'if one upload fails nothing is written'.",
+    "scope": "Adds unrequested behaviour (video reference-image refusal, degrade-to-link with \\! escaping), dead code (isSingleImage, UploadStub, _ = astLinks, unused lineInRanges end param), and a partial-write policy the requirement excludes.",
+    "readability": "references.go is ~790 lines of hand-rolled bracket/reference scanning layered on goldmark with duplicated counting blocks; client.go repeats the same uploadError literal seven times.",
+    "robustness": "No obvious panics, files and bodies are closed, bounds are guarded; sequential uploads use context.Background and stat-time ContentLength, and the partial-success path can leave a half-attached body.",
+    "maintainability": "attachToBody/newXUploader copy-pasted into four packages, hasDeferredEdits duplicates hasDeferredFlags, newAttachableMarkdown duplicates attachAssetsToMarkdown; the custom markdown scanner is fragile to keep in step with goldmark."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

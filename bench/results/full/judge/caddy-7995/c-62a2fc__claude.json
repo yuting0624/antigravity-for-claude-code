@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-62a2fc",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:55:55+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "0dc1794b8529bf26ab3daf8f43178bde9246b88824ff39e1fae4fd4cbdfff8ae",
+  "wall_s": 41.6,
+  "cost_usd": 0.45387725,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.167,
+  "rationale": {
+    "consistency": "Follows package idioms (slices helpers, typed option values, existing-value chaining in parseOpt*); param name existingVal vs. `existing` used elsewhere is a minor deviation.",
+    "edge_cases": "Handles nil options map, chained order options in one block, caller-supplied untyped 'order' value, First/Last/Before/After; invalid order errors before anything is stored.",
+    "scope": "Focused on the requirement; RegisterDirectiveOrder rewrite and whole-map clone go slightly beyond the minimum but are justified by the no-mutation and map-reuse requirements.",
+    "readability": "Clear helper directiveOrderFrom and explicit order parameter; comments explain the non-obvious typed-option and cloning decisions without excess.",
+    "robustness": "No shared mutable state per adaptation, default order cloned so never aliased, order slices cloned before edits, no locks, no panics on bad input.",
+    "maintainability": "Order is passed explicitly rather than read from a global, so coupling is visible; unused nil order for non-sorting buildSubroute call is a small wart, and the unreachable i<0 return in RegisterDirectiveOrder silently no-ops."
+  },
+  "flags": []
+}

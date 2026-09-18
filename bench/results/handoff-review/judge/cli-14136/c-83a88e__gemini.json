@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-83a88e",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:29:56+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e3b7533ab5411107bc614418faf704f25ad7dfc36566e7f3e39887423dcf9c84",
+  "wall_s": 73.7,
+  "cost_usd": 0.18035,
+  "usage": {
+    "input": 38059,
+    "output": 8686,
+    "thinking": 8516,
+    "cache_read": 0,
+    "total": 46745
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Matches existing command queueing patterns from checkout, though duplicates a basic command executor.",
+    "edge_cases": "Correctly validates inputs, mutually exclusive flags, and absolute paths, though documentation is missing.",
+    "scope": "Implements core features but places git operations in the shared package instead of the git client and omits help text constraints.",
+    "readability": "Clean structure with well-named functions and logical separation.",
+    "robustness": "Safely executes git operations and correctly encapsulates worktree reuse and branch scoping for fast-forwards.",
+    "maintainability": "Cleverly abstracts branch creation from synchronization logic, enabling clean reuse across commands."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

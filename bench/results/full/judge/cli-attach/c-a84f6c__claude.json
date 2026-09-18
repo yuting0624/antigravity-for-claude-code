@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-a84f6c",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:39:17+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "3bc65d2c7d0f17a69d2e00747269a6479feaca972d61fb6c4b7ef4980f73b7c7",
+  "wall_s": 83.0,
+  "cost_usd": 1.29360725,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Follows api/ghinstance/config/cmdutil idioms (FlagErrorf, heredoc.Docf, prefix helpers, test helper in-package like prompter). Prose-heavy comment style and errors.Join usage differ from surrounding code.",
+    "edge_cases": "Covers extensions, sizes, dir/non-regular/empty, SameFile dupes, '#' in names, ref-defs, code spans. But issue create never treats --attach alone as body input, and a partial upload failure still writes the body, contrary to 'nothing is written'.",
+    "scope": "Mostly on target, but adds unrequested behaviours (video degrade-to-link, ref-image video refusal), an unused UploadStub type, an always-true KeepExistingBody knob, and changes --json repository output for pr/issue view.",
+    "readability": "Clear names and structure, but references.go is 724 lines of hand-rolled byte scanning; attachableMarkdown/attachedMarkdown are confusingly similar; many comments are verbose prose.",
+    "robustness": "Bodies/responses closed, nil-safe Flag methods, bounds-checked scanners, overlapping edits guarded, errors joined not dropped. Stale ContentLength from validation-time Stat and 404→no-write mapping are minor risks.",
+    "maintainability": "Four near-identical *Uploader constructors across packages, hasDeferredEdits duplicates the flag computation in NewCmdEdit, image markdown rendering duplicated between asset and attachmentArg; custom markdown scanner is a long-term burden."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

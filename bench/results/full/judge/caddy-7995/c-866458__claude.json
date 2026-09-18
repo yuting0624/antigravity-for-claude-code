@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-866458",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:00:18+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "17c5949c7add99ef0da82e2cd139263c0e2f15553b6d699faf2f9c9261fe8856",
+  "wall_s": 71.9,
+  "cost_usd": 0.6187907500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.833,
+  "rationale": {
+    "consistency": "Mirrors existing special-case handling in evaluateGlobalOptionsBlock (servers/log/default_bind), reuses the existingVal pattern, error strings match; gofmt-clean style.",
+    "edge_cases": "Invalid order errors out with local state discarded; chained order options build on prior value; plugin-registered order still visible via directiveOrder clone. A Helper built outside Setup gets nil order and buildSubroute would reject every directive; no fallback.",
+    "scope": "Removing named_routes/named_route_invokes from the options map is beyond the literal ask but needed for the shared-map concurrent case since extractNamedRoutes always wrote there; leftover configuredNamedRoutes alias is a small smell.",
+    "readability": "Clear comments explaining why order stays out of the options map; but serversFromPairings now takes seven params and extractNamedRoutes returns four values.",
+    "robustness": "No writes to directiveOrder or the options map for order; first-order-option clones the shared slice before DeleteFunc; type assertions checked. Missing nil-order fallback in buildSubroute/sortRoutes.",
+    "maintainability": "Explicit per-adaptation state threading is the right direction, but the stringly \"order\" special case plus parseOptOrder's reliance on existingVal type form a two-place contract, and the widening signatures suggest a context struct would age better."
+  },
+  "flags": []
+}

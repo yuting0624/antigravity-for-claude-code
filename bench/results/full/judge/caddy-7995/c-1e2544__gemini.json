@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-1e2544",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:50:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a667fec150d0d9cd7ea51ea637575a985429cfe911956d58cd678e6ac308599b",
+  "wall_s": 102.8,
+  "cost_usd": 0.156774,
+  "usage": {
+    "input": 38073,
+    "output": 6719,
+    "thinking": 6527,
+    "cache_read": 0,
+    "total": 44792
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Properly uses modern Go idioms like slices.Clone, slices.Insert, and maps.Clone, matching surrounding code.",
+    "edge_cases": "Correctly handles nil options map, nested subroutes, and successive order directives in the same file via existingVal.",
+    "scope": "Laser-focused on isolating the 'order' state per-adaptation and preventing global mutation without unrelated refactoring.",
+    "readability": "Excellent inline comments explaining the rationale behind map cloning and slice cloning for the order lifecycle.",
+    "robustness": "Eliminates data races by cloning the options map before mutation and safely cloning slices to prevent array backing overrides.",
+    "maintainability": "Completely decouples global plugin directive order from local per-adaptation overrides, greatly improving maintainability."
+  },
+  "flags": []
+}

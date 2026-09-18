@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-34831d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:41:36+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a97c36531dbe572aab17a5dd3ae36575c46109b42153194a35699c083c02c90b",
+  "wall_s": 55.5,
+  "cost_usd": 0.5146944999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Follows sibling cmd layout, license header and zoekt-git-index flag names; but list/remove hand-roll a -index flag instead of index.Options, and the gitindex change unconditionally lets a caller-set Name beat zoekt.name/origin config, which alters zoekt-git-index behaviour.",
+    "edge_cases": "Handles bare repos, .git-file worktrees, root-as-repo, duplicate names and sorted output; but no-arg run returns an error without usage, compound shards are pruned wholesale if any repo is absent, and dry run still MkdirAlls the index dir and creates a lock file.",
+    "scope": "Delivers discovery, preview/apply, list, remove, lock and help; adds an extra 'sync' subcommand and a larger prepareRepo/IsUpToDate refactor of the shared indexer than strictly needed.",
+    "readability": "Small focused files, clear names, straightforward control flow; preview and apply loops repeat the same status printing.",
+    "robustness": "flock-based non-blocking lock and closer handling are fine; os.Remove errors are silently discarded in apply mode, IsUpToDate errors are swallowed into 'needs indexing', and syscall.Flock is Unix-only.",
+    "maintainability": "Index-dir default duplicated in three places, shard removal logic duplicated between sync and remove, and prepareRepo mutates opts through a pointer with repeated manual closer cleanup on error paths."
+  },
+  "flags": []
+}

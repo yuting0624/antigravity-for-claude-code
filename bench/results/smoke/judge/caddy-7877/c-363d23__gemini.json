@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-363d23",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:10:12+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "41764b99cca1a8339080842c5dca6820b461717a9355abbb63e6db81f34f660f",
+  "wall_s": 100.4,
+  "cost_usd": null,
+  "usage": {
+    "input": 27505,
+    "output": 12515,
+    "thinking": 12336,
+    "cache_read": 0,
+    "total": 40020
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Minor structural inconsistency between the character counting loops for paths and suffixes.",
+    "edge_cases": "Missing isHex check in countSuffixChars incorrectly parses '%' followed by non-hex, breaking literal matching for invalid escapes.",
+    "scope": "Perfectly scoped to replacing the broken string-reversal logic with a proper suffix-trimming implementation.",
+    "readability": "Clear variable names, excellent documentation comments, and straightforward control flow.",
+    "robustness": "Slice bounds and loop limits are completely safe with no risk of panics or out-of-bounds errors.",
+    "maintainability": "Duplicated percent-encoding detection logic between path and suffix introduces a slight divergence."
+  },
+  "flags": []
+}

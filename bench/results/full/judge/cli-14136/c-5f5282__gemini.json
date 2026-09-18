@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-5f5282",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:17:11+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "fc81fbd1bcb7b5e28e80a26740c8c5a5bfb059b6cc23882164d8812f4f4cb052",
+  "wall_s": 21.4,
+  "cost_usd": 0.123596,
+  "usage": {
+    "input": 43756,
+    "output": 3007,
+    "thinking": 2766,
+    "cache_read": 0,
+    "total": 46763
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly adheres to the codebase's conventions, idiomatic Go, and existing git client patterns.",
+    "edge_cases": "Handles absolute path normalization, blank path rejection, mutual exclusivity, and existing/new branch cases gracefully.",
+    "scope": "Implements exactly what was asked, cleanly extracting shared logic without unnecessary refactoring or scope creep.",
+    "readability": "The extracted shared worktree helpers and the newly added git client methods are clear, concise, and well-documented.",
+    "robustness": "Correctly manages worktree git client execution by safely cloning the client, avoiding side effects.",
+    "maintainability": "Excellent reuse of existing code via the pr/shared package and cohesive abstractions that can be easily extended."
+  },
+  "flags": []
+}

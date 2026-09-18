@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-83a88e",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:39:49+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e3b7533ab5411107bc614418faf704f25ad7dfc36566e7f3e39887423dcf9c84",
+  "wall_s": 169.3,
+  "cost_usd": 0.179348,
+  "usage": {
+    "input": 38104,
+    "output": 8595,
+    "thinking": 8324,
+    "cache_read": 0,
+    "total": 46699
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 5,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.5,
+  "rationale": {
+    "consistency": "Bypasses git.Client method conventions in issue/develop by introducing a custom runGitCommands loop to execute raw string slices.",
+    "edge_cases": "Properly handles blank paths, absolute path conversion, exclusivity validation, symlink guards, and nested worktree detection.",
+    "scope": "Failed to add the Git worktree operations as a helper on the git client as explicitly requested, dumping command generation in the shared package instead.",
+    "readability": "Control flow is mostly clear, though returning raw string slices for commands obscures the high-level intent slightly.",
+    "robustness": "The custom runGitCommands loop uses cmd.Output() and returns the error directly, which swallows Git's stderr output if the command fails.",
+    "maintainability": "Returning command slices creates a leaky abstraction that forces callers to duplicate execution logic rather than relying on an encapsulated API."
+  },
+  "flags": []
+}

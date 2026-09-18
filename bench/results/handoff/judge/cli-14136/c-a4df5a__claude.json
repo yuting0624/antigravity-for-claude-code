@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-a4df5a",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:39:55+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "6e4ffdfc8fa3121b5dd75fc94d522536e97ad825826ce027ab31bd008cdd2538",
+  "wall_s": 6.7,
+  "cost_usd": 0.11642399999999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to evaluate against codebase conventions.",
+    "edge_cases": "Empty diff; none of the validation or path-handling cases are addressed.",
+    "scope": "Empty diff; the requested --worktree flag, git helper, and shared resolver were not delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; no failure handling implemented.",
+    "maintainability": "Empty diff; nothing to maintain or extend."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

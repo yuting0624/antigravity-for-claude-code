@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-d34562",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:29:48+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "842de9d22798ec91b16bd7cb1e38f121b549b099109dc8e8f56f6fc6f371f945",
+  "wall_s": 32.0,
+  "cost_usd": 0.48796225000000004,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses prShared alias, Copy()+RepoDir, ctx.Background(), cmdutil.FlagErrorf/MutuallyExclusive and git client method style matching the codebase; new git methods mirror WorktreeRemove.",
+    "edge_cases": "Handles blank path, missing --checkout, --list conflict, relative->absolute, reuse-of-existing-worktree, existing vs new local branch, remote chosen from branchRepo, ff-only pull warning; no-remote early return preserved.",
+    "scope": "Core move to shared package is required, but adds an unused WorktreeCheckoutCommands helper and silently rewrites checkout's localBranchExists to HasLocalBranch, neither asked for.",
+    "readability": "Clear names, small checkoutWorktree with commented branches, extracted warnFastForwardFailure; doc comments carried over intact.",
+    "robustness": "Errors propagated at each git step, Abs errors handled, symlink/non-dir guard retained and applied to the absolute path; validation runs before any API mutation.",
+    "maintainability": "Shared WorktreeTarget struct is a good seam, but WorktreeCheckoutCommands duplicates command logic already in cmdsForExistingRemote and is dead in production, and develop implements the same branching a third way via client methods."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

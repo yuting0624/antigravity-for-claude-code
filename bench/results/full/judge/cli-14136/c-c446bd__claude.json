@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-14136",
+  "candidate_id": "c-c446bd",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:28:24+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "d5c85990aae8bb7a4f133fb1e66779ca0705a67ef2822bdc96e33c95ae76d7d2",
+  "wall_s": 53.7,
+  "cost_usd": 0.62409325,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Blank-flag check, MutuallyExclusive chain, heredoc help, and ff-only warning text all mirror existing gh pr checkout / issue develop idioms; new client method follows WorktreeRemove shape.",
+    "edge_cases": "Covers blank path, --list exclusivity, requires --checkout, relative->absolute, spaces via exec args, symlink/non-dir guard, same-repo and foreign-repo targets, and reuse of an existing linked worktree.",
+    "scope": "Beyond the ask it swaps pr checkout's localBranchExists (show-ref) for HasLocalBranch (rev-parse), changing that command's git invocations, adds an exported WorktreeCheckoutCommands that develop never uses, and normalises with filepath.Abs twice.",
+    "readability": "Clear names, WorktreeTarget struct replaces a bool+string pair, comments explain non-obvious git behaviour; checkoutBranchInWorktree reads linearly.",
+    "robustness": "Errors propagate; pull failure downgrades to a warning like the existing flow; best-effort detection falls back to letting git worktree add fail; Copy() with RepoDir is a safe way to scope commands.",
+    "maintainability": "The reuse×branch-exists decision matrix now lives twice: declaratively in shared.WorktreeCheckoutCommands and imperatively in develop's checkoutBranchInWorktree; WorktreeAdd uses an empty-string sentinel to select mode."
+  },
+  "flags": []
+}

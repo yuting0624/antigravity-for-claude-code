@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-f954d1",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:57:21+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2f8a374c715c5ace8b44bd7c01d6c6ea2a79fa5642a50d75ae23bc4238b2a1d2",
+  "wall_s": 47.2,
+  "cost_usd": 0.140896,
+  "usage": {
+    "input": 37724,
+    "output": 5454,
+    "thinking": 5234,
+    "cache_read": 0,
+    "total": 43178
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches zoekt conventions, directory layout, and option structures perfectly.",
+    "edge_cases": "Handles shared shards, duplicated repository names, missing branches, and nested roots correctly.",
+    "scope": "Adds exactly the requested subcommands and sync behaviors without any unrelated refactors.",
+    "readability": "Cleanly separated logic across discover, index, and main files with clear, descriptive naming.",
+    "robustness": "Uses robust file locking for concurrency safety and carefully orchestrates shard removal.",
+    "maintainability": "Subcommand routing is well-structured and the extension to the shared git indexer is elegant and backwards-compatible."
+  },
+  "flags": []
+}

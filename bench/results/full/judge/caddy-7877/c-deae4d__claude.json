@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-deae4d",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T14:40:14+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "cdae25048c0b7317b47d7451d6b55e4ceff5ff41998e98d40185feb92655b20b",
+  "wall_s": 106.6,
+  "cost_usd": 0.634306,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 3,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "trimPathSuffix mirrors trimPathPrefix in naming, structure, comment style and EqualFold/PathUnescape usage; error comment copied verbatim.",
+    "edge_cases": "Required cases pass, but only the last hex digit of a suffix escape is forced literal: suffix %2f wrongly matches path ...%252f (and %25%32f), diverging from the prefix semantics.",
+    "scope": "One-line call-site change, new helper, removal of the now-unused reverse(); nothing else touched.",
+    "readability": "Clear backward lock-step loop with good comments, though the 'byte for byte' comment overstates what the suffixEscaped check enforces.",
+    "robustness": "Index bounds guarded (iPath>=3, iSuffix>=3), PathUnescape error handled, empty suffix after placeholder expansion is a safe no-op.",
+    "maintainability": "Symmetric with the prefix helper so easy to follow; the escape-detection asymmetry is a latent trap for future edits."
+  },
+  "flags": []
+}

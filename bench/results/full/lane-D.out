@@ -1,0 +1,87 @@
+lane D start (gap 300s)
+lane D -> cli-14136__hybrid-inst__r1 (attempt 2)
+lane D: cli-14136__hybrid-inst__r1 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+lane D -> cli-14136__hybrid-inst__r1 (attempt 3)
+lane D: cli-14136__hybrid-inst__r1 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+lane D -> cli-14136__hybrid-inst__r1 (attempt 4)
+lane D: cli-14136__hybrid-inst__r1 gave up after 4 attempts (infra)
+lane D -> caddy-7877__hybrid-inst__r2 (attempt 1)
+lane D: caddy-7877__hybrid-inst__r2 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+lane D -> caddy-7877__hybrid-inst__r2 (attempt 2)
+lane D: caddy-7877__hybrid-inst__r2 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+lane D -> caddy-7877__hybrid-inst__r2 (attempt 3)
+lane D: caddy-7877__hybrid-inst__r2 gave up after 3 attempts (infra)
+lane D -> k6-6169__hybrid-forced__r1 (attempt 2)
+lane D: k6-6169__hybrid-forced__r1 infra failure (no run.json (rc 1): STOP file present: /Users/linyuting/.cache/agy-bench/src/bench/results/full/STOP
+); will retry
+lane D -> cli-14136__hybrid-inst__r1 (attempt 2)
+lane D: cli-14136__hybrid-inst__r1 done pass=True $6.154093500000001 in 1655s
+lane D -> k6-6169__hybrid-forced__r1 (attempt 1)
+lane D: k6-6169__hybrid-forced__r1 done pass=True $24.874600750000003 in 7000s
+lane D -> caddy-7877__solo-opus__r2 (attempt 1)
+lane D: caddy-7877__solo-opus__r2 done pass=True $0.65210525 in 141s
+lane D -> cli-14136__hybrid-inst__r2 (attempt 1)
+lane D: cli-14136__hybrid-inst__r2 done pass=True $5.66657525 in 2252s
+lane D -> caddy-7877__hybrid-forced__r2 (attempt 1)
+lane D: caddy-7877__hybrid-forced__r2 done pass=True $0.83689575 in 258s
+lane D -> caddy-7995__solo-opus__r2 (attempt 1)
+lane D: caddy-7995__solo-opus__r2 done pass=True $2.17097475 in 412s
+lane D -> k6-6169__hybrid-inst__r1 (attempt 1)
+lane D: k6-6169__hybrid-inst__r1 done pass=True $22.516645999999998 in 5809s
+lane D -> caddy-7995__solo-sonnet__r2 (attempt 1)
+lane D: caddy-7995__solo-sonnet__r2 done pass=False $2.5319848999999994 in 747s
+lane D -> caddy-7877__hybrid-inst__r2 (attempt 1)
+lane D: caddy-7877__hybrid-inst__r2 done pass=True $1.0604675000000001 in 421s
+lane D -> cli-14136__solo-sonnet__r2 (attempt 1)
+lane D: cli-14136__solo-sonnet__r2 done pass=True $2.559219399999999 in 657s
+lane D -> caddy-7888__solo-opus__r2 (attempt 1)
+lane D: caddy-7888__solo-opus__r2 done pass=True $2.0914057499999994 in 390s
+lane D -> caddy-7913__solo-sonnet__r2 (attempt 1)
+lane D: caddy-7913__solo-sonnet__r2 done pass=True $2.4260284 in 779s
+lane D -> caddy-7888__hybrid-inst__r2 (attempt 1)
+lane D: caddy-7888__hybrid-inst__r2 done pass=True $2.1853979999999997 in 1175s
+lane D -> caddy-7913__solo-opus__r2 (attempt 1)
+lane D: caddy-7913__solo-opus__r2 done pass=True $9.326167499999997 in 1528s
+lane D -> caddy-7888__solo-sonnet__r2 (attempt 1)
+lane D: caddy-7888__solo-sonnet__r2 done pass=True $0.5011255000000001 in 187s
+lane D -> k6-6169__hybrid-inst__r2 (attempt 1)
+lane D: k6-6169__hybrid-inst__r2 done pass=False $24.084331749999997 in 8944s
+lane D -> caddy-7913__hybrid-forced__r2 (attempt 1)
+lane D: caddy-7913__hybrid-forced__r2 done pass=True $11.052365749999998 in 3781s
+lane D -> cli-attach__hybrid-inst__r1 (attempt 1)
+lane D: cli-attach__hybrid-inst__r1 done pass=False $1.6335225 in 4107s
+lane D -> caddy-7995__solo-sonnet__r3 (attempt 1)
+lane D: caddy-7995__solo-sonnet__r3 done pass=True $2.1337162000000003 in 576s
+lane D -> caddy-7913__hybrid-inst__r2 (attempt 1)
+lane D: caddy-7913__hybrid-inst__r2 done pass=True $12.208527 in 4122s
+lane D -> cli-attach__solo-sonnet__r2 (attempt 1)
+lane D: cli-attach__solo-sonnet__r2 done pass=False $2.289947 in 727s
+lane D -> zoekt-1105__hybrid-inst__r2 (attempt 1)
+lane D: zoekt-1105__hybrid-inst__r2 done pass=True $16.757959 in 5469s
+lane D -> k6-6169__solo-opus__r1 (attempt 2)
+lane D: k6-6169__solo-opus__r1 done pass=True $14.929325249999998 in 1625s
+lane D -> cli-14136__solo-sonnet__r3 (attempt 1)
+lane D: cli-14136__solo-sonnet__r3 done pass=True $2.4880057000000013 in 709s
+lane D -> k6-6169__hybrid-inst__r2 (attempt 2)
+lane D: k6-6169__hybrid-inst__r2 done pass=True $33.7042255 in 11751s
+lane D -> caddy-7888__solo-opus__r3 (attempt 1)
+lane D: caddy-7888__solo-opus__r3 done pass=True $2.1942192499999997 in 393s
+lane D -> cli-attach__hybrid-inst__r1 (attempt 2)
+lane D: cli-attach__hybrid-inst__r1 done pass=True $48.16534349999999 in 10760s
+lane D -> k6-6169__solo-opus__r3 (attempt 1)
+lane D: k6-6169__solo-opus__r3 done pass=True $11.407304999999997 in 1532s
+lane D -> cli-14136__hybrid-forced__r3 (attempt 1)
+lane D: cli-14136__hybrid-forced__r3 done pass=True $6.2949645 in 2296s
+lane D -> zoekt-1105__solo-opus__r3 (attempt 1)
+lane D: zoekt-1105__solo-opus__r3 done pass=True $4.5087980000000005 in 778s
+lane D -> caddy-7995__hybrid-forced__r3 (attempt 1)
+lane D: caddy-7995__hybrid-forced__r3 done pass=True $3.44355375 in 1145s
+lane D -> zoekt-1105__solo-sonnet__r3 (attempt 1)
+lane D: zoekt-1105__solo-sonnet__r3 done pass=True $2.7265968999999997 in 887s
+lane D -> k6-6169__hybrid-forced__r3 (attempt 1)
+lane D: k6-6169__hybrid-forced__r3 interrupted by machine sleep (1217s asleep); will retry
+STOP present; lane D exits

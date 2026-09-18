@@ -1,0 +1,78 @@
+diff --git a/modules/caddyhttp/rewrite/rewrite.go b/modules/caddyhttp/rewrite/rewrite.go
+index 324c531d7..1c11b9de0 100644
+--- a/modules/caddyhttp/rewrite/rewrite.go
++++ b/modules/caddyhttp/rewrite/rewrite.go
+@@ -296,7 +296,7 @@ func (rewr Rewrite) Rewrite(r *http.Request, repl *caddy.Replacer) bool {
+ 		mergeSlashes := !strings.Contains(suffix, "//")
+ 		changePath(r, func(escapedPath string) string {
+ 			escapedPath = caddyhttp.CleanPath(escapedPath, mergeSlashes)
+-			return reverse(trimPathPrefix(reverse(escapedPath), reverse(suffix)))
++			return trimPathSuffix(escapedPath, suffix)
+ 		})
+ 	}
+ 
+@@ -464,12 +464,59 @@ func trimPathPrefix(escapedPath, prefix string) string {
+ 	return escapedPath
+ }
+ 
+-func reverse(s string) string {
+-	r := []rune(s)
+-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
+-		r[i], r[j] = r[j], r[i]
++// trimPathSuffix is like strings.TrimSuffix, but customized for advanced URI
++// path suffix matching, using the same comparison rules as trimPathPrefix,
++// only iterating both strings backwards from their ends: if the suffix string
++// uses the escaped form for a character, escapedPath must literally use the
++// same escape at that position; otherwise, all character comparisons are
++// performed in normalized/unescaped space.
++func trimPathSuffix(escapedPath, suffix string) string {
++	iPath, iSuffix := len(escapedPath), len(suffix)
++	for iPath > 0 && iSuffix > 0 {
++		suffixCh := suffix[iSuffix-1]
++		ch := string(escapedPath[iPath-1])
++
++		// if the path has an escape sequence ending at this position, but the
++		// suffix does not, compare the character the escape represents; if the
++		// suffix does have an escape here too, the bytes of both escapes are
++		// compared literally, one at a time, by the loop
++		if endsEscape(escapedPath, iPath) && !endsEscape(suffix, iSuffix) {
++			var err error
++			ch, err = url.PathUnescape(escapedPath[iPath-3 : iPath])
++			if err != nil {
++				// should be impossible unless EscapedPath() is returning invalid values!
++				return escapedPath
++			}
++			iPath -= 2
++		}
++
++		// like prefix comparisons, these are case-insensitive for consistency
++		// with the path matcher, which is case-insensitive for good reasons
++		if !strings.EqualFold(ch, string(suffixCh)) {
++			return escapedPath
++		}
++
++		iPath--
++		iSuffix--
+ 	}
+-	return string(r)
++
++	// if we iterated through the entire suffix, we found it, so trim it
++	if iSuffix == 0 {
++		return escapedPath[:iPath]
++	}
++
++	// otherwise we did not find the suffix
++	return escapedPath
++}
++
++// endsEscape returns true if the three bytes of s ending at index i
++// (exclusive) form a "%xx" escape sequence.
++func endsEscape(s string, i int) bool {
++	return i >= 3 && s[i-3] == '%' && isHex(s[i-2]) && isHex(s[i-1])
++}
++
++func isHex(c byte) bool {
++	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+ }
+ 
+ // substrReplacer describes either a simple and fast substring replacement.

@@ -1,0 +1,35 @@
+{
+  "seed": 20260914,
+  "candidates": {
+    "c-363d23": {
+      "task_id": "caddy-7877",
+      "source": "run:caddy-7877__solo-opus__r1",
+      "diff_sha256": "da64e95bfc8773e49e81d583f10978c568dc557ac61e8998c9db5023ef6fb942"
+    },
+    "c-7c1005": {
+      "task_id": "caddy-7877",
+      "source": "run:caddy-7877__solo-sonnet__r1",
+      "diff_sha256": "db6266f476ace41b36186b674c766de26120210ab9383a4f5419ab2cb9632a74"
+    },
+    "c-8458da": {
+      "task_id": "caddy-7877",
+      "source": "null",
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "c-c0ee1d": {
+      "task_id": "caddy-7877",
+      "source": "author",
+      "diff_sha256": "b09784697487fb49f5799b4911b8baa1bfd9c82c9d11b9d43f437d7d15d59e6b"
+    },
+    "c-deae4d": {
+      "task_id": "caddy-7877",
+      "source": "run:caddy-7877__hybrid-forced__r1",
+      "diff_sha256": "2dcd70872dcb8fc48127304d955699c03588277246430c64b9feea75fd289dc8"
+    },
+    "c-359ebd": {
+      "task_id": "caddy-7877",
+      "source": "run:caddy-7877__hybrid-inst__r1",
+      "diff_sha256": "17525dc021d01ec583afb10250a6b86a6eb69b0926445469b60f0d538da9610f"
+    }
+  }
+}

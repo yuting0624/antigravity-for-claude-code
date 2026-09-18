@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-30a350",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:38:54+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "3a79473bfff806df6386fc9a0f15d949ef8683b233e2733700bd67c3b560ce74",
+  "wall_s": 25.3,
+  "cost_usd": 0.127332,
+  "usage": {
+    "input": 38472,
+    "output": 4199,
+    "thinking": 4032,
+    "cache_read": 0,
+    "total": 42671
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Excellent adherence to Go and repository conventions, including flag handling and layout.",
+    "edge_cases": "Properly detects name collisions, handles bare/worktree repos, and locks index strictly honoring dry-runs.",
+    "scope": "Implements all requirements precisely without unrelated refactoring or changes.",
+    "readability": "Clean separation of concerns across files, well-named functions, and tabwriter output for list.",
+    "robustness": "Lock file creation with O_EXCL prevents race conditions, and walk handles permissions/missing dirs gracefully.",
+    "maintainability": "Extremely clean flag abstraction and decoupled subcommand logic make it easy to extend."
+  },
+  "flags": []
+}

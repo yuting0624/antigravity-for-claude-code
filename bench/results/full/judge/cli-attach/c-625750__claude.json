@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-625750",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:35:28+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "ca6c290932812f7925bf65aa46231a33c5739f29649c0e43e5ee108b6878f1bb",
+  "wall_s": 17.9,
+  "cost_usd": 0.48898749999999996,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 3,
+    "robustness": 2,
+    "maintainability": 2
+  },
+  "mean": 2.0,
+  "rationale": {
+    "consistency": "What exists follows repo idioms (query_builder case, ghinstance prefix helper, gh interface doc comments), but the AuthConfig interface change has no accompanying mock/regen and no command-package conventions are exercised.",
+    "edge_cases": "None of the required validation exists: no extension/size/regular-file checks, no duplicate/symlink detection, no GHES/token/role refusal ordering, no code-fence-aware markdown rewriting.",
+    "scope": "Delivers only the thin API/config/host-prefix layer; the entire internal/attachments package, uploader, --attach flag, and wiring into six commands and the HTTP mock are absent.",
+    "readability": "Clear names and helpful comments; the PRRepository comment is a little dense, and the Repository struct comment insertion breaks field alignment in an awkward way.",
+    "robustness": "Nil guards on Repository accessors are fine, but no failure handling for the upload path or file validation is present because those paths were never written.",
+    "maintainability": "Token-type enum and accessors are extensible, yet the bulk of the feature is missing so the pieces here are dangling scaffolding with no consumer."
+  },
+  "flags": [
+    "incomplete"
+  ]
+}

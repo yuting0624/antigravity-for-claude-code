@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "smoke",
+  "task_id": "caddy-7877",
+  "candidate_id": "c-c0ee1d",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-14T15:15:38+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c8586c790fa710e044e10781eec1009ffb03d80bafbe1296bab09bb16c588ea6",
+  "wall_s": 118.4,
+  "cost_usd": null,
+  "usage": {
+    "input": 19692,
+    "output": 15136,
+    "thinking": 14864,
+    "cache_read": 7680,
+    "total": 34828
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 2,
+    "edge_cases": 1,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "Unidiomatic per-byte string allocations inside a tight loop violate Go performance best practices for a hot-path HTTP router.",
+    "edge_cases": "Using EqualFold universally ignores case-sensitivity for non-escapes, and comparing raw trailing UTF-8 bytes with EqualFold yields false positives.",
+    "scope": "Strictly focused on the suffix stripping logic without modifying unrelated prefix or query handling.",
+    "readability": "Well-commented and structured, effectively explaining why the naive reverse-based approach was abandoned.",
+    "robustness": "Safe from out-of-bounds panics and handles invalid escapes gracefully, though the heavy loop allocations degrade performance.",
+    "maintainability": "The custom backwards byte-by-byte state machine is brittle, and its subtle encoding bugs highlight the difficulty of extending it safely."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-8d9e6e",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:02:04+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "4ac3c9e32d535a675ee0d62eef2a379903e70f8d996f2908bbdc2a930e678972",
+  "wall_s": 39.3,
+  "cost_usd": 0.143762,
+  "usage": {
+    "input": 40147,
+    "output": 5289,
+    "thinking": 5113,
+    "cache_read": 0,
+    "total": 45436
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Idiomatic use of standard library maps and slices packages; perfectly matches Go and Caddy conventions.",
+    "edge_cases": "Successfully handles parsing failures without leaking partial mutations and correctly isolates the options map.",
+    "scope": "Strictly adheres to the constraints; introduces only the necessary parameter passing and state isolation.",
+    "readability": "Cleanly structured with excellent, insightful comments explaining why state is being cloned and isolated.",
+    "robustness": "Safely supports concurrent adaptations by eliminating shared mutable arrays and shallow-copying maps.",
+    "maintainability": "Decouples the directive order from global state into an adaptation-scoped property, making future extensions much safer."
+  },
+  "flags": []
+}

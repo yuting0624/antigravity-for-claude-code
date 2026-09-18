@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "cli-14136",
+  "candidate_id": "c-cc003c",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:31:39+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "25c547ec0dbc1780178d87bc0a4ac159ad02f8f778eaf1a541e1780d40d76359",
+  "wall_s": 86.4,
+  "cost_usd": 0.7412852499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.667,
+  "rationale": {
+    "consistency": "Uses CommandModifier/WithRepoDir, FlagErrorf, MutuallyExclusive, prShared alias as the codebase does; exported WorktreeTarget lacks a doc comment and the `<path>` placeholder style differs from pr checkout's `path`.",
+    "edge_cases": "Blank path, --checkout requirement, --list exclusion, Abs normalisation, remote from branch-repo, reuse-existing-worktree and ff-only pull warning all handled; no success hint printed for the worktree case and Abs is computed twice.",
+    "scope": "Core feature plus shared extraction is on target, but localBranchExists was rewritten to HasLocalBranch (changes the git command issued in pr checkout), WorktreeAdd takes unused mods, and CheckoutBranch/CheckoutNewBranch signatures were widened.",
+    "readability": "Small clear functions; checkoutWorktree mirrors the existing flow; carrying both opts.Worktree and wtTarget.Path into checkoutBranch is mildly redundant.",
+    "robustness": "Errors propagated, pull failure downgraded to a warning like the existing flow, target validated before API work; WithRepoDir combined with a set Client.RepoDir could mis-resolve, and the show-ref→rev-parse swap risks regressing existing checkout behaviour.",
+    "maintainability": "Path rules now live in one shared place, but the branch-exists/reuse decision matrix exists twice (shared.WorktreeCheckoutCommands for pr checkout, checkoutWorktree for issue develop) and the new WorktreeAdd helper is used by only one of them."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-55d17a",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:47:33+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "0a1490e6bd55697ffec8b782f06d1662c7369aa856245a4b4645fa8fa21355b0",
+  "wall_s": 66.8,
+  "cost_usd": 0.149532,
+  "usage": {
+    "input": 38502,
+    "output": 6044,
+    "thinking": 5863,
+    "cache_read": 0,
+    "total": 44546
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches Go idioms and existing Zoekt conventions perfectly, including flag handling and package layout.",
+    "edge_cases": "Correctly handles nested repositories, missing directories, naming collisions, and stale shards.",
+    "scope": "Implements exactly the requested functionality with a clean separation of subcommands and dry-run by default.",
+    "readability": "Code is exceptionally clear, logically grouped, and well-commented where necessary.",
+    "robustness": "Utilizes file locking for concurrency, handles errors gracefully, and prevents destructive actions in dry-run mode.",
+    "maintainability": "Highly modular design; minimal and safe changes to the shared git indexer to preserve existing behavior without coupling."
+  },
+  "flags": []
+}

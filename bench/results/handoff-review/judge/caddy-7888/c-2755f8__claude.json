@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-2755f8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T10:51:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "550f95521d4a1c25f6c26944ac0b83974f892bee509944047927654e83853acf",
+  "wall_s": 42.5,
+  "cost_usd": 0.28037275,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 4
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter exactly: same cookieFilterAction reuse, Validate, module ID naming, Caddyfile switch, receiver conventions, and interface-guard entries.",
+    "edge_cases": "Unparseable lines pass through, quoting preserved for replace and hash, suffix kept byte-for-byte, exact-name match, first-action-wins; whitespace-in-value handling is slightly odd but harmless.",
+    "scope": "Only adds the new filter, registration and guards; no unrelated edits or refactors.",
+    "readability": "Clear split into Filter/filterLine/replaceSetCookieValue; whitespace-preservation arithmetic and redundant name/quote re-checks add some noise.",
+    "robustness": "All slice indices are guarded, ParseSetCookie errors handled, non-array fields returned untouched; no panic paths.",
+    "maintainability": "Reuses shared action type and hash helper; Caddyfile parsing is copy-pasted from CookieFilter rather than shared, but that follows the stated convention."
+  },
+  "flags": []
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "cli-attach",
+  "candidate_id": "c-263903",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T18:29:13+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "a534fab413db7e5860b79905e154603273b0e2f2b9c3cd9738384ec7fa56e418",
+  "wall_s": 94.1,
+  "cost_usd": 0.328526,
+  "usage": {
+    "input": 76699,
+    "output": 14594,
+    "thinking": 14400,
+    "cache_read": 0,
+    "total": 91293
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.833,
+  "rationale": {
+    "consistency": "Seamlessly integrates with the existing codebase's GraphQL abstractions, CLI patterns, and error handling.",
+    "edge_cases": "Exceptional handling of path parsing, alt-text escaping, symlinks, and markdown AST manipulation.",
+    "scope": "Deliberately proceeds with resource creation on partial upload failures to prevent orphaned assets, deviating from 'if one fails nothing is written'.",
+    "readability": "Complex markdown parsing and rewriting logic is meticulously documented and logically decomposed.",
+    "robustness": "Validates files without blocking on pipes, streams uploads to prevent memory bloat, and verifies alt-text exploitability.",
+    "maintainability": "The separation of UserAsset, Uploader, and Flag concerns makes the feature highly extensible and easy to test."
+  },
+  "flags": []
+}

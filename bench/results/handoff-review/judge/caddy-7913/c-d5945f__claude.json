@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-d5945f",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T11:00:31+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "2897bb3c071f9d839afd84e19fc10d59eaba638c46ae3d051e4583f2668cbb27",
+  "wall_s": 83.1,
+  "cost_usd": 0.7471357500000001,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "License headers, module registration, interface guards and directive ordering follow siblings; but handler uses time.Duration fields plus hand-written Marshal/UnmarshalJSON instead of the codebase's caddy.Duration convention.",
+    "edge_cases": "Handles hard-deadline capping, credit overflow, zero-length writes, ErrNotSupported fallback and rate-without-timeout defaulting; server-level idle timeouts never default to 1 minute, and the write deadline is left set on keep-alive connections after the request.",
+    "scope": "Core requirement met, but adds unrequested positional args, read_min_rate/write_min_rate/max_write_chunk subdirectives, a write_max_chunk JSON alias, min-rate args on server Caddyfile options and a /s-suffix rate parser.",
+    "readability": "Clear split into IdleDeadline/Reader/Writer with doc comments; Calculate silently mutates Start, and repeated nil checks on the embedded wrapper add noise.",
+    "robustness": "Pre-checks expired deadlines, tolerates controller errors, no panics on bad config; nil-wrapper path in Write would loop forever, and stale write deadlines are not cleared post-request.",
+    "maintainability": "Shared wrapper types are reusable, but the timeout/rate defaulting logic is duplicated across server, handler Provision and ServeHTTP, and the custom JSON alias marshalling is brittle to field additions."
+  },
+  "flags": []
+}

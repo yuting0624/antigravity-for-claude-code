@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-a7e094",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:04:02+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "772e9ad3ca7f489f784a00de54fb40413f633da512592742afc22fba64cf7284",
+  "wall_s": 45.0,
+  "cost_usd": 0.144822,
+  "usage": {
+    "input": 38295,
+    "output": 5686,
+    "thinking": 5503,
+    "cache_read": 0,
+    "total": 43981
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Idiomatic Go, perfectly matches Caddy's conventions, uses modern slices and maps packages correctly.",
+    "edge_cases": "Handles multiple order directives, protects against caller spoofing with an unexported type, and handles a nil options map.",
+    "scope": "Strictly addresses the requirement without unrelated refactoring or changing the exported API.",
+    "readability": "Excellent use of comments to explain the 'why' behind clones and unexported types.",
+    "robustness": "Thoroughly eliminates data races by cloning both the map and slice, ensuring thread-safe adaptations.",
+    "maintainability": "Unexported typed slice in the options map is an elegant, non-intrusive way to isolate state per adaptation."
+  },
+  "flags": []
+}

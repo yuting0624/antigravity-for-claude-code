@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-c121ac",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:47:31+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c3f1c6fed61e28c5f3a0b49dc448c824d9085ecda57fc2261a4921f4bd16d945",
+  "wall_s": 6.2,
+  "cost_usd": 0.1155515,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to judge against codebase conventions.",
+    "edge_cases": "Empty diff; no handling of duplicate names, missing roots, dry-run, or any boundary input.",
+    "scope": "Empty diff; none of the required command, subcommands, or gitindex change delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; no locking, error handling, or failure paths implemented.",
+    "maintainability": "Empty diff; nothing to maintain or extend."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

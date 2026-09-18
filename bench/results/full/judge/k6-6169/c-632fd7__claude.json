@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-632fd7",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:04:34+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "e657cc0f401c643e3cac8a6a57f291678e74d58779053041f569be692ca07167",
+  "wall_s": 42.9,
+  "cost_usd": 0.97101875,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 4,
+    "scope": 4,
+    "readability": 4,
+    "robustness": 4,
+    "maintainability": 4
+  },
+  "mean": 4.0,
+  "rationale": {
+    "consistency": "Mirrors v6 client shape (NewClient, authCtx, checkResponse, closeResponse/drainAndClose, httperr sentinels); CheckResponse signature differs from v6's (r) vs (r, err) and test pkg named provtest under dir test/.",
+    "edge_cases": "Handles 409 find-by-name, nil/empty upload URL, int32 overflow, ctx cancel during retry wait, aborted/completed while polling; but unexpected statuses (e.g. running) poll forever and unknown abort reasons send code 0 rather than null.",
+    "scope": "Stays on local-execution path; v1 run --out cloud untouched. Adds a clientcfg package and refactors createCloudTest into prepareCloudTest, both justified; Client keeps unused version/stackID fields.",
+    "readability": "Clear layering (api/client/errors/http_client/notify/provision) and good names; comments are thorough though occasionally chatty.",
+    "robustness": "Retries with rewindable bodies, drained/closed responses, bounded notify timeout, per-attempt readers for upload, scoped token never hits env; nil cloudClient would panic in newMetricsClient only if metricsURL unset (not reachable today).",
+    "maintainability": "Output switches on a single provisioningMode flag with injectable pusher/notifier; expv2 accepts URL/client overrides without breaking exported API; runtime-config mapping isolated in one helper."
+  },
+  "flags": []
+}

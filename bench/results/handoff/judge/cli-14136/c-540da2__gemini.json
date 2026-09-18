@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-14136",
+  "candidate_id": "c-540da2",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:32:35+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "10e392e657db2d0ad2f62c6e74311c6e68be9636a095b69fd004f6e065147967",
+  "wall_s": 84.0,
+  "cost_usd": 0.159936,
+  "usage": {
+    "input": 41820,
+    "output": 6358,
+    "thinking": 6114,
+    "cache_read": 0,
+    "total": 48178
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly adheres to existing idioms, including the ctx package alias in develop.go, and cleanly extends the git client.",
+    "edge_cases": "Handles existing branches, blank flag values, mutually exclusive options, relative paths, and existing worktrees correctly.",
+    "scope": "Precisely implements the worktree feature and necessary shared validation logic without any scope creep.",
+    "readability": "Code is clean, clear, and the refactored shared package makes the worktree logic easy to understand.",
+    "robustness": "Properly handles errors, converts relative paths safely, and prevents symlink issues via the extracted validation.",
+    "maintainability": "Outstanding extraction of worktree logic into a shared package, eliminating duplication and making future reuse trivial."
+  },
+  "flags": []
+}

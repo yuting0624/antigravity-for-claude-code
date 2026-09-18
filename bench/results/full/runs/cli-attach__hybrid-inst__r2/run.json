@@ -1,0 +1,822 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-attach__hybrid-inst__r2",
+  "task_id": "cli-attach",
+  "arm": "hybrid-inst",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "C",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-16T14:08:08+00:00",
+  "ended_at": "2026-09-16T16:12:00+00:00",
+  "agent_wall_s": 7430.1,
+  "agent_active_s": 7430.0,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "1906b48f49966f89242748e324fd88eb10bb94f139b23d17bc723048ec21f32d",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "00cb939532726c1db8830d239340ee4e10ef9f0b3bb09f485fdedeb31db17b92"
+  },
+  "claude": {
+    "session_id": "135ee7bb-e083-47a6-8a21-f5c66b63ed6f",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 137,
+    "num_turns_source": "result",
+    "duration_ms": 7429534,
+    "duration_api_ms": 1609993,
+    "total_cost_usd": 31.693839250000007,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 234,
+      "cache_creation_input_tokens": 2451187,
+      "cache_read_input_tokens": 26527997,
+      "output_tokens": 124261,
+      "output_tokens_details": {
+        "thinking_tokens": 65958
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 2451187
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2082,
+        "outputTokens": 29,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0022270000000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 234,
+        "outputTokens": 124261,
+        "cacheReadInputTokens": 26527997,
+        "cacheCreationInputTokens": 2451187,
+        "webSearchRequests": 0,
+        "costUSD": 31.69161225000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 65958,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 31.691612,
+    "recomputed_vs_reported_gap": -0.0001,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 117,
+      "input": 234,
+      "output": 124261,
+      "cache_creation": 2451187,
+      "cache_read": 26527997,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 117,
+          "input": 234,
+          "output": 124261,
+          "cache_creation": 2451187,
+          "cache_read": 26527997
+        }
+      },
+      "tool_calls": {
+        "Bash": 105,
+        "Read": 18,
+        "Write": 10,
+        "Edit": 3
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 13,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 1
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 234,
+        "transcript": 234,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 124261,
+        "transcript": 124261,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 2451187,
+        "transcript": 2451187,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 26527997,
+        "transcript": 26527997,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 6,
+    "denied_tools": {
+      "Bash:git": 2,
+      "Bash:find": 1,
+      "Bash:grep": 1,
+      "Bash:agy-delegate": 1,
+      "Bash:go": 1
+    },
+    "result_head": "Done. `--attach` is implemented end to end and the working tree is uncommitted.\n\n## What landed\n\n**New package `internal/attachments`** (6 files, ~1400 lines):\n- `userasset.go` — nine extensions mapped to content types, 10 MB image / 100 MB video limits, metadata-only validation, alt text defaults and escaping; alt text refused on video.\n- `flags.go` — repeatable string-array `--attach`, `<file>#<",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 56.764838,
+      "requests": 117,
+      "requests_over_200k": 78,
+      "ctx_tokens_over_200k_share": 0.8384
+    }
+  },
+  "agy": {
+    "delegations": 18,
+    "usage_lines": 15,
+    "signal_only": 3,
+    "succeeded": 12,
+    "zero_usage_lines": 0,
+    "signals": {
+      "AGY_FAILED": 2,
+      "QUOTA_EXHAUSTED": 1,
+      "TIMEOUT": 1
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 15,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 12,
+        "input": 5725720,
+        "output": 411532,
+        "thinking": 296472,
+        "cache_read": 35077729,
+        "usd": 8.468365
+      },
+      "flash-lo": {
+        "calls": 3,
+        "input": 373458,
+        "output": 3704,
+        "thinking": 188,
+        "cache_read": 1025594,
+        "usd": 0.370903
+      }
+    },
+    "totals": {
+      "input": 6099178,
+      "output": 415236,
+      "thinking": 296660,
+      "cache_read": 36103323,
+      "total": 6514414
+    },
+    "invariant_ok": true,
+    "shadow_usd": 8.839268,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "ddbe8838-c25b-46e7-b382-702412b28ef3",
+      "2f203cf1-ad58-456c-b29c-b6e67adfa631",
+      "42dbdff8-c62e-4c41-b266-a8cf32f5eea3",
+      "d1c68c9e-de80-4fcd-ab85-86248dd9508b",
+      "a8755f47-1465-4ae4-b17d-216d503af244",
+      "2b4398d9-d830-424d-9beb-b25d5413d4f2",
+      "81ad1b01-6b3f-4268-b7fb-b6e610d7b439",
+      "eeeb5349-00b8-4c4d-90c7-07a58670218c",
+      "e2b6b23d-834e-44b2-be19-dad10f6f1a4b",
+      "622e7ce4-594c-4655-8996-7aace547de40",
+      "04b9d68e-ff3c-46e5-aad3-5567c14c7568",
+      "4227b5e5-a6c7-4427-9b16-15e276d4fd31",
+      "2bd6c3df-3c20-4e89-ab0e-08c333f6ce53",
+      "fc5ef219-9c5c-4c51-89c9-3b06d6b27c06",
+      "63b539ba-8370-41b8-bbf6-c6c34057f857"
+    ],
+    "agy_duration_s_sum": 5633.177,
+    "wrapper_calls_in_transcript": 16,
+    "trace_audit": {
+      "ddbe8838-c25b-46e7-b382-702412b28ef3": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 28,
+          "GENERIC": 27
+        },
+        "tool_calls": {
+          "run_command": 8,
+          "view_file": 11,
+          "grep_search": 3,
+          "find_by_name": 1,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T14:13:43Z",
+        "last_step_at": "2026-09-16T14:17:09Z"
+      },
+      "2f203cf1-ad58-456c-b29c-b6e67adfa631": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 52,
+          "GENERIC": 51
+        },
+        "tool_calls": {
+          "run_command": 11,
+          "view_file": 22,
+          "grep_search": 9,
+          "replace_file_content": 9
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 9,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T14:17:44Z",
+        "last_step_at": "2026-09-16T14:22:44Z"
+      },
+      "42dbdff8-c62e-4c41-b266-a8cf32f5eea3": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 9,
+          "GENERIC": 8
+        },
+        "tool_calls": {
+          "run_command": 6,
+          "view_file": 1,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T14:23:01Z",
+        "last_step_at": "2026-09-16T14:24:24Z"
+      },
+      "d1c68c9e-de80-4fcd-ab85-86248dd9508b": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 24,
+          "GENERIC": 23,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 7,
+          "run_command": 3,
+          "list_dir": 1,
+          "grep_search": 8,
+          "find_by_name": 2,
+          "write_to_file": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T14:25:35Z",
+        "last_step_at": "2026-09-16T14:31:46Z"
+      },
+      "a8755f47-1465-4ae4-b17d-216d503af244": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 42,
+          "GENERIC": 41,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 23,
+          "view_file": 16,
+          "write_to_file": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T14:34:38Z",
+        "last_step_at": "2026-09-16T14:40:21Z"
+      },
+      "2b4398d9-d830-424d-9beb-b25d5413d4f2": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 98,
+          "GENERIC": 97,
+          "SYSTEM_MESSAGE": 6,
+          "CHECKPOINT": 3,
+          "ERROR_MESSAGE": 1
+        },
+        "tool_calls": {
+          "run_command": 57,
+          "manage_task": 11,
+          "view_file": 21,
+          "find_by_name": 2,
+          "grep_search": 1,
+          "write_to_file": 4,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 5,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T14:47:18Z",
+        "last_step_at": "2026-09-16T15:01:58Z"
+      },
+      "81ad1b01-6b3f-4268-b7fb-b6e610d7b439": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 43,
+          "GENERIC": 42,
+          "SYSTEM_MESSAGE": 3
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 25,
+          "manage_task": 5,
+          "view_file": 8,
+          "grep_search": 2,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T15:02:19Z",
+        "last_step_at": "2026-09-16T15:06:23Z"
+      },
+      "eeeb5349-00b8-4c4d-90c7-07a58670218c": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 57,
+          "GENERIC": 56,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "run_command": 21,
+          "view_file": 21,
+          "find_by_name": 1,
+          "grep_search": 9,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T15:09:15Z",
+        "last_step_at": "2026-09-16T15:20:11Z"
+      },
+      "e2b6b23d-834e-44b2-be19-dad10f6f1a4b": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 61,
+          "GENERIC": 59,
+          "ERROR_MESSAGE": 1,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 15,
+          "view_file": 30,
+          "grep_search": 5,
+          "replace_file_content": 9
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 9,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T15:24:46Z",
+        "last_step_at": "2026-09-16T15:31:28Z"
+      },
+      "622e7ce4-594c-4655-8996-7aace547de40": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 66,
+          "GENERIC": 65,
+          "SYSTEM_MESSAGE": 2,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "run_command": 21,
+          "find_by_name": 1,
+          "manage_task": 3,
+          "view_file": 28,
+          "grep_search": 5,
+          "replace_file_content": 7
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 7,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T15:31:36Z",
+        "last_step_at": "2026-09-16T15:40:34Z"
+      },
+      "04b9d68e-ff3c-46e5-aad3-5567c14c7568": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 83,
+          "GENERIC": 82,
+          "SYSTEM_MESSAGE": 6,
+          "CHECKPOINT": 2
+        },
+        "tool_calls": {
+          "run_command": 29,
+          "find_by_name": 1,
+          "manage_task": 8,
+          "view_file": 35,
+          "grep_search": 5,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T15:42:03Z",
+        "last_step_at": "2026-09-16T15:51:25Z"
+      },
+      "4227b5e5-a6c7-4427-9b16-15e276d4fd31": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 61,
+          "GENERIC": 60,
+          "SYSTEM_MESSAGE": 3,
+          "CHECKPOINT": 2,
+          "ERROR_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 26,
+          "find_by_name": 1,
+          "list_dir": 2,
+          "manage_task": 5,
+          "view_file": 20,
+          "grep_search": 2,
+          "replace_file_content": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 4,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T15:51:36Z",
+        "last_step_at": "2026-09-16T16:02:48Z"
+      },
+      "2bd6c3df-3c20-4e89-ab0e-08c333f6ce53": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 34,
+          "GENERIC": 33,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 31,
+          "find_by_name": 2,
+          "manage_task": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T16:04:29Z",
+        "last_step_at": "2026-09-16T16:07:26Z"
+      },
+      "fc5ef219-9c5c-4c51-89c9-3b06d6b27c06": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 3,
+          "GENERIC": 2
+        },
+        "tool_calls": {
+          "run_command": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T16:07:41Z",
+        "last_step_at": "2026-09-16T16:08:23Z"
+      },
+      "63b539ba-8370-41b8-bbf6-c6c34057f857": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 2,
+          "GENERIC": 1
+        },
+        "tool_calls": {
+          "run_command": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T16:08:51Z",
+        "last_step_at": "2026-09-16T16:09:30Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 52
+  },
+  "writes": {
+    "claude_tool": 11,
+    "claude_bash": 0,
+    "agy": 13,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 2,
+    "events": 331,
+    "gate_blocks": 3,
+    "blocked_heads": {
+      "git": 2,
+      "go": 1
+    },
+    "gate_allows": 102,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "internal/config/config.go",
+      "internal/gh/gh.go",
+      "internal/ghinstance/host.go",
+      "api/queries_issue.go",
+      "api/queries_pr.go",
+      "api/queries_repo.go",
+      "api/query_builder.go",
+      "pkg/httpmock/legacy.go",
+      "internal/attachments/flags.go",
+      "internal/attachments/userasset.go",
+      "internal/attachments/client.go",
+      "internal/attachments/testing.go",
+      "internal/attachments/references.go",
+      "internal/attachments/attach.go",
+      "pkg/cmd/issue/comment/comment.go",
+      "pkg/cmd/pr/comment/comment.go",
+      "pkg/cmd/pr/shared/commentable.go",
+      "pkg/cmd/issue/create/create.go",
+      "pkg/cmd/pr/create/create.go",
+      "pkg/cmd/pr/edit/edit.go",
+      "pkg/cmd/issue/edit/edit.go",
+      "AGY_SPEC.md",
+      "AGY_SPEC2.md"
+    ],
+    "claude_tool_files": [
+      "AGY_SPEC.md",
+      "AGY_SPEC2.md",
+      "pkg/cmd/issue/create/create.go",
+      "internal/gh/gh.go",
+      "pkg/cmd/issue/edit/edit.go"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 2.1,
+      "passed_tests": 951,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 11,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 30.6,
+      "passed_tests": 7803,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 309,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 21,
+    "code_added": 1872,
+    "code_removed": 46,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/attachments/testing.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "9ce22edad8f5acbd6de2f6ca7fb978913531fb98b96f7bcbf8b35d6a866ca8d5"
+  },
+  "diff_files": {
+    "api/queries_issue.go": {
+      "added": 19,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/queries_pr.go": {
+      "added": 23,
+      "removed": 3,
+      "class": "code"
+    },
+    "api/queries_repo.go": {
+      "added": 4,
+      "removed": 0,
+      "class": "code"
+    },
+    "api/query_builder.go": {
+      "added": 2,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/attach.go": {
+      "added": 71,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/client.go": {
+      "added": 221,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/flags.go": {
+      "added": 94,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/references.go": {
+      "added": 766,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/testing.go": {
+      "added": 72,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/attachments/userasset.go": {
+      "added": 157,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/config/config.go": {
+      "added": 24,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/gh/gh.go": {
+      "added": 19,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/ghinstance/host.go": {
+      "added": 9,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/comment/comment.go": {
+      "added": 10,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/create/create.go": {
+      "added": 55,
+      "removed": 9,
+      "class": "code"
+    },
+    "pkg/cmd/issue/edit/edit.go": {
+      "added": 81,
+      "removed": 3,
+      "class": "code"
+    },
+    "pkg/cmd/pr/comment/comment.go": {
+      "added": 10,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/pr/create/create.go": {
+      "added": 70,
+      "removed": 13,
+      "class": "code"
+    },
+    "pkg/cmd/pr/edit/edit.go": {
+      "added": 68,
+      "removed": 3,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/commentable.go": {
+      "added": 88,
+      "removed": 13,
+      "class": "code"
+    },
+    "pkg/httpmock/legacy.go": {
+      "added": 9,
+      "removed": 2,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 31.693839250000007,
+    "gemini_usd": 8.839268,
+    "total_usd": 40.53310725000001
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:51+00:00",
+    "reaccounted at 2026-09-17T14:49:00+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

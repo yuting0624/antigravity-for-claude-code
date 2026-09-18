@@ -1,0 +1,35 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-436d84",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:19:26+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c38c35ca7b612f16dfc5c541586e264aaf4a4b5fe0e0fbaeff3ff4a5f2fcd47c",
+  "wall_s": 35.0,
+  "cost_usd": 0.23743375,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 4,
+    "scope": 5,
+    "readability": 4,
+    "robustness": 5,
+    "maintainability": 3
+  },
+  "mean": 4.333,
+  "rationale": {
+    "consistency": "Mirrors CookieFilter closely: same module ID pattern, receiver names, Validate, Caddyfile unmarshalling, interface guards, and reuse of net/http parsing via http.Response.Cookies().",
+    "edge_cases": "Unparseable values and unmatched names pass through, quoted values keep quotes, hash uses parsed value, delete drops the entry, exact name match; whitespace around '=' and before ';' is not preserved verbatim.",
+    "scope": "Only the new filter plus registration and guards; no unrelated edits or dead code.",
+    "readability": "Clear flow and names; the seg/rest if/else with redundant empty assignment could be strings.Cut, and the eq==-1 branch is defensive-only given the parser already rejected such lines.",
+    "robustness": "No panics: index bounds guarded, quote check requires len>=2, non-array input returned unchanged, stateless filter.",
+    "maintainability": "UnmarshalCaddyfile and Validate are copied verbatim from CookieFilter instead of shared; Filter relies on Go's parser and a separate manual split agreeing on the leading pair."
+  },
+  "flags": []
+}

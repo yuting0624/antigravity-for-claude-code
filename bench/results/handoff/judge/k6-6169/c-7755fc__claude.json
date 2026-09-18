@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "k6-6169",
+  "candidate_id": "c-7755fc",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:58:03+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "bbb21b38ac4d4d4f79ccbb278a1c8c712bf858fe53728a011f2fedc1dce4c20d",
+  "wall_s": 58.2,
+  "cost_usd": 0.9307482499999999,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 4,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.333,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (authCtx, closeResponse, CheckResponse, 401/403 via httperr) but uses pointer ResponseError vs v6 value type, package name provtest in dir test, and drops v6's exported RetryInterval/MaxRetries constants despite the source-compat constraint.",
+    "edge_cases": "Covers 409 find-by-name, nil archive, missing upload URL, int32 overflow, aborted/completed while polling, malformed runtime durations, PushRefID short-circuit; unknown abort reasons map to code 0 which is dubious.",
+    "scope": "Delivers the whole flow, but adds a clientcfg refactor touching v6, leaves the now-dead thresholds map computation in createCloudTest, and carries unused Client.host/version and HTTPClient.logger fields.",
+    "readability": "Structure is clear, but comments are verbose and repetitive, one is contradictory (claims no map[string]any round-trip while StartLocalExecution does exactly that), and server.go keeps a 'skeleton/specs' placeholder comment.",
+    "robustness": "doWithRetry resets bodies, drains/closes, honours ctx; upload/notify errors are wrapped. Minor: Info-level log on every default poll interval, notify uses context.Background, notify error code 0 for unclassified errors.",
+    "maintainability": "expv2 setters and config fields are a reasonable seam, but Output type-asserts *cloudv2.Output, builds a full provisioning+v6 client just for notify, and transports the run token via the JSON collectors map; provisioning Client depends on v6 internals."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

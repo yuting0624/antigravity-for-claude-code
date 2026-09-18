@@ -1,0 +1,44 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "k6-6169",
+  "candidate_id": "c-e073ea",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:03:46+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "81e0dbdbf416c07e0fba4cda0d3495a25db9caa51206536882db2e4b1a2217bd",
+  "wall_s": 48.3,
+  "cost_usd": 0.062404,
+  "usage": {
+    "input": 24668,
+    "output": 1089,
+    "thinking": 878,
+    "cache_read": 0,
+    "total": 25757
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "The candidate provided an empty diff, offering no code to evaluate.",
+    "edge_cases": "The candidate provided an empty diff, failing to handle any scenarios.",
+    "scope": "The candidate provided an empty diff, failing to implement any part of the requirement.",
+    "readability": "The candidate provided an empty diff, offering no code to evaluate.",
+    "robustness": "The candidate provided an empty diff, offering no code to evaluate.",
+    "maintainability": "The candidate provided an empty diff, offering no code to evaluate."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

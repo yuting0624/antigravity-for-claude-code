@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "zoekt-1105",
+  "candidate_id": "c-c121ac",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T16:55:02+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "c3f1c6fed61e28c5f3a0b49dc448c824d9085ecda57fc2261a4921f4bd16d945",
+  "wall_s": 7.5,
+  "cost_usd": 0.05082675,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to judge against codebase conventions.",
+    "edge_cases": "Empty diff; no handling of any input, boundary, or error case.",
+    "scope": "Empty diff; none of the requested command, subcommands, indexer change, or lock was delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; no failure handling or locking implemented.",
+    "maintainability": "Empty diff; nothing to maintain or extend."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

@@ -1,0 +1,834 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "k6-6169__hybrid-inst__r2",
+  "task_id": "k6-6169",
+  "arm": "hybrid-inst",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "D",
+  "size_class": "large",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-16T04:20:00+00:00",
+  "ended_at": "2026-09-16T07:34:32+00:00",
+  "agent_wall_s": 11669.4,
+  "agent_active_s": 11669.3,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.4",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 75,
+    "max_turns": 250,
+    "wall_s": 14400,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "664c2b05c5caff13caabdb8e8928635ee08409836dd6c5bff427c6007b36423a",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "f01e883316e176c532314e4c1d8fc16901d5b7a139867a15c92447d0dc8a51ab"
+  },
+  "claude": {
+    "session_id": "04090f2a-76b0-4057-9e3b-e17b5caf1e2a",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 123,
+    "num_turns_source": "result",
+    "duration_ms": 11668843,
+    "duration_api_ms": 1088738,
+    "total_cost_usd": 19.5874105,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 184,
+      "cache_creation_input_tokens": 1750298,
+      "cache_read_input_tokens": 13025250,
+      "output_tokens": 85294,
+      "output_tokens_details": {
+        "thinking_tokens": 31749
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 1750298
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 2028,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.002153,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 184,
+        "outputTokens": 85294,
+        "cacheReadInputTokens": 13025250,
+        "cacheCreationInputTokens": 1750298,
+        "webSearchRequests": 0,
+        "costUSD": 19.5852575,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 31749,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 19.585258,
+    "recomputed_vs_reported_gap": -0.0001,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 92,
+      "input": 184,
+      "output": 85294,
+      "cache_creation": 1750298,
+      "cache_read": 13025250,
+      "first_turn_cache_read": 0,
+      "models": {
+        "claude-opus-5": {
+          "turns": 92,
+          "input": 184,
+          "output": 85294,
+          "cache_creation": 1750298,
+          "cache_read": 13025250
+        }
+      },
+      "tool_calls": {
+        "Bash": 86,
+        "Read": 13,
+        "ToolSearch": 1,
+        "Edit": 15,
+        "Write": 7
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 22,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 1
+    },
+    "warm_start": false,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 184,
+        "transcript": 184,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 85294,
+        "transcript": 85294,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 1750298,
+        "transcript": 1750298,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 13025250,
+        "transcript": 13025250,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 8,
+    "denied_tools": {
+      "Bash:go": 1,
+      "Bash:ls": 2,
+      "Bash:for": 1,
+      "Bash:grep": 1,
+      "Bash:agy-delegate": 2,
+      "Bash:git": 1
+    },
+    "result_head": "All green. The work is complete.\n\n## What changed\n\n**New `internal/cloudapi/provisioning` package** — owns the local-execution orchestration:\n- `client.go` — client over the provisioning endpoints, embedding a `v6.Client` for the v6 calls\n- `http_client.go` — retrying JSON-over-HTTP client (5xx retried, 4xx not, body replayed, cancellation interrupts the retry wait)\n- `errors.go` — `ResponseError`",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 29.29026,
+      "requests": 92,
+      "requests_over_200k": 38,
+      "ctx_tokens_over_200k_share": 0.5848
+    }
+  },
+  "agy": {
+    "delegations": 20,
+    "usage_lines": 17,
+    "signal_only": 3,
+    "succeeded": 14,
+    "zero_usage_lines": 0,
+    "signals": {
+      "TIMEOUT": 6,
+      "QUOTA_EXHAUSTED": 3
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 17,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 14,
+        "input": 4696441,
+        "output": 219681,
+        "thinking": 173626,
+        "cache_read": 17968839,
+        "usd": 5.693797
+      },
+      "pro": {
+        "calls": 2,
+        "input": 835171,
+        "output": 43894,
+        "thinking": 37156,
+        "cache_read": 3100956,
+        "usd": 8.398982
+      },
+      "flash-lo": {
+        "calls": 1,
+        "input": 26222,
+        "output": 785,
+        "thinking": 704,
+        "cache_read": 19000,
+        "usd": 0.024035
+      }
+    },
+    "totals": {
+      "input": 5557834,
+      "output": 264360,
+      "thinking": 211486,
+      "cache_read": 21088795,
+      "total": 5822194
+    },
+    "invariant_ok": true,
+    "shadow_usd": 14.116815,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [
+      "no_cached_rate_for:gemini_pro"
+    ],
+    "conversation_ids": [
+      "aaa07011-2cc5-4e28-a771-3dd88d1035b6",
+      "1ebf2296-e35a-4f69-8aac-fc0767d270f8",
+      "ee5c84ec-28a3-4a4c-a03c-39dbaebcac80",
+      "a22aae24-2db0-437b-b12d-68c618528ec2",
+      "b9cfeb37-a48a-4151-8639-93853c55d152",
+      "e236fe6b-a52b-4370-80a9-0063fbb235d4",
+      "5af16f60-19db-4888-a5cc-76a3dece9300",
+      "c5ec35d9-a8bd-413b-9918-7b5b94754521",
+      "ed141617-1193-453e-8ef1-d79c9872edf7",
+      "6a247a6f-45dd-4d78-be1a-2a5fc2c0c09a",
+      "94f0f9cd-fa19-4f19-8adc-4b3bf702d0e1",
+      "f68cdb61-9a8a-4cf9-95ae-091a02415e02",
+      "89bf4115-166d-4a80-8bd3-2ba71247d39c",
+      "16035f14-66ad-406a-8e97-a28a176e4666",
+      "16e9b45f-428d-4af4-a9eb-d62da5cd2e13",
+      "53d92d11-3297-4709-ad04-c787c0361c9d",
+      "6a0a2b3e-e7d5-4304-abdf-53210232a7f6"
+    ],
+    "agy_duration_s_sum": 9636.547,
+    "wrapper_calls_in_transcript": 19,
+    "trace_audit": {
+      "aaa07011-2cc5-4e28-a771-3dd88d1035b6": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 36,
+          "GENERIC": 35
+        },
+        "tool_calls": {
+          "run_command": 19,
+          "find_by_name": 1,
+          "list_dir": 1,
+          "view_file": 7,
+          "grep_search": 5,
+          "write_to_file": 1,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T04:25:28Z",
+        "last_step_at": "2026-09-16T04:33:22Z"
+      },
+      "1ebf2296-e35a-4f69-8aac-fc0767d270f8": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 31,
+          "GENERIC": 30,
+          "SYSTEM_MESSAGE": 2,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "run_command": 22,
+          "view_file": 6,
+          "grep_search": 1,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T04:34:45Z",
+        "last_step_at": "2026-09-16T04:43:08Z"
+      },
+      "ee5c84ec-28a3-4a4c-a03c-39dbaebcac80": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 15,
+          "GENERIC": 15
+        },
+        "tool_calls": {
+          "run_command": 3,
+          "view_file": 8,
+          "grep_search": 4
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T04:43:17Z",
+        "last_step_at": "2026-09-16T04:52:37Z"
+      },
+      "a22aae24-2db0-437b-b12d-68c618528ec2": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 19,
+          "GENERIC": 18
+        },
+        "tool_calls": {
+          "run_command": 8,
+          "view_file": 5,
+          "grep_search": 2,
+          "replace_file_content": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T04:53:20Z",
+        "last_step_at": "2026-09-16T04:58:53Z"
+      },
+      "b9cfeb37-a48a-4151-8639-93853c55d152": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 54,
+          "GENERIC": 53,
+          "SYSTEM_MESSAGE": 2,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "view_file": 21,
+          "run_command": 30,
+          "manage_task": 1,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T05:00:56Z",
+        "last_step_at": "2026-09-16T05:10:07Z"
+      },
+      "e236fe6b-a52b-4370-80a9-0063fbb235d4": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 30,
+          "GENERIC": 30,
+          "SYSTEM_MESSAGE": 2
+        },
+        "tool_calls": {
+          "run_command": 16,
+          "manage_task": 3,
+          "view_file": 11
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T05:11:44Z",
+        "last_step_at": "2026-09-16T05:28:53Z"
+      },
+      "5af16f60-19db-4888-a5cc-76a3dece9300": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 6,
+          "GENERIC": 6,
+          "ERROR_MESSAGE": 4
+        },
+        "tool_calls": {
+          "run_command": 1,
+          "view_file": 4,
+          "list_dir": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T05:32:17Z",
+        "last_step_at": "2026-09-16T05:41:45Z"
+      },
+      "c5ec35d9-a8bd-413b-9918-7b5b94754521": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 4,
+          "GENERIC": 4
+        },
+        "tool_calls": {
+          "run_command": 1,
+          "view_file": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T05:44:20Z",
+        "last_step_at": "2026-09-16T05:54:13Z"
+      },
+      "ed141617-1193-453e-8ef1-d79c9872edf7": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 14,
+          "GENERIC": 14,
+          "SYSTEM_MESSAGE": 1
+        },
+        "tool_calls": {
+          "find_by_name": 1,
+          "run_command": 10,
+          "manage_task": 1,
+          "view_file": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T05:56:23Z",
+        "last_step_at": "2026-09-16T06:06:27Z"
+      },
+      "6a247a6f-45dd-4d78-be1a-2a5fc2c0c09a": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 19,
+          "GENERIC": 19
+        },
+        "tool_calls": {
+          "run_command": 1,
+          "view_file": 16,
+          "list_dir": 1,
+          "grep_search": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T06:08:25Z",
+        "last_step_at": "2026-09-16T06:18:52Z"
+      },
+      "94f0f9cd-fa19-4f19-8adc-4b3bf702d0e1": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 35,
+          "GENERIC": 34,
+          "SYSTEM_MESSAGE": 3
+        },
+        "tool_calls": {
+          "run_command": 16,
+          "find_by_name": 1,
+          "manage_task": 4,
+          "list_dir": 1,
+          "view_file": 7,
+          "grep_search": 4,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T06:20:28Z",
+        "last_step_at": "2026-09-16T06:26:35Z"
+      },
+      "f68cdb61-9a8a-4cf9-95ae-091a02415e02": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "GENERIC": 48,
+          "PLANNER_RESPONSE": 44
+        },
+        "tool_calls": {
+          "view_file": 8,
+          "find_by_name": 20,
+          "list_dir": 17,
+          "write_to_file": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 3,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T06:27:10Z",
+        "last_step_at": "2026-09-16T06:33:23Z"
+      },
+      "89bf4115-166d-4a80-8bd3-2ba71247d39c": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 54,
+          "GENERIC": 53,
+          "SYSTEM_MESSAGE": 1
+        },
+        "tool_calls": {
+          "find_by_name": 19,
+          "list_dir": 23,
+          "view_file": 9,
+          "run_command": 1,
+          "manage_task": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T06:33:31Z",
+        "last_step_at": "2026-09-16T06:41:38Z"
+      },
+      "16035f14-66ad-406a-8e97-a28a176e4666": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 44,
+          "GENERIC": 44
+        },
+        "tool_calls": {
+          "find_by_name": 20,
+          "list_dir": 20,
+          "view_file": 3,
+          "grep_search": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T06:42:31Z",
+        "last_step_at": "2026-09-16T06:55:57Z"
+      },
+      "16e9b45f-428d-4af4-a9eb-d62da5cd2e13": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 59,
+          "GENERIC": 58,
+          "ERROR_MESSAGE": 8,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "find_by_name": 20,
+          "list_dir": 20,
+          "view_file": 17,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T06:56:34Z",
+        "last_step_at": "2026-09-16T07:09:46Z"
+      },
+      "53d92d11-3297-4709-ad04-c787c0361c9d": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "ERROR_MESSAGE": 1,
+          "PLANNER_RESPONSE": 106,
+          "GENERIC": 105,
+          "CHECKPOINT": 1
+        },
+        "tool_calls": {
+          "find_by_name": 29,
+          "list_dir": 34,
+          "view_file": 42
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T07:11:21Z",
+        "last_step_at": "2026-09-16T07:24:57Z"
+      },
+      "6a0a2b3e-e7d5-4304-abdf-53210232a7f6": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 2,
+          "GENERIC": 1
+        },
+        "tool_calls": {
+          "run_command": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 0,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-16T07:33:04Z",
+        "last_step_at": "2026-09-16T07:33:48Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 12
+  },
+  "writes": {
+    "claude_tool": 22,
+    "claude_bash": 0,
+    "agy": 7,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 1,
+    "events": 285,
+    "gate_blocks": 3,
+    "blocked_heads": {
+      "for": 1,
+      "agy-delegate": 1,
+      "git": 1
+    },
+    "gate_allows": 83,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "internal/cloudapi/clientcfg/clientcfg.go",
+      "internal/cloudapi/v6/client.go",
+      "internal/cloudapi/v6/api.go",
+      "output/cloud/expv2/metrics_client.go",
+      "output/cloud/expv2/output.go",
+      "internal/cloudapi/provisioning/test/server.go",
+      "internal/cloudapi/provisioning/provision.go",
+      "internal/cloudapi/provisioning/http_client.go",
+      "AGY_SPEC.md"
+    ],
+    "claude_tool_files": [
+      "cloudapi/config.go",
+      "AGY_SPEC.md",
+      "internal/cloudapi/provisioning/doc.go",
+      "internal/cloudapi/provisioning/errors.go",
+      "internal/cloudapi/provisioning/types.go",
+      "internal/cloudapi/provisioning/notify.go",
+      "internal/cloudapi/provisioning/client.go",
+      "internal/cloudapi/provisioning/api.go",
+      "internal/output/cloud/output.go",
+      "internal/cmd/outputs_cloud.go"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "internal/js/modules/k6/experimental/fs/file.go:85:16: method Seek(offset int64, whence fs.SeekMode) (int64, error) should have signature Seek(int64, int) (int64, error)\nlib/executor/helpers.go:146:18: the cancel function returned by context.WithDeadline should be called, not discarded, to avoid a context leak\n",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 3.9,
+      "passed_tests": 178,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 7,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 69.4,
+      "passed_tests": 5991,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 131,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null,
+      "failed_packages_before_retry": null,
+      "unrelated_failed_packages": null,
+      "unrelated_retry": null,
+      "env_failure": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 17,
+    "code_added": 1117,
+    "code_removed": 77,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "internal/cloudapi/provisioning/types.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "823b61716c77e28720bfaf19a8f2c4833f0d1b777ad8b9c0fb42a56085b6735b"
+  },
+  "diff_files": {
+    "cloudapi/config.go": {
+      "added": 19,
+      "removed": 1,
+      "class": "code"
+    },
+    "internal/cloudapi/clientcfg/clientcfg.go": {
+      "added": 12,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/api.go": {
+      "added": 156,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/client.go": {
+      "added": 78,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/doc.go": {
+      "added": 6,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/errors.go": {
+      "added": 57,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/http_client.go": {
+      "added": 142,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/notify.go": {
+      "added": 55,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/provision.go": {
+      "added": 84,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/test/server.go": {
+      "added": 144,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/provisioning/types.go": {
+      "added": 71,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/v6/api.go": {
+      "added": 31,
+      "removed": 0,
+      "class": "code"
+    },
+    "internal/cloudapi/v6/client.go": {
+      "added": 3,
+      "removed": 2,
+      "class": "code"
+    },
+    "internal/cmd/outputs_cloud.go": {
+      "added": 104,
+      "removed": 55,
+      "class": "code"
+    },
+    "internal/output/cloud/output.go": {
+      "added": 107,
+      "removed": 1,
+      "class": "code"
+    },
+    "output/cloud/expv2/metrics_client.go": {
+      "added": 17,
+      "removed": 11,
+      "class": "code"
+    },
+    "output/cloud/expv2/output.go": {
+      "added": 31,
+      "removed": 7,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 19.5874105,
+    "gemini_usd": 14.116815,
+    "total_usd": 33.7042255
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:51+00:00",
+    "reaccounted at 2026-09-17T14:49:01+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

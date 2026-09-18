@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff-review",
+  "task_id": "k6-6169",
+  "candidate_id": "c-7755fc",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-18T15:47:47+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "bbb21b38ac4d4d4f79ccbb278a1c8c712bf858fe53728a011f2fedc1dce4c20d",
+  "wall_s": 57.6,
+  "cost_usd": 0.91299075,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 3,
+    "edge_cases": 3,
+    "scope": 3,
+    "readability": 3,
+    "robustness": 4,
+    "maintainability": 3
+  },
+  "mean": 3.167,
+  "rationale": {
+    "consistency": "Mirrors v6 idioms (authCtx, closeResponse, CheckResponse, httperr classification) but removes v6's exported RetryInterval/MaxRetries constants, uses fmt.Errorf without verbs, and exports SetMetricsHTTPClient with an unexported param type.",
+    "edge_cases": "409 fallback, int32 overflow, nil upload URL, aborted/completed and ctx cancellation handled; but no terminal handling for timed-out runs (polls forever), unknown errors notify with code 0, and PushInterval default logs at Info every run.",
+    "scope": "Core flow delivered, but adds a clientcfg extraction refactor, leaves the now-dead thresholds computation in createCloudTest, and carries unused Client.host/version and HTTPClient.logger fields.",
+    "readability": "Structure is clear, but comments are verbose and plan-speak ('existing pattern', 'skeleton', 'specs'), one is contradictory (claims no map[string]any round-trip while api.go does exactly that), and 'vendored SDK' is wrong.",
+    "robustness": "Bodies drained/closed, retries honour ctx, GetBody reset on retry, scoped token via context for notify; minor ignored GetBody error and heavy per-output construction of a full provisioning+v6 client just for notify.",
+    "maintainability": "Provisioning Client hides a v6 client and duplicates SDK config; three near-identical duration-parse blocks; MaxSamplesPerPackage->MaxTimeSeriesInBatch mapping is an unverified assumption; dead fields and leftover code add drag."
+  },
+  "flags": [
+    "generated_code_smell"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-a33be8",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:17:47+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "69efb7f2e74257ed19c86e3ff7b632e7e74b26e34a41a6ef39c18d359c1fccce",
+  "wall_s": 94.1,
+  "cost_usd": 1.020035,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 4,
+    "edge_cases": 2,
+    "scope": 2,
+    "readability": 4,
+    "robustness": 3,
+    "maintainability": 3
+  },
+  "mean": 3.0,
+  "rationale": {
+    "consistency": "License headers, module registration, interface guards, //nolint:bodyclose, humanize/strconv parsing all match sibling handlers; comment style deviates with very long single-line doc comments.",
+    "edge_cases": "MinRate with Timeout<=0 yields a deadline at start, so first I/O times out immediately (doc says rate needs timeout, code enables it alone); route handler ignores server hard timeouts, and the server's default 1m wrapper resets after it, overriding shorter route deadlines.",
+    "scope": "Deletes request_body's existing read_timeout/write_timeout JSON fields, Caddyfile subdirectives and Provision, breaking existing configs; adds undocumented aliases and extra rate args to server options beyond what was asked.",
+    "readability": "Clear names, small helpers (next, setDeadline, maxChunk), well-commented Server fields; a few doc comments are single 200+ char lines instead of wrapped.",
+    "robustness": "Handles nil logger, nil body, downgrades ErrNotSupported to debug, clears deadlines on Hijack/Close, chunked Write/ReadFrom terminate correctly; but the zero-timeout-with-rate path can kill legitimate requests and Close drops the hard read deadline.",
+    "maintainability": "Shared IdleDeadline/reader/writer reused by server and handler, but exported mutable Start state and duplicated Caddyfile arg parsing for read/write; doc/code mismatch on MinRate semantics will confuse future edits."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

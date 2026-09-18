@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "k6-6169",
+  "candidate_id": "c-8fd5d8",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T17:12:01+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1daf5d3f20a6bc901039064ecd1d19ab8a7b8a99b7273f6072c3c08a721b9716",
+  "wall_s": 46.6,
+  "cost_usd": 0.187088,
+  "usage": {
+    "input": 58930,
+    "output": 5769,
+    "thinking": 5546,
+    "cache_read": 0,
+    "total": 64699
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Code naturally extends existing cloud API clients, matching idioms, naming conventions, and fake-server patterns flawlessly.",
+    "edge_cases": "Perfect handling of 409 conflicts, HTTP request body rewinding on retries, context cancellation, and exact test abort error code mapping.",
+    "scope": "Precisely targets the requirements; cleanly isolates the new provisioning flow while leaving the legacy v1 and PushRefID paths untouched as asked.",
+    "readability": "Highly expressive comments, clean separation of concerns, and localized initialization logic (e.g. lazyInitProvisioning) make it very easy to follow.",
+    "robustness": "Rigorous HTTP client lifecycle management, strong context checking during backoffs, and safe type bounds checking for archive sizes.",
+    "maintainability": "Excellent testability via the dedicated domain fake server, modular HTTP clients, and safe extraction of shared configuration into clientcfg."
+  },
+  "flags": []
+}

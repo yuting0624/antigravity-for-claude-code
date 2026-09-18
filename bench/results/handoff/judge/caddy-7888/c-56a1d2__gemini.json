@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-56a1d2",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T14:07:50+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "b4807bf640a8b9a4306803dcdde8dda9c73e026511c610f0084467df8da59c01",
+  "wall_s": 124.5,
+  "cost_usd": 0.17994,
+  "usage": {
+    "input": 28404,
+    "output": 10261,
+    "thinking": 10062,
+    "cache_read": 0,
+    "total": 38665
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Perfectly mimics existing filter patterns, Caddy module registration, and Unmarshaler token handling idioms.",
+    "edge_cases": "Gracefully handles unparseable cookies, properly preserves existing quotes via Go 1.23's Cookie.Quoted, and safely cuts strings.",
+    "scope": "Implements exactly what was requested for the set_cookie filter with zero unrelated bloat or unnecessary changes.",
+    "readability": "Clean and linear logic using well-named variables, clear type switches, and idiomatic labeled continues.",
+    "robustness": "Avoids mutating the original slice, safely defaults on bad inputs, and handles missing suffixes perfectly.",
+    "maintainability": "The action matching loop and Caddyfile unmarshaler are well-structured and trivial to extend with new actions."
+  },
+  "flags": []
+}

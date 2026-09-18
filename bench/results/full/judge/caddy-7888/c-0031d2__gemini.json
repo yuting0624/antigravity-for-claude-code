@@ -1,0 +1,43 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7888",
+  "candidate_id": "c-0031d2",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:14:58+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "38ef7b4d0426a7d6dac8acb57fd01d71127cdde6e9ac5b6f43acab266b4804d8",
+  "wall_s": 67.4,
+  "cost_usd": 0.163678,
+  "usage": {
+    "input": 28571,
+    "output": 8878,
+    "thinking": 8678,
+    "cache_read": 0,
+    "total": 37449
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Flawlessly mimics Caddy's module registration, Caddyfile unmarshaling patterns, and interface assertions.",
+    "edge_cases": "Perfectly handles unparseable cookies, respects original quotes, and uses precise string cutting to preserve trailing attributes and whitespace exactly.",
+    "scope": "Implements exactly the requested set_cookie actions without unnecessary abstraction or feature creep.",
+    "readability": "Extremely clear logic with an elegant OUTER loop and a well-named, isolated helper for string replacement.",
+    "robustness": "Safe against malformed inputs, gracefully handles errors from parsing, and optimally pre-allocates the new array.",
+    "maintainability": "Decoupled string manipulation and clean, linear configuration parsing make it highly extensible and easy to test."
+  },
+  "flags": [
+    "unrelated_changes"
+  ]
+}

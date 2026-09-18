@@ -1,0 +1,349 @@
+diff --git a/caddyconfig/httpcaddyfile/builtins.go b/caddyconfig/httpcaddyfile/builtins.go
+index 34965d1d6..dcf14177f 100644
+--- a/caddyconfig/httpcaddyfile/builtins.go
++++ b/caddyconfig/httpcaddyfile/builtins.go
+@@ -818,7 +818,7 @@ func parseRoute(h Helper) (caddyhttp.MiddlewareHandler, error) {
+ 		}
+ 	}
+ 
+-	return buildSubroute(allResults, h.groupCounter, false)
++	return buildSubroute(allResults, h.groupCounter, false, h.order)
+ }
+ 
+ func parseHandle(h Helper) (caddyhttp.MiddlewareHandler, error) {
+diff --git a/caddyconfig/httpcaddyfile/directives.go b/caddyconfig/httpcaddyfile/directives.go
+index cdf1ef3aa..57d237b3a 100644
+--- a/caddyconfig/httpcaddyfile/directives.go
++++ b/caddyconfig/httpcaddyfile/directives.go
+@@ -212,6 +212,10 @@ type Helper struct {
+ 	matcherDefs  map[string]caddy.ModuleMap
+ 	parentBlock  caddyfile.ServerBlock
+ 	groupCounter counter
++	// order is the directive order in effect for this adaptation: the
++	// process-wide directiveOrder, possibly overridden by this adaptation's
++	// "order" global option. It must never be written back to directiveOrder.
++	order []string
+ }
+ 
+ // Option gets the option keyed by name.
+@@ -348,7 +352,7 @@ func ParseSegmentAsSubroute(h Helper) (caddyhttp.MiddlewareHandler, error) {
+ 		return nil, err
+ 	}
+ 
+-	return buildSubroute(allResults, h.groupCounter, true)
++	return buildSubroute(allResults, h.groupCounter, true, h.order)
+ }
+ 
+ // parseSegmentAsConfig parses the segment such that its subdirectives
+@@ -444,9 +448,9 @@ type ConfigValue struct {
+ 	directive string
+ }
+ 
+-func sortRoutes(routes []ConfigValue) {
++func sortRoutes(routes []ConfigValue, order []string) {
+ 	dirPositions := make(map[string]int)
+-	for i, dir := range directiveOrder {
++	for i, dir := range order {
+ 		dirPositions[dir] = i
+ 	}
+ 
+diff --git a/caddyconfig/httpcaddyfile/httptype.go b/caddyconfig/httpcaddyfile/httptype.go
+index 60d851fec..3291fb345 100644
+--- a/caddyconfig/httpcaddyfile/httptype.go
++++ b/caddyconfig/httpcaddyfile/httptype.go
+@@ -82,16 +82,25 @@ func (st ServerType) Setup(
+ 
+ 	// apply any global options
+ 	var err error
+-	originalServerBlocks, err = st.evaluateGlobalOptionsBlock(originalServerBlocks, options)
++	var order []string
++	originalServerBlocks, order, err = st.evaluateGlobalOptionsBlock(originalServerBlocks, options)
+ 	if err != nil {
+ 		return nil, warnings, err
+ 	}
++	if order == nil {
++		// no "order" option was given in this adaptation, so fall back to
++		// the process-wide default order (including any directive order
++		// registered by plugins at init time)
++		order = directiveOrder
++	}
+ 
+ 	// this will replace both static and user-defined placeholder shorthands
+ 	// with actual identifiers used by Caddy
+ 	replacer := NewShorthandReplacer()
+ 
+-	originalServerBlocks, err = st.extractNamedRoutes(originalServerBlocks, options, &warnings, replacer)
++	var namedRoutes map[string]*caddyhttp.Route
++	var namedRouteInvokes map[string][]string
++	originalServerBlocks, namedRoutes, namedRouteInvokes, err = st.extractNamedRoutes(originalServerBlocks, options, &warnings, replacer, order)
+ 	if err != nil {
+ 		return nil, warnings, err
+ 	}
+@@ -145,6 +154,7 @@ func (st ServerType) Setup(
+ 				groupCounter: gc,
+ 				State:        state,
+ 				BlockState:   state,
++				order:        order,
+ 			}
+ 
+ 			results, err := dirFunc(h)
+@@ -184,7 +194,7 @@ func (st ServerType) Setup(
+ 
+ 	// each pairing of listener addresses to list of server
+ 	// blocks is basically a server definition
+-	servers, err := st.serversFromPairings(pairings, options, &warnings, gc)
++	servers, err := st.serversFromPairings(pairings, options, &warnings, gc, order, namedRoutes, namedRouteInvokes)
+ 	if err != nil {
+ 		return nil, warnings, err
+ 	}
+@@ -368,12 +378,19 @@ func (st ServerType) Setup(
+ // evaluateGlobalOptionsBlock evaluates the global options block,
+ // which is expected to be the first server block if it has zero
+ // keys. It returns the updated list of server blocks with the
+-// global options block removed, and updates options accordingly.
+-func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options map[string]any) ([]serverBlock, error) {
++// global options block removed, updates options accordingly, and
++// returns the directive order established by any "order" options,
++// or nil if none were given (meaning the process-wide default order
++// applies). The order is kept out of the options map, which may be
++// reused by the caller across adaptations, so it never leaks between
++// adaptations or mutates the process-wide directiveOrder.
++func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options map[string]any) ([]serverBlock, []string, error) {
+ 	if len(serverBlocks) == 0 || len(serverBlocks[0].block.Keys) > 0 {
+-		return serverBlocks, nil
++		return serverBlocks, nil, nil
+ 	}
+ 
++	var order []string
++
+ 	for _, segment := range serverBlocks[0].block.Segments {
+ 		opt := segment.Directive()
+ 		var val any
+@@ -383,12 +400,28 @@ func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options
+ 		optFunc, ok := registeredGlobalOptions[opt]
+ 		if !ok {
+ 			tkn := segment[0]
+-			return nil, fmt.Errorf("%s:%d: unrecognized global option: %s", tkn.File, tkn.Line, opt)
++			return nil, nil, fmt.Errorf("%s:%d: unrecognized global option: %s", tkn.File, tkn.Line, opt)
++		}
++
++		// The "order" option is scoped to this adaptation only, so it is
++		// tracked in a local variable instead of the options map, which
++		// the caller may reuse across separate adaptations.
++		if opt == "order" {
++			val, err = optFunc(disp, order)
++			if err != nil {
++				return nil, nil, fmt.Errorf("parsing caddyfile tokens for '%s': %v", opt, err)
++			}
++			newOrder, ok := val.([]string)
++			if !ok {
++				return nil, nil, fmt.Errorf("unexpected type from 'order' global option: %T", val)
++			}
++			order = newOrder
++			continue
+ 		}
+ 
+ 		val, err = optFunc(disp, options[opt])
+ 		if err != nil {
+-			return nil, fmt.Errorf("parsing caddyfile tokens for '%s': %v", opt, err)
++			return nil, nil, fmt.Errorf("parsing caddyfile tokens for '%s': %v", opt, err)
+ 		}
+ 
+ 		// As a special case, fold multiple "servers" options together
+@@ -400,7 +433,7 @@ func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options
+ 			}
+ 			serverOpts, ok := val.(serverOptions)
+ 			if !ok {
+-				return nil, fmt.Errorf("unexpected type from 'servers' global options: %T", val)
++				return nil, nil, fmt.Errorf("unexpected type from 'servers' global options: %T", val)
+ 			}
+ 			options[opt] = append(existingOpts, serverOpts)
+ 			continue
+@@ -414,7 +447,7 @@ func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options
+ 			}
+ 			logOpts, ok := val.([]ConfigValue)
+ 			if !ok {
+-				return nil, fmt.Errorf("unexpected type from 'log' global options: %T", val)
++				return nil, nil, fmt.Errorf("unexpected type from 'log' global options: %T", val)
+ 			}
+ 			options[opt] = append(existingOpts, logOpts...)
+ 			continue
+@@ -428,7 +461,7 @@ func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options
+ 			}
+ 			defaultBindOpts, ok := val.([]ConfigValue)
+ 			if !ok {
+-				return nil, fmt.Errorf("unexpected type from 'default_bind' global options: %T", val)
++				return nil, nil, fmt.Errorf("unexpected type from 'default_bind' global options: %T", val)
+ 			}
+ 			options[opt] = append(existingOpts, defaultBindOpts...)
+ 			continue
+@@ -447,24 +480,24 @@ func (ServerType) evaluateGlobalOptionsBlock(serverBlocks []serverBlock, options
+ 		seen := make(map[string]bool)
+ 		for _, entry := range serverOpts {
+ 			if _, alreadySeen := seen[entry.ListenerAddress]; alreadySeen {
+-				return nil, fmt.Errorf("cannot have 'servers' global options with duplicate listener addresses: %s", entry.ListenerAddress)
++				return nil, nil, fmt.Errorf("cannot have 'servers' global options with duplicate listener addresses: %s", entry.ListenerAddress)
+ 			}
+ 			seen[entry.ListenerAddress] = true
+ 		}
+ 	}
+ 
+-	return serverBlocks[1:], nil
++	return serverBlocks[1:], order, nil
+ }
+ 
+ // extractNamedRoutes pulls out any named route server blocks
+-// so they don't get parsed as sites, and stores them in options
+-// for later.
++// so they don't get parsed as sites, and returns them for later.
+ func (ServerType) extractNamedRoutes(
+ 	serverBlocks []serverBlock,
+ 	options map[string]any,
+ 	warnings *[]caddyconfig.Warning,
+ 	replacer ShorthandReplacer,
+-) ([]serverBlock, error) {
++	order []string,
++) ([]serverBlock, map[string]*caddyhttp.Route, map[string][]string, error) {
+ 	namedRoutes := map[string]*caddyhttp.Route{}
+ 	namedRouteInvokes := map[string][]string{}
+ 
+@@ -509,11 +542,12 @@ func (ServerType) extractNamedRoutes(
+ 			groupCounter: gc,
+ 			State:        state,
+ 			BlockState:   state,
++			order:        order,
+ 		}
+ 
+ 		handler, err := ParseSegmentAsSubroute(h)
+ 		if err != nil {
+-			return nil, err
++			return nil, nil, nil, err
+ 		}
+ 		subroute := handler.(*caddyhttp.Subroute)
+ 		route := caddyhttp.Route{}
+@@ -528,7 +562,7 @@ func (ServerType) extractNamedRoutes(
+ 
+ 		key := sb.block.GetKeysText()[0]
+ 		if _, exists := namedRoutes[key]; exists {
+-			return nil, fmt.Errorf("cannot have duplicate named_routes: %s", key)
++			return nil, nil, nil, fmt.Errorf("cannot have duplicate named_routes: %s", key)
+ 		}
+ 		namedRoutes[key] = &route
+ 
+@@ -542,10 +576,8 @@ func (ServerType) extractNamedRoutes(
+ 			state[namedRouteKey] = nil
+ 		}
+ 	}
+-	options["named_routes"] = namedRoutes
+-	options["named_route_invokes"] = namedRouteInvokes
+ 
+-	return filtered, nil
++	return filtered, namedRoutes, namedRouteInvokes, nil
+ }
+ 
+ // serversFromPairings creates the servers for each pairing of addresses
+@@ -555,6 +587,9 @@ func (st *ServerType) serversFromPairings(
+ 	options map[string]any,
+ 	warnings *[]caddyconfig.Warning,
+ 	groupCounter counter,
++	order []string,
++	namedRoutes map[string]*caddyhttp.Route,
++	namedRouteInvokes map[string][]string,
+ ) (map[string]*caddyhttp.Server, error) {
+ 	servers := make(map[string]*caddyhttp.Server)
+ 	defaultSNI := tryString(options["default_sni"], warnings)
+@@ -735,8 +770,7 @@ func (st *ServerType) serversFromPairings(
+ 		}
+ 
+ 		// add named routes to the server if 'invoke' was used inside of it
+-		configuredNamedRoutes := options["named_routes"].(map[string]*caddyhttp.Route)
+-		namedRouteInvokes := options["named_route_invokes"].(map[string][]string)
++		configuredNamedRoutes := namedRoutes
+ 		for _, sblock := range p.serverBlocks {
+ 			if len(sblock.pile[namedRouteKey]) == 0 {
+ 				continue
+@@ -918,7 +952,7 @@ func (st *ServerType) serversFromPairings(
+ 
+ 			// set up each handler directive, making sure to honor directive order
+ 			dirRoutes := sblock.pile["route"]
+-			siteSubroute, err := buildSubroute(dirRoutes, groupCounter, true)
++			siteSubroute, err := buildSubroute(dirRoutes, groupCounter, true, order)
+ 			if err != nil {
+ 				return nil, err
+ 			}
+@@ -1421,15 +1455,15 @@ func appendSubrouteToRouteList(routeList caddyhttp.RouteList,
+ 
+ // buildSubroute turns the config values, which are expected to be routes
+ // into a clean and orderly subroute that has all the routes within it.
+-func buildSubroute(routes []ConfigValue, groupCounter counter, needsSorting bool) (*caddyhttp.Subroute, error) {
++func buildSubroute(routes []ConfigValue, groupCounter counter, needsSorting bool, order []string) (*caddyhttp.Subroute, error) {
+ 	if needsSorting {
+ 		for _, val := range routes {
+-			if !slices.Contains(directiveOrder, val.directive) {
++			if !slices.Contains(order, val.directive) {
+ 				return nil, fmt.Errorf("directive '%s' is not an ordered HTTP handler, so it cannot be used here - try placing within a route block or using the order global option", val.directive)
+ 			}
+ 		}
+ 
+-		sortRoutes(routes)
++		sortRoutes(routes, order)
+ 	}
+ 
+ 	subroute := new(caddyhttp.Subroute)
+diff --git a/caddyconfig/httpcaddyfile/options.go b/caddyconfig/httpcaddyfile/options.go
+index 0b4ee5402..956440c55 100644
+--- a/caddyconfig/httpcaddyfile/options.go
++++ b/caddyconfig/httpcaddyfile/options.go
+@@ -101,7 +101,7 @@ func parseOptHTTPSPort(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	return httpsPort, nil
+ }
+ 
+-func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
++func parseOptOrder(d *caddyfile.Dispenser, existingVal any) (any, error) {
+ 	d.Next() // consume option name
+ 
+ 	// get directive name
+@@ -119,8 +119,17 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	}
+ 	pos := Positional(d.Val())
+ 
++	// start from the order established so far in this adaptation; if this
++	// is the first "order" option encountered, that's a private copy of the
++	// process-wide order (the default order, plus any directives registered
++	// by plugins) so this adaptation never mutates shared state
++	base, _ := existingVal.([]string)
++	if base == nil {
++		base = slices.Clone(directiveOrder)
++	}
++
+ 	// if directive already had an order, drop it
+-	newOrder := slices.DeleteFunc(directiveOrder, func(d string) bool {
++	newOrder := slices.DeleteFunc(base, func(d string) bool {
+ 		return d == dirName
+ 	})
+ 
+@@ -131,7 +140,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 		if d.NextArg() {
+ 			return nil, d.ArgErr()
+ 		}
+-		directiveOrder = newOrder
+ 		return newOrder, nil
+ 
+ 	case Last:
+@@ -139,7 +147,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 		if d.NextArg() {
+ 			return nil, d.ArgErr()
+ 		}
+-		directiveOrder = newOrder
+ 		return newOrder, nil
+ 
+ 	// if it's Before or After, continue
+@@ -171,8 +178,6 @@ func parseOptOrder(d *caddyfile.Dispenser, _ any) (any, error) {
+ 	// insert the directive into the new order
+ 	newOrder = slices.Insert(newOrder, targetIndex, dirName)
+ 
+-	directiveOrder = newOrder
+-
+ 	return newOrder, nil
+ }
+ 

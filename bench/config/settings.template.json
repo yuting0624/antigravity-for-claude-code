@@ -1,0 +1,21 @@
+{
+  "_comment": "Rendered per run into $CLAUDE_CONFIG_DIR/settings.json by bench/harness/run.py: __ENV__ receives only the Vertex/model keys copied from the operator's settings plus the fixed bench keys; __ALLOW__ the policy allow rules; __HOOKS_DIR__ the absolute bench/hooks path. No plugins, skills, memory, model or effortLevel here: those are pinned on the command line.",
+  "env": "__ENV__",
+  "permissions": {"allow": "__ALLOW__", "deny": []},
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [
+        {"type": "command", "command": "python3 __HOOKS_DIR__/bash-gate.py", "timeout": 20},
+        {"type": "command", "command": "bash __HOOKS_DIR__/tree-trace.sh", "timeout": 20}
+      ]},
+      {"matcher": "Edit|Write|MultiEdit|NotebookEdit", "hooks": [
+        {"type": "command", "command": "bash __HOOKS_DIR__/tree-trace.sh", "timeout": 20}
+      ]}
+    ],
+    "PostToolUse": [
+      {"matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit", "hooks": [
+        {"type": "command", "command": "bash __HOOKS_DIR__/tree-trace.sh", "timeout": 20}
+      ]}
+    ]
+  }
+}

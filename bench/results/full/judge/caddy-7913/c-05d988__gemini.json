@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7913",
+  "candidate_id": "c-05d988",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:28:54+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "1c501e193962cb4396ba07e0cf5b5dae93271a518ff099b4054180604faa981a",
+  "wall_s": 21.7,
+  "cost_usd": 0.121892,
+  "usage": {
+    "input": 49144,
+    "output": 1967,
+    "thinking": 1763,
+    "cache_read": 0,
+    "total": 51111
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 5,
+    "scope": 5,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 5.0,
+  "rationale": {
+    "consistency": "Matches Caddy's module structure, Caddyfile parsing conventions, JSON tags, and wrapper idioms perfectly.",
+    "edge_cases": "Expertly handles hijacked connections by clearing deadlines, caps rate credits to prevent overflow, and chunks ReadFrom correctly.",
+    "scope": "Implements exactly the requested server-level and route-level idle timeouts, minimum rates, and chunking without unrelated changes.",
+    "readability": "Logic is crystal clear with excellent inline comments explaining the deadline math, chunking loops, and connection lifecycle management.",
+    "robustness": "Safely clears deadlines via defer for keep-alive connections, handles ErrNotSupported efficiently, and correctly manages chunked writes.",
+    "maintainability": "Centralized deadline and wrapper primitives in idletimeout.go elegantly prevent duplication between the server and the handler module."
+  },
+  "flags": []
+}

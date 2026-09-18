@@ -1,0 +1,440 @@
+{
+  "schema": "bench.run/1",
+  "run_id": "full",
+  "run_key": "cli-14136__hybrid-inst__r2",
+  "task_id": "cli-14136",
+  "arm": "hybrid-inst",
+  "rep": 2,
+  "attempt": 1,
+  "lane": "D",
+  "size_class": "medium",
+  "status": "ok",
+  "failure_class": null,
+  "env_failure": null,
+  "violations": [],
+  "started_at": "2026-09-15T15:55:24+00:00",
+  "ended_at": "2026-09-15T16:32:19+00:00",
+  "agent_wall_s": 2211.5,
+  "agent_active_s": 2211.5,
+  "suspended_s": 0.0,
+  "versions": {
+    "claude": "2.1.272 (Claude Code)",
+    "claude_bin": "/Users/linyuting/.local/share/claude/versions/2.1.272",
+    "agy": "1.2.3",
+    "agy_bin": "/Users/linyuting/.cache/agy-bench/bin/agy",
+    "go": "go version go1.27.1 darwin/arm64",
+    "plugin": "0.28.0",
+    "plugin_sha": "5392467"
+  },
+  "conductor": {
+    "model_alias": "opus",
+    "model_ids": [
+      "claude-haiku-4-5@20251001",
+      "claude-opus-5[1m]"
+    ],
+    "effort": "high"
+  },
+  "executor": {
+    "default_tier": "flash",
+    "agy_timeout": "10m"
+  },
+  "caps": {
+    "max_budget_usd": 30,
+    "max_turns": 150,
+    "wall_s": 9000,
+    "overridden": true
+  },
+  "prompt": {
+    "task_sha256": "878ec79131936101a7c822ed364755f664c0191cd2e27b82963d81b2eab23e89",
+    "appendix": "hybrid-appendix.md",
+    "appendix_sha256": "d520a3f18a579b4f9bcf534203f6c0a9c995269a73d37d1dfc1958268aaf97e7",
+    "sent_sha256": "be5da9ffb866620b390daf5a480c90ec18bfa14d8f75efa1babd665be6e6feb4"
+  },
+  "claude": {
+    "session_id": "566fdd67-260f-48d5-a285-3f05cb6decea",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 62,
+    "num_turns_source": "result",
+    "duration_ms": 2211113,
+    "duration_api_ms": 542824,
+    "total_cost_usd": 4.33027925,
+    "total_cost_usd_source": "result.modelUsage",
+    "capped": false,
+    "usage": {
+      "input_tokens": 94,
+      "cache_creation_input_tokens": 203617,
+      "cache_read_input_tokens": 3832066,
+      "output_tokens": 45576,
+      "output_tokens_details": {
+        "thinking_tokens": 17072
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 203617
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard"
+    },
+    "model_usage": {
+      "claude-haiku-4-5@20251001": {
+        "inputTokens": 1645,
+        "outputTokens": 25,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0017699999999999999,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      },
+      "claude-opus-5[1m]": {
+        "inputTokens": 94,
+        "outputTokens": 45576,
+        "cacheReadInputTokens": 3832066,
+        "cacheCreationInputTokens": 203617,
+        "webSearchRequests": 0,
+        "costUSD": 4.328509250000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "thinkingTokens": 17072,
+        "canonicalModel": "claude-opus-5",
+        "provider": "vertex",
+        "costBasis": "list"
+      }
+    },
+    "list_price_usd_recomputed": 4.328509,
+    "recomputed_vs_reported_gap": -0.0004,
+    "price_flags": [
+      "no_claude_rate_for:claude-haiku-4-5@20251001"
+    ],
+    "transcript": {
+      "present": true,
+      "turns": 47,
+      "input": 94,
+      "output": 45576,
+      "cache_creation": 203617,
+      "cache_read": 3832066,
+      "first_turn_cache_read": 9760,
+      "models": {
+        "claude-opus-5": {
+          "turns": 47,
+          "input": 94,
+          "output": 45576,
+          "cache_creation": 203617,
+          "cache_read": 3832066
+        }
+      },
+      "tool_calls": {
+        "Bash": 34,
+        "Read": 4,
+        "Edit": 23
+      },
+      "web_tool_calls": 0,
+      "write_tool_calls": 23,
+      "sidechain_turns": 0,
+      "background_delegations": 0,
+      "bash_cap_backgrounds": 0
+    },
+    "warm_start": true,
+    "usage_reconciles": true,
+    "usage_reconciliation": {
+      "input": {
+        "result": 94,
+        "transcript": 94,
+        "rel": 0.0
+      },
+      "output": {
+        "result": 45576,
+        "transcript": 45576,
+        "rel": 0.0
+      },
+      "cache_creation": {
+        "result": 203617,
+        "transcript": 203617,
+        "rel": 0.0
+      },
+      "cache_read": {
+        "result": 3832066,
+        "transcript": 3832066,
+        "rel": 0.0
+      }
+    },
+    "permission_denials": 4,
+    "denied_tools": {
+      "Bash:pwd;": 1,
+      "Bash:ls": 1,
+      "Bash:python3": 1,
+      "Bash:agy-delegate": 1
+    },
+    "result_head": "All work is complete and verified. Summary of the change:\n\n**`pkg/cmd/pr/shared/worktree.go`** (new) — the shared worktree path rules, moved out of `pr/checkout` and exported:\n- `WorktreeTarget{Path, Reuse}`\n- `ResolveWorktreeTarget` — makes the path absolute, rejects a leaf symlink or an existing non-directory *before* running any git command, then uses `git rev-parse --path-format=absolute` to c",
+    "errors": [],
+    "long_context": {
+      "usd_long_context_est": 4.328509,
+      "requests": 47,
+      "requests_over_200k": 0,
+      "ctx_tokens_over_200k_share": 0.0
+    }
+  },
+  "agy": {
+    "delegations": 4,
+    "usage_lines": 4,
+    "signal_only": 0,
+    "succeeded": 4,
+    "zero_usage_lines": 0,
+    "signals": {
+      "TIMEOUT": 2
+    },
+    "bad_lines": 0,
+    "join": {
+      "by_model_field": 4,
+      "by_conversation_id": 0,
+      "by_order": 0,
+      "unresolved": 0
+    },
+    "by_tier": {
+      "flash": {
+        "calls": 4,
+        "input": 1181973,
+        "output": 63432,
+        "thinking": 49950,
+        "cache_read": 2825954,
+        "usd": 1.336296
+      }
+    },
+    "totals": {
+      "input": 1181973,
+      "output": 63432,
+      "thinking": 49950,
+      "cache_read": 2825954,
+      "total": 1245405
+    },
+    "invariant_ok": true,
+    "shadow_usd": 1.336296,
+    "shadow_usd_is_lower_bound": true,
+    "flags": [],
+    "conversation_ids": [
+      "4d51e1c6-36fe-421e-bb6d-ec1b74fda795",
+      "b9edf68b-bd8b-42e8-a82a-0eb5213ad719",
+      "f3139ae4-a163-49b8-9d00-17bc6e998eab",
+      "c2ede61c-0f41-46ee-b42f-eee7d1647b26"
+    ],
+    "agy_duration_s_sum": 1535.663,
+    "wrapper_calls_in_transcript": 5,
+    "trace_audit": {
+      "4d51e1c6-36fe-421e-bb6d-ec1b74fda795": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 34,
+          "GENERIC": 33
+        },
+        "tool_calls": {
+          "run_command": 26,
+          "view_file": 3,
+          "grep_search": 3,
+          "write_to_file": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T15:58:58Z",
+        "last_step_at": "2026-09-15T16:02:52Z"
+      },
+      "b9edf68b-bd8b-42e8-a82a-0eb5213ad719": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 13,
+          "GENERIC": 12
+        },
+        "tool_calls": {
+          "view_file": 4,
+          "grep_search": 3,
+          "find_by_name": 1,
+          "write_to_file": 1,
+          "run_command": 3
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T16:03:39Z",
+        "last_step_at": "2026-09-15T16:05:57Z"
+      },
+      "f3139ae4-a163-49b8-9d00-17bc6e998eab": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 17,
+          "GENERIC": 17
+        },
+        "tool_calls": {
+          "view_file": 6,
+          "run_command": 1,
+          "grep_search": 8,
+          "find_by_name": 1,
+          "replace_file_content": 1
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 1,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T16:06:37Z",
+        "last_step_at": "2026-09-15T16:15:42Z"
+      },
+      "c2ede61c-0f41-46ee-b42f-eee7d1647b26": {
+        "present": true,
+        "steps": {
+          "USER_INPUT": 1,
+          "PLANNER_RESPONSE": 31,
+          "GENERIC": 30
+        },
+        "tool_calls": {
+          "view_file": 10,
+          "grep_search": 7,
+          "run_command": 12,
+          "replace_file_content": 2
+        },
+        "failed_commands": 0,
+        "web_steps": 0,
+        "write_steps": 2,
+        "unknown_step_types": [],
+        "first_step_at": "2026-09-15T16:16:40Z",
+        "last_step_at": "2026-09-15T16:26:36Z"
+      }
+    },
+    "executor_web_access": false,
+    "executor_write_steps": 5
+  },
+  "writes": {
+    "claude_tool": 23,
+    "claude_bash": 0,
+    "agy": 3,
+    "agy_background": 0,
+    "toolchain_gomod": 0,
+    "between_calls": 0,
+    "post_missing": 0,
+    "events": 142,
+    "gate_blocks": 1,
+    "blocked_heads": {
+      "python3": 1
+    },
+    "gate_allows": 33,
+    "pairing": "tool_use_id",
+    "claude_bash_commands": [],
+    "claude_bash_files": [],
+    "agy_files": [
+      "pkg/cmd/pr/shared/worktree.go",
+      "pkg/cmd/pr/checkout/checkout.go",
+      "git/client.go"
+    ],
+    "claude_tool_files": [
+      "pkg/cmd/pr/checkout/checkout.go",
+      "pkg/cmd/issue/develop/develop.go"
+    ]
+  },
+  "outcome": {
+    "build_ok": true,
+    "build_stderr_tail": "",
+    "vet_ok": true,
+    "vet_mode": "relative",
+    "vet_new_findings": [],
+    "vet_stderr_tail": "",
+    "gofmt_clean": true,
+    "gofmt_dirty_files": [],
+    "hidden_tests": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 0.9,
+      "passed_tests": 109,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 3,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "full_suite": {
+      "pass": true,
+      "rc": 0,
+      "timed_out": false,
+      "seconds": 29.5,
+      "passed_tests": 7384,
+      "failed_tests": [],
+      "failed_packages": [],
+      "build_failed_packages": [],
+      "packages": 308,
+      "stderr_tail": "",
+      "flaky_retry": null,
+      "failed_tests_before_retry": null
+    },
+    "hidden_pass": true,
+    "tree_pass": true,
+    "pass": true,
+    "hidden_test_tampered": false,
+    "tampered_files": []
+  },
+  "diff": {
+    "files_touched": 4,
+    "code_added": 249,
+    "code_removed": 131,
+    "test_added": 0,
+    "test_removed": 0,
+    "doc_added": 0,
+    "other_added": 0,
+    "gomod_changed": false,
+    "files_outside_author_set": [
+      "git/client.go"
+    ],
+    "stray_binaries": [],
+    "patch_sha256": "9734c11cc2f1e5c3677ac72ae128d2312d8201f0c60d39890e4b0a40850cfbfa"
+  },
+  "diff_files": {
+    "git/client.go": {
+      "added": 19,
+      "removed": 0,
+      "class": "code"
+    },
+    "pkg/cmd/issue/develop/develop.go": {
+      "added": 82,
+      "removed": 4,
+      "class": "code"
+    },
+    "pkg/cmd/pr/checkout/checkout.go": {
+      "added": 26,
+      "removed": 127,
+      "class": "code"
+    },
+    "pkg/cmd/pr/shared/worktree.go": {
+      "added": 122,
+      "removed": 0,
+      "class": "code"
+    }
+  },
+  "cost": {
+    "claude_usd": 4.33027925,
+    "gemini_usd": 1.336296,
+    "total_usd": 5.66657525
+  },
+  "notes": [
+    "reaccounted at 2026-09-16T17:22:55+00:00",
+    "reaccounted at 2026-09-16T17:24:10+00:00",
+    "reaccounted at 2026-09-16T18:21:50+00:00",
+    "reaccounted at 2026-09-17T14:49:00+00:00"
+  ],
+  "prices_lock_sha256": "606c43d82972168c3159fa1c45d6cf843d6e52a9cdcc0792cead13e3a71fbc2d",
+  "scheduler_class": "final"
+}

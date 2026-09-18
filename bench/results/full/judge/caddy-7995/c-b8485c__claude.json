@@ -1,0 +1,38 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "full",
+  "task_id": "caddy-7995",
+  "candidate_id": "c-b8485c",
+  "judge": "claude",
+  "judge_model_id": "claude-fable-5-1[1m],claude-haiku-4-5@20251001",
+  "attempt": 1,
+  "judged_at": "2026-09-16T15:06:06+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "254088ed9b2d3341002c4a21ac0341f563dec3f4941ee76f55f1869513f73851",
+  "wall_s": 5.6,
+  "cost_usd": 0.1032955,
+  "usage": null,
+  "rc": 0,
+  "scores": {
+    "consistency": 1,
+    "edge_cases": 1,
+    "scope": 1,
+    "readability": 1,
+    "robustness": 1,
+    "maintainability": 1
+  },
+  "mean": 1.0,
+  "rationale": {
+    "consistency": "Empty diff; no code to judge against codebase conventions.",
+    "edge_cases": "Empty diff; invalid order, concurrency, and options-map reuse cases are all unaddressed.",
+    "scope": "Empty diff; none of the required change was delivered.",
+    "readability": "Empty diff; nothing to read.",
+    "robustness": "Empty diff; shared mutable order state and race conditions remain.",
+    "maintainability": "Empty diff; no implementation exists."
+  },
+  "flags": [
+    "empty_diff",
+    "incomplete"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "bench.judge/1",
+  "run_id": "handoff",
+  "task_id": "cli-attach",
+  "candidate_id": "c-3435eb",
+  "judge": "gemini",
+  "judge_model_id": "Gemini 3.1 Pro (High)",
+  "attempt": 1,
+  "judged_at": "2026-09-17T15:09:16+00:00",
+  "status": "ok",
+  "format_error": "",
+  "prompt_sha256": "354bd68b4a67bf57a1fd661505f5ecc6faac91e35e0d3392ba8023be70ac6117",
+  "wall_s": 105.4,
+  "cost_usd": 0.237872,
+  "usage": {
+    "input": 72844,
+    "output": 7682,
+    "thinking": 7504,
+    "cache_read": 0,
+    "total": 80526
+  },
+  "rc": 0,
+  "scores": {
+    "consistency": 5,
+    "edge_cases": 3,
+    "scope": 4,
+    "readability": 5,
+    "robustness": 5,
+    "maintainability": 5
+  },
+  "mean": 4.5,
+  "rationale": {
+    "consistency": "Flawlessly matches gh conventions, existing package structures, and command idioms.",
+    "edge_cases": "Fails to treat --attach as valid body input for create commands and submits partial uploads instead of aborting.",
+    "scope": "Implements the feature thoroughly but deliberately ignores the 'nothing is written on failure' rule.",
+    "readability": "Extremely clear code with well-separated concerns and excellent explanatory comments.",
+    "robustness": "Highly resilient: safely handles markdown AST, validates file types/sizes, escapes alt text properly, and cleans up resources.",
+    "maintainability": "The internal attachments package is highly cohesive, decoupled, and easy to extend."
+  },
+  "flags": []
+}
