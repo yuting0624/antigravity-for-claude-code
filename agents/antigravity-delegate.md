@@ -54,7 +54,7 @@ claim success** — verification is the caller's (Claude's) job.
 ## Core rule — everything goes through the wrapper
 
 You have **no `Write` and no `Edit`**, and a `PreToolUse` gate **blocks every Bash
-command except the delegation wrapper** (`agy-delegate` / `agy-job`). So all
+command except the delegation wrapper** (`agy-delegate` / `agy-job` / `agy-handoff`). So all
 file creation/editing and bulky work must be performed by agy, not by you — you
 cannot write files even via the shell. Never reconstruct file contents in your reply.
 

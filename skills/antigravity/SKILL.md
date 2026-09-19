@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.28.0
+version: 0.29.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -28,6 +28,10 @@ the model — routing, shared rules, verification gates — not raw generation.
 - **Orchestrator (async, multi-unit):** decompose a larger task into units, dispatch
   to agy (often with `--dir`, agentic, in parallel), then review and integrate.
   Best for migrations, bulk implementation against patterns, test suites.
+- **Hand-off (whole task, tests as the gate):** hand one coherent, test-covered task
+  to agy as a whole with `agy-handoff`, read nothing, verify only by running the tests,
+  hand the diff to a human as a first draft. The only delegation shape measured cheaper
+  than Claude alone on implementation work — see **Hand-off mode** below.
 
 ## Division of labor across the SDLC
 
@@ -253,6 +257,57 @@ commands** (`--yolo` grants write + terminal):
 - `--sandbox` is NOT execution containment. Measured on macOS with agy 1.1.19: with `--yolo`, `--sandbox` changed nothing — a write to an absolute path OUTSIDE `--dir` succeeded (rc 0), `id` ran and returned a real uid, and `curl https://example.com` returned 200. agy's own help says "terminal restrictions"; whatever it restricts, it is not those, and not in this combination. Not tested on Linux. Contain by what you check
   out and by `permissions.allow`, not by the flag.
 - **Claude reviews the diff before merging** — never auto-merge agy's writes.
+
+## Hand-off mode — whole task to agy, tests as the gate (measured)
+
+The measurement that shaped this section: eight merged pull requests from public Go
+repositories (caddy, cli/cli, k6, zoekt; 52–2,242 lines), replayed from the parent commit
+with the PR's tests restored before scoring, Claude Opus 5 as the conductor in every arm,
+n = 2–3 per cell, blinded two-family review (2026-09; PR #91, `docs/BENCHMARK.md`).
+
+| configuration | cost per passing task vs solo Opus 5 | tests | blinded review (5 = best) |
+|---|---|---|---|
+| Claude reads, specifies, agy writes file by file | **1.33–1.68×** | equal | 3.7–3.8 vs 4.0 |
+| Claude reads nothing; whole task to agy; tests decide (`agy-handoff`) | **0.58×** (large ≥700 lines **0.43×**; small <100 lines **1.20×**) | 16/16 | 3.4 vs 4.0 (human-merged PR: 3.7) |
+| same, plus agy reviewing its own diff against a checklist | 0.67× | 15/16 | 3.5 |
+| Sonnet 5 alone | 0.58× | 17/20 | 3.7 |
+
+Why it works: a solo run's spend is 54% cache reads and 21% cache writes; half of what
+the conductor reads it never edits. Delegation only saves money when the conductor stops
+reading. Why it is not free: the executor writes more than asked (dead code, duplicated
+helpers, extra options) and nobody reads it before the tests, so the result is a **first
+draft for human review**, and the wall-clock is 3–4× a solo run. Prices matter too: at
+the Gemini 3.8 Flash unit price this project was actually billed (2× the promotional
+`prices.json` rate) the overall saving vanishes and only large tasks keep 0.77×; on an
+Antigravity plan where the Gemini side is not metered, the Claude side alone is 0.16×.
+
+Rules, all measured:
+
+1. **Hand off whole, or not at all.** One delegation carrying the entire requirement,
+   verbatim, plus the contract `agy-handoff` appends (tests exist and must pass unmodified,
+   no additions beyond the requirement, leave changes uncommitted, run the gate before
+   finishing). Median 1–2 delegations per task; a second one only to quote a failing test.
+2. **Size gate.** Roughly 200 changed lines and up, with tests that define "done". Below
+   that the fixed price of one long executor conversation (about $1.5–2.5 at the deck)
+   exceeds what a solo run would have cost. Small tasks lost money in every delegation arm.
+3. **Read nothing.** Not the files before (ask for a digest if you must), not the diff
+   after. The moment you read to verify, you are back in the 1.3–1.7× regime.
+4. **Tests are the only gate you apply.** `agy-handoff` runs the repository's verification
+   command, sends at most one fix-up quoting the failing output, and checks the named
+   test files were not touched. No test command, no hand-off (`--no-verify` exists for
+   experiments, not for work).
+5. **Human review after green.** Hand the diff over as a first draft and say what the
+   reviewer found in the measurement: dead code and unused fields, helpers re-implemented
+   beside a library already in `go.mod`, options nobody asked for, mismatched import
+   grouping. Asking the executor to review its own diff for these did not help (+0.07).
+6. **Clean tree, dedicated branch, `--yolo` implied.** The executor edits with all tools
+   auto-approved and may search the web; the wrapper refuses a dirty tree unless told
+   otherwise. It registers the repository with agy first (`agy --new-project`; in an
+   unseen directory agy otherwise works in its last project root — 450 s vs 119 s).
+7. **Interactive sessions: `--background`.** A real feature takes 20–120 minutes; Claude
+   Code's Bash tool cuts a call off after its timeout. Detach, poll with `agy-job status`,
+   collect with `agy-job result`, and leave the repository alone meanwhile. Headless
+   `claude -p`: synchronous, with the Bash timeout raised.
 
 ## Cost discipline — where the savings actually come from
 

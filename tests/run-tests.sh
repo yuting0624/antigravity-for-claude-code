@@ -2021,6 +2021,123 @@ else
   echo "FAIL: agy-migrate suite"; sed 's/^/    /' "$TMP/migrate.log" | tail -20; FAIL=$((FAIL+1))
 fi
 
+
+echo "== agy-handoff.sh =="
+HANDOFF="$ROOT/scripts/agy-handoff.sh"
+HREPO="$TMP/hrepo"; mkdir -p "$HREPO"
+( cd "$HREPO" && git init -q . && git config user.email t@t && git config user.name t \
+  && printf 'module example.com/h\n\ngo 1.22\n' > go.mod && printf 'package h\n' > a_test.go \
+  && git add -A && git commit -qm init ) >/dev/null 2>&1
+# a verification command that fails $VFAIL times, then passes; every call is counted
+cat > "$TMP/vfy.sh" <<'V'
+#!/usr/bin/env bash
+n=$(cat "$VCOUNT" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$VCOUNT"
+if [ "$n" -le "${VFAIL:-0}" ]; then echo "--- FAIL: TestX VFY-FAIL-MARK-$n"; exit 1; fi
+echo ok; exit 0
+V
+chmod +x "$TMP/vfy.sh"
+hreset() { rm -f "$TMP/vcount"; ( cd "$HREPO" && git checkout -q -- . && git clean -qfd ) >/dev/null 2>&1; }
+export VCOUNT="$TMP/vcount"
+export ANTIGRAVITY_JOBS="$TMP/hjobs"
+
+out=$("$HANDOFF" --help 2>&1); rc=$?
+check "handoff --help" 0 "$rc" "Usage" "$out"
+out=$("$ROOT/bin/agy-handoff" --help 2>&1); rc=$?
+check "bin/agy-handoff forwards" 0 "$rc" "Usage" "$out"
+out=$("$HANDOFF" --dir "$HREPO" 2>&1); rc=$?
+check "no requirement -> exit 1" 1 "$rc"
+out=$("$HANDOFF" --dir "$HOME" "do x" 2>&1); rc=$?
+check "refuses \$HOME" 1 "$rc" "refusing" "$out"
+out=$("$HANDOFF" --dir "$HREPO" --bogus "do x" 2>&1); rc=$?
+check "unknown option -> exit 1" 1 "$rc"
+
+# dirty tree: refused, unless --allow-dirty
+echo stray > "$HREPO/stray.txt"
+out=$("$HANDOFF" --dir "$HREPO" --print-command "do x" 2>&1); rc=$?
+check "dirty tree refused" 1 "$rc" "uncommitted" "$out"
+out=$("$HANDOFF" --dir "$HREPO" --allow-dirty --print-command "do x" 2>&1); rc=$?
+check "--allow-dirty lets a dirty tree through" 0 "$rc" "agy-handoff plan" "$out"
+hreset
+
+# the plan: detected verify command, the contract, the requirement, --tests
+out=$("$HANDOFF" --dir "$HREPO" --tests a_test.go --print-command "Add the thing REQ-MARK" 2>&1); rc=$?
+check "print-command detects the go gate" 0 "$rc" "go build ./... && go vet ./... && go test ./..." "$out"
+check "print-command shows the requirement" 0 "$rc" "REQ-MARK" "$out"
+check "print-command shows the contract" 0 "$rc" "Hand-off contract" "$out"
+check "print-command names the protected tests" 0 "$rc" "a_test.go already exist" "$out"
+check "print-command runs nothing (no verify count)" 0 "$rc" "" ""
+[ ! -e "$TMP/vcount" ] || { echo "FAIL: print-command ran the verify command"; FAIL=$((FAIL+1)); }
+out=$(printf 'STDIN-REQ-MARK' | "$HANDOFF" --dir "$HREPO" --print-command - 2>&1); rc=$?
+check "requirement from stdin (-)" 0 "$rc" "STDIN-REQ-MARK" "$out"
+# no gate detectable and none given -> refused
+mkdir -p "$TMP/nogate" && ( cd "$TMP/nogate" && git init -q . ) >/dev/null 2>&1
+out=$("$HANDOFF" --dir "$TMP/nogate" --print-command "do x" 2>&1); rc=$?
+check "no verification command -> refused" 1 "$rc" "no verification command" "$out"
+out=$("$HANDOFF" --dir "$TMP/nogate" --no-verify --print-command "do x" 2>&1); rc=$?
+check "--no-verify bypasses the gate requirement" 0 "$rc" "skipped" "$out"
+
+# pass: one delegation, verify ok
+hreset
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" "do x" 2>/dev/null); rc=$?
+check "pass path -> exit 0" 0 "$rc" "PASS" "$out"
+check "pass path: one delegation" 0 "$rc" "1 delegation(s), 0 fix-up(s)" "$out"
+check "pass path: verify ran once" 0 "$rc" "1" "$(cat "$TMP/vcount")"
+
+# fix-up: verify fails once, the fix-up prompt quotes the failure, then passes
+hreset
+out=$(VFAIL=1 STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" "do x" 2>/dev/null); rc=$?
+check "fix-up path -> exit 0" 0 "$rc" "2 delegation(s), 1 fix-up(s)" "$out"
+check "fix-up path: verify ran twice" 0 "$rc" "2" "$(cat "$TMP/vcount")"
+hreset
+out=$(VFAIL=1 STUB_MODE=args "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" --json "do x" 2>/dev/null); rc=$?
+check "fix-up prompt quotes the failing output verbatim" 0 "$rc" "VFY-FAIL-MARK-1" "$out"
+check "--json reports the fix-up" 0 "$rc" '"fixups": 1' "$out"
+check "--json carries the schema" 0 "$rc" '"schema": "agy-handoff/1"' "$out"
+
+# still failing after the allowed fix-ups -> exit 4; --fixups 0 makes it one delegation
+hreset
+out=$(VFAIL=9 STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" "do x" 2>/dev/null); rc=$?
+check "verification still red -> exit 4" 4 "$rc" "FAIL" "$out"
+check "exit 4 after exactly one fix-up" 4 "$rc" "2 delegation(s), 1 fix-up(s)" "$out"
+hreset
+out=$(VFAIL=9 STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" --fixups 0 "do x" 2>/dev/null); rc=$?
+check "--fixups 0 -> one delegation, exit 4" 4 "$rc" "1 delegation(s), 0 fix-up(s)" "$out"
+
+# quota: nothing verified, the wrapper's exit code passes through
+hreset
+out=$(STUB_MODE=quota "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" "do x" 2>&1); rc=$?
+check "quota -> exit 10 and no verification" 10 "$rc" "" ""
+[ ! -e "$TMP/vcount" ] || { echo "FAIL: quota path ran the verify command"; FAIL=$((FAIL+1)); }
+
+# a protected test file modified by the "executor" (simulated by the verify script) -> exit 6
+hreset
+cat > "$TMP/vfy_tamper.sh" <<V
+#!/usr/bin/env bash
+echo tampered >> "$HREPO/a_test.go"; echo ok; exit 0
+V
+chmod +x "$TMP/vfy_tamper.sh"
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$HANDOFF" --dir "$HREPO" --new-project off --tests a_test.go --verify "$TMP/vfy_tamper.sh" "do x" 2>/dev/null); rc=$?
+check "modified protected test file -> exit 6" 6 "$rc" "TEST FILES MODIFIED: a_test.go" "$out"
+hreset
+
+# --background: detaches as an agy-job; status/result see it
+hreset
+id=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" --background "do x" 2>/dev/null); rc=$?
+check "--background prints a job id" 0 "$rc" "" ""
+for _ in $(seq 1 40); do [ -s "$ANTIGRAVITY_JOBS/$id/rc" ] && break; sleep 0.25; done
+check "background job finished with rc 0" 0 "$(cat "$ANTIGRAVITY_JOBS/$id/rc" 2>/dev/null || echo 99)" "" ""
+out=$(cd "$HREPO" && "$ROOT/scripts/agy-job.sh" result "$id" 2>/dev/null); rc=$?
+check "agy-job result shows the hand-off report" 0 "$rc" "PASS" "$out"
+out=$("$ROOT/scripts/agy-job.sh" status "$id" 2>/dev/null); rc=$?
+check "agy-job status names the hand-off" 0 "$rc" "task=handoff:" "$out"
+
+# the subagent's Bash gate admits the new wrapper as a bare name only
+printf '%s' '{"tool_input":{"command":"agy-handoff --dir . \"do x\""}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate: bare agy-handoff allowed" 0 "$rc"
+printf '%s' '{"tool_input":{"command":"./agy-handoff --dir . \"do x\""}}' | "$GATE" >/dev/null 2>&1; rc=$?
+check "gate: path-qualified agy-handoff denied" 2 "$rc"
+unset ANTIGRAVITY_JOBS VCOUNT
+
 echo ""
 if [ "$SKIP" -gt 0 ]; then
   echo "PASS=$PASS FAIL=$FAIL SKIP=$SKIP"

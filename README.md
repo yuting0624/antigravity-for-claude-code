@@ -45,6 +45,7 @@ you → Claude Code (conduct: design / verify / review)
 - **Cross-model verification** — an independent, different-model opinion on your code.
 - **Background jobs** — fire a long delegation, keep working, collect later.
 - **Internal fan-out** — one delegation, and agy spawns its own subagents on the cheap side (dynamic `define_subagent` on agy ≥ 1.0.16; `TypeName "self"` + Role on any version); each leaves a **readable trajectory** you audit with `agy-trace`.
+- **Hand-off mode** — `/antigravity:handoff` gives agy a whole, test-covered task; Claude reads nothing and verifies only by running the tests. The one delegation shape that measured **cheaper than Claude Code alone** on implementation work (0.58× per passing task; 0.43× on large tasks — and a loss on small ones), at the price of a 3–4× longer wall-clock and code that needs the human review a first draft gets.
 - **Built-in cost discipline** — measured, not guessed (see below).
 - **Drops in with the discipline on** — a `SessionStart` hook injects the *cost-aware*
   routing policy automatically (toggle in plugin settings), and the `antigravity-delegate`
@@ -66,6 +67,19 @@ On a **large** ADK multi-agent build (+ `adk eval`), same task / same model, 3 w
 → **−27% vs solo@high, −64% vs solo@max, at equal quality** — and the cheap Gemini work isn't even counted. Savings scale with task size; tiny one-off tasks are cheaper to just run on Claude. Full A/B: [`docs/AB-RESULTS.md`](docs/AB-RESULTS.md).
 
 > **Note on cost figures:** numbers are **estimates** — token counts are approximated and rates live in [`prices.json`](prices.json). **Set your real Vertex rates there before quoting any figure.**
+
+**Hand-off mode, measured on real pull requests (2026-09).** Eight merged PRs from caddy,
+cli/cli, k6 and zoekt (52–2,242 lines), replayed with the PR's tests restored before
+scoring, Claude Opus 5 conducting, agy on Gemini 3.8 Flash, n = 2 per cell, blinded
+two-family review. Delegating file by file while Claude reads and specifies cost
+**1.33–1.68×** a solo run per passing task. Handing the **whole** task to agy and verifying
+only by running the tests (`agy-handoff`) cost **0.58×** (95% CI 0.39–0.96) at the
+pre-registered price deck — **0.43×** on large tasks, **1.20×** on small ones — with 16/16
+tests passed and the Claude side alone at 0.16×; the blinded Claude judge rated that code
+0.6 of 5 below the solo run (dead code, duplicated helpers), about 0.2 below the human-merged
+PR. At the Gemini unit price this project was actually billed (2× the promotional rate) the
+overall saving disappears and large tasks keep 0.77×. Full protocol, per-run records and
+deviations: PR #91 (`docs/BENCHMARK.md`).
 
 ## 🚀 Install
 
@@ -90,6 +104,7 @@ In Claude Code:
 |---|---|
 | `/antigravity:setup` | health check — `agy` installed + authenticated, scripts ready |
 | `/antigravity:delegate [--tier flash\|pro] <task>` | delegate a subtask to agy under cost discipline, then verify |
+| `/antigravity:handoff [--dir <repo>] [--tests <files>] <requirement>` | hand a **whole** test-covered task to agy; Claude reads nothing, the wrapper runs the tests, allows one fix-up, and reports — 0.58× a solo run per passing task on the PR-replay benchmark (small tasks: more) |
 | `/antigravity:review [--adversarial]` | independent cross-model review of the current diff; Claude reconciles |
 | `/antigravity:research <topic>` | Claude-orchestrated deep research — agy does grounded web legwork, Claude verifies citations across ≥2 sources |
 | `/antigravity:media <file> [focus] [--convert]` | understand audio / video / images — agy transcribes + analyzes, returns a **timestamped digest**; full transcript goes to a file, not your context |

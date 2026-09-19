@@ -3,6 +3,28 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.29.0
+
+- **Hand-off mode: `agy-handoff` and `/antigravity:handoff`.** The one delegation shape
+  that measured cheaper than Claude Code alone on implementation work (PR-replay
+  benchmark, 8 merged PRs × 2, 2026-09; PR #91): the whole requirement goes to agy in one
+  delegation, Claude reads nothing, the wrapper runs the repository's verification
+  command (detected from `go.mod` / `package.json` / `Cargo.toml` / `pyproject.toml` /
+  `Makefile`, or `--verify`), sends at most one fix-up quoting the failing output, checks
+  that the named test files (`--tests`) were not modified, and reports (`--json` for
+  machines). Measured: 16/16 tests passed at **0.58× a solo Opus 5 run per passing task**
+  (0.43× on large tasks, 1.20× on small — the size gate is in the skill), Claude side
+  0.16×, wall-clock 3.6×, blinded review 0.6 of 5 below solo (about 0.2 below the
+  human-merged PR) — so the output is a first draft for human review, and the skill says
+  what to look for. The wrapper refuses a dirty tree, `$HOME` and `/`, registers the
+  repository with agy first (`agy --new-project`, the 450 s → 119 s fix), and detaches as
+  an `agy-job` with `--background` for interactive sessions. Per-file delegation with the
+  conductor reading cost 1.3–1.7× in the same study, and a self-review pass by the
+  executor recovered nothing (+0.07 of 5 for $1 a run), so neither is offered as a mode.
+  The `antigravity-delegate` subagent's Bash gate admits `agy-handoff`; the session policy
+  names the mode. On the 1.0 line (PR #92) the shipped MCP server never writes, so this is
+  the contract a future writing tool would wrap: `agy-handoff --json`.
+
 ## 0.28.0
 
 - **`AGY_USAGE` now names the model that ran, the tier it was picked from, and agy's own
