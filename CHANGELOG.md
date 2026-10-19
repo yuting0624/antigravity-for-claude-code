@@ -3,6 +3,20 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.29.1
+
+- **Docs: the `pro` fallback's worst case is written down, and what was measured is
+  separated from what was reported.** Review of #107 pointed out two gaps. First, an
+  unremapped `--tier pro` can now run agy up to three times (Argon, `Gemini 3.1 Pro`,
+  `Gemini 3.1 Pro (High)`), each with the full `--print-timeout`, so on a plan that has none of
+  them exit 14 arrives only after up to 3 × the timeout — TROUBLESHOOTING's exit-14 row, the
+  skill's pro-tier paragraph and `/antigravity:status` now say so, so a wall-clock guard or an
+  `agy-job` polling loop sized to one timeout does not call a live job hung. Second, the
+  consumer-plan shape (no 3.1 Pro, Argon present) and the API-key / GCP-project shape are
+  known from issue reports (#102, #104), while only the enterprise shape was measured on
+  agy 1.4.2; the skill and TROUBLESHOOTING now phrase them that way instead of as fact. No
+  code changes.
+
 ## 0.29.0
 
 - **`pro` tier now defaults to `Gemini 4 Argon (High)` with an automatic fallback to

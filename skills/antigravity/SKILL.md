@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.29.0
+version: 0.29.1
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -54,11 +54,13 @@ Routing tier within agy: `flash` (default, bulk) · `flash-lo` (cheapest, trivia
 model `agy models` lists (Claude / GPT on plans that expose them) — via `--model <exact name>`,
 or persistently with the `default_model` / `tier_*` plugin options (in `~/.claude/settings.json`
 `pluginConfigs` or env `CLAUDE_PLUGIN_OPTION_*`). The `pro` tier defaults to **Gemini 4 Argon (High)**
-since 0.29.0 (consumer Google AI plans dropped 3.1 Pro for Argon, #104, and enterprise plans on
-agy 1.4.x renamed `gemini-3.1-pro-high`'s display name to `Gemini 3.1 Pro` while also serving
+since 0.29.0 (consumer Google AI plans list Argon instead of 3.1 Pro — as reported in #104, not
+measured here — and enterprise plans on agy 1.4.x, which were measured, renamed
+`gemini-3.1-pro-high`'s display name to `Gemini 3.1 Pro` while also serving
 `Gemini 4 Argon (High)`). When `tier_pro` is unremapped and the active plan does not expose
 Argon, `agy-delegate` automatically falls back to `Gemini 3.1 Pro` (then `Gemini 3.1 Pro (High)`)
-and logs `pro fell back to …` on stderr — check `AGY_USAGE.model` for the model that actually ran. Keep the executor a
+and logs `pro fell back to …` on stderr — check `AGY_USAGE.model` for the model that actually ran,
+and budget up to 3 × the timeout for a plan that has none of the three. Keep the executor a
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
 
