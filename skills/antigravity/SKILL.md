@@ -60,8 +60,10 @@ measured here — and enterprise plans on agy 1.4.x, which were measured, rename
 `Gemini 4 Argon (High)`). When `tier_pro` is unremapped and the active plan does not expose
 Argon, `agy-delegate` automatically falls back to `Gemini 3.1 Pro` (then `Gemini 3.1 Pro (High)`)
 and logs `pro fell back to …` on stderr — check `AGY_USAGE.model` for the model that actually ran.
-The retry fires only on agy's immediate "model not recognized" error (a timeout exits 12 without
-retrying), so it costs a quick failed start or two, not extra timeouts. Keep the executor a
+The retry fires only on agy's "model not recognized" error, never after a timeout (a timed-out
+attempt exits 12). That rejection is not instant: measured on agy 1.4.2 (enterprise plan, four
+runs) it took 5–37 s per attempt, so a plan with none of the three costs up to three such
+starts — well under one `--print-timeout` each, not three timeouts. Keep the executor a
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
 

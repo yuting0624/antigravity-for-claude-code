@@ -5,20 +5,21 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
 
 ## 0.29.1
 
-- **Docs: what the `pro` fallback costs is written down from the code, and what was measured is
-  separated from what was reported.** Review of #107 and of this entry's first draft pointed
-  out two gaps. First, an unremapped `--tier pro` can now run agy up to three times (Argon,
+- **Docs: what the `pro` fallback costs, measured, and what was measured separated from what
+  was reported.** An unremapped `--tier pro` can run agy up to three times (Argon,
   `Gemini 3.1 Pro`, `Gemini 3.1 Pro (High)`). The retry fires only when agy answers with its
-  immediate "model not recognized" error; a timed-out attempt exits 12 and is not retried. So
-  on a plan that has none of the three the cost is up to three quick failed starts before exit
-  14 — not three timeouts, which is what the first draft of this entry and the #107 text said
-  before the code was re-read. TROUBLESHOOTING's exit-14 row, the skill's pro-tier paragraph and
-  `/antigravity:status` now say exactly that, and `/antigravity:status` no longer points at an
-  `AGY_SIGNAL` for the fallback (it is a plain stderr line; `AGY_USAGE.model` is the record).
-  Second, the consumer-plan shape (no 3.1 Pro, Argon present) and the API-key / GCP-project
-  shape are known from issue reports (#102, #104), while only the enterprise shape was measured
-  on agy 1.4.2; the skill and TROUBLESHOOTING now phrase them that way instead of as fact. No
-  code changes.
+  "model not recognized" error; a timed-out attempt exits 12 and is not retried. That
+  rejection is not instant: on agy 1.4.2 (enterprise plan, four runs of
+  `agy --model "Gemini 3.1 Pro (High)" -p "Reply OK"`) it took 37 s, 26 s, 4.6 s and 9.9 s. So on
+  a plan that has none of the three the cost is up to three such starts before exit 14 — each
+  well under a `--print-timeout`, never three timeouts. TROUBLESHOOTING's exit-14 row, the
+  skill's pro-tier paragraph and `/antigravity:status` say exactly that, and
+  `/antigravity:status` points at `/antigravity:result <id>` as the place the
+  `pro fell back to …` stderr line is visible (`AGY_USAGE.model` is the record of what ran).
+  Separately, the consumer-plan shape (no 3.1 Pro, Argon present) and the API-key /
+  GCP-project shape are known from issue reports (#102, #104), while only the enterprise shape
+  was measured; the skill, TROUBLESHOOTING and `prices.json`'s Argon note now phrase them that
+  way instead of as fact. No code changes.
 
 ## 0.29.0
 
