@@ -59,8 +59,9 @@ measured here — and enterprise plans on agy 1.4.x, which were measured, rename
 `gemini-3.1-pro-high`'s display name to `Gemini 3.1 Pro` while also serving
 `Gemini 4 Argon (High)`). When `tier_pro` is unremapped and the active plan does not expose
 Argon, `agy-delegate` automatically falls back to `Gemini 3.1 Pro` (then `Gemini 3.1 Pro (High)`)
-and logs `pro fell back to …` on stderr — check `AGY_USAGE.model` for the model that actually ran,
-and budget up to 3 × the timeout for a plan that has none of the three. Keep the executor a
+and logs `pro fell back to …` on stderr — check `AGY_USAGE.model` for the model that actually ran.
+The retry fires only on agy's immediate "model not recognized" error (a timeout exits 12 without
+retrying), so it costs a quick failed start or two, not extra timeouts. Keep the executor a
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
 

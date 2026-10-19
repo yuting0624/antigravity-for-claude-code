@@ -5,16 +5,19 @@ All notable changes to **Antigravity for Claude Code**. Format loosely follows
 
 ## 0.29.1
 
-- **Docs: the `pro` fallback's worst case is written down, and what was measured is
-  separated from what was reported.** Review of #107 pointed out two gaps. First, an
-  unremapped `--tier pro` can now run agy up to three times (Argon, `Gemini 3.1 Pro`,
-  `Gemini 3.1 Pro (High)`), each with the full `--print-timeout`, so on a plan that has none of
-  them exit 14 arrives only after up to 3 × the timeout — TROUBLESHOOTING's exit-14 row, the
-  skill's pro-tier paragraph and `/antigravity:status` now say so, so a wall-clock guard or an
-  `agy-job` polling loop sized to one timeout does not call a live job hung. Second, the
-  consumer-plan shape (no 3.1 Pro, Argon present) and the API-key / GCP-project shape are
-  known from issue reports (#102, #104), while only the enterprise shape was measured on
-  agy 1.4.2; the skill and TROUBLESHOOTING now phrase them that way instead of as fact. No
+- **Docs: what the `pro` fallback costs is written down from the code, and what was measured is
+  separated from what was reported.** Review of #107 and of this entry's first draft pointed
+  out two gaps. First, an unremapped `--tier pro` can now run agy up to three times (Argon,
+  `Gemini 3.1 Pro`, `Gemini 3.1 Pro (High)`). The retry fires only when agy answers with its
+  immediate "model not recognized" error; a timed-out attempt exits 12 and is not retried. So
+  on a plan that has none of the three the cost is up to three quick failed starts before exit
+  14 — not three timeouts, which is what the first draft of this entry and the #107 text said
+  before the code was re-read. TROUBLESHOOTING's exit-14 row, the skill's pro-tier paragraph and
+  `/antigravity:status` now say exactly that, and `/antigravity:status` no longer points at an
+  `AGY_SIGNAL` for the fallback (it is a plain stderr line; `AGY_USAGE.model` is the record).
+  Second, the consumer-plan shape (no 3.1 Pro, Argon present) and the API-key / GCP-project
+  shape are known from issue reports (#102, #104), while only the enterprise shape was measured
+  on agy 1.4.2; the skill and TROUBLESHOOTING now phrase them that way instead of as fact. No
   code changes.
 
 ## 0.29.0
