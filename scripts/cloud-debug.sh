@@ -236,7 +236,13 @@ esac
 # (Subshell assignment, not a pipe, so it's safe under `set -euo pipefail`.)
 MAX_BYTES="${CLOUD_DEBUG_MAX_BYTES:-200000}"
 if [ "$(LC_ALL=C; printf '%s' "${#LOGS}")" -gt "$MAX_BYTES" ]; then
-  LOGS="$(LC_ALL=C; printf '%s' "${LOGS:0:$MAX_BYTES}")"
+  # A byte cut can split a multibyte char; invalid UTF-8 then breaks agy (and
+  # uutils `timeout` rejects it as an arg), so drop the trailing non-ASCII char.
+  # ponytail: may drop one complete char too — harmless on an already-clipped log.
+  LOGS="$(LC_ALL=C; s="${LOGS:0:$MAX_BYTES}"
+    while [[ "$s" == *[$'\x80'-$'\xbf'] ]]; do s="${s%?}"; done
+    [[ "$s" == *[$'\xc0'-$'\xff'] ]] && s="${s%?}"
+    printf '%s' "$s")"
   # Clipping mid-array leaves invalid JSON; agy reads it leniently, but say so.
   INSTRUCTION="$INSTRUCTION
 
