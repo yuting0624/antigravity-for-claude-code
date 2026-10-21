@@ -143,6 +143,11 @@ case "${STUB_MODE:-text}" in
   # agy >= 1.1.8 structured envelope. Note the RAW newline inside "response" — agy really
   # emits that, and it makes the payload invalid for strict JSON parsers.
   json_ok)  printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":1,"cache_read_tokens":3,"total_tokens":16}}'; exit 0 ;;
+  # agy 1.4.4 can write the complete envelope and then never exit (shutdown waits on a
+  # conversation-title request; antigravity-cli#1313). The sleep stands in for that hang
+  # and must outlast the wall-clock guard. The text twin has no envelope to judge by.
+  json_ok_hang) printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'; sleep 20; exit 0 ;;
+  text_ok_hang) echo "STUB_OK"; sleep 20; exit 0 ;;
   # agy 1.1.13 turned the write-without-grant SOFT deny into a HARD error: rc=1, and the
   # diagnostic in the envelope's `error` field, carrying none of the 1.1.3 anchors. That
   # shape lands on the rc != 0 path, above the soft-deny check, so exit 15 stopped being
@@ -471,6 +476,18 @@ if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; th
   # outer guard for --timeout 1s = 1 + min-pad(10) = 11s; sleep well past it.
   out=$(STUB_MODE=text STUB_SLEEP=20 "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
   check "hanging agy -> wall-clock guard kills it -> exit 12" 12 "$rc" "TIMEOUT" "$out"
+  # A complete SUCCESS envelope followed by a hang (#1313 upstream) is a finished run:
+  # the reply goes to stdout, the warning to stderr, and the exit is 0.
+  so="$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok_hang "$DELEGATE" --timeout 1s "hi" 2>"$TMP/hang.err")"; rc=$?
+  se="$(cat "$TMP/hang.err")"
+  check "complete JSON result, then agy hangs -> reply printed, exit 0" 0 "$rc" "JSONBODY" "$so"
+  check "complete JSON result, then agy hangs -> warns that agy did not exit" 0 "$rc" "did not exit" "$se"
+  if has "AGY_SIGNAL" "$se"; then
+    echo "FAIL: a finished run killed after the fact emitted AGY_SIGNAL"; FAIL=$((FAIL+1))
+  else echo "ok: a finished run killed after the fact emits no AGY_SIGNAL"; PASS=$((PASS+1)); fi
+  # Plain text has no end-of-result marker, so the same hang stays a timeout.
+  out=$(STUB_MODE=text_ok_hang "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
+  check "plain-text output, then agy hangs -> still exit 12" 12 "$rc" "TIMEOUT" "$out"
 else
   echo "ok: (skipped) hang-guard test — no timeout/gtimeout on PATH"; PASS=$((PASS+1))
 fi
