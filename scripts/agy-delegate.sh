@@ -43,7 +43,9 @@
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
 #             |    (agy's own, the wall-clock guard, or — agy 1.1.28+ — a --print-timeout that
 #             |    expired mid-turn: agy then returns the PARTIAL reply with rc 0 and one stderr
-#             |    line; the wrapper prints that partial reply and still exits 12)
+#             |    line; the wrapper prints that partial reply and still exits 12). Not when
+#             |    JSON mode has a complete SUCCESS reply and agy just failed to exit after it
+#             |    (agy 1.4.4): that prints the reply, warns on stderr and exits 0
 #             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
 #             | 15 permission denied — a tool needed permission headless. BOTH shapes:
 #             |    the soft deny (rc 0, empty stdout, "auto-denied" on stderr — agy 1.1.3+, and
@@ -592,6 +594,16 @@ fi
 
 # `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had to
 # kill agy. Treat that as our structured TIMEOUT (exit 12), not a generic failure.
+# Exception: agy 1.4.4 can write its complete result and then never exit, because
+# shutdown waits on a conversation-title request that nothing cancels
+# (google-antigravity/antigravity-cli#1313). A parsed SUCCESS envelope with a
+# non-empty response means the turn finished, so the kill lost nothing: fall through
+# to the normal checks. Plain-text output has no such end marker, so it stays a timeout.
+if [ -n "$TO_CMD" ] && { [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; } \
+   && [ "$JSON_STATUS" = "SUCCESS" ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
+  echo "agy-delegate: agy wrote a complete result but did not exit; killed by the wall-clock guard (${TO_SECS}s). See https://github.com/google-antigravity/antigravity-cli/issues/1313" >&2
+  RC=0
+fi
 if [ -n "$TO_CMD" ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; }; then
   echo "agy-delegate: agy hit the wall-clock guard (${TO_SECS}s) and was terminated — likely a headless/no-TTY hang." >&2
   if on_windows_native; then
