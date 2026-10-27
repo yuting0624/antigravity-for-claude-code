@@ -3,6 +3,18 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.30.1
+
+- **A finished run that agy fails to exit is no longer a timeout.** agy 1.4.4 can print
+  its complete result and then stay alive, because shutdown waits on a conversation-title
+  request that is never cancelled
+  ([antigravity-cli#1313](https://github.com/google-antigravity/antigravity-cli/issues/1313));
+  the wall-clock guard then killed it and the wrapper exited `12`, discarding a finished
+  reply. When the guard fires and JSON mode parsed a `SUCCESS` envelope with a non-empty
+  response, the wrapper now prints the reply, warns on stderr that agy did not exit, and
+  goes through the normal success checks (exit `0`). Plain-text output has no end marker,
+  so it still exits `12`.
+
 ## 0.30.0
 
 - **Hand-off mode: `agy-handoff` and `/antigravity:handoff`.** The one delegation shape

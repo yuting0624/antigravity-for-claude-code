@@ -166,7 +166,7 @@ generation to happen entirely on Gemini with **zero Claude tokens spent writing*
 the unit to the **`antigravity-delegate` subagent** (its only file-acting tool is the
 wrapper; it returns a digest for you to verify). Either way, *you* still own verification.
 
-**Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout (incl. an expired `--print-timeout`, which agy 1.1.28+ returns as a **partial** reply with rc 0 — the wrapper prints it and still exits 12) · `13`
+**Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout (incl. an expired `--print-timeout`, which agy 1.1.28+ returns as a **partial** reply with rc 0 — the wrapper prints it and still exits 12; a complete JSON `SUCCESS` reply after which agy never exits, seen on agy 1.4.4, is printed and exits 0 with a stderr warning) · `13`
 agy-missing · `14` model-unavailable (a `--model` / `tier_*` / `default_model` name not in
 `agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
 permission-denied (a tool needed permission headless — BOTH the soft deny, agy 1.1.3+ and
