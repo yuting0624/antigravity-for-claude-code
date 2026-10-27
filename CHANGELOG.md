@@ -3,6 +3,15 @@
 All notable changes to **Antigravity for Claude Code**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are in `.claude-plugin/plugin.json`.
 
+## 0.30.2
+
+- **`cloud-debug` no longer splits multibyte UTF-8 characters when byte-clipping logs.**
+  `scripts/cloud-debug.sh` clips `LOGS` to `CLOUD_DEBUG_MAX_BYTES` under `LC_ALL=C`, which
+  could cut inside a multibyte UTF-8 sequence; wrappers that reject invalid UTF-8 in
+  `argv` (such as uutils coreutils `timeout` 0.8.0) then failed the delegation call with
+  exit `5`. Trailing continuation bytes (`0x80`–`0xBF`) and their lead byte (`0xC0`–`0xFF`)
+  are now stripped after the byte cut (#109).
+
 ## 0.30.1
 
 - **A finished run that agy fails to exit is no longer a timeout.** agy 1.4.4 can print
