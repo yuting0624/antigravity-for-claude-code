@@ -588,9 +588,12 @@ fi
 ots_0="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0')"
 ots_0s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0s')"
 ots_10s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 10s')"
-check "outer_timeout_secs 0 -> 0 (not 10)" 0 0 "0" "$ots_0"
-[ "$ots_0" = "0" ] && [ "$ots_0s" = "0" ] || { echo "FAIL: outer_timeout_secs 0/0s returned '$ots_0'/'$ots_0s'"; FAIL=$((FAIL+1)); }
-[ "$ots_10s" = "45" ] && { echo "ok: outer_timeout_secs 10s uses 35s default min pad (45s)"; PASS=$((PASS+1)); } || { echo "FAIL: outer_timeout_secs 10s returned '$ots_10s', want 45"; FAIL=$((FAIL+1)); }
+if [ "$ots_0" = "0" ] && [ "$ots_0s" = "0" ]; then
+  echo "ok: outer_timeout_secs 0 and 0s -> exact 0 (not 10)"; PASS=$((PASS+1));
+else echo "FAIL: outer_timeout_secs 0/0s returned '$ots_0'/'$ots_0s'"; FAIL=$((FAIL+1)); fi
+if [ "$ots_10s" = "45" ]; then
+  echo "ok: outer_timeout_secs 10s uses 35s default min pad (45s)"; PASS=$((PASS+1));
+else echo "FAIL: outer_timeout_secs 10s returned '$ots_10s', want 45"; FAIL=$((FAIL+1)); fi
 
 # userConfig default tier via env; explicit --tier still wins
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" "hi" 2>/dev/null); rc=$?
