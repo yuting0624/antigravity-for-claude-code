@@ -177,7 +177,7 @@ if len(segs) != 1:
     deny("a pipeline (%d pipe%s). No command may feed the wrapper: `git` with arbitrary "
          "arguments runs arbitrary commands, and `cat`/`echo`/`printf` turn the wrapper "
          "into a way to send any file or environment variable to the external model. "
-         "Pass `--dir <repo-root>` and let agy read the repository itself."
+         "Pass `--dir .` and let agy read the repository itself."
          % (len(segs) - 1, "" if len(segs) == 2 else "s"))
 
 toks = tokens(segs[0])

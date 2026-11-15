@@ -1199,7 +1199,7 @@ check "reason names the wrong first command" 0 0 "not agy-delegate"    "$(gate_w
 # WHY, and told what to do instead, or it retries the same shape.
 check "reason names the pipe count"     0 0 "2 pipes"                 "$(gate_why '"cat f | agy-delegate - | wc"')"
 check "reason rejects any pipeline"     0 0 "a pipeline"              "$(gate_why '"ls | agy-delegate -"')"
-check "reason points at --dir instead"  0 0 "--dir"                   "$(gate_why '"cat f | agy-delegate -"')"
+check "reason points at --dir instead"  0 0 "--dir ."                 "$(gate_why '"cat f | agy-delegate -"')"
 
 # The reason goes into the AGENT'S CONTEXT, and a blocked command routinely carries a
 # delegation prompt. It must describe the syntax and never quote ANY of the command back.
