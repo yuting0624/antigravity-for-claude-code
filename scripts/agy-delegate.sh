@@ -8,8 +8,10 @@
 # stdout — for delegation, cross-model checks, or offloading bulk work.
 #
 # Why a wrapper instead of calling `agy` directly:
-#   * `agy --print` silently drops stdout when stdin is a non-TTY -> we always
-#     redirect `< /dev/null` so it never blocks waiting for input.
+#   * `agy --print` silently drops stdout when stdin is a non-TTY -> we detach
+#     stdin (`< /dev/null`) for short prompts and pipe via a rewindable temp file
+#     (`< "$PROMPTF"` without `-p`, measured on agy 1.4.8 and 1.5.9) above 64 KB
+#     to avoid Linux E2BIG.
 #   * agy v1.0.x has NO `--output-format json`, so callers must parse plain text.
 #     This wrapper guarantees: non-empty stdout on success, non-zero exit on
 #     failure or empty output.
@@ -113,7 +115,7 @@ model_unavailable_blob() {
   shopt -s nocasematch
   case "$1" in
     *"invalid --model"*|*"is not recognized as a known model"*|*"not a known model"*|\
-    *"is unavailable:"*|*"is currently available to"*|*"is no longer available"*|\
+    *"model "*" is unavailable:"*|*"model "*" is currently available to"*|*"model "*" is no longer available"*|\
     *"model was not found, or your project does not have access"*|\
     *"model is not supported in the selected location"*)
       shopt -u nocasematch; return 0 ;;
@@ -485,28 +487,37 @@ case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
     fi ;;
 esac
 
-# --- dry run: print the resolved (shell-quoted) agy invocation and exit ---
-if [ "$PRINT_CMD" -eq 1 ]; then
-  { printf 'agy'; printf ' %q' "${ARGS[@]}" -p "$PROMPT"; printf '\n'; }
-  exit 0
-fi
-
-# --- run (detach stdin for short prompts; use a temp file above 64 KB) ---
+# --- decide prompt delivery (detach stdin up to 64 KB; temp file above 64 KB) ---
 # Linux enforces MAX_ARG_STRLEN = 131072 bytes (128 KB) per single argv string, even
 # when ARG_MAX is 2 MB, so a 130–200 KB log digest (`cloud-debug.sh`) or large `git diff`
 # passed via `-p "$PROMPT"` fails immediately with `Argument list too long` (E2BIG).
-# Above 64 KB (measured in bytes under LC_ALL=C so multibyte UTF-8 never slips past),
-# write the prompt to a regular temp file and pass `< "$PROMPTF"` without `-p` — agy
-# reads non-TTY stdin directly into print mode, and a regular file rewinds cleanly if
-# the pro-tier fallback loop retries. Keep `-p "$PROMPT" < /dev/null` up to 64 KB.
+# Above 64 KB (measured in bytes under LC_ALL=C; 16384-char pre-filter covers worst-case
+# 4-byte UTF-8), write the prompt to a regular temp file and pass `< "$PROMPTF"` without
+# `-p` — verified on agy 1.4.8 and 1.5.9 (162.6 KB prompt), agy reads non-TTY stdin
+# directly into print mode, and a regular file rewinds cleanly if the fallback loop
+# retries. Keep `-p "$PROMPT" < /dev/null` up to 64 KB.
 PROMPT_VIA_STDIN=0
-if [ "${#PROMPT}" -gt 20000 ]; then
+prompt_bytes=0
+if [ "${#PROMPT}" -gt 16384 ]; then
   prompt_bytes="$(LC_ALL=C; printf '%s' "${#PROMPT}")"
   if [ "$prompt_bytes" -gt 65536 ]; then
-    PROMPTF="$(mktemp "${TMPDIR:-/tmp}/agy-prompt.XXXXXX")"
-    printf '%s' "$PROMPT" >"$PROMPTF"
     PROMPT_VIA_STDIN=1
   fi
+fi
+
+# --- dry run: print the resolved (shell-quoted) agy invocation and exit ---
+if [ "$PRINT_CMD" -eq 1 ]; then
+  if [ "$PROMPT_VIA_STDIN" -eq 1 ]; then
+    { printf 'agy'; printf ' %q' "${ARGS[@]}"; printf ' < <prompt-file:%sB>\n' "$prompt_bytes"; }
+  else
+    { printf 'agy'; printf ' %q' "${ARGS[@]}" -p "$PROMPT"; printf '\n'; }
+  fi
+  exit 0
+fi
+
+if [ "$PROMPT_VIA_STDIN" -eq 1 ]; then
+  PROMPTF="$(mktemp "${TMPDIR:-/tmp}/agy-prompt.XXXXXX")"
+  printf '%s' "$PROMPT" >"$PROMPTF"
 fi
 
 # Per-invocation temp file for stderr (mktemp avoids the race + symlink risk of a
