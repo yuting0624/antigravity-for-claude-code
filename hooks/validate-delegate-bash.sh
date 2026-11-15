@@ -269,6 +269,20 @@ def scan_opts(opt_toks, val_opts, bool_opts, stop_on_pos):
             check_dir_val(flag_name, add_val)
             idx += 1
             continue
+        if tok == "--json-schema":
+            if idx + 1 >= len(opt_toks):
+                deny("option --json-schema requires a value")
+            schema_val = opt_toks[idx + 1]
+            if not schema_val.lstrip().startswith("{"):
+                check_dir_val("--json-schema", schema_val)
+            idx += 2
+            continue
+        if tok.startswith("--json-schema="):
+            schema_val = tok.split("=", 1)[1]
+            if not schema_val.lstrip().startswith("{"):
+                check_dir_val("--json-schema", schema_val)
+            idx += 1
+            continue
         if tok in val_opts:
             if idx + 1 >= len(opt_toks):
                 deny("option %s requires a value" % tok)
