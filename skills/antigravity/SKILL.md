@@ -133,8 +133,7 @@ because ingesting digests instead of dumps is the single biggest cost lever) ·
 `--print-command` (dry run: show the resolved `agy` call without running or probing `agy --help`; capability-gated flags such as `--output-format json` and `--disable-slash-commands` are added on live runs) · `--allow-slash-commands` (re-enable leading `/command` or `/skill` expansion in print mode; by default `--disable-slash-commands` is passed when `MODE != plan` on agy builds that advertise it, measured on 1.5.9, so prompts starting with `/clear` or `/credits` are sent as literal prose) · pipe a long
 prompt with a trailing `-`.
 
-The wrapper handles agy's quirks (prompt is the value of `-p`; non-TTY stdout drop via
-`< /dev/null`). On **agy ≥ 1.1.8** it also runs agy with `--output-format json`
+The wrapper handles agy's quirks (up to 64 KB, prompt is the value of `-p` with non-TTY stdin detached via `< /dev/null`; above 64 KB, prompt is passed via a rewindable temp file on stdin without `-p` to avoid Linux `E2BIG` — measured on agy 1.4.8 and 1.5.9 with `--output-format json`; `--continue`/`--conversation` + `> 64 KB` combinations are stub-tested). On **agy ≥ 1.1.8** it also runs agy with `--output-format json`
 internally: **stdout still gives you the model's text unchanged**, but failures are
 classified from the structured `error` instead of scraped prose, and the executor's real
 token usage (input / output / thinking / **cache_read**) is reported as an `AGY_USAGE
