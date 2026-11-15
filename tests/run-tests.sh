@@ -1225,6 +1225,7 @@ leak_free "right side of a pipe"                 '"git diff | \"SECRETPROMPTMARK
 leak_free "left side of a pipe"                  '"\"SECRETPROMPTMARKER\" | agy-delegate -"'           'SECRETPROMPTMARKER'
 leak_free "name-shaped token (an API key is)"    '"sk-ant-oat01-SECRETPROMPTMARKER x"'                 'SECRETPROMPTMARKER'
 leak_free "plain wrong command"                  '"SECRETPROMPTMARKER --flag x"'                       'SECRETPROMPTMARKER'
+leak_free "unknown delegate option"              '"agy-delegate --SECRETPROMPTMARKER \"hi\""'          'SECRETPROMPTMARKER'
 
 AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")
@@ -2791,6 +2792,39 @@ check "gate: blocks --add-dir ~ home expansion" 2 "$rc" "outside the current wor
 GATE_WS="$TMP/gate-ws"; mkdir -p "$GATE_WS/sub"
 ( cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --read-only --dir sub --add-dir sub \"hi\""}}' | "$GATE" >/dev/null 2>&1 ); rc=$?
 check "gate: allows --read-only and in-workspace --dir / --add-dir sub" 0 "$rc"
+# Option mis-pairing bypasses (value-taking flags carrying "-d" before --dir / --settings):
+out=$(printf '%s' '{"tool_input":{"command":"agy-handoff --tests -d --dir /etc \"do x\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-handoff --tests -d --dir /etc option mis-pairing" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -m -d --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-delegate -m -d --dir /etc option mis-pairing" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -m -d --settings \"{}\" \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-delegate -m -d --settings option mis-pairing" 2 "$rc" "--settings is not allowed" "$out"
+# Shell parameter / brace / glob expansion in directory flags (assert "shell expansion" so JSON parse errors cannot pass for free):
+gate_cmd_err() {
+  python3 -c 'import json,sys; print(json.dumps({"tool_input": {"command": sys.argv[1]}}))' "$1" | "$GATE" 2>&1
+}
+out=$(gate_cmd_err 'agy-delegate --dir $HOME/.ssh "hi"'); rc=$?
+check "gate: blocks unquoted \$HOME expansion in --dir" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --dir "$HOME/.ssh" "hi"'); rc=$?
+check "gate: blocks double-quoted \$HOME expansion in --dir" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --dir=${PWD}/.. "hi"'); rc=$?
+check "gate: blocks \${PWD}/.. expansion in --dir=" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --dir={.,/etc} "hi"'); rc=$?
+check "gate: blocks brace expansion in --dir=" 2 "$rc" "shell expansion" "$out"
+# Symlink escape, agy-job start --dir, -d with no value, and explicit hook payload cwd:
+ln -sf /etc "$GATE_WS/sym-escape"
+out=$(cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --dir sym-escape \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks symlink inside workspace pointing to /etc" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-job start --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-job start --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-job --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-job --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -d"}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks -d with no directory value" 2 "$rc" "-d requires a directory path" "$out"
+( cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir sub \"hi\""}}))' "$GATE_WS" | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: honors explicit cwd in PreToolUse hook JSON payload" 0 "$rc"
+out=$(cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir /etc \"hi\""}}))' "$GATE_WS" | "$GATE" 2>&1); rc=$?
+check "gate: blocks /etc when explicit cwd in hook JSON is workspace" 2 "$rc" "outside the current working directory" "$out"
 
 # 6. doctor.sh 0.31.0: fallback `ok` + >64KB cache pre-seed, col-2 `/model` probe, and MDM routeWebFetch warning
 DOC159="$TMP/doc159"; DOC159_H="$TMP/doc159-home"; DOC159_C="$TMP/doc159-cache"

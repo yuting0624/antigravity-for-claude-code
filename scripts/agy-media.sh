@@ -180,7 +180,7 @@ NO_SHELL_NOTE=""
 if [ -n "$SCOPED_SETTINGS" ]; then
   NO_SHELL_NOTE="
 
-IMPORTANT: Terminal commands (run_command) are disabled in this session — inspect $ABS directly with read_file and write $OUT with write_file; never call run_command."
+IMPORTANT: Terminal commands (run_command) are disabled in this session -- inspect $ABS directly with read_file and write $OUT with write_file; never call run_command."
 fi
 
 if [ "$IS_STILL_IMAGE" -eq 1 ]; then
