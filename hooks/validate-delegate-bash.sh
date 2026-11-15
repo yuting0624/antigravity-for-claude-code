@@ -219,7 +219,7 @@ DELEGATE_BOOL_OPTS = {
 HANDOFF_VAL_OPTS = {
     "-t", "--tier", "-e", "--effort", "-m", "--model", "--timeout",
     "--fixup-timeout", "--verify-timeout", "--fixups", "--tests",
-    "--new-project",
+    "--new-project",   # enum (auto|on|off), not a path: agy-handoff runs `cd "$DIR" && agy --new-project ...`
 }
 HANDOFF_BOOL_OPTS = {
     "--allow-dirty", "--background", "--json", "--print-command",

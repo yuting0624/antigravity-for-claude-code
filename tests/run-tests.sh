@@ -2825,6 +2825,10 @@ check "gate: blocks -d with no directory value" 2 "$rc" "-d requires a directory
 check "gate: honors explicit cwd in PreToolUse hook JSON payload" 0 "$rc"
 out=$(cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir /etc \"hi\""}}))' "$GATE_WS" | "$GATE" 2>&1); rc=$?
 check "gate: blocks /etc when explicit cwd in hook JSON is workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir .. \"hi\""}}))' "$GATE_WS/sub" | "$GATE" 2>&1); rc=$?
+check "gate: subdirectory cwd blocks parent repo root (--dir ..)" 2 "$rc" "outside the current working directory" "$out"
+( cd "$GATE_WS" && python3 -c 'import json,sys; print(json.dumps({"tool_input": {"command": "agy-handoff --dir . -- \"- add a retry to fetch()\""}}))' | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: allows dash-led agy-handoff requirement after --" 0 "$rc"
 
 # 6. doctor.sh 0.31.0: fallback `ok` + >64KB cache pre-seed, col-2 `/model` probe, and MDM routeWebFetch warning
 DOC159="$TMP/doc159"; DOC159_H="$TMP/doc159-home"; DOC159_C="$TMP/doc159-cache"
