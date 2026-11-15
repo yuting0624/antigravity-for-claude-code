@@ -130,7 +130,7 @@ on a branch) · `--mode accept-edits|plan|auto`
 `--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·
-`--print-command` (dry run: show the resolved `agy` call, don't run it) · `--allow-slash-commands` (re-enable leading `/command` or `/skill` expansion in print mode; by default `--disable-slash-commands` is passed when `MODE != plan` on agy builds that advertise it, measured on 1.5.9, so prompts starting with `/clear` or `/credits` are sent as literal prose) · pipe a long
+`--print-command` (dry run: show the resolved `agy` call without running or probing `agy --help`; capability-gated flags such as `--output-format json` and `--disable-slash-commands` are added on live runs) · `--allow-slash-commands` (re-enable leading `/command` or `/skill` expansion in print mode; by default `--disable-slash-commands` is passed when `MODE != plan` on agy builds that advertise it, measured on 1.5.9, so prompts starting with `/clear` or `/credits` are sent as literal prose) · pipe a long
 prompt with a trailing `-`.
 
 The wrapper handles agy's quirks (prompt is the value of `-p`; non-TTY stdout drop via

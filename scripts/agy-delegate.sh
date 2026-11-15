@@ -42,7 +42,7 @@
 #       --allow-slash-commands       Keep agy's leading `/command` expansion enabled in print mode
 #                                    (by default --disable-slash-commands is passed when MODE != plan
 #                                    so literal `/clear` or `/credits` text in prompts never aborts)
-#       --print-command              Print the resolved agy command and exit (dry run)
+#       --print-command              Print the resolved agy command and exit (dry run; skips agy --help probe)
 #   -h, --help                       Show this help
 #
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
