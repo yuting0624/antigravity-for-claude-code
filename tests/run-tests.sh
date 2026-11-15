@@ -192,7 +192,7 @@ case "${STUB_MODE:-text}" in
   json_reply_mentions_timeout) printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY: agy logs print timeout after 5s with turn in progress; returning partial output when it gives up\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'; exit 0 ;;
   # CRLF stderr on Windows native agy.exe < 1.5.0 (#13).
   crlf_partial_timeout_120) printf '[agy] print timeout after 5s with turn in progress; returning partial output\r\n' >&2; printf 'CRLF_PARTIAL_BODY'; exit 0 ;;
-  # agy 1.5.0+ (#115, measured on 1.5.1 / 1.5.9): --print-timeout exits 3, sets status=ERROR
+  # agy 1.5.0+ (#115, reported on 1.5.1, measured on 1.5.9): --print-timeout exits 3, sets status=ERROR
   # and finished_reason="print_timeout" in the JSON envelope while carrying the partial response,
   # and writes both `error:` and `AGY_ERROR: {..."reason":"print_timeout"}` to stderr.
   json_partial_timeout_151)
@@ -2546,7 +2546,7 @@ check "badmodel -> exit 14 and no verification" 14 "$rc" "executor unavailable (
 hreset
 out=$(STUB_MODE=harddeny "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" "do x" 2>&1); rc=$?
 check "harddeny -> exit 15 and no verification" 15 "$rc" "executor unavailable (agy-delegate exit 15)" "$out"
-check "handoff exit 15 notes policy_blocked despite --yolo" 15 "$rc" "policy_blocked" "$out"
+check "handoff exit 15 notes policy_blocked despite --yolo" 15 "$rc" "policy_blocked despite --yolo" "$out"
 [ ! -e "$TMP/vcount" ] || { echo "FAIL: harddeny path ran the verify command"; FAIL=$((FAIL+1)); }
 
 # a protected test file modified by the "executor" (simulated by the verify script) -> exit 6
