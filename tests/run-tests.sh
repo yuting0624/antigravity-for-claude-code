@@ -262,6 +262,7 @@ case "${STUB_MODE:-text}" in
   vertex_badmodel_153) echo 'error: The requested model was not found, or your project does not have access to it.' >&2; exit 3 ;;
   vertex_badloc_153)   echo 'error: Selected model is not supported in the selected location' >&2; exit 3 ;;
   consumer_unavail)    echo 'error: invalid model selection: model Gemini 4 Carbon is unavailable: Upgrade to Ultra' >&2; exit 1 ;;
+  transient_503_unavail) echo 'error: service is unavailable: try again later' >&2; exit 1 ;;
   badmodel_quota_word) echo 'error: invalid model selection (--model "quota-timed-out-model"): model quota-timed-out-model is not recognized as a known model' >&2; exit 1 ;;
   spend_cap_15x)       echo 'error: MONETIZATION_DENIED: spend cap breached for project' >&2; exit 3 ;;
   prepay_15x)          echo 'error: billing required — visit https://ai.studio/spend or cloud.google.com/billing#prepay' >&2; exit 3 ;;
@@ -832,17 +833,27 @@ check ">64KB prompt rewinds cleanly across pro-tier fallback retry" 0 "$v0303_fb
 v0303_jp75k="$(python3 -c 'import sys; sys.stdout.write("あ" * 25000)')"
 v0303_si_jp=$(printf '%s' "$v0303_jp75k" | STUB_MODE=stdin_info "$DELEGATE" - 2>/dev/null); v0303_jp_rc=$?
 check ">64KB multibyte UTF-8 prompt (25000 chars = 75000B) delivered via stdin file" 0 "$v0303_jp_rc" "stdin_bytes=75000" "$v0303_si_jp"
+v0303_emoji68k="$(python3 -c 'import sys; sys.stdout.write("\U0001f680" * 17000)')"
+v0303_si_em=$(printf '%s' "$v0303_emoji68k" | STUB_MODE=stdin_info "$DELEGATE" - 2>/dev/null); v0303_em_rc=$?
+check ">64KB 4-byte emoji prompt (17000 chars = 68000B) delivered via stdin file" 0 "$v0303_em_rc" "stdin_bytes=68000" "$v0303_si_em"
+v0303_dry_big=$(printf '%s' "$v0303_big70k" | "$DELEGATE" --print-command - 2>/dev/null); v0303_dry_rc=$?
+check ">64KB --print-command reflects stdin file route (no -p)" 0 "$v0303_dry_rc" "< <prompt-file:70000B>" "$v0303_dry_big"
+if has ' -p ' " $v0303_dry_big "; then
+  echo "FAIL: >64KB --print-command still printed -p"; FAIL=$((FAIL+1));
+else echo "ok: >64KB --print-command omits -p"; PASS=$((PASS+1)); fi
 v0303_short=$(STUB_MODE=stdin_info "$DELEGATE" "short prompt" 2>/dev/null); v0303_sh_rc=$?
 check "<=64KB prompt keeps -p and /dev/null stdin" 0 "$v0303_sh_rc" "stdin_bytes=0" "$v0303_short"
 
 # Default --disable-slash-commands when advertised and MODE != plan; omitted on --mode plan or --allow-slash-commands.
 v0303_sc1=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" "/clear and summarize" 2>/dev/null); v0303_sc1_rc=$?
 check "--disable-slash-commands added by default when agy advertises it" 0 "$v0303_sc1_rc" "--disable-slash-commands" "$v0303_sc1"
-v0303_sc2=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" --mode plan "design auth" 2>/dev/null)
+v0303_sc2=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" --mode plan "design auth" 2>/dev/null); v0303_sc2_rc=$?
+check "--mode plan returns resolved args" 0 "$v0303_sc2_rc" "--mode plan" "$v0303_sc2"
 if has '--disable-slash-commands' "$v0303_sc2"; then
   echo "FAIL: --disable-slash-commands passed under --mode plan (cancels plan mode)"; FAIL=$((FAIL+1));
 else echo "ok: --mode plan keeps slash expansion enabled"; PASS=$((PASS+1)); fi
-v0303_sc3=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" --allow-slash-commands "/model" 2>/dev/null)
+v0303_sc3=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" --allow-slash-commands "/model" 2>/dev/null); v0303_sc3_rc=$?
+check "--allow-slash-commands returns resolved args" 0 "$v0303_sc3_rc" "/model" "$v0303_sc3"
 if has '--disable-slash-commands' "$v0303_sc3"; then
   echo "FAIL: --allow-slash-commands still passed --disable-slash-commands"; FAIL=$((FAIL+1));
 else echo "ok: --allow-slash-commands opts out of --disable-slash-commands"; PASS=$((PASS+1)); fi
@@ -853,7 +864,12 @@ check "agy 1.5.3 Vertex 'model was not found, or your project does not have acce
 v0303_c2=$(STUB_MODE=vertex_badloc_153 "$DELEGATE" "hi" 2>&1); v0303_c2_rc=$?
 check "agy 1.5.3 Vertex 'not supported in the selected location' -> exit 14" 14 "$v0303_c2_rc" "MODEL_UNAVAILABLE" "$v0303_c2"
 v0303_c3=$(STUB_MODE=consumer_unavail "$DELEGATE" "hi" 2>&1); v0303_c3_rc=$?
-check "consumer plan-gated 'is unavailable:' -> exit 14" 14 "$v0303_c3_rc" "MODEL_UNAVAILABLE" "$v0303_c3"
+check "consumer plan-gated 'model ... is unavailable:' -> exit 14" 14 "$v0303_c3_rc" "MODEL_UNAVAILABLE" "$v0303_c3"
+v0303_c3_neg=$(STUB_MODE=transient_503_unavail "$DELEGATE" --tier pro "hi" 2>&1); v0303_c3_neg_rc=$?
+check "generic 'service is unavailable:' stays exit 2 (not MODEL_UNAVAILABLE 14)" 2 "$v0303_c3_neg_rc" "AGY_FAILED" "$v0303_c3_neg"
+if has 'fell back to' "$v0303_c3_neg"; then
+  echo "FAIL: generic 'service is unavailable:' triggered pro-tier model fallback"; FAIL=$((FAIL+1));
+else echo "ok: generic 'service is unavailable:' does not trigger model fallback"; PASS=$((PASS+1)); fi
 v0303_c4=$(STUB_MODE=badmodel_quota_word "$DELEGATE" --model "quota-timed-out-model" "hi" 2>&1); v0303_c4_rc=$?
 check "unknown --model containing 'quota'/'timed-out' words still exits 14 (not 10/12)" 14 "$v0303_c4_rc" "MODEL_UNAVAILABLE" "$v0303_c4"
 v0303_c5=$(STUB_MODE=spend_cap_15x "$DELEGATE" "hi" 2>&1); v0303_c5_rc=$?
