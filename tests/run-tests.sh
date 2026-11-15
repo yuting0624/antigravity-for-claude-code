@@ -2853,6 +2853,8 @@ out=$(gate_cmd_err 'agy-delegate --json-schema /etc/passwd "hi"'); rc=$?
 check "gate: blocks out-of-workspace file path on --json-schema" 2 "$rc" "outside the current working directory" "$out"
 out=$(gate_cmd_err 'agy-job start --json-schema $HOME/.ssh/id_rsa "hi"'); rc=$?
 check "gate: blocks shell expansion in --json-schema path on agy-job start" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --json-schema "{/etc/shadow" "hi"'); rc=$?
+check "gate: blocks invalid {-prefixed path on --json-schema (json.loads required)" 2 "$rc" "shell expansion" "$out"
 
 # 6. doctor.sh 0.31.0: fallback `ok` + >64KB cache pre-seed, col-2 `/model` probe, and MDM routeWebFetch warning
 DOC159="$TMP/doc159"; DOC159_H="$TMP/doc159-home"; DOC159_C="$TMP/doc159-cache"

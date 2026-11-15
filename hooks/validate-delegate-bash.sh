@@ -248,6 +248,12 @@ def check_dir_val(flag_name, add_val):
              "main Claude session when cross-directory access is intended)"
              % (flag_name, flag_name))
 
+def is_json_object(s):
+    try:
+        return isinstance(json.loads(s), dict)
+    except Exception:
+        return False
+
 def scan_opts(opt_toks, val_opts, bool_opts, stop_on_pos):
     idx = 0
     while idx < len(opt_toks):
@@ -273,13 +279,13 @@ def scan_opts(opt_toks, val_opts, bool_opts, stop_on_pos):
             if idx + 1 >= len(opt_toks):
                 deny("option --json-schema requires a value")
             schema_val = opt_toks[idx + 1]
-            if not schema_val.lstrip().startswith("{"):
+            if not is_json_object(schema_val):
                 check_dir_val("--json-schema", schema_val)
             idx += 2
             continue
         if tok.startswith("--json-schema="):
             schema_val = tok.split("=", 1)[1]
-            if not schema_val.lstrip().startswith("{"):
+            if not is_json_object(schema_val):
                 check_dir_val("--json-schema", schema_val)
             idx += 1
             continue
