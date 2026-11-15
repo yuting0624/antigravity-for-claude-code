@@ -187,35 +187,39 @@ scripts/agy-delegate.sh --tier pro --dir ./src "List every TODO with file:line"
 # bulk read -> digest-only reply (the biggest cost lever; wrapper warns on dump-sized replies)
 scripts/agy-delegate.sh --digest --dir . "Map the auth flow end to end"
 
-# write task: needs a grant — a permissions.allow write_file(<dir>) rule, or --yolo (run on a branch)
+# scoped read-only web / URL research (agy >= 1.4.10; synthesizes --settings request-review + read_url(*) without --yolo)
+scripts/agy-delegate.sh --tier flash --read-only --allow-url "Web-search <X>. Give URLs + dates."
+
+# write task: needs a grant — a permissions.allow write_file(<dir>) rule, --mode accept-edits (agy >= 1.5.7, workspace writes only), or --yolo (run on a branch)
 scripts/agy-delegate.sh --yolo --dir ./app "Implement X per SPEC.md"
 
-# live web / Google search — and, since agy 1.1.28, any URL read — need --yolo (or a read_url(<target>) rule) headless
-scripts/agy-delegate.sh --tier pro --yolo "Web-search <X>. Give URLs + dates."
+# reasoning effort override + structured JSON Schema output (agy >= 1.4.10 / 1.5.8)
+scripts/agy-delegate.sh --tier flash --effort xhigh --json-schema '{"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]}' "Summarize repo layout"
 
 # Vertex AI Search over internal data
 scripts/agy-delegate.sh --tier pro --yolo "List Vertex AI Search engines (list_engines)."
 
 # cross-model review / stdin / background job
-scripts/agy-delegate.sh --tier pro "Review for bugs, be skeptical: <paste>"
+scripts/agy-delegate.sh --tier pro --read-only "Review for bugs, be skeptical: <paste>"
 cat big-prompt.txt | scripts/agy-delegate.sh -
 ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh result "$ID"
 ```
 
 | tier | model | use for |
 |------|-------|---------|
-| `flash` (default) | Gemini 3.8 Flash (High) | most bulk work |
-| `flash-lo` | Gemini 3.8 Flash (Low) | cheapest, trivial tasks |
-| `pro` | Gemini 4 Argon (High) | harder reasoning / cross-checks |
+| `flash` (default) | Gemini 4 Hydrogen (High) | most bulk work (~2.5× faster agentic throughput) |
+| `flash-lo` (`lite`) | Gemini 4 Hydrogen (Low) | cheapest, low-latency tasks |
+| `pro` | Gemini 4 Carbon (High) | harder coding / reasoning / cross-checks |
+| `argon` · `flash-38` (aliases) | Gemini 4 Argon (High) · Gemini 3.8 Flash (High) | explicit Argon reasoning or promotional $0.75/$3.75 3.8 Flash |
 
-**agy is multi-model.** Tiers default to Gemini, but you can use any model `agy models` lists
-(Claude / GPT on plans that expose them): pass `--model "<exact name>"`, or set it persistently
+**agy is multi-model.** Tiers default to Gemini 4, but you can use any model `agy models` lists
+(Claude / GPT on plans that expose them): pass `--model "<exact name>"` (and optional `--effort low|medium|high|xhigh|max`), or set it persistently
 via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_lo` / `tier_pro`
 (in `~/.claude/settings.json` under `pluginConfigs["antigravity@antigravity-for-claude-code"].options`
 or via env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
 conductor — that's what gives both the cost saving and the cross-model verification.
 
-> **The `flash` tiers moved to Gemini 3.8 Flash in 0.26.0** (3.7 in 0.24.0; 3.5 before that). 3.8, 3.7 and 3.6 carry *identical* list prices — $0.75 in / $3.75 out / $0.075 cached-in per 1M tokens — under promotional pricing that **ends 2026-12-31**, after which all three settle at $1.50 / $7.50 / $0.15 (3.5 is $1.50 / $9.00 / $0.15 throughout). Checked against two sources on 2026-09-03; [`prices.json`](prices.json) carries both sets. No quality claim is made here — the reason to move is currency at an unchanged list price, and this repo has retracted a model comparison before for being measured on a build where `--model` was ignored. An identical *per-token* price is not an identical *per-task* cost: thinking bills as output, nothing here has measured how much of it 3.8 does, so read the `AGY_USAGE` line. One quirk was measured while checking this release: under `--digest`, a prompt that gives agy nothing to inspect (a bare "reply OK" ping) makes 3.8 High run a *command* to find something to report — 6 of 7 runs here, which headless without a grant is exit 15 (3.7 High 0 of 3, 3.8 Medium 1 of 6, 3.8 High without `--digest` 0 of 2). Given a real task — a file behind `--dir`, or code pasted into the prompt — 3.8 High answered 6 of 6. Give it a task, or drop `--digest` for a ping. **If your plan does not serve 3.8 yet** (agy 1.1.25's release note lists it for `GEMINI_API_KEY` sign-in; `agy models` also lists it on the GCP-project sign-in this was measured on, but newer models can lag on enterprise plans) you find out immediately, not silently: `agy-doctor` warns that the tier model is absent from `agy models`, and a delegation exits **14** naming the fix. Remap with the `tier_flash` / `tier_flash_lo` options to anything `agy models` lists — `Gemini 3.7 Flash (High)` and `Gemini 3.6 Flash (High)` cost exactly the same. (agy 1.1.5 switched `agy models` to slugs like `gemini-3.8-flash-high`; both slugs and display names work with `--model`, and `doctor` matches either.)
+> **The default tiers moved to the Gemini 4 family in 0.31.0:** `flash` / `flash-lo` (`lite`) use **Gemini 4 Hydrogen (High)** / **(Low)** ($1.50 in / $7.50 out / $0.075 cached-in per 1M tokens — standard non-promotional pricing with a 95% implicit prefix cache discount ≥ 4,096 tokens), and `pro` uses **Gemini 4 Carbon (High)** ($2.00 in / $10.00 out / $0.10 cached-in introductory through **2026-11-30**, settling at $4.00 / $20.00 / $0.20 standard from **2026-12-01**; [`prices.json`](prices.json) carries both sets alongside `Gemini 3.8 Flash`'s $0.75 / $3.75 promotional rate through **2026-12-31**, accessible via `--tier flash-38`). When `tier_flash`, `tier_flash_lo`, or `tier_pro` is **unremapped** and your active plan does not expose the primary Gemini 4 model (for example Google AI Pro without Carbon/Hydrogen, or Free-tier accounts), `agy-delegate` resolves an entitled fallback in **two layers**: first, it parses the `Available models:` list from `agy`'s error output to jump directly to the first entitled fallback in a single retry (`pro`: Carbon → Argon → 3.1 Pro → 3.1 Pro High/Low → Hydrogen → 3.8 Flash; `flash`: Hydrogen → 3.8 Flash → 3.7 Flash → 3.5 Flash; `flash-lo`: Hydrogen Low → 3.8 Flash Low → 3.5 Flash Lite → 3.1 Flash Lite); second, it caches the resolved model for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` (keyed by `agy` version + auth fingerprint, and pre-seeded by `agy-doctor`) so subsequent calls hit the entitled model on attempt #1 with zero retry delay. Check `AGY_USAGE.model` on stderr for the model that actually ran. (Note: on `Gemini 3.8 Flash (High)` under `--digest`, a bare "reply OK" ping with nothing to inspect was measured to run a command 6 of 7 times — exit 15 headless without a grant; give it a real task or drop `--digest` for a ping. Both slugs and display names work with `--model`, and `doctor` matches either.)
 
 </details>
 
@@ -229,7 +233,7 @@ Delegation doesn't save money by itself — these do (also in the skill):
 3. **Batch** — one big delegation beats many round-trips.
 4. **Review the diff, not the whole tree.**
 
-`scripts/measure-session.py <session-id>` prints the COST-WEIGHTED + est. USD breakdown for a session (Claude side; Gemini side priced separately). `scripts/agy-cost-compare.sh` shows the per-token gap for a task — **estimates from char-count, so verify `prices.json` first.**
+`scripts/measure-session.py <session-id>` prints the COST-WEIGHTED + est. USD breakdown for a session (Claude side; Gemini side priced separately). `scripts/agy-cost-compare.sh` shows the per-token gap for a task — **using exact `AGY_USAGE` token counts (including additive `cache_read`) on `agy ≥ 1.1.8` and falling back to char-count estimates on older plain-text runs; verify `prices.json` first.**
 
 **Running a PoC in your org?** [`docs/POC-PLAYBOOK.md`](docs/POC-PLAYBOOK.md) is the step-by-step method — quality gate first, baseline, one lever at a time, break-even reporting, and org-level rollout/enforcement (incl. Windows/WSL requirements).
 

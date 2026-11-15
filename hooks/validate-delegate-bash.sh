@@ -42,7 +42,7 @@ set -uo pipefail
 
 input="$(cat)"
 
-BLOCK_MSG="[antigravity-delegate] blocked: this subagent may only run agy-delegate / agy-job / agy-handoff, as a BARE name with no path and no pipeline (and for agy-handoff, without --verify or --no-verify). No other commands, pipes, chaining, redirection, substitution, comments, or unquoted newlines. To give agy a repository, pass --dir <repo-root> rather than piping content in. Delegate file work to agy; verification is the caller's job."
+BLOCK_MSG="[antigravity-delegate] blocked: this subagent may only run agy-delegate / agy-job / agy-handoff, as a BARE name with no path and no pipeline (without --settings, without out-of-workspace -d/--dir/--add-dir, and for agy-handoff without --verify or --no-verify). No other commands, pipes, chaining, redirection, substitution, comments, or unquoted newlines. To give agy a repository, pass --dir . rather than piping content in. Delegate file work to agy; verification is the caller's job."
 
 # python3 gives a correct, quote-aware parse. Fail CLOSED if it's missing.
 if ! command -v python3 >/dev/null 2>&1; then
@@ -193,6 +193,45 @@ if w == "agy-handoff":
                  "boundary as SECURITY.md; tamper check and diff review are the guard), "
                  "or run custom `--verify` from the main Claude session."
                  % tok.split("=", 1)[0])
+
+# Block raw --settings (arbitrary SessionSettings JSON could override permissions/hooks)
+# and restrict -d / --dir / --add-dir to paths inside the current working directory so a
+# prompt-injected subagent cannot mount ~/.ssh, /etc, or sibling trees without an explicit grant.
+cwd_real = os.path.realpath(os.getcwd())
+idx = 1
+while idx < len(toks):
+    tok = toks[idx]
+    if tok == "--settings" or tok.startswith("--settings="):
+        deny("--settings is not allowed from the antigravity-delegate subagent: "
+             "use --read-only / --allow-url instead, or run custom --settings "
+             "from the main Claude session.")
+    add_val = None
+    flag_name = None
+    if tok in ("-d", "--dir", "--add-dir"):
+        flag_name = tok
+        if idx + 1 >= len(toks):
+            deny("%s requires a directory path" % flag_name)
+        add_val = toks[idx + 1]
+        idx += 2
+    elif tok.startswith(("--dir=", "--add-dir=")):
+        flag_name, add_val = tok.split("=", 1)
+        idx += 1
+    else:
+        idx += 1
+        continue
+    if not add_val or add_val.startswith("~"):
+        deny("%s outside the current working directory is not allowed "
+             "from the antigravity-delegate subagent" % flag_name)
+    target_real = os.path.realpath(os.path.abspath(add_val))
+    try:
+        inside = os.path.commonpath([cwd_real, target_real]) == cwd_real
+    except ValueError:
+        inside = False
+    if not inside:
+        deny("%s outside the current working directory is not allowed "
+             "from the antigravity-delegate subagent (pass %s from the "
+             "main Claude session when cross-directory access is intended)"
+             % (flag_name, flag_name))
 sys.exit(0)
 PY
 then

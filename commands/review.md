@@ -11,12 +11,12 @@ Scope/flags: $ARGUMENTS
 Do this:
 1. Capture the diff: `git diff` (or the range/paths in the scope above; default to
    uncommitted + last commit if unspecified).
-2. Delegate the review to agy (pro tier) — pipe the diff in on stdin:
-   `git diff | agy-delegate --tier pro -`
+2. Delegate the review to agy (`pro` tier = Gemini 4 Carbon High, falling back automatically on plans without Carbon) — pipe the diff in on stdin with `--read-only`:
+   `git diff | agy-delegate --read-only --tier pro -`
    (This runs as YOU, the conductor. The `antigravity-delegate` subagent cannot pipe —
    its PreToolUse gate refuses every pipeline since GHSA-hwv2-vjgj-8rcv, because `git`
    with arbitrary arguments executes arbitrary commands and `cat` feeding the wrapper
-   ships any file to the external model. If you delegate this step, pass `--dir`.)
+   ships any file to the external model. If you delegate this step, pass `--read-only --dir .`.)
    with an instruction to find correctness/security/performance bugs, be skeptical, and
    list each as `file:line — issue`. If `--adversarial` is set, also have it challenge the
    design decisions and tradeoffs, not just line bugs.

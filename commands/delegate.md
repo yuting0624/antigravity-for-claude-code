@@ -1,6 +1,6 @@
 ---
 description: Delegate a well-scoped subtask to Antigravity (agy/Gemini) under cost discipline, then verify.
-argument-hint: "[--tier flash|pro] <task>"
+argument-hint: "[--tier flash|flash-lo|pro] [--effort low|medium|high|xhigh] <task>"
 ---
 
 Delegate the following task to Antigravity (`agy` / Gemini) via the plugin wrapper,
@@ -9,30 +9,20 @@ following the `antigravity` skill's **Cost discipline** and **Verification gates
 Task: $ARGUMENTS
 
 Do this:
-1. Pick a tier (`flash` default; `pro` for hard reasoning). If the task needs the repo,
+1. Pick a tier (`flash` default = Gemini 4 Hydrogen High; `flash-lo` = Hydrogen Low; `pro` = Gemini 4 Carbon High; auto-falls-back on plans without Carbon/Hydrogen). If the task needs the repo,
    add `--dir <repo-root>` so agy reads the real files (don't paste them into context).
-   **If the task WRITES files or uses tools** (web search / URL reads / Vertex AI Search / terminal), it needs
-   a grant. For a plain file write the narrower one is a `write_file(<dir>)` entry under
-   `permissions.allow` in `~/.gemini/antigravity-cli/settings.json` (recursive beneath
-   `<dir>`, no flag needed — substitute a real path for `<dir>`; if a rule is already
-   there and the write is still denied, `agy-doctor` checks whether agy can parse it). Otherwise pass **`--yolo`**, which auto-approves all tools and
-   is what web search / URL reads (agy 1.1.28+) / Vertex AI Search / terminal need. Without a grant,
-   headless agy leaves your workspace untouched, and since 1.1.3 the run says so on stderr (it
-   describes / scratch-diverts / soft-denies / fails outright depending on version; issue #10). `--mode
-   accept-edits` is not a grant either: measured on agy 1.1.13, where the flag is applied
-   at all, the write is denied exactly like one without it. Run
+   - **Read/analysis tasks**: pass `--read-only` (and `--allow-url` if reading web URLs) so `agy 1.5.7+` default `Auto` mode cannot edit files or run shell commands.
+   - **Workspace file-edit tasks** (no terminal needed): on `agy 1.5.7+`, `--mode accept-edits` auto-approves `write_file` inside `--dir` / `--add-dir` without granting shell execution (or use a `write_file(<dir>)` entry in `permissions.allow` in `~/.gemini/antigravity-cli/settings.json`).
+   - **Full agentic tasks** (running tests/shell commands, Vertex AI Search): pass **`--yolo`**, which auto-approves all tools unless blocked by enterprise admin policy. Run
    write tasks on a dedicated branch — `--sandbox` is not containment, it was measured
    doing nothing under `--yolo` — and
    **verify files actually changed** with `git status`. Claude Code may prompt for or block
    `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
-   (`claude -p`) without that permission can't write/use-tools via agy. (If the wrapper
-   returns exit `15`, that's exactly this: agy denied the write. Both shapes land here —
-   the soft deny on agy 1.1.3+ (back again from 1.1.20, measured on 1.1.25) and the hard
-   error on 1.1.13–1.1.19 — and both take the same
-   fix: a `permissions.allow` rule covering the target, or `--yolo`. Since agy 1.1.27 the
-   wrapper names the refused tool from the envelope's `denied_actions`.)
+   (`claude -p`) without that permission can't run `--yolo` via agy. (If the wrapper
+   returns exit `15`, agy denied a tool interaction — covering both the soft deny back since
+   agy 1.1.20 and 1.1.13's hard error — and names the refused tool from `denied_actions`.)
 2. Run **synchronously** (you may be headless — do not background-and-wait):
-   `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
+   `agy-delegate --tier <tier> [--read-only | --mode accept-edits | --yolo] [--dir .] [--digest] "<task>"`
    For read/analysis tasks, add `--digest` — it appends a digest-only output contract so
    agy returns compact bullets instead of raw content.
 3. Ingest only the **result/digest** — do NOT re-read the files agy already handled

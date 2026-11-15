@@ -1,6 +1,6 @@
 ---
 description: Hand a whole, test-covered task to Antigravity (agy/Gemini) and verify it only by running the tests — the one delegation shape measured cheaper than Claude Code alone.
-argument-hint: "[--dir <repo>] [--tier flash|pro] [--verify \"<cmd>\"] [--tests a_test.go,b_test.go] <requirement>"
+argument-hint: "[--dir <repo>] [--tier flash|flash-lo|pro] [--verify \"<cmd>\"] [--tests a_test.go,b_test.go] <requirement>"
 ---
 
 Hand the following task to Antigravity as a whole, through the plugin's `agy-handoff`

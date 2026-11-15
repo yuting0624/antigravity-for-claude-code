@@ -29,7 +29,7 @@
 #       --severity <SEV>         Minimum severity (default: ERROR)
 #       --resource-type <type>    GCP resource.type (default: cloud_run_revision)
 #   -p, --project <id>           GCP project (default: gcloud config's project)
-#   -t, --tier <flash|flash-lo|pro>  agy tier for the digest (default: flash)
+#   -t, --tier <flash|flash-lo|pro>  agy tier for the digest (default: flash = Hydrogen High)
 #       --print-command          Print the resolved gcloud + agy commands and exit (dry run)
 #   -h, --help                   Show this help
 #
@@ -167,7 +167,7 @@ PROMPT
 # --- dry run: show the resolved pipeline and exit (no gcloud / agy call) ---
 if [ "$PRINT_CMD" -eq 1 ]; then
   { printf 'gcloud'; printf ' %q' "${GCLOUD_ARGS[@]}"; printf '\n'; }
-  printf '  | %s --tier %q -\n' "$DELEGATE" "$TIER"
+  printf '  | %s --read-only --tier %q -\n' "$DELEGATE" "$TIER"
   exit 0
 fi
 
@@ -249,9 +249,9 @@ if [ "$(LC_ALL=C; printf '%s' "${#LOGS}")" -gt "$MAX_BYTES" ]; then
 NOTE: the JSON array below was clipped to ${MAX_BYTES} bytes and is no longer valid JSON — parse it leniently; the digest may be partial."
 fi
 
-# --- delegate the digest to agy (cheap tier; lean output back to Claude) ---
+# --- delegate the digest to agy (read-only tier; lean output back to Claude) ---
 set +e
-DIGEST="$(printf '%s\n%s\n' "$INSTRUCTION" "$LOGS" | "$DELEGATE" --tier "$TIER" - 2>"$ERR")"
+DIGEST="$(printf '%s\n%s\n' "$INSTRUCTION" "$LOGS" | "$DELEGATE" --read-only --tier "$TIER" - 2>"$ERR")"
 RC=$?
 set -e
 

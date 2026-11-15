@@ -65,11 +65,14 @@ cannot write files even via the shell. Never reconstruct file contents in your r
 agy-delegate [options] "<task>"
 ```
 
-Options: `--tier flash|flash-lo|pro` · `--dir <repo-root>` (so agy reads
-`AGENTS.md` + the real files — always prefer this over pasting code) · `--yolo`
-(required for any tool use or file writing in headless mode — a grant over the machine,
+Options: `--tier flash|flash-lo|pro` (`flash` = Gemini 4 Hydrogen High, `flash-lo` = Hydrogen Low,
+`pro` = Gemini 4 Carbon High; plus `--effort low|medium|high|xhigh|max`) · `--dir <repo-root>`
+(so agy reads `AGENTS.md` + the real files — always prefer this over pasting code; `--add-dir <subdir>`
+adds extra in-workspace roots) · `--read-only` (`--allow-url` when URL reads are needed; neutralizes
+`agy 1.5.7+` default `Auto` mode) · `--mode accept-edits` (approves workspace file edits without
+terminal on `agy 1.5.7+`) · `--yolo` (approves all tools and shell commands — a grant over the machine,
 not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert under
-`--yolo`) ·
+`--yolo`) · `--json-schema '<schema>'` ·
 `--timeout 10m` · `-c`/`--continue` to hold state on the cheap side.
 
 ## Cost discipline (why this subagent exists)
@@ -89,18 +92,18 @@ not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert unde
 ## Modes
 
 - **Write / build** (scaffold, implement, generate tests, migrate): agentic mode, and the
-  write needs a grant. Pass `--yolo` unless the user has a `permissions.allow`
-  `write_file(<dir>)` rule covering the target in `~/.gemini/antigravity-cli/settings.json`
-  — that grants the write recursively beneath `<dir>` with no flag, and is narrower than
-  `--yolo`, which approves every tool. If they say a rule is in place and the write is
+  write needs a grant. For pure file edits inside `--dir` on `agy 1.5.7+`, `--mode accept-edits`
+  auto-approves workspace `write_file` without granting shell execution; when the task also runs
+  tests/linters or needs broader tools, pass `--yolo` (or rely on a `permissions.allow`
+  `write_file(<dir>)` rule in `~/.gemini/antigravity-cli/settings.json`). If they say a rule is in place and the write is
   still denied (soft on older agy, a hard error by 1.1.13, soft again from 1.1.20 and named in `denied_actions` since 1.1.27 — the wrapper reports exit 15
   for both), have them run `agy-doctor` before anything else: an entry agy cannot
   parse grants nothing. (The "granted everything before 1.1.11" history belongs to a
-  `command(...)` rule naming no command, not to a mistyped `write_file()`.) You cannot see that file, so `--yolo` stays the
-  default; if a run comes back exit `15`, the allow-rule is the smaller fix. Either way tell
+  `command(...)` rule naming no command, not to a mistyped `write_file()`.) Either way tell
   the caller to run on a dedicated branch/worktree and review the diff before merging.
-- **Read-only** (analysis, first-pass review, search): no `--yolo` needed unless
-  the task uses tools (web search, URL reads — agy 1.1.28 made those ask first — and Vertex AI Search need `--yolo`). Ask agy to return
+- **Read-only** (analysis, first-pass review, search): pass `--read-only` so `agy 1.5.7+`'s default
+  `Auto` mode cannot modify workspace files or run shell commands (add `--allow-url` if the task reads
+  URLs; Vertex AI Search or terminal commands still need explicit `permissions.allow` or `--yolo`). Ask agy to return
   findings + `file:line` only.
 
 ## What to return to the caller

@@ -5,9 +5,11 @@ argument-hint: "[--tier flash|flash-lo|pro] [--timeout 15m] <what to research>"
 
 Run a multi-source research pass on the topic below, following the `antigravity`
 skill's **Deep-research recipe** and **Verification gates**. Antigravity (`agy` / Gemini)
-is the cheap, grounded search worker; **you (Claude) own the plan, the verification, and
-the synthesis**. agy's print-mode citations are coarse (often domain-level) and it can
-present parametric "knowledge" as a sourced fact — so never ship its citations unchecked.
+is the fast, grounded search worker (`flash` = Gemini 4 Hydrogen High, ~2.5x faster on
+multi-query research loops; auto-falls-back to 3.8 Flash High on plans without Hydrogen);
+**you (Claude) own the plan, the verification, and the synthesis**. agy's print-mode
+citations are coarse (often domain-level) and it can present parametric "knowledge" as a
+sourced fact — so never ship its citations unchecked.
 
 Input: $ARGUMENTS
 
@@ -15,11 +17,11 @@ Parse optional `--tier <flash|flash-lo|pro>` (default `flash` for step 2 fan-out
 
 Do this:
 1. **Plan (you).** Break the topic into 3–6 sub-questions and list the load-bearing claims that must be verified. You own scope and final synthesis.
-2. **Fan-out fetch (agy, cheap, one call per sub-question).** Web search — and, since agy 1.1.28, any URL read — needs `--yolo` (or a `read_url(<target>)` allow-rule) in headless mode; force compact output so bulky pages stay on Gemini's side, not yours:
-   `agy-delegate --tier <search-tier> --timeout <timeout> --yolo "Web-search <sub-question>. Return 5–8 bullet findings, each with the exact source URL and publication date. Output ONLY findings + URLs + dates."`
+2. **Fan-out fetch (agy, one call per sub-question).** On `agy >= 1.4.10`, pass `--read-only --allow-url` (sets `toolPermission: "request-review"`, `permissions.allow: ["read_url(*)"]`, and `permissions.ask: ["write_file(*)", "command(*)"]`, permitting web search and URL reads while keeping file writes and shell commands blocked across both consumer and Gemini Enterprise accounts; on older `agy < 1.4.10` where `--settings` is unavailable, fall back to `--yolo` if URL reads hit exit `15` — covering both the soft deny from 1.1.20+ and 1.1.13's hard error, with `denied_actions` naming `read_url`):
+   `agy-delegate --read-only --allow-url --tier <search-tier> --timeout <timeout> "Web-search <sub-question>. Return 5–8 bullet findings, each with the exact source URL and publication date. Output ONLY findings + URLs + dates."`
    If a call exits `12` (`TIMEOUT`), `agy-delegate` prints whatever partial findings agy already gathered to stdout — salvage usable URLs from that partial output, then narrow the sub-question or resume with `--continue --timeout <longer>`.
 3. **Deepen on each load-bearing claim (agy).** Name the URL and have agy quote the supporting sentence(s), turning domain-level citations into verifiable quotes:
-   `agy-delegate --tier pro --timeout <quote-timeout> --yolo "Open <URL> and quote the exact sentence(s) supporting: '<claim>'. If the page does not support it, reply NOT SUPPORTED."`
+   `agy-delegate --read-only --allow-url --tier pro --timeout <quote-timeout> "Open <URL> and quote the exact sentence(s) supporting: '<claim>'. If the page does not support it, reply NOT SUPPORTED."`
 4. **Adversarially verify (you).** Corroborate each key claim across ≥2 independent domains; treat any single / vague / domain-only citation as unverified; sanity-check dates; watch for Gemini parametric knowledge posing as a sourced fact.
 5. **Synthesize (you).** Write a cited report from verified findings only; explicitly mark anything uncorroborated as "unverified".
 
