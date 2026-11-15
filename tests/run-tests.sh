@@ -231,6 +231,11 @@ case "${STUB_MODE:-text}" in
   startup_timeout_151)
     echo 'error: timeout waiting for cascade to start running' >&2
     exit 1 ;;
+  json_partial_timeout_badmodel_words)
+    printf '%s\n' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s while probing: model foo is not recognized as a known model","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf '{"conversation_id":"c-ptbm","status":"ERROR","response":"Partial note before timeout.","error":"print timeout after 5m0s while probing: model foo is not recognized as a known model","duration_seconds":300,"num_turns":1,"usage":{},"finished_reason":"print_timeout"}'
+    exit 3 ;;
   json_partial_timeout_151_hang)
     printf '%s\n' \
       '[agy] print timeout after 1s with turn in progress; returning partial output' \
@@ -579,6 +584,13 @@ if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; th
 else
   echo "ok: (skipped) hang-guard test — no timeout/gtimeout on PATH"; PASS=$((PASS+1))
 fi
+# Direct unit assertions on outer_timeout_secs (fails against unfixed code where 0 -> 10 and 10s -> 20):
+ots_0="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0')"
+ots_0s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0s')"
+ots_10s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 10s')"
+check "outer_timeout_secs 0 -> 0 (not 10)" 0 0 "0" "$ots_0"
+[ "$ots_0" = "0" ] && [ "$ots_0s" = "0" ] || { echo "FAIL: outer_timeout_secs 0/0s returned '$ots_0'/'$ots_0s'"; FAIL=$((FAIL+1)); }
+[ "$ots_10s" = "45" ] && { echo "ok: outer_timeout_secs 10s uses 35s default min pad (45s)"; PASS=$((PASS+1)); } || { echo "FAIL: outer_timeout_secs 10s returned '$ots_10s', want 45"; FAIL=$((FAIL+1)); }
 
 # userConfig default tier via env; explicit --tier still wins
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" "hi" 2>/dev/null); rc=$?
@@ -792,11 +804,11 @@ check "agy 1.5.1 background-task completion race (AGY_ERROR only, no [agy] line)
 pt15st_err=$(STUB_MODE=startup_timeout_151 "$DELEGATE" --timeout 5s "hi" 2>&1); pt15st_rc=$?
 check "agy startup timeout waiting for cascade -> exit 12" 12 "$pt15st_rc" "TIMEOUT" "$pt15st_err"
 
-pt15pro_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_151 "$DELEGATE" --tier pro --timeout 5m "research" 2>&1 >/dev/null); pt15pro_rc=$?
+pt15pro_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_badmodel_words "$DELEGATE" --tier pro --timeout 5m "research" 2>&1 >/dev/null); pt15pro_rc=$?
 check "pro tier print-timeout (rc 3) exits 12 without model fallback" 12 "$pt15pro_rc" "TIMEOUT" "$pt15pro_err"
-if has 'pro fell back to' "$pt15pro_err"; then
+if has 'fell back to' "$pt15pro_err"; then
   echo "FAIL: pro tier retried fallback model after a print-timeout"; FAIL=$((FAIL+1));
-else echo "ok: pro tier does not fall back after a print-timeout"; PASS=$((PASS+1)); fi
+else echo "ok: pro tier does not fall back after a print-timeout (even with model-unavailable words in error)"; PASS=$((PASS+1)); fi
 
 nc15_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_rc3_err_mentions_print_timeout "$DELEGATE" "debug #115" 2>&1); nc15_rc=$?
 check "real rc=3 error mentioning 'print timeout' stays exit 2 (no false TIMEOUT)" 2 "$nc15_rc" "AGY_FAILED" "$nc15_err"

@@ -125,9 +125,10 @@ model_unavailable_blob() {
 
 # True when agy's own --print-timeout cut the turn off (mid-turn or while waiting on
 # non-daemon background tasks). Covers both agy 1.1.28–1.4.x (rc 0 + `[agy] print timeout...`
-# on stderr) and agy >= 1.5.0 (#115: rc 3 + `finished_reason: "print_timeout"` in the JSON
-# envelope, `AGY_ERROR: {..."reason":"print_timeout"...}` on stderr, and the `[agy]` stderr
-# prefix for both mid-turn and background-task timeouts). Never scans prose or model replies:
+# on stderr) and agy >= 1.5.0 (#115, reported on 1.5.1 with `[agy] print timeout after ...
+# returning partial output` and measured on 1.5.9 with rc 3 + `finished_reason: "print_timeout"`
+# in the JSON envelope and `AGY_ERROR: {..."reason":"print_timeout"...}` on stderr; background-task
+# `[agy]` shape from agy 1.5.x diagnostics). Never scans prose or model replies:
 # `[,{]"reason"` cannot match an escaped `\"reason\"` inside an error string.
 is_print_timeout() {
   [ "${JSON_FINISHED:-}" = "print_timeout" ] && return 0
@@ -719,7 +720,7 @@ if [ -n "$JSON_DENIED" ]; then
 fi
 
 # agy 1.1.28–1.4.x returns a mid-turn --print-timeout as rc 0 + partial reply + `[agy] print timeout...`
-# on stderr; agy 1.5.0+ (#115, measured on 1.5.1 and 1.5.9) exits 3 for both mid-turn and
+# on stderr; agy 1.5.0+ (#115, reported on 1.5.1, measured on 1.5.9) exits 3 for both mid-turn and
 # background-task wait timeouts, setting `finished_reason: "print_timeout"` in the JSON
 # envelope (with the partial response in `.response`) and `AGY_ERROR: {..."reason":"print_timeout"}`
 # on stderr. Keep the contract (exit 12 = timeout) and print whatever partial reply agy produced
