@@ -7,4 +7,4 @@ Cancel a running background agy job.
 
 Run: `agy-job cancel $ARGUMENTS`
 
-Confirm to the user whether it was cancelled or had already finished.
+Confirm to the user whether the job (and its `agy` process tree) was cancelled (`state=cancelled`), was already cancelled, or had already finished.

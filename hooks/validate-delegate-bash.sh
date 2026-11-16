@@ -42,7 +42,7 @@ set -uo pipefail
 
 input="$(cat)"
 
-BLOCK_MSG="[antigravity-delegate] blocked: this subagent may only run agy-delegate / agy-job / agy-handoff, as a BARE name with no path and no pipeline (without --settings, without out-of-workspace -d/--dir/--add-dir, and for agy-handoff without --verify or --no-verify). No other commands, pipes, chaining, redirection, substitution, comments, or unquoted newlines. To give agy a repository, pass --dir . rather than piping content in. Delegate file work to agy; verification is the caller's job."
+BLOCK_MSG="[antigravity-delegate] blocked: this subagent may only run agy-delegate / agy-job / agy-handoff, as a BARE name with no path and no pipeline (without --settings, with -d/--dir/--add-dir confined to literal paths inside cwd, and for agy-handoff without --verify or --no-verify; note -d/--dir/--add-dir bounds workspace mounts only, while --yolo still grants machine-wide tool execution when passed). No other commands, pipes, chaining, redirection, substitution, comments, or unquoted newlines. To give agy a repository, pass --dir . rather than piping content in. Delegate file work to agy; verification is the caller's job."
 
 # python3 gives a correct, quote-aware parse. Fail CLOSED if it's missing.
 if ! command -v python3 >/dev/null 2>&1; then
@@ -202,9 +202,12 @@ if w == "agy-handoff":
 # Block raw --settings (arbitrary SessionSettings JSON could override permissions/hooks)
 # and restrict -d / --dir / --add-dir to literal paths inside the current working directory
 # so a prompt-injected subagent cannot mount ~/.ssh, /etc, or sibling trees without an
-# explicit grant. Parse each wrapper's real option grammar so value-taking flags (--tests,
-# -m/--model, etc.) cannot mis-pair a literal "-d" value to hide a following --dir/--settings,
-# and block shell/glob/brace expansion ($VAR, ~, *, ?, [], {}) inside directory arguments.
+# explicit grant. Note that -d / --dir / --add-dir confinement bounds which workspace roots
+# agy mounts; when --yolo is passed (or implied by agy-handoff), --yolo still grants
+# machine-wide tool execution. Parse each wrapper's real option grammar so value-taking
+# flags (--tests, -m/--model, etc.) cannot mis-pair a literal "-d" value to hide a following
+# --dir/--settings, and reject shell/glob/brace metacharacters ($VAR, ~, *, ?, [], {}) with
+# a dedicated message separate from out-of-cwd resolution.
 cwd_real = os.path.realpath(cwd_base)
 
 DELEGATE_VAL_OPTS = {
@@ -229,13 +232,13 @@ DIR_OPTS = {"-d", "--dir", "--add-dir"}
 
 def check_dir_val(flag_name, add_val):
     if not add_val:
-        deny("%s outside the current working directory is not allowed "
-             "from the antigravity-delegate subagent" % flag_name)
+        deny("%s requires a non-empty literal path inside the current working directory"
+             % flag_name)
     if add_val.startswith("~") or any(ch in add_val for ch in "$`*?[]{}"):
-        deny("%s outside the current working directory is not allowed "
-             "from the antigravity-delegate subagent (shell expansion, ~, "
-             "globs, and braces in directory paths are blocked; pass a "
-             "literal path inside the current working directory)" % flag_name)
+        deny("%s may not contain shell expansion, ~, globs, or braces "
+             "($, backtick, ~, *, ?, [], {} are blocked from the antigravity-delegate "
+             "subagent; pass a literal path inside the current working directory, "
+             "such as --dir .)" % flag_name)
     resolved_in = add_val if os.path.isabs(add_val) else os.path.join(cwd_real, add_val)
     target_real = os.path.realpath(resolved_in)
     try:

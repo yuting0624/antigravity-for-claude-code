@@ -22,9 +22,16 @@ do), and a **non-destructive** proof-of-concept (exit codes / policy decisions, 
 ## Scope — what matters most here
 
 - **`hooks/validate-delegate-bash.sh`** — the PreToolUse gate that is the *only* thing
-  restricting what the `antigravity-delegate` subagent may run via Bash. Bypasses here
-  (arbitrary command execution under prompt injection) are the highest-value reports.
-- **`scripts/agy-delegate.sh` / `agy-job.sh`** — the wrappers that invoke `agy`.
+  restricting what the `antigravity-delegate` subagent may run via Bash. It limits calls
+  to bare `agy-delegate` / `agy-job` / `agy-handoff` with no pipeline, blocks raw
+  `--settings` (and `--verify` / `--no-verify` on `agy-handoff`), and confines
+  `-d` / `--dir` / `--add-dir` (plus file-path `--json-schema`) to literal paths without
+  shell/glob metacharacters resolving inside `cwd`. Note that `-d` / `--dir` / `--add-dir`
+  confinement bounds which workspace roots `agy` mounts — when `--yolo` is passed (or
+  implied by `agy-handoff`), `--yolo` (`--dangerously-skip-permissions`) still grants `agy`
+  machine-wide tool execution (`--sandbox` is not containment). Bypasses of the Bash gate
+  itself (arbitrary command execution under prompt injection) are the highest-value reports.
+- **`scripts/agy-delegate.sh` / `agy-handoff.sh` / `agy-job.sh`** — the wrappers that invoke `agy`.
 - **`hooks/`** — anything injected into the model's context or run at session start.
 - Trust boundary reminder: `agy` output and repo contents are **untrusted** — the plugin
   treats agy as a tool whose results Claude must verify, never as a trusted authority.

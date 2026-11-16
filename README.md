@@ -103,13 +103,13 @@ In Claude Code:
 | command | what it does |
 |---|---|
 | `/antigravity:setup` | health check — `agy` installed + authenticated, scripts ready |
-| `/antigravity:delegate [--tier flash\|pro] <task>` | delegate a subtask to agy under cost discipline, then verify |
+| `/antigravity:delegate [--tier flash\|flash-lo\|pro] <task>` | delegate a subtask to agy under cost discipline, then verify |
 | `/antigravity:handoff [--dir <repo>] [--tests <files>] <requirement>` | hand a **whole** test-covered task to agy; Claude reads nothing, the wrapper runs the tests, allows one fix-up, and reports — 0.58× a solo run per passing task on the PR-replay benchmark (small tasks: more) |
 | `/antigravity:review [--adversarial]` | independent cross-model review of the current diff; Claude reconciles |
-| `/antigravity:research [--tier flash\|pro] [--timeout 15m] <topic>` | Claude-orchestrated deep research — agy does grounded web legwork, Claude verifies citations across ≥2 sources |
+| `/antigravity:research [--tier flash\|flash-lo\|pro] [--timeout 15m] <topic>` | Claude-orchestrated deep research — agy does grounded web legwork, Claude verifies citations across ≥2 sources |
 | `/antigravity:media <file> [focus] [--convert]` | understand audio / video / images — agy transcribes + analyzes, returns a **timestamped digest**; full transcript goes to a file, not your context |
 | `/antigravity:cloud-run-debug [--service <s>] [--region <r>] [--project <id>] [--since 1h] [--apply]` | diagnose a failing Cloud Run service — agy digests the error logs, Claude infers the root cause + fix; read-only by default (`--apply` writes to a branch) |
-| `/antigravity:status [id]` · `:result <id>` · `:cancel <id>` | manage background delegation jobs |
+| `/antigravity:status [id]` · `:result <id>` · `:cancel <id>` | manage background delegation jobs (`:cancel` terminates the full job process tree and marks `state=cancelled`) |
 | `/antigravity:migrate [--apply] [--include-repos]` | move an existing Claude Code setup onto agy — skills, CLAUDE.md, memory, MCP, plugins, permissions; dry-run by default, `--uninstall` reverses it |
 
 > Background jobs are for **interactive** sessions (fire-and-collect). In headless `claude -p` (one-shot), delegate **synchronously** — there's no later turn to collect a result.
@@ -199,10 +199,10 @@ scripts/agy-delegate.sh --tier flash --effort xhigh --json-schema '{"type":"obje
 # Vertex AI Search over internal data
 scripts/agy-delegate.sh --tier pro --yolo "List Vertex AI Search engines (list_engines)."
 
-# cross-model review / stdin / background job
+# cross-model review / stdin / background job (cancel terminates the full job process tree)
 scripts/agy-delegate.sh --tier pro --read-only "Review for bugs, be skeptical: <paste>"
 cat big-prompt.txt | scripts/agy-delegate.sh -
-ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh result "$ID"
+ID=$(scripts/agy-job.sh start --tier pro --dir . "big task"); scripts/agy-job.sh status "$ID"; scripts/agy-job.sh result "$ID"   # or: scripts/agy-job.sh cancel "$ID"
 ```
 
 | tier | model | use for |
@@ -219,7 +219,7 @@ via plugin options — `default_model`, or per-tier `tier_flash` / `tier_flash_l
 or via env `CLAUDE_PLUGIN_OPTION_*`). Keep the executor a *different, cheaper* model than the Claude
 conductor — that's what gives both the cost saving and the cross-model verification.
 
-> **The default tiers moved to the Gemini 4 family in 0.31.0:** `flash` / `flash-lo` (`lite`) use **Gemini 4 Hydrogen (High)** / **(Low)** ($1.50 in / $7.50 out / $0.075 cached-in per 1M tokens — standard non-promotional pricing with a 95% implicit prefix cache discount ≥ 4,096 tokens), and `pro` uses **Gemini 4 Carbon (High)** ($2.00 in / $10.00 out / $0.10 cached-in introductory through **2026-11-30**, settling at $4.00 / $20.00 / $0.20 standard from **2026-12-01**; [`prices.json`](prices.json) carries both sets alongside `Gemini 3.8 Flash`'s $0.75 / $3.75 promotional rate through **2026-12-31**, accessible via `--tier flash-38`). When `tier_flash`, `tier_flash_lo`, or `tier_pro` is **unremapped** and your active plan does not expose the primary Gemini 4 model (for example Google AI Pro without Carbon/Hydrogen, or Free-tier accounts), `agy-delegate` resolves an entitled fallback in **two layers**: first, it parses the `Available models:` list from `agy`'s error output to jump directly to the first entitled fallback in a single retry (`pro`: Carbon → Argon → 3.1 Pro → 3.1 Pro High/Low → Hydrogen → 3.8 Flash; `flash`: Hydrogen → 3.8 Flash → 3.7 Flash → 3.5 Flash; `flash-lo`: Hydrogen Low → 3.8 Flash Low → 3.5 Flash Lite → 3.1 Flash Lite); second, it caches the resolved model for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` (keyed by `agy` version + auth fingerprint, and pre-seeded by `agy-doctor`) so subsequent calls hit the entitled model on attempt #1 with zero retry delay. Check `AGY_USAGE.model` on stderr for the model that actually ran. (Note: on `Gemini 3.8 Flash (High)` under `--digest`, a bare "reply OK" ping with nothing to inspect was measured to run a command 6 of 7 times — exit 15 headless without a grant; give it a real task or drop `--digest` for a ping. Both slugs and display names work with `--model`, and `doctor` matches either.)
+> **The default tiers moved to the Gemini 4 family in 0.31.0 (measured manually on Linux with `agy 1.5.9` via Vertex AI ADC, `AGY_ADC_AUTH=true`):** `flash` / `flash-lo` (`lite`) use **Gemini 4 Hydrogen (High)** / **(Low)** ($1.50 in / $7.50 out / $0.075 cached-in per 1M tokens — standard non-promotional pricing with a 95% implicit prefix cache discount ≥ 4,096 tokens, plus `(XHigh)` via `--effort xhigh`), and `pro` uses **Gemini 4 Carbon (High)** ($2.00 in / $10.00 out / $0.10 cached-in introductory through **2026-11-30**, settling at $4.00 / $20.00 / $0.20 standard from **2026-12-01**; [`prices.json`](prices.json) carries both sets alongside `Gemini 3.8 Flash`'s $0.75 / $3.75 promotional rate through **2026-12-31**, accessible via `--tier flash-38`). When `tier_flash`, `tier_flash_lo`, or `tier_pro` is **unremapped** and your active plan does not expose the primary Gemini 4 model (for example Google AI Pro without Carbon/Hydrogen, Free-tier accounts, or Google Workspace accounts signed in via consumer `1. Google OAuth` instead of `2. Use a Google Cloud project` / `AGY_ADC_AUTH=true` — see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)), `agy-delegate` resolves an entitled fallback in **two layers**: first, it parses the `Available models:` list from `agy`'s error output to jump directly to the first entitled fallback in a single retry (`pro`: Carbon → Argon → 3.1 Pro → 3.1 Pro High/Low → Hydrogen → 3.8 Flash; `flash`: Hydrogen → 3.8 Flash → 3.7 Flash → 3.5 Flash; `flash-lo`: Hydrogen Low → 3.8 Flash Low → 3.5 Flash Lite → 3.1 Flash Lite); second, it caches the resolved model for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` (keyed by `agy` version + auth fingerprint, and pre-seeded by `agy-doctor`) so subsequent calls hit the entitled model on attempt #1 with zero retry delay. Check `AGY_USAGE.model` on stderr for the model that actually ran. (Note: on `Gemini 3.8 Flash (High)` under `--digest`, a bare "reply OK" ping with nothing to inspect was measured to run a command 6 of 7 times — exit 15 headless without a grant; give it a real task or drop `--digest` for a ping. Both slugs and display names work with `--model`, and `doctor` matches either.)
 
 </details>
 
