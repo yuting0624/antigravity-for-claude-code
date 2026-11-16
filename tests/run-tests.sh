@@ -2297,8 +2297,8 @@ printf 'PARTIAL_JOB_OUT\n' > "$ANTIGRAVITY_JOBS/$cid/out"
 printf 'PARTIAL_JOB_ERR\n' > "$ANTIGRAVITY_JOBS/$cid/err"
 jt_res_out=$("$JOB" result "$cid" 2>"$TMP/jt-res.err"); jt_res_rc=$?
 jt_res_err="$(cat "$TMP/jt-res.err")"
-check "job result on cancelled job exits 0 and prints captured stdout (#117)" 0 "$jt_res_rc" "PARTIAL_JOB_OUT" "$jt_res_out"
-check "job result on cancelled job prints captured stderr (#117)" 0 "$jt_res_rc" "PARTIAL_JOB_ERR" "$jt_res_err"
+check "job result on cancelled job exits 0 and prints pre-existing out file (#117)" 0 "$jt_res_rc" "PARTIAL_JOB_OUT" "$jt_res_out"
+check "job result on cancelled job prints pre-existing err file (#117)" 0 "$jt_res_rc" "PARTIAL_JOB_ERR" "$jt_res_err"
 check "job result on cancelled job prints [cancelled] on stderr (#117)" 0 "$jt_res_rc" "[cancelled]" "$jt_res_err"
 if [ -n "$jt_res_err" ] && ! has '[exit rc=' "$jt_res_err"; then
   echo "ok: cancelled job result omits [exit rc=?] (#117)"; PASS=$((PASS+1))
@@ -2484,6 +2484,35 @@ else
 fi
 retry_cancel_out=$("$JOB" cancel "$int_jid" 2>&1); retry_cancel_rc=$?
 check "job remains cleanly cancellable after interrupted cancel" 0 "$retry_cancel_rc" "cancelled $int_jid" "$retry_cancel_out"
+
+# #117 (g): interrupted LOSING `cancel` (where another owner already created `.final` and is
+# mid-write) must disarm its trap (`owns_final=0`) and NEVER wipe the owner's `.final` / `cancelled`.
+LOSE_JID="20261116-000003-lose117"
+mkdir -p "$ANTIGRAVITY_JOBS/$LOSE_JID/.final"
+printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:03Z\ntask=losing cancel trap test\n' "$LOSE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$LOSE_JID/meta"
+sleep 5 >/dev/null 2>&1 & lose_pid=$!
+echo "$lose_pid" > "$ANTIGRAVITY_JOBS/$LOSE_JID/pid"
+LOSE_BIN="$TMP/lose-bin"; mkdir -p "$LOSE_BIN"
+cat > "$LOSE_BIN/sleep" <<STUB
+#!/usr/bin/env bash
+for _w in 1 2 3 4 5 6 7 8 9 10; do [ -s "$TMP/lose-runner.pid" ] && break; /bin/sleep 0.02 2>/dev/null || /bin/sleep 1; done
+# Write the winner's cancelled marker while the losing cancel is waiting in its poll loop, then signal the loser:
+: > "$ANTIGRAVITY_JOBS/$LOSE_JID/cancelled"
+[ -s "$TMP/lose-runner.pid" ] && { kill -TERM "\$(cat "$TMP/lose-runner.pid")" 2>/dev/null || true; }
+exec /bin/sleep "\$@"
+STUB
+chmod +x "$LOSE_BIN/sleep"
+rm -f "$TMP/lose-runner.pid"
+PATH="$LOSE_BIN:$PATH" "$JOB" cancel "$LOSE_JID" >/dev/null 2>&1 &
+lose_runner=$!
+echo "$lose_runner" > "$TMP/lose-runner.pid"
+wait "$lose_runner" 2>/dev/null || true
+if [ -d "$ANTIGRAVITY_JOBS/$LOSE_JID/.final" ] && [ -f "$ANTIGRAVITY_JOBS/$LOSE_JID/cancelled" ]; then
+  echo "ok: interrupted losing cancel preserves winner's .final and cancelled markers"; PASS=$((PASS+1))
+else
+  echo "FAIL: interrupted losing cancel wiped winner's .final or cancelled marker"; FAIL=$((FAIL+1))
+fi
+kill "$lose_pid" 2>/dev/null || true; wait "$lose_pid" 2>/dev/null || true
 
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
 # only left the subshell, so status/result/cancel carried on with jd="" and printed
@@ -3100,6 +3129,8 @@ out=$(printf '%s' '{"tool_input":{"command":"agy-job --dir /etc \"hi\""}}' | "$G
 check "gate: blocks agy-job --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
 out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -d"}}' | "$GATE" 2>&1); rc=$?
 check "gate: blocks -d with no directory value" 2 "$rc" "-d requires a directory path" "$out"
+out=$(gate_cmd_err 'agy-delegate -d "" "hi"'); rc=$?
+check "gate: blocks empty -d \"\" value" 2 "$rc" "non-empty literal path" "$out"
 ( cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir sub \"hi\""}}))' "$GATE_WS" | "$GATE" >/dev/null 2>&1 ); rc=$?
 check "gate: honors explicit cwd in PreToolUse hook JSON payload" 0 "$rc"
 out=$(cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir /etc \"hi\""}}))' "$GATE_WS" | "$GATE" 2>&1); rc=$?

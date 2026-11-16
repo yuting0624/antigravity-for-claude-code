@@ -161,10 +161,10 @@ fix the model name, or add `--yolo`) instead of scraping prose.
 background a delegation expecting a later turn / "harness re-invocation": there is none in
 `-p` mode, so you'd exit before the work finishes. (Backgrounding is only valid in an
 interactive session that will be re-invoked; there `agy-job cancel <id>` stops the job's
-descendant process tree — measured on Linux, and stub-tested for Windows Git Bash `ps -e` +
-`taskkill /T /F` from the #117 report — and marks `state=cancelled`, with `agy-job result`
-printing `[cancelled]` on stderr and exiting `0`, just as finished jobs exit `0` and report
-`[exit rc=...]` on stderr.)
+descendant process tree — measured live on Linux with `agy 1.5.9`, CI-tested with stubs on
+macOS `/bin/bash 3.2`, and stub-tested for Windows Git Bash `ps -e` + `taskkill /T /F` from
+the #117 report — and marks `state=cancelled`, with `agy-job result` printing `[cancelled]`
+on stderr and exiting `0`, just as finished jobs exit `0` and report `[exit rc=...]` on stderr.)
 
 ## Shared harness: one AGENTS.md for both AIs
 

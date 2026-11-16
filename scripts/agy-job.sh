@@ -157,10 +157,10 @@ EOF
 }
 
 abort_cancel() {
-  local jd="${1:-}" t="${2:-}"
+  local jd="${1:-}" owned="${2:-0}" t="${3:-}"
   trap - INT TERM HUP
   [ -n "$t" ] && resume_tree "$t"
-  if [ -n "$jd" ]; then
+  if [ "$owned" = "1" ] && [ -n "$jd" ]; then
     rm -f "$jd/cancelled" 2>/dev/null || true
     rmdir "$jd/.final" 2>/dev/null || true
   fi
@@ -235,6 +235,8 @@ case "$cmd" in
     if [ "$st" = "running" ]; then echo "still running — try again later"; exit 2; fi
     [ -s "$jd/err" ] && { echo "----- stderr -----" >&2; cat "$jd/err" >&2; }
     cat "$jd/out" 2>/dev/null
+    # `result` exits 2 only while still running and exits 0 whenever output is ready to
+    # read (including failed jobs below, whose rc is reported on stderr / `status`).
     if [ "$st" = "cancelled" ]; then
       echo "[cancelled]" >&2
       exit 0
@@ -248,26 +250,20 @@ case "$cmd" in
     if [ -f "$jd/rc" ]; then echo "not running"; exit 0; fi
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
     if pid_alive "$jd" "$pid"; then
-      tree=""
-      trap 'abort_cancel "$jd" "${tree:-}"' INT TERM HUP
-      if ! mkdir "$jd/.final" 2>/dev/null; then
-        # Lost the atomic race to normal completion (subshell writing $jd/rc), a concurrent
-        # cancel, or an earlier cancel killed by SIGKILL right after `mkdir .final`.
-        for _ in 1 2 3; do
+      owns_final=0; tree=""
+      trap 'abort_cancel "$jd" "$owns_final" "${tree:-}"' INT TERM HUP
+      if mkdir "$jd/.final" 2>/dev/null; then
+        owns_final=1
+      else
+        # Lost the atomic race to normal completion (subshell writing $jd/rc) or a
+        # concurrent cancel — disarm our trap immediately so we never touch the winner's state.
+        trap - INT TERM HUP
+        for _ in 1 2 3 4 5; do
           { [ -f "$jd/cancelled" ] || [ -f "$jd/rc" ]; } && break
           sleep 0.05 2>/dev/null || sleep 1
         done
-        if [ -f "$jd/cancelled" ]; then trap - INT TERM HUP; echo "already cancelled"; exit 0; fi
-        if [ -f "$jd/rc" ] || ! pid_alive "$jd" "$pid"; then
-          trap - INT TERM HUP
-          [ ! -f "$jd/rc" ] && { rmdir "$jd/.final" 2>/dev/null || true; }
-          echo "not running"
-          exit 0
-        fi
-        # Stale empty `.final` while job is still alive: reclaim it.
-        rmdir "$jd/.final" 2>/dev/null && mkdir "$jd/.final" 2>/dev/null || {
-          trap - INT TERM HUP; echo "not running"; exit 0;
-        }
+        if [ -f "$jd/cancelled" ]; then echo "already cancelled"; else echo "not running"; fi
+        exit 0
       fi
       : > "$jd/cancelled"
       tree="$(job_tree "$pid" "$$")"
