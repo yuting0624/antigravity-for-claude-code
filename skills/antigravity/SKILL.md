@@ -162,8 +162,9 @@ background a delegation expecting a later turn / "harness re-invocation": there 
 `-p` mode, so you'd exit before the work finishes. (Backgrounding is only valid in an
 interactive session that will be re-invoked; there `agy-job cancel <id>` stops the job's
 descendant process tree — measured on Linux, and stub-tested for Windows Git Bash `ps -e` +
-`taskkill /T /F` from the #117 report — and marks `state=cancelled`, printing `[cancelled]`
-on `result`.)
+`taskkill /T /F` from the #117 report — and marks `state=cancelled`, with `agy-job result`
+printing `[cancelled]` on stderr and exiting `0`, just as finished jobs exit `0` and report
+`[exit rc=...]` on stderr.)
 
 ## Shared harness: one AGENTS.md for both AIs
 

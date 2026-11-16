@@ -2414,6 +2414,22 @@ race_st=$("$JOB" status "$RACE_JID" 2>/dev/null)
 check "TOCTOU race: job status stays state=done (rc=0: ok) (#117)" 0 0 "state=done (rc=0: ok)" "$race_st"
 kill "$race_pid" 2>/dev/null || true; wait "$race_pid" 2>/dev/null || true
 
+# Live concurrent race: start a short job (~0.1s) and race `cancel` against normal completion;
+# atomic `mkdir $jd/.final` guarantees exactly one of `rc` or `cancelled` exists (never both).
+live_race_id=$(STUB_MODE=text STUB_SLEEP=0.1 "$JOB" start --tier flash "live race task" 2>/dev/null)
+sleep 0.1 2>/dev/null || sleep 1
+"$JOB" cancel "$live_race_id" >/dev/null 2>&1 || true
+for _ in 1 2 3 4 5; do
+  { [ -f "$ANTIGRAVITY_JOBS/$live_race_id/rc" ] || [ -f "$ANTIGRAVITY_JOBS/$live_race_id/cancelled" ]; } && break
+  sleep 0.1 2>/dev/null || sleep 1
+done
+if { [ -f "$ANTIGRAVITY_JOBS/$live_race_id/rc" ] && [ ! -f "$ANTIGRAVITY_JOBS/$live_race_id/cancelled" ]; } ||
+   { [ ! -f "$ANTIGRAVITY_JOBS/$live_race_id/rc" ] && [ -f "$ANTIGRAVITY_JOBS/$live_race_id/cancelled" ]; }; then
+  echo "ok: concurrent completion vs cancel produces mutually exclusive rc XOR cancelled (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: concurrent completion vs cancel wrote both or neither marker (#117)"; FAIL=$((FAIL+1))
+fi
+
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
 # only left the subshell, so status/result/cancel carried on with jd="" and printed
 # `state=failed` with rc 0 — a caller reading the state was told a run had failed when

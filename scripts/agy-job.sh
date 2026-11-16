@@ -90,9 +90,11 @@ proc_table() {
   esac
 }
 
-# Echoes "<pid> <winpid>" for the whitespace-separated root PID(s) in $1 and all their
+# Echoes "<pid> <winpid>" for the space-separated root PID(s) in $1 and all their
 # descendants in top-down breadth-first order (root/parents first, deepest leaves last),
 # excluding the current agy-job shell ($2) and its subshell/ps/awk pipeline.
+# Keep $1 single-line space-separated: macOS BSD `/usr/bin/awk` rejects literal newlines
+# inside `-v var=...` arguments.
 job_tree() {
   proc_table | awk -v roots="$1" -v self="$2" '
     $1 == self || $2 == self { next }
@@ -102,7 +104,7 @@ job_tree() {
       w[$1] = $3
     }
     END {
-      nr = split(roots, rlist, /[[:space:]]+/)
+      nr = split(roots, rlist)
       n = 0
       for (r = 1; r <= nr; r++) {
         rt = rlist[r]
@@ -126,6 +128,15 @@ job_tree() {
         print p, ((p in w) ? w[p] : "-")
       }
     }'
+}
+
+resume_tree() {
+  local p
+  while read -r p _; do
+    [ -n "$p" ] && { kill -CONT "$p" 2>/dev/null || true; }
+  done <<EOF
+${1:-}
+EOF
 }
 
 # Human label for a delegate / hand-off exit code (mirrors agy-delegate.sh / agy-handoff.sh codes).
@@ -222,14 +233,16 @@ case "$cmd" in
       if [ "$is_win" -eq 0 ]; then
         # Freeze parents top-down BEFORE any child exits so parent shells (e.g. agy-handoff
         # or fallback loops) cannot wake on a killed child and spawn a new process, then
-        # re-snapshot once to catch anything forked between ps and SIGSTOP.
+        # re-snapshot once (space-separated for BSD awk) to catch anything forked in between.
+        trap 'resume_tree "$tree"' INT TERM HUP
         while read -r p _; do
           [ -n "$p" ] && { kill -STOP "$p" 2>/dev/null || true; }
         done <<EOF
 $tree
 EOF
-        roots="$(printf '%s\n' "$tree" | awk '{print $1}')"
-        tree="$(job_tree "$roots" "$$")"
+        roots="$(printf '%s\n' "$tree" | awk '{printf "%s ", $1}')"
+        tree2="$(job_tree "$roots" "$$")"
+        [ -n "$tree2" ] && tree="$tree2"
         while read -r p _; do
           [ -n "$p" ] && { kill -STOP "$p" 2>/dev/null || true; }
         done <<EOF
@@ -249,6 +262,7 @@ EOF
       done <<EOF
 $tree
 EOF
+      [ "$is_win" -eq 0 ] && trap - INT TERM HUP
       for _ in 1 2 3; do
         alive=0
         while read -r p _; do
