@@ -119,6 +119,9 @@ else bad "no dry-run notice"; fi
 if has "demo-skill" "$OUT" && has "allowed-tools" "$OUT"; then
   ok "flags Claude-only skill frontmatter agy ignores"
 else bad "did not flag allowed-tools"; fi
+if has "low|medium|high|xhigh|max" "$OUT"; then
+  ok "effortLevel warning lists agy 1.5.x effort vocabulary (low|medium|high|xhigh|max)"
+else bad "effortLevel warning missing xhigh|max"; fi
 if has "remote-x" "$OUT" && has "local-x" "$OUT"; then
   ok "finds project .mcp.json servers"
 else bad "missed .mcp.json"; fi
@@ -781,6 +784,35 @@ assert not added, added
 PY
 then ok "trustedWorkspaces treats separator spellings of a covered path as covered"
 else bad "trustedWorkspaces re-adds a path already covered under another spelling"; fi
+
+# agy 1.5.8+ enterprise pluginControls block (`ErrPluginsDisabledByAdmin` / policy load gate)
+# must be distinguished from a generic importer crash.
+if python3 - "$MIG" "$TMP" <<'PY'
+import importlib.util, io, json, os, sys
+from contextlib import redirect_stdout
+spec = importlib.util.spec_from_file_location("m", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+assert m.is_plugins_admin_blocked("Error: plugins are disabled by your organization\n")
+assert m.is_plugins_admin_blocked("plugins are unavailable until your organization's policy loads")
+assert not m.is_plugins_admin_blocked("No claude extensions found.")
+
+base = os.path.join(sys.argv[2], "admin-blk")
+pdir = os.path.join(base, "claude", "plugins", "cache", "mp", "demo", "1.0.0", ".claude-plugin")
+os.makedirs(pdir, exist_ok=True)
+os.makedirs(os.path.join(base, "gemini", "config"), exist_ok=True)
+json.dump({"name": "demo"}, open(os.path.join(pdir, "plugin.json"), "w"))
+m.claude_dir = lambda: os.path.join(base, "claude")
+m.gemini_config = lambda: os.path.join(base, "gemini", "config")
+m.run_native_import = lambda stage, fresh: (1, "Error: plugins are disabled by your organization\n")
+plan = m.Plan()
+m.unit_plugins(plan, m.Manifest())
+buf = io.StringIO()
+with redirect_stdout(buf):
+    res = plan.items[0]["fn"]()
+assert res is False and "enterprise admin policy (pluginControls)" in buf.getvalue(), buf.getvalue()
+PY
+then ok "unit_plugins surfaces agy 1.5.8+ enterprise pluginControls block explicitly"
+else bad "unit_plugins did not detect ErrPluginsDisabledByAdmin"; fi
 
 echo
 echo "passed: $PASS   failed: $FAIL"

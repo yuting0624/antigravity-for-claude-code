@@ -13,10 +13,10 @@ Show background agy delegation jobs.
 Report each job's id, state (running / done / failed), and task. For finished jobs,
 remind the user they can fetch output with `/antigravity:result <id>`.
 
-If a `--tier pro` job was retried with a fallback model, its stderr carries
-`agy-delegate: pro fell back to …` — visible through `/antigravity:result <id>` (which prints
-the job's stderr after a `----- stderr -----` marker), not in the status listing. An unremapped
-`pro` can do that up to twice, only on agy's "model not recognized" error and never after a
-timeout; each rejected start took 5–37 s on agy 1.4.2, so the fallback explains a job that is
-a minute late, not one that is still `running` past its timeout. `AGY_USAGE.model` in the same
-stderr names the model that actually ran.
+If an unremapped tier job (`--tier pro`, `--tier flash`, `--tier flash-lo`) was retried with
+or served from a plan-fallback model, its stderr carries `agy-delegate: <tier> fell back to …`
+— visible through `/antigravity:result <id>` (which prints the job's stderr after a
+`----- stderr -----` marker), not in the status listing. On a cold miss `agy-delegate`
+intersects the fallback chain against `agy`'s `Available models:` hint (jumping in one hop)
+and caches the working model for 6 hours so subsequent jobs pay zero retry delay, and never
+retries after a timeout. `AGY_USAGE.model` in the same stderr names the model that actually ran.

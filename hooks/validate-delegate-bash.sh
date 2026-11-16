@@ -42,7 +42,7 @@ set -uo pipefail
 
 input="$(cat)"
 
-BLOCK_MSG="[antigravity-delegate] blocked: this subagent may only run agy-delegate / agy-job / agy-handoff, as a BARE name with no path and no pipeline (and for agy-handoff, without --verify or --no-verify). No other commands, pipes, chaining, redirection, substitution, comments, or unquoted newlines. To give agy a repository, pass --dir <repo-root> rather than piping content in. Delegate file work to agy; verification is the caller's job."
+BLOCK_MSG="[antigravity-delegate] blocked: this subagent may only run agy-delegate / agy-job / agy-handoff, as a BARE name with no path and no pipeline (without --settings, without out-of-workspace -d/--dir/--add-dir, and for agy-handoff without --verify or --no-verify). No other commands, pipes, chaining, redirection, substitution, comments, or unquoted newlines. To give agy a repository, pass --dir . rather than piping content in. Delegate file work to agy; verification is the caller's job."
 
 # python3 gives a correct, quote-aware parse. Fail CLOSED if it's missing.
 if ! command -v python3 >/dev/null 2>&1; then
@@ -55,11 +55,16 @@ import json, os, shlex, sys
 
 raw = os.environ.get("AGY_GATE_INPUT", "")
 try:
-    cmd = json.loads(raw).get("tool_input", {}).get("command", "")
+    payload = json.loads(raw)
+    cmd = payload.get("tool_input", {}).get("command", "")
+    raw_cwd = payload.get("cwd")
 except Exception:
     sys.exit(2)                      # unparseable payload -> fail closed
 if not isinstance(cmd, str) or not cmd.strip():
     sys.exit(2)
+if raw_cwd is not None and (not isinstance(raw_cwd, str) or not raw_cwd.strip()):
+    sys.exit(2)
+cwd_base = raw_cwd if isinstance(raw_cwd, str) and raw_cwd.strip() else os.getcwd()
 
 # Leading/trailing whitespace is normalised away BEFORE scanning (issue #51). bash
 # ignores it, so this cannot change what the command does — and a newline with
@@ -172,7 +177,7 @@ if len(segs) != 1:
     deny("a pipeline (%d pipe%s). No command may feed the wrapper: `git` with arbitrary "
          "arguments runs arbitrary commands, and `cat`/`echo`/`printf` turn the wrapper "
          "into a way to send any file or environment variable to the external model. "
-         "Pass `--dir <repo-root>` and let agy read the repository itself."
+         "Pass `--dir .` and let agy read the repository itself."
          % (len(segs) - 1, "" if len(segs) == 2 else "s"))
 
 toks = tokens(segs[0])
@@ -193,6 +198,131 @@ if w == "agy-handoff":
                  "boundary as SECURITY.md; tamper check and diff review are the guard), "
                  "or run custom `--verify` from the main Claude session."
                  % tok.split("=", 1)[0])
+
+# Block raw --settings (arbitrary SessionSettings JSON could override permissions/hooks)
+# and restrict -d / --dir / --add-dir to literal paths inside the current working directory
+# so a prompt-injected subagent cannot mount ~/.ssh, /etc, or sibling trees without an
+# explicit grant. Parse each wrapper's real option grammar so value-taking flags (--tests,
+# -m/--model, etc.) cannot mis-pair a literal "-d" value to hide a following --dir/--settings,
+# and block shell/glob/brace expansion ($VAR, ~, *, ?, [], {}) inside directory arguments.
+cwd_real = os.path.realpath(cwd_base)
+
+DELEGATE_VAL_OPTS = {
+    "-t", "--tier", "-e", "--effort", "--timeout", "--json-schema",
+    "--mode", "--conversation", "-m", "--model",
+}
+DELEGATE_BOOL_OPTS = {
+    "--read-only", "--allow-url", "--yolo", "--sandbox", "--digest",
+    "-c", "--continue", "--allow-slash-commands", "--print-command",
+    "-h", "--help", "-",
+}
+HANDOFF_VAL_OPTS = {
+    "-t", "--tier", "-e", "--effort", "-m", "--model", "--timeout",
+    "--fixup-timeout", "--verify-timeout", "--fixups", "--tests",
+    "--new-project",   # enum (auto|on|off), not a path: agy-handoff runs `cd "$DIR" && agy --new-project ...`
+}
+HANDOFF_BOOL_OPTS = {
+    "--allow-dirty", "--background", "--json", "--print-command",
+    "-h", "--help", "-",
+}
+DIR_OPTS = {"-d", "--dir", "--add-dir"}
+
+def check_dir_val(flag_name, add_val):
+    if not add_val:
+        deny("%s outside the current working directory is not allowed "
+             "from the antigravity-delegate subagent" % flag_name)
+    if add_val.startswith("~") or any(ch in add_val for ch in "$`*?[]{}"):
+        deny("%s outside the current working directory is not allowed "
+             "from the antigravity-delegate subagent (shell expansion, ~, "
+             "globs, and braces in directory paths are blocked; pass a "
+             "literal path inside the current working directory)" % flag_name)
+    resolved_in = add_val if os.path.isabs(add_val) else os.path.join(cwd_real, add_val)
+    target_real = os.path.realpath(resolved_in)
+    try:
+        inside = os.path.commonpath([cwd_real, target_real]) == cwd_real
+    except ValueError:
+        inside = False
+    if not inside:
+        deny("%s outside the current working directory is not allowed "
+             "from the antigravity-delegate subagent (pass %s from the "
+             "main Claude session when cross-directory access is intended)"
+             % (flag_name, flag_name))
+
+def is_json_object(s):
+    try:
+        return isinstance(json.loads(s), dict)
+    except Exception:
+        return False
+
+def scan_opts(opt_toks, val_opts, bool_opts, stop_on_pos):
+    idx = 0
+    while idx < len(opt_toks):
+        tok = opt_toks[idx]
+        if tok == "--":
+            break
+        if tok == "--settings" or tok.startswith("--settings="):
+            deny("--settings is not allowed from the antigravity-delegate subagent: "
+                 "use --read-only / --allow-url instead, or run custom --settings "
+                 "from the main Claude session.")
+        if tok in DIR_OPTS:
+            if idx + 1 >= len(opt_toks):
+                deny("%s requires a directory path" % tok)
+            check_dir_val(tok, opt_toks[idx + 1])
+            idx += 2
+            continue
+        if tok.startswith(("--dir=", "--add-dir=")):
+            flag_name, add_val = tok.split("=", 1)
+            check_dir_val(flag_name, add_val)
+            idx += 1
+            continue
+        if tok == "--json-schema":
+            if idx + 1 >= len(opt_toks):
+                deny("option --json-schema requires a value")
+            schema_val = opt_toks[idx + 1]
+            if not is_json_object(schema_val):
+                check_dir_val("--json-schema", schema_val)
+            idx += 2
+            continue
+        if tok.startswith("--json-schema="):
+            schema_val = tok.split("=", 1)[1]
+            if not is_json_object(schema_val):
+                check_dir_val("--json-schema", schema_val)
+            idx += 1
+            continue
+        if tok in val_opts:
+            if idx + 1 >= len(opt_toks):
+                deny("option %s requires a value" % tok)
+            idx += 2
+            continue
+        if tok in bool_opts:
+            idx += 1
+            continue
+        if tok.startswith("-"):
+            deny("unknown or disallowed option for %s "
+                 "(pass prompt text starting with '-' after '--')" % w)
+        if stop_on_pos:
+            break
+        idx += 1
+
+if w == "agy-delegate":
+    scan_opts(toks[1:], DELEGATE_VAL_OPTS, DELEGATE_BOOL_OPTS, stop_on_pos=True)
+elif w == "agy-handoff":
+    scan_opts(toks[1:], HANDOFF_VAL_OPTS, HANDOFF_BOOL_OPTS, stop_on_pos=False)
+elif w == "agy-job":
+    if len(toks) >= 2:
+        sub = toks[1]
+        if sub == "start":
+            scan_opts(toks[2:], DELEGATE_VAL_OPTS, DELEGATE_BOOL_OPTS, stop_on_pos=True)
+        elif sub in ("list", "status", "result", "cancel", "-h", "--help", "help"):
+            for extra in toks[2:]:
+                if (extra == "--settings" or extra.startswith("--settings=")
+                        or extra in DIR_OPTS or extra.startswith(("--dir=", "--add-dir="))):
+                    deny("options %s are only valid after `agy-job start`" % extra.split("=", 1)[0])
+        elif sub.startswith("-"):
+            scan_opts(toks[1:], DELEGATE_VAL_OPTS, DELEGATE_BOOL_OPTS, stop_on_pos=True)
+            deny("unknown agy-job subcommand (use start | list | status | result | cancel)")
+        else:
+            deny("unknown agy-job subcommand (use start | list | status | result | cancel)")
 sys.exit(0)
 PY
 then

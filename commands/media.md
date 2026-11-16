@@ -1,6 +1,6 @@
 ---
 description: Understand an audio / video / image file — Antigravity (agy/Gemini) transcribes and analyzes it, returning a timestamped digest while the full transcript goes to a file.
-argument-hint: "<file> [what to focus on] [--convert] [--tier pro|flash] [--timeout 20m]"
+argument-hint: "<file> [what to focus on] [--convert] [--tier pro|flash|flash-lo] [--timeout 20m]"
 ---
 
 Claude Code can't hear audio or watch video, and doing it locally means an ffmpeg +

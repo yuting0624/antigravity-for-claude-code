@@ -1,8 +1,13 @@
 {
-  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh picks this key by tier NAME, not by model. Today that is Gemini 3.8 Flash (High), so gemini_flash mirrors gemini_flash_38 (3.8, 3.7 and 3.6 carry identical list prices). IMPORTANT: 3.6, 3.7 and 3.8 are on PROMOTIONAL pricing that ends 2026-12-31 — on 2027-01-01 input goes 0.75 -> 1.50, output 3.75 -> 7.50 and cached_in 0.075 -> 0.15. Leaving these as-is after that date understates the Gemini side by half. The _post_2026 entries carry the standard rates; copy them over then. Verified 2026-09-03 against ai.google.dev/gemini-api/docs/pricing and Google Cloud's Agent Platform pricing page (cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing; non-global endpoints are +10%).",
+  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh falls back to this key when no per-model match applies. Since 0.31.0 `flash` defaults to Gemini 4 Hydrogen (High), so gemini_flash mirrors gemini_hydrogen (1.50 in / 7.50 out / 0.075 cached_in — standard global rate, 95% implicit prefix cache discount >= 4,096 tokens, no promotional cliff). IMPORTANT: Gemini 3.6, 3.7 and 3.8 Flash remain on PROMOTIONAL pricing (0.75 / 3.75 / 0.075) through 2026-12-31 — on 2027-01-01 their rates move to _post_2026 (1.50 / 7.50 / 0.15). Re-verified 2026-11-15 against ai.google.dev/gemini-api/docs/pricing and cloud.google.com/vertex-ai/generative-ai/pricing (non-global endpoints are +10%).",
   "gemini_flash": {
-    "in": 0.75,
-    "out": 3.75,
+    "in": 1.5,
+    "out": 7.5,
+    "cached_in": 0.075
+  },
+  "gemini_hydrogen": {
+    "in": 1.5,
+    "out": 7.5,
     "cached_in": 0.075
   },
   "gemini_flash_38": {
@@ -25,6 +30,16 @@
     "out": 9.0,
     "cached_in": 0.15
   },
+  "gemini_flash_lite_35": {
+    "in": 0.3,
+    "out": 2.5,
+    "cached_in": 0.03
+  },
+  "gemini_flash_lite_31": {
+    "in": 0.25,
+    "out": 1.5,
+    "cached_in": 0.025
+  },
   "gemini_flash_38_post_2026": {
     "in": 1.5,
     "out": 7.5,
@@ -40,13 +55,13 @@
     "out": 7.5,
     "cached_in": 0.15
   },
-  "_comment": "Per-1M-token USD on Vertex AI (global endpoints; regional/multi-region carry a ~10% premium). Re-verified 2026-10-19 against cloud.google.com/vertex-ai/generative-ai/pricing and platform.claude.com/docs/en/about-claude/pricing for the models agy 1.4.x actually lists: Claude Opus 5.5 (4/20), Claude Sonnet 5.5 (2/10), Gemini 3.1 Pro (2/12, cached 0.20), Gemini 4 Argon (2/10 intro, 4/20 standard). VERIFY against your own invoice before quoting: the Argon introductory rate did not appear on at least one pay-as-you-go project's billing export (it was billed 4/20 on 2026-10-09), and Google's promo end dates move.",
+  "_comment": "Per-1M-token USD on Vertex AI / Gemini API (global endpoints; regional/multi-region carry a ~10% premium). Re-verified 2026-11-15 against cloud.google.com/vertex-ai/generative-ai/pricing and platform.claude.com/docs/en/about-claude/pricing for agy 1.5.9 models: Claude Opus 5.5 (4/20), Claude Sonnet 5.5 (2/10), Gemini 4 Carbon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Argon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Hydrogen (1.50/7.50, cached 0.075), Gemini 3.8 Flash (0.75/3.75 promo through 2026-12-31), Gemini 3.1 Pro (2/12, cached 0.20). VERIFY against your own invoice before quoting: some pay-as-you-go projects already bill standard 4/20 on Argon/Carbon, and promo end dates can move.",
   "_sources": [
     "cloud.google.com/vertex-ai/generative-ai/pricing",
     "ai.google.dev/gemini-api/docs/pricing",
     "platform.claude.com/docs/en/about-claude/pricing"
   ],
-  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only (Opus 5.5 / Sonnet 5.5: 5-minute cache write = 1.25x input, cache read = 0.05x input — the Opus 4.x generation read at 0.10x). Gemini prices cached input at a flat rate (cached_in) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
+  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only (Opus 5.5 / Sonnet 5.5: 5-minute cache write = 1.25x input, cache read = 0.05x input — the Opus 4.x generation read at 0.10x). Gemini prices cached input at a flat rate (cached_in: 95% off on Gemini 4 Carbon/Argon/Hydrogen >= 4,096 tokens, 90% off on Gemini 3.x) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
   "claude_opus": {
     "in": 4.0,
     "out": 20.0
@@ -60,7 +75,17 @@
     "out": 12.0,
     "cached_in": 0.2
   },
-  "_gemini_argon_note": "Gemini 4 Argon (the `pro` tier default since 0.29.0; consumer Google AI plans list it instead of 3.1 Pro as reported in #104 (not measured here), and enterprise plans, which were measured on agy 1.4.2, list it alongside `Gemini 3.1 Pro`). Introductory rate through 2026-11-30; `_post_2026_12` carries the standard rate that applies from 2026-12-01 — copy it over then. agy-cost-compare.sh prices `--tier pro` from `gemini_argon` when the resolved pro model is Argon and from `gemini_pro` otherwise.",
+  "_gemini_carbon_argon_note": "Gemini 4 Carbon (`pro` tier default since 0.31.0) and Gemini 4 Argon (`argon` alias and first `pro` fallback on Google AI Pro plans where Carbon is Ultra-only) carry identical global list prices: introductory 2.00 / 10.00 / 0.10 through 2026-11-30, moving to standard `_post_2026_12` (4.00 / 20.00 / 0.20) on 2026-12-01 — copy `_post_2026_12` over then.",
+  "gemini_carbon": {
+    "in": 2.0,
+    "out": 10.0,
+    "cached_in": 0.1
+  },
+  "gemini_carbon_post_2026_12": {
+    "in": 4.0,
+    "out": 20.0,
+    "cached_in": 0.2
+  },
   "gemini_argon": {
     "in": 2.0,
     "out": 10.0,

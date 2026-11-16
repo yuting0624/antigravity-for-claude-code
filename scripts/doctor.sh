@@ -18,8 +18,88 @@ FAIL=0
 . "$HERE/lib/plugin-options.sh"
 load_plugin_options
 
+# Portable <mtime>:<size> signature following symlinks (GNU coreutils stat, else BSD stat).
+file_stat_sig() {
+  [ -e "$1" ] || { printf '0:0'; return 0; }
+  stat -L -c '%Y:%s' "$1" 2>/dev/null || stat -L -f '%m:%z' "$1" 2>/dev/null || printf '0:0'
+}
+
+# Portable content signature (`<crc>:<bytes>` via POSIX cksum) for small JSON config files
+# that agy rewrites atomically on every invocation (`cache/onboarding.json`) without changing
+# content, kept identical to scripts/agy-delegate.sh.
+file_content_sig() {
+  if [ -f "$1" ]; then
+    cksum < "$1" 2>/dev/null | awk '{printf "%s:%s", $1, $2}' || printf '0:0'
+  else
+    printf '0:0'
+  fi
+}
+
+# Shared warm tier-fallback cache helpers (kept byte-compatible with scripts/agy-delegate.sh).
+# Gated on real agy binary size (> 65536 bytes) in auto mode so unit-test stubs (< 10 KB)
+# never read or write $HOME/.cache unless AGY_TIER_CACHE=on is explicitly set.
+tier_cache_enabled() {
+  local mode bin sig sz
+  mode="$(printf '%s' "${AGY_TIER_CACHE:-auto}" | tr '[:upper:]' '[:lower:]')"
+  case "$mode" in
+    off|false|0|no|disabled) return 1 ;;
+    on|true|1|yes|enabled)   return 0 ;;
+  esac
+  [ -z "${STUB_MODE:-}${STUB_REJECT_MODEL:-}" ] || return 1
+  bin="$(command -v agy 2>/dev/null || true)"
+  [ -n "$bin" ] || return 1
+  sig="$(file_stat_sig "$bin")"
+  sz="${sig#*:}"
+  case "$sz" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$sz" -gt 65536 ]
+}
+
+tier_cache_file() {
+  printf '%s/tier-models-v1.tsv' "${AGY_TIER_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/antigravity-claude}"
+}
+
+tier_cache_key() {
+  local bin app oauth_present="0"
+  bin="$(command -v agy 2>/dev/null || true)"
+  app="$HOME/.gemini/antigravity-cli"
+  [ -s "$app/antigravity-oauth-token" ] && oauth_present="1"
+  printf '%s|%s|%s|%s|%s|%s|%s|%s|%s' \
+    "$bin" "$(file_stat_sig "$bin")" \
+    "$oauth_present" \
+    "$(file_content_sig "$app/settings.json")" \
+    "$(file_content_sig "$app/cache/onboarding.json")" \
+    "${AGY_ADC_AUTH:-}" "${GEMINI_API_KEY:+1}" \
+    "${GOOGLE_CLOUD_PROJECT:-}" "${GOOGLE_CLOUD_LOCATION:-}" | tr '\t\r\n' '   '
+}
+
+tier_cache_put() { # $1 = slot (flash|flash-lo|pro), $2 = fallback model (empty = evict)
+  tier_cache_enabled || return 0
+  local slot="$1" val="${2:-}" cf dir now ttl key tmp ts k s m
+  cf="$(tier_cache_file)"; dir="$(dirname "$cf")"
+  now="$(date +%s 2>/dev/null || echo 0)"
+  ttl="${AGY_TIER_CACHE_TTL:-21600}"
+  case "$ttl" in ''|*[!0-9]*) ttl=21600 ;; esac
+  key="$(tier_cache_key)"
+  mkdir -p -m 0700 "$dir" 2>/dev/null || return 0
+  tmp="$(mktemp "$dir/.tier-cache.XXXXXX" 2>/dev/null)" || return 0
+  chmod 0600 "$tmp" 2>/dev/null || true
+  if [ -f "$cf" ]; then
+    while IFS=$'\t' read -r ts k s m; do
+      [ -n "$ts" ] && [ -n "$k" ] && [ -n "$s" ] && [ -n "$m" ] || continue
+      case "$ts" in *[!0-9]*) continue ;; esac
+      [ $(( now - ts )) -lt "$ttl" ] || continue
+      if [ "$k" = "$key" ] && [ "$s" = "$slot" ]; then continue; fi
+      printf '%s\t%s\t%s\t%s\n' "$ts" "$k" "$s" "$m" >> "$tmp"
+    done < "$cf"
+  fi
+  if [ -n "$val" ]; then
+    printf '%s\t%s\t%s\t%s\n' "$now" "$key" "$slot" "$val" >> "$tmp"
+  fi
+  mv -f "$tmp" "$cf" 2>/dev/null || rm -f "$tmp" 2>/dev/null || true
+}
+
 # Normalize a model id to lowercase alphanumerics only, so a configured display name
-# ("Gemini 3.8 Flash (High)") and an `agy models` entry survive comparison regardless of
+# ("Gemini 4 Hydrogen (High)") and an `agy models` entry survive comparison regardless of
 # format. agy 1.1.5 switched `agy models` output from display names to slugs
 # (`gemini-3.5-flash`), which broke a strict grep and made doctor falsely warn that every
 # tier model was missing (they still worked). Both forms normalize to a comparable core.
@@ -32,8 +112,8 @@ norm_model() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]
 # (#104) while `agy -p --model` rejected both with exit 14.
 #
 # `agy models` lines come in two shapes across versions and test stubs:
-#   - two columns: `<slug>  <display name>` (current agy 1.2.x-1.4.x; first token is a
-#     lowercase slug such as `gemini-launch-candidate-high` or `auto`, remainder is the
+#   - two columns: `<slug>  <display name>` (current agy 1.2.x-1.5.x; first token is a
+#     lowercase slug such as `gemini-4-hydrogen-high` or `auto`, remainder is the
 #     display name) -> compare slug-shaped $1 (no spaces/parens) against the slug column,
 #     and display-name $1 against the display column.
 #   - one column: `<slug>` only (agy 1.1.5 / stub) or `<display name>` only (pre-1.1.5,
@@ -66,18 +146,42 @@ EOF
   return 1
 }
 
+# Return the first fallback model in $MODELS for an unremapped tier ($1 = flash|flash-lo|pro).
+# Order mirrors scripts/agy-delegate.sh so doctor reports and pre-seeds the exact model
+# runtime fallback will select.
+first_present_fallback() {
+  local tier="$1" cand
+  local cands=()
+  case "$tier" in
+    flash)
+      cands=("Gemini 3.8 Flash (High)" "Gemini 3.7 Flash (High)" "Gemini 3.6 Flash (High)" "Gemini 3.5 Flash") ;;
+    flash-lo)
+      cands=("Gemini 3.8 Flash (Low)" "Gemini 3.5 Flash Lite" "Gemini 3.7 Flash (Low)" "Gemini 3.1 Flash Lite") ;;
+    pro)
+      cands=("Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)") ;;
+  esac
+  for cand in "${cands[@]:-}"; do
+    [ -n "$cand" ] || continue
+    if model_present "$cand"; then
+      printf '%s' "$cand"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Suggest up to 3 candidate models from $MODELS when a tier model is missing (#102, #104).
 # Ranks direct substring matches (either $n contains $want, e.g. "Gemini 4 Argon" ->
 # "Gemini 4 Argon (High)", or $want contains the normalized display name, e.g.
-# "Gemini 3.1 Pro (High)" -> "Gemini 3.1 Pro") AHEAD of generic family matches (argon/pro
-# or flash) across the entire model list, so earlier family rows never bury a direct match
+# "Gemini 3.1 Pro (High)" -> "Gemini 3.1 Pro") AHEAD of generic family matches (carbon/argon/pro
+# or hydrogen/flash) across the entire model list, so earlier family rows never bury a direct match
 # that appears later in `agy models`. Specialist orchestrator/coordinator entries are
 # skipped on generic family matches.
 suggest_models() {
   local want line first first_lc rest disp n nd fam="flash"
   local direct=() family=() picked=() item
   want="$(norm_model "$1")"
-  case "$want" in *pro*|*argon*|*opus*) fam="pro" ;; esac
+  case "$want" in *carbon*|*argon*|*pro*|*opus*|*sonnet*) fam="pro" ;; esac
   while IFS= read -r line; do
     line="${line#"${line%%[![:space:]]*}"}"
     line="${line%"${line##*[![:space:]]}"}"
@@ -99,20 +203,27 @@ suggest_models() {
       direct+=("$disp")
     else
       case "$n" in *orchestrator*|*coordinator*) continue ;; esac
-      if [ "$fam" = "pro" ] && case "$n" in *argon*|*pro*|*opus*) true ;; *) false ;; esac; then
+      if [ "$fam" = "pro" ] && case "$n" in *carbon*|*argon*|*pro*|*opus*|*sonnet*) true ;; *) false ;; esac; then
         family+=("$disp")
-      elif [ "$fam" = "flash" ] && case "$n" in *flash*) true ;; *) false ;; esac; then
+      elif [ "$fam" = "flash" ] && case "$n" in *hydrogen*|*flash*) true ;; *) false ;; esac; then
         family+=("$disp")
       fi
     fi
   done <<EOF
 $MODELS
 EOF
-  for item in "${direct[@]:-}" "${family[@]:-}"; do
+  for item in "${direct[@]:-}"; do
     [ -n "$item" ] || continue
     picked+=("$item")
     [ "${#picked[@]}" -ge 3 ] && break
   done
+  if [ "${#picked[@]}" -lt 3 ]; then
+    for item in "${family[@]:-}"; do
+      [ -n "$item" ] || continue
+      picked+=("$item")
+      [ "${#picked[@]}" -ge 3 ] && break
+    done
+  fi
   local out=""
   for item in "${picked[@]:-}"; do
     [ -n "$item" ] || continue
@@ -181,53 +292,62 @@ sys.exit(0 if n else 1)
 ' "${files[@]}" 2>/dev/null
 }
 
+# Inspect MDM admin_settings.json when present (Linux /etc/antigravity/admin_settings.json,
+# macOS /Library/Application Support/Antigravity/admin_settings.json, or AGY_ADMIN_SETTINGS_PATH).
+# Emits TAB-separated `<kind>\t<msg>` lines (`info` or `warn`).
+inspect_admin_settings() {
+  local p="${AGY_ADMIN_SETTINGS_PATH:-}"
+  if [ -z "$p" ]; then
+    if [ -r "/etc/antigravity/admin_settings.json" ]; then
+      p="/etc/antigravity/admin_settings.json"
+    elif [ -r "/Library/Application Support/Antigravity/admin_settings.json" ]; then
+      p="/Library/Application Support/Antigravity/admin_settings.json"
+    fi
+  fi
+  [ -n "$p" ] && [ -r "$p" ] || return 1
+  command -v python3 >/dev/null 2>&1 || { printf 'info\tMDM policy present: %s\n' "$p"; return 0; }
+  python3 -c '
+import json, re, sys
+path = sys.argv[1]
+try:
+    raw = open(path, encoding="utf-8", errors="replace").read()
+    # admin_settings.json permits JSONC line comments in upstream hujson; strip simple // lines
+    clean = re.sub(r"(?m)^[ \t]*//.*$", "", raw)
+    d = json.loads(clean) or {}
+except Exception:
+    print("info\tMDM policy present: " + path)
+    sys.exit(0)
+gw = d.get("gateway") or {}
+ac = d.get("agentControls") or {}
+pr = d.get("proxy") or {}
+parts = []
+if isinstance(gw, dict) and gw.get("url"):
+    parts.append("gateway=" + str(gw.get("url")))
+if isinstance(ac, dict) and ac.get("permissionPreset"):
+    parts.append("permissionPreset=" + str(ac.get("permissionPreset")))
+suffix = (" (" + ", ".join(parts) + ")") if parts else ""
+print("info\tMDM policy active: " + path + suffix)
+if isinstance(gw, dict) and gw.get("url") and gw.get("routeWebFetch") is True:
+    addr = str((pr.get("address") if isinstance(pr, dict) else "") or "").strip()
+    if not addr:
+        print("warn\tadmin_settings.json sets gateway.routeWebFetch=true without proxy.address — agy 1.5.8+ disables URL reads (read_url_content) fail-closed")
+' "$p" 2>/dev/null
+}
+
 # Report `permissions.allow` entries agy cannot use as written. Prints one
 # TAB-separated `<class>\t<reason>\t<entry>` line each and returns 0 when any were found.
-#
-# The class matters because the CONSEQUENCE is not shared. `zerowords` is the specific
-# thing agy 1.1.11 fixed — a `command(...)` rule naming no command, which used to match
-# every command — and only that class carries the auto-approve-everything history.
-# `unparseable` is everything else: agy cannot use the entry, so the grant is not in
-# effect, and nothing beyond that is known. Reporting the first consequence for the
-# second would put a security claim in front of someone it does not apply to.
-#
-# WHY doctor owns this. The plugin recommends a `permissions.allow` rule in eight
-# places as the NARROW alternative to `--yolo`, and that recommendation carries a
-# placeholder — `write_file(<dir>)`. A rule that agy cannot parse does not announce
-# itself in either direction: before 1.1.11 an entry that tokenizes to zero command
-# words matched EVERY command and silently auto-approved anything the agent ran, which
-# is broader than the `--yolo` it was chosen over; from 1.1.11 it matches nothing, so
-# the grant simply is not there and the write is soft-denied for no visible reason.
-# Same typo, opposite failures, no message either time.
 bad_allow_rules() {   # $1 = the allow rules, one per line
   command -v python3 >/dev/null 2>&1 || return 1
   [ -n "${1:-}" ] || return 1
   python3 -c '
 import re, shlex, sys
 
-# Rules arrive as text, one per line, so the SOURCE is the callers business — the file
-# for old agy, and agys own resolved view for 1.1.12+. Reading the file was the whole
-# defect: it sees one scope, and agy applies more than one.
 allow = [l for l in sys.argv[1].split(chr(10)) if l.strip()]
 
-# Shell reserved words that may PREFIX a command without being one, so a rule made
-# only of them names no command. agy 1.1.11 describes the class it fixed as an entry
-# that "tokenizes to zero command words" and gives command(time) as its own example.
 PREFIX = {"time", "!", "{", "}", "[[", "]]", "if", "then", "elif", "else", "fi",
           "case", "esac", "for", "select", "while", "until", "do", "done", "in",
           "function", "coproc"}
 
-# A placeholder is the <...> shape with placeholder-shaped content: one unbroken token,
-# no whitespace, which already separates <dir> and <path/to/repo> from a literal redirect
-# (command(echo hi > /tmp/f)) and from a PAIR of them (command(sort < in > out)), where
-# what sits between the brackets is a filename.
-#
-# Shape is not enough on its own, though: command(grep -F <TAG> file.txt) is a real rule
-# holding a real angle-bracketed literal. So the test is applied only OUTSIDE
-# `command(...)`. Angle brackets are shell syntax, and shell is what a command rule
-# contains; the placeholder we ship appears in `write_file(<dir>)` and nowhere else. The
-# cost of that choice is a placeholder inside a command rule going unflagged — a miss,
-# which this file prefers to a false positive that sends someone to edit a working rule.
 PLACEHOLDER = re.compile(r"<[A-Za-z0-9_./\-]+>")
 PLACEHOLDER_REASON = "unsubstituted placeholder — replace <...> with a real value"
 
@@ -240,39 +360,26 @@ for e in allow:
         bad.append(("(empty string)", "empty entry", "unparseable")); continue
     i = t.find("(")
     if i < 0 or not t.endswith(")"):
-        # Not the NAME(...) shape, so not ours to judge — except an entry that is nothing
-        # but a placeholder, which cannot be anything else.
         if PLACEHOLDER.fullmatch(t):
             bad.append((t, PLACEHOLDER_REASON, "unparseable"))
         continue
     name, inner = t[:i].strip(), t[i + 1:-1]
     if not inner.strip():
-        # Bare `()` is one of the zero-command-word examples upstream gives, and so is
-        # command(). An empty body on any OTHER matcher, e.g. write_file(), is merely
-        # unusable and carries none of that history.
         bad.append((t, "empty rule body",
                     "zerowords" if name in ("", "command") else "unparseable")); continue
     if name != "command":
-        # write_file(...) etc. are a different matcher, and the only place our placeholder
-        # is ever recommended.
         if PLACEHOLDER.search(inner):
             bad.append((t, PLACEHOLDER_REASON, "unparseable"))
         continue
     try:
         words = shlex.split(inner, comments=True)
     except ValueError:
-        continue                      # unbalanced quotes: agy parses these, not us
+        continue
     while words and words[0] in PREFIX:
         words.pop(0)
     if not words:
         bad.append((t, "tokenizes to zero command words", "zerowords"))
 
-# CLASS first, and the entry last with its control characters escaped. The reader splits
-# on tabs, so a rule containing one would shift every field after it — and the field that
-# would move is the class, which decides whether a security consequence gets printed. A
-# newline would be worse: it would split one finding into two lines, the second of them
-# classless. Neither is hypothetical enough to leave to chance in a file that reads
-# user-supplied JSON.
 def esc(x):
     return (x.replace(chr(92), chr(92) * 2).replace(chr(9), chr(92) + "t")
              .replace(chr(10), chr(92) + "n").replace(chr(13), chr(92) + "r"))
@@ -283,14 +390,21 @@ sys.exit(0 if bad else 1)
 ' "$1" 2>/dev/null
 }
 
+# True when version $1 is strictly older than $2. Pure shell on purpose: `sort -V` is
+# not universal.
+ver_lt() {
+  local a="$1" b="$2" i x y
+  for i in 1 2 3; do
+    x="$(printf '%s' "$a" | cut -d. -f"$i")"; y="$(printf '%s' "$b" | cut -d. -f"$i")"
+    case "$x" in ''|*[!0-9]*) x=0 ;; esac
+    case "$y" in ''|*[!0-9]*) y=0 ;; esac
+    [ "$x" -lt "$y" ] && return 0
+    [ "$x" -gt "$y" ] && return 1
+  done
+  return 1                            # equal is not older
+}
+
 # The allow rules agy will actually apply, one per line.
-#
-# The file parse below reads ONE scope. agy applies more: a `shared` scope lives in
-# ~/.gemini/config/config.json (userSettings.globalPermissionGrants), and doctor never
-# saw it — so it could report every rule clean while a broken one sat in a file it does
-# not open. Guessing which files agy reads is what produced that, and 1.1.12 removes the
-# need to guess: `-p /permissions` returns what agy RESOLVED, one
-# `<scope>\t<action>\t<rule>` record per line, with no agent turn and no tokens.
 allow_rules() {
   case "${AGY_VER:-}" in
     ''|*[!0-9.]*) : ;;
@@ -302,8 +416,6 @@ allow_rules() {
           printf '%s\n' "$resolved" | awk -F'\t' '$2 == "allow" && $3 != "" { print $3 }'
           return 0
         fi
-        # Empty is not proof of no rules — it is also what a hang or an older build than
-        # the version claims looks like. Fall through to the file rather than report clean.
       fi ;;
   esac
   [ -f "$SETTINGS" ] || return 1
@@ -320,23 +432,6 @@ for e in allow:
 ' "$SETTINGS" 2>/dev/null
 }
 
-# True when version $1 is strictly older than $2. Pure shell on purpose: `sort -V` is
-# not universal, and when it is missing the command substitution comes back EMPTY, the
-# comparison quietly fails, and the check it guards never fires — a version gate that
-# silently does nothing is worse than none, because it reads as a clean bill of health.
-# (macOS's own sort does support -V; BusyBox and minimal images are the risk.)
-ver_lt() {
-  local a="$1" b="$2" i x y
-  for i in 1 2 3; do
-    x="$(printf '%s' "$a" | cut -d. -f"$i")"; y="$(printf '%s' "$b" | cut -d. -f"$i")"
-    case "$x" in ''|*[!0-9]*) x=0 ;; esac
-    case "$y" in ''|*[!0-9]*) y=0 ;; esac
-    [ "$x" -lt "$y" ] && return 0
-    [ "$x" -gt "$y" ] && return 1
-  done
-  return 1                            # equal is not older
-}
-
 # True on native Windows (Git Bash/MSYS/Cygwin), NOT WSL — where headless agy hangs.
 on_windows_native() {
   case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
@@ -344,21 +439,36 @@ on_windows_native() {
   return 1
 }
 
+# Validate one tier slot ($1 = flash|flash-lo|pro, $2 = model, $3 = explicit remap value).
+# Sets LAST_EFFECTIVE_TIER_MODEL to whichever model (primary or fallback) is usable on this plan.
+LAST_EFFECTIVE_TIER_MODEL=""
+check_tier_slot() {
+  local slot="$1" m="$2" explicit="${3:-}" fb=""
+  LAST_EFFECTIVE_TIER_MODEL=""
+  if model_present "$m"; then
+    ok "tier model present: $m"
+    tier_cache_put "$slot" ""
+    LAST_EFFECTIVE_TIER_MODEL="$m"
+  elif [ -z "$explicit" ] && fb="$(first_present_fallback "$slot")" && [ -n "$fb" ]; then
+    ok "tier '$slot' fallback model present: $fb ($m not on this plan; auto-fallback active)"
+    tier_cache_put "$slot" "$fb"
+    LAST_EFFECTIVE_TIER_MODEL="$fb"
+  else
+    warn "tier model not in 'agy models': $m"
+    local sugg
+    sugg="$(suggest_models "$m")"
+    [ -n "$sugg" ] && info "available in 'agy models': $sugg"
+    info "agy is multi-model/plan-dependent — remap tiers via CLAUDE_PLUGIN_OPTION_TIER_* (or set _DEFAULT_MODEL), or pass --model <name from \`agy models\`>"
+  fi
+}
+
 echo "Antigravity for Claude Code — doctor"
 
 # 1. agy on PATH
 if command -v agy >/dev/null 2>&1; then
-  # version probe is guarded too: `command -v` already proved agy exists, and on a
-  # headless hang even `agy --version` shouldn't be able to freeze doctor (issue #6).
   AGY_VER="$(agy_guard 10 --version 2>/dev/null | head -1 | tr -d '[:space:]')"
   ok "agy found: $(command -v agy)  (${AGY_VER:-version unknown})"
 
-  # `--tier` resolves to `--model`, and agy IGNORED --model/--effort in headless `-p`
-  # until 1.1.10 — the flag was applied after model configuration had initialised, so
-  # the run silently fell back to the persisted default. Nothing surfaces that: the
-  # call succeeds, returns sensible text, and reports usage. So on an older agy the
-  # plugin's whole routing story is inert and looks like it is working, which is worth
-  # a warning rather than a footnote.
   case "$AGY_VER" in
     ''|*[!0-9.]*) : ;;               # unparseable (dev build, wrapper, hang) — say nothing
     *)
@@ -388,11 +498,6 @@ if command -v agy >/dev/null 2>&1; then
   if [ "$AGY_TIMED_OUT" -eq 1 ]; then
     bad "\`agy models\` hung and was killed after 20s — this is NOT an auth problem"
     if MCP_N="$(has_stdio_mcp)"; then
-      # NOT the issue-37 mechanism. That one was MCP children holding a capture
-      # PIPE open, and there is no pipe left to hold — agy's stdout goes to a
-      # file now. What can still hang here is agy blocking INTERNALLY while a
-      # configured MCP server never finishes connecting, which reproduces even
-      # with stdout on a file and looks identical from the outside.
       info "you have $MCP_N stdio MCP server(s) configured (~/.gemini/config/mcp_config.json and plugins/*/mcp_config.json)."
       info "agy waits on its MCP servers at startup, so one that never finishes connecting blocks \`agy models\` itself."
       info "check the agy log for a server that never reports ready, or disable them temporarily to confirm the cause."
@@ -408,51 +513,37 @@ if command -v agy >/dev/null 2>&1; then
   fi
   if [ -n "$MODELS" ]; then
     ok "agy authenticated — $(printf '%s' "$MODELS" | grep -c . ) models available"
-    # 2b. configured tier->model names exist (respecting userConfig remaps). agy is
-    # multi-model and plan-dependent, so a miss is a WARNING, not a failure.
-    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.8 Flash (High)}"
-    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.8 Flash (Low)}"
-    PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Argon (High)}"
-    for m in "$FLASH" "$FLASH_LO" "$PRO"; do
-      if model_present "$m"; then
-        ok "tier model present: $m"
-      else
-        warn "tier model not in 'agy models': $m"
-        SUGG="$(suggest_models "$m")"
-        [ -n "$SUGG" ] && info "available in 'agy models': $SUGG"
-        info "agy is multi-model/plan-dependent — remap tiers via CLAUDE_PLUGIN_OPTION_TIER_* (or set _DEFAULT_MODEL), or pass --model <name from \`agy models\`)"
-      fi
-    done
+    # 2b. configured tier->model names exist (respecting userConfig remaps and automatic
+    # plan fallbacks; pinned against agy-delegate.sh in tests/run-tests.sh).
+    FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 4 Hydrogen (High)}"
+    FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 4 Hydrogen (Low)}"
+    PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Carbon (High)}"
+    check_tier_slot "flash"    "$FLASH"    "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-}"
+    PROBE_M="${LAST_EFFECTIVE_TIER_MODEL:-$FLASH}"
+    check_tier_slot "flash-lo" "$FLASH_LO" "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-}"
+    check_tier_slot "pro"      "$PRO"      "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-}"
 
-    # 2c. Does --model actually TAKE EFFECT? Being listed in `agy models` and being
-    # honoured are different questions, and for three releases the answer to the second
-    # one was no (see the 1.1.10 warning above) while everything here still read green.
-    #
-    # The check above can only infer that from a version string. 1.1.11 answers the
-    # read-only slash commands in print mode without starting an agent turn, so doctor
-    # can stop inferring and ASK: request a tier model, see which one comes back. Costs
-    # no tokens, no quota, and leaves no conversation behind (`usage.total_tokens: 0`).
-    #
-    # Gated at 1.1.11 on purpose. Below it the command is not recognised, falls through
-    # as literal prompt text, and the model answers as though it had run — so the probe
-    # would spend a real turn AND return a made-up answer. Verified on 1.1.11: display
-    # names and slugs both work, and all three tiers come back as themselves.
+    # 2c. Does --model actually TAKE EFFECT?
+    # Reply is `<slug>\t<display name>` (or one column on custom stubs). Check both
+    # col 1 and col 2 (`cut -s -f2` guarded by `[ -n "$EFF_DISP_N" ]` so single-column
+    # output never vacuous-matches `*"$EFF_DISP_N"*`).
     case "${AGY_VER:-}" in
       ''|*[!0-9.]*) : ;;
       *)
         if ! ver_lt "$AGY_VER" 1.1.11; then
-          # cut -f1: the reply is one tab-separated record, `<slug>\t<display name>`.
-          EFF="$(agy_guard 20 --model "$FLASH" -p /model 2>/dev/null | head -1 | cut -f1)"
-          EFF_N="$(norm_model "$EFF")"; WANT_N="$(norm_model "$FLASH")"
+          RAW_EFF="$(agy_guard 20 --model "$PROBE_M" -p /model 2>/dev/null | head -1)"
+          EFF="$(printf '%s\n' "$RAW_EFF" | cut -f1)"
+          EFF_DISP="$(printf '%s\n' "$RAW_EFF" | cut -s -f2)"
+          EFF_N="$(norm_model "$EFF")"
+          EFF_DISP_N="$(norm_model "$EFF_DISP")"
+          WANT_N="$(norm_model "$PROBE_M")"
           if [ -z "$EFF_N" ]; then
-            # No answer at all: a hang, an older build than the version claims, or a
-            # plan that refuses the probe. Not evidence of breakage — stay quiet rather
-            # than report a failure doctor cannot actually substantiate.
             :
-          elif case "$WANT_N" in *"$EFF_N"*) true ;; *) case "$EFF_N" in *"$WANT_N"*) true ;; *) false ;; esac ;; esac; then
-            ok "--model takes effect (asked for '$FLASH', agy reports '$EFF')"
+          elif case "$WANT_N" in *"$EFF_N"*) true ;; *) case "$EFF_N" in *"$WANT_N"*) true ;; *) false ;; esac ;; esac ||
+               { [ -n "$EFF_DISP_N" ] && { case "$WANT_N" in *"$EFF_DISP_N"*) true ;; *) case "$EFF_DISP_N" in *"$WANT_N"*) true ;; *) false ;; esac ;; esac; }; }; then
+            ok "--model takes effect (asked for '$PROBE_M', agy reports '$EFF')"
           else
-            warn "--model does NOT take effect: asked for '$FLASH', agy reports '$EFF'"
+            warn "--model does NOT take effect: asked for '$PROBE_M', agy reports '$EFF'"
             info "every delegation runs '$EFF' instead, and nothing in the output says so."
             info "--tier / tier_* remaps are therefore inert. Check for a persisted default"
             info "or a profile overriding it, then re-run doctor."
@@ -462,31 +553,44 @@ if command -v agy >/dev/null 2>&1; then
   elif [ "$AGY_TIMED_OUT" -eq 0 ]; then
     # Empty WITHOUT a timeout kill: genuinely no models -> auth/network is the likely cause.
     bad "agy could not list models (not authenticated, or no network)"
-    info "fix: authenticate agy (run \`agy\` once interactively) and check GCP access"
+    info "fix: authenticate agy (run \`agy\` interactively, or \`agy acp --login\` over SSH/headless) and check GCP access"
     info "if agy works interactively but is empty here, suspect a headless/no-TTY hang instead (see above)"
   fi
 fi
 
-# 3. agy GCP config
+# 3. agy GCP & auth-route config
 SETTINGS="$HOME/.gemini/antigravity-cli/settings.json"
 if [ -f "$SETTINGS" ]; then
   PROJ="$(sed -n 's/.*"project"[: ]*"\([^"]*\)".*/\1/p' "$SETTINGS" | head -1)"
   LOC="$(sed -n 's/.*"location"[: ]*"\([^"]*\)".*/\1/p' "$SETTINGS" | head -1)"
+  MPROV="$(sed -n 's/.*"modelProvider"[: ]*"\([^"]*\)".*/\1/p' "$SETTINGS" | head -1)"
   ok "agy settings: ${SETTINGS/#$HOME/~}"
   [ -n "$PROJ" ] && info "GCP project: $PROJ   location: ${LOC:-?}"
-
+  if [ "$MPROV" = "gemini" ]; then
+    if [ -n "${GEMINI_API_KEY:-}" ]; then
+      info "auth route: Gemini API key (modelProvider=gemini, GEMINI_API_KEY set)"
+    else
+      warn "settings.json sets modelProvider=\"gemini\", but GEMINI_API_KEY is not set in this environment"
+      info "fix: export GEMINI_API_KEY=... (agy exits non-zero without it when modelProvider is gemini)"
+    fi
+  fi
 else
   info "no agy settings.json yet (${SETTINGS/#$HOME/~})"
 fi
+case "$(printf '%s' "${AGY_ADC_AUTH:-}" | tr '[:upper:]' '[:lower:]')" in
+  true|1|yes) info "auth route: Vertex AI Application Default Credentials (AGY_ADC_AUTH=${AGY_ADC_AUTH})" ;;
+esac
+[ -n "${AGY_GATEWAY_URL:-}" ] && info "auth route: Enterprise LLM Gateway (AGY_GATEWAY_URL=${AGY_GATEWAY_URL})"
+if MDM_OUT="$(inspect_admin_settings)"; then
+  while IFS=$'\t' read -r mkind mmsg; do
+    [ -n "$mmsg" ] || continue
+    if [ "$mkind" = "warn" ]; then warn "$mmsg"; else info "$mmsg"; fi
+  done <<EOF
+$MDM_OUT
+EOF
+fi
 
 # 3b. permissions.allow entries agy cannot use as written.
-#
-# OUTSIDE the settings.json branch on purpose. From agy 1.1.12 the rules come from
-# `-p /permissions`, which resolves scopes living in other files entirely — the `shared`
-# scope in ~/.gemini/config/config.json is the one this check was added for. Nesting it
-# under "does settings.json exist" meant a machine configured only through those other
-# scopes ran no check at all, and said nothing about it. Both reviewers caught that the
-# fix could not reach the case it was written for.
 ALLOW_RULES="$(allow_rules)"
 if BAD_RULES="$(bad_allow_rules "$ALLOW_RULES")"; then
   warn "permissions.allow: $(printf '%s\n' "$BAD_RULES" | grep -c .) entry/entries agy cannot use as written"
@@ -498,10 +602,6 @@ if BAD_RULES="$(bad_allow_rules "$ALLOW_RULES")"; then
   done <<EOF
 $BAD_RULES
 EOF
-  # Every class above means the grant is not in effect. Only the zero-command-word
-  # class ALSO has the pre-1.1.11 history of matching everything, so that sentence is
-  # printed only when such an entry is actually present — putting a security claim in
-  # front of someone holding a mistyped write_file() would be worse than saying less.
   info "an entry agy cannot use grants nothing, so the tool it was meant to cover is"
   info "still denied (exit 15) with nothing in the message naming the rule."
   if [ "$ZEROWORDS" -eq 1 ]; then
@@ -520,13 +620,13 @@ EOF
 fi
 
 # 4. plugin scripts executable
-for s in agy-delegate.sh agy-cost-compare.sh cloud-debug.sh agy-trace.sh agy-media.sh; do
+for s in agy-delegate.sh agy-handoff.sh agy-job.sh agy-cost-compare.sh cloud-debug.sh agy-trace.sh agy-media.sh agy-migrate.py; do
   if [ -x "$HERE/$s" ]; then ok "$s executable"; else
     bad "$s not executable"; info "fix: chmod +x \"$HERE/$s\""
   fi
 done
 
-# 4b. SessionStart hooks executable
+# 4b. SessionStart / PreToolUse / UserPromptSubmit hooks executable
 for h in check-agy.sh inject-policy.sh validate-delegate-bash.sh nudge-delegation.sh; do
   if [ -x "$ROOT/hooks/$h" ]; then ok "hooks/$h executable"; else
     bad "hooks/$h not executable"; info "fix: chmod +x \"$ROOT/hooks/$h\""
@@ -535,7 +635,7 @@ done
 
 # 4b2. bin/ entrypoints executable (added to the Bash-tool PATH; commands/skills call
 #      these bare names — $CLAUDE_PLUGIN_ROOT is not exported to model-run Bash, issue #11)
-for b in agy-delegate agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session agy-media; do
+for b in agy-delegate agy-handoff agy-job agy-cost-compare agy-doctor cloud-debug agy-trace measure-session agy-media agy-migrate; do
   if [ -x "$ROOT/bin/$b" ]; then ok "bin/$b executable"; else
     bad "bin/$b not executable"; info "fix: chmod +x \"$ROOT/bin/$b\""
   fi

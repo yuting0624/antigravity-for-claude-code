@@ -12,30 +12,43 @@
 #     stdin (`< /dev/null`) for short prompts and pipe via a rewindable temp file
 #     (`< "$PROMPTF"` without `-p`, measured on agy 1.4.8 and 1.5.9) above 64 KB
 #     to avoid Linux E2BIG.
-#   * agy v1.0.x has NO `--output-format json`, so callers must parse plain text.
-#     This wrapper guarantees: non-empty stdout on success, non-zero exit on
-#     failure or empty output.
-#   * Human-friendly tier names (flash / pro) instead of exact model strings.
+#   * Structured JSON unwrapping (`--output-format json` on agy >= 1.1.8) with
+#     plain-text fallback, non-empty stdout guarantee, and structured AGY_USAGE /
+#     AGY_SIGNAL telemetry on stderr.
+#   * Human-friendly Gemini 4 tier names (`flash` = Hydrogen High, `flash-lo` =
+#     Hydrogen Low, `pro` = Carbon High) with 1-hop `Available models:` pruning
+#     and a 6-hour fingerprinted warm fallback cache on plans without Carbon/Hydrogen.
 #
 # Usage:
 #   agy-delegate.sh [options] "the task prompt"
 #   echo "long prompt" | agy-delegate.sh [options] -      # read prompt from stdin
 #
 # Options:
-#   -t, --tier <flash|flash-lo|pro>  Model tier (default: flash)
-#   -d, --dir  <path>                Add a workspace dir (repeatable)
-#       --timeout <dur>              Print-mode timeout, e.g. 10m (default: 5m)
+#   -t, --tier <flash|flash-lo|pro>  Model tier (default: flash = Gemini 4 Hydrogen High;
+#                                    flash-lo/lite = Hydrogen Low; pro = Gemini 4 Carbon High;
+#                                    power aliases: argon, flash-38)
+#   -e, --effort <low|medium|high|xhigh|max>
+#                                    Reasoning effort override (rewrites tier display-name suffix,
+#                                    or passes --effort to agy for base slugs / gateway models)
+#   -d, --dir, --add-dir <path>      Add a workspace dir (repeatable)
+#       --timeout <dur>              Print-mode timeout, e.g. 10m, or 0 for unbounded (default: 5m)
+#       --read-only                  Enforce read-only session settings on agy >= 1.4.10
+#                                    (agentMode="", toolPermission="request-review", allow=[]);
+#                                    neutralizes agy 1.5.7+ default Auto mode
+#       --allow-url                  With --read-only (or standalone), permit URL fetches
+#                                    (read_url(*)) while keeping writes and shell commands blocked
+#       --settings <json>            Pass ephemeral per-session settings JSON (agy >= 1.4.10)
+#       --json-schema <schema>       Enforce a JSON object schema on the final output (agy >= 1.4.x)
 #       --yolo                       Auto-approve all tool permissions (DANGEROUS). Reaches agy as
 #                                    --dangerously-skip-permissions; agy 1.1.25 rejects a literal --yolo
-#       --sandbox                    Run agent with terminal sandbox restrictions
+#       --sandbox                    Run agent with terminal sandbox restrictions (NOT containment)
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
-#       --mode <accept-edits|plan|auto> agy execution mode (agy >= 1.1.0; auto >= 1.3.5). accept-edits is NOT a
-#                                    write grant: measured on agy 1.1.13, where the flag is
-#                                    applied at all (1.1.12 fixed it being ignored headless),
-#                                    the write is denied exactly like one without it. Use a
-#                                    permissions.allow rule or --yolo. plan: strategize only.
-#                                    auto: dynamic plan/execute based on task complexity.
+#       --mode <accept-edits|plan|auto> agy execution mode (agy >= 1.1.0; auto >= 1.3.5). On agy 1.5.7+,
+#                                    accept-edits auto-approves write_file inside --dir/--add-dir
+#                                    (never shell commands or outside paths); on agy 1.1.13–1.5.6 it
+#                                    was not a headless write grant and denied like a plain write.
+#                                    plan: strategize only. auto: dynamic plan/execute.
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
@@ -59,7 +72,7 @@
 #             |    again from 1.1.20; since 1.1.27 the envelope also names the tool in
 #             |    denied_actions, measured on 1.2.0) and 1.1.13's hard error (rc 1, "user
 #             |    denied permission", 1.1.13-1.1.19). Add a permissions.allow rule, or --yolo.
-#             |    URL reads need a grant too since 1.1.28 (read_url(<target>), or the flag).
+#             |    URL reads need a grant too since 1.1.28 (read_url(<target>), --allow-url, or --yolo).
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -68,16 +81,6 @@
 # AGY_USAGE / AGY_SIGNAL go to stderr. If you are MEASURING cost, also set
 # AGY_USAGE_LOG=/path/to/log: stderr is easily lost (`2>&1 | tail -N` keeps the
 # digest and drops the usage line — see tee_usage below), a named file is not.
-# Since 0.28.0 the AGY_USAGE line also names the model that ran and the tier it was
-# picked from ("tier" is empty when --model or default_model chose the model), plus
-# agy's own duration_seconds and num_turns (1.2.x envelope; 0 on older agy) — so a
-# log can be priced per tier without joining it back to the command that produced it.
-#
-# agy is multi-model: tiers map to Gemini by default, but you can point delegation at any
-# model `agy models` lists (e.g. Claude/GPT on plans that expose them). Defaults via plugin
-# userConfig (env or ~/.claude/settings.json pluginConfigs): CLAUDE_PLUGIN_OPTION_DEFAULT_TIER,
-# _TIMEOUT, _DEFAULT_MODEL (exact name), _USAGE_LOG, and per-tier remaps _TIER_FLASH /
-# _TIER_FLASH_LO / _TIER_PRO. Explicit --model/--tier win; AGY_USAGE_LOG wins over _USAGE_LOG.
 #
 set -euo pipefail
 
@@ -91,6 +94,11 @@ TIER="${CLAUDE_PLUGIN_OPTION_DEFAULT_TIER:-flash}"
 TIMEOUT="${CLAUDE_PLUGIN_OPTION_TIMEOUT:-5m}"
 TIER_EXPLICIT=0
 MODEL=""
+EFFORT=""
+READ_ONLY=0
+ALLOW_URL=0
+CUSTOM_SETTINGS=""
+JSON_SCHEMA=""
 YOLO=0
 SANDBOX=0
 DIGEST=0
@@ -104,13 +112,210 @@ PRINT_CMD=0
 DENIED_ACTIONS=""   # tool names from the envelope's denied_actions (agy 1.1.27+), for the message
 
 die() { echo "agy-delegate: $*" >&2; exit 1; }
-# $1 = remaining argc ($#). Fail with a friendly message if an option has no value
-# (avoids `shift 2` aborting under `set -e` with a cryptic "shift count" error).
 need() { [ "$1" -ge 2 ] || die "option '$2' needs a value"; }
+
+# Normalize a model identifier to lowercase alphanumerics for case/punctuation-insensitive matching.
+norm_model() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]'; }
+
+# Portable <mtime>:<size> signature following symlinks (GNU coreutils stat, else BSD stat).
+file_stat_sig() {
+  [ -e "$1" ] || { printf '0:0'; return 0; }
+  stat -L -c '%Y:%s' "$1" 2>/dev/null || stat -L -f '%m:%z' "$1" 2>/dev/null || printf '0:0'
+}
+
+# Portable content signature (`<crc>:<bytes>` via POSIX cksum) for small JSON config files
+# that agy rewrites atomically on every invocation (`cache/onboarding.json`) without changing
+# content, avoiding false mtime cache invalidation across consecutive runs.
+file_content_sig() {
+  if [ -f "$1" ]; then
+    cksum < "$1" 2>/dev/null | awk '{printf "%s:%s", $1, $2}' || printf '0:0'
+  else
+    printf '0:0'
+  fi
+}
+
+# Warm tier-fallback cache helpers (shared format with scripts/doctor.sh).
+# In auto mode, requires a real agy binary (> 65536 bytes) and no STUB_* env vars so
+# unit-test stubs (< 10 KB) never read or write $HOME/.cache unless AGY_TIER_CACHE=on.
+tier_cache_enabled() {
+  local mode bin sig sz
+  mode="$(printf '%s' "${AGY_TIER_CACHE:-auto}" | tr '[:upper:]' '[:lower:]')"
+  case "$mode" in
+    off|false|0|no|disabled) return 1 ;;
+    on|true|1|yes|enabled)   return 0 ;;
+  esac
+  [ -z "${STUB_MODE:-}${STUB_REJECT_MODEL:-}" ] || return 1
+  bin="$(command -v agy 2>/dev/null || true)"
+  [ -n "$bin" ] || return 1
+  sig="$(file_stat_sig "$bin")"
+  sz="${sig#*:}"
+  case "$sz" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$sz" -gt 65536 ]
+}
+
+tier_cache_file() {
+  printf '%s/tier-models-v1.tsv' "${AGY_TIER_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/antigravity-claude}"
+}
+
+tier_cache_key() {
+  local bin app oauth_present="0"
+  bin="$(command -v agy 2>/dev/null || true)"
+  app="$HOME/.gemini/antigravity-cli"
+  [ -s "$app/antigravity-oauth-token" ] && oauth_present="1"
+  printf '%s|%s|%s|%s|%s|%s|%s|%s|%s' \
+    "$bin" "$(file_stat_sig "$bin")" \
+    "$oauth_present" \
+    "$(file_content_sig "$app/settings.json")" \
+    "$(file_content_sig "$app/cache/onboarding.json")" \
+    "${AGY_ADC_AUTH:-}" "${GEMINI_API_KEY:+1}" \
+    "${GOOGLE_CLOUD_PROJECT:-}" "${GOOGLE_CLOUD_LOCATION:-}" | tr '\t\r\n' '   '
+}
+
+tier_cache_get() { # $1 = slot (e.g. pro or pro:medium) -> echoes cached model if fresh
+  tier_cache_enabled || return 1
+  local slot="$1" cf now ttl key ts k s m
+  cf="$(tier_cache_file)"
+  [ -f "$cf" ] || return 1
+  now="$(date +%s 2>/dev/null || echo 0)"
+  ttl="${AGY_TIER_CACHE_TTL:-21600}"
+  case "$ttl" in ''|*[!0-9]*) ttl=21600 ;; esac
+  key="$(tier_cache_key)"
+  while IFS=$'\t' read -r ts k s m; do
+    [ -n "$ts" ] && [ -n "$k" ] && [ -n "$s" ] && [ -n "$m" ] || continue
+    case "$ts" in *[!0-9]*) continue ;; esac
+    if [ "$k" = "$key" ] && [ "$s" = "$slot" ] && [ $(( now - ts )) -lt "$ttl" ]; then
+      printf '%s' "$m"
+      return 0
+    fi
+  done < "$cf"
+  return 1
+}
+
+tier_cache_put() { # $1 = slot, $2 = fallback model (empty = evict)
+  tier_cache_enabled || return 0
+  local slot="$1" val="${2:-}" cf dir now ttl key tmp ts k s m
+  cf="$(tier_cache_file)"; dir="$(dirname "$cf")"
+  now="$(date +%s 2>/dev/null || echo 0)"
+  ttl="${AGY_TIER_CACHE_TTL:-21600}"
+  case "$ttl" in ''|*[!0-9]*) ttl=21600 ;; esac
+  key="$(tier_cache_key)"
+  mkdir -p -m 0700 "$dir" 2>/dev/null || return 0
+  tmp="$(mktemp "$dir/.tier-cache.XXXXXX" 2>/dev/null)" || return 0
+  chmod 0600 "$tmp" 2>/dev/null || true
+  if [ -f "$cf" ]; then
+    while IFS=$'\t' read -r ts k s m; do
+      [ -n "$ts" ] && [ -n "$k" ] && [ -n "$s" ] && [ -n "$m" ] || continue
+      case "$ts" in *[!0-9]*) continue ;; esac
+      [ $(( now - ts )) -lt "$ttl" ] || continue
+      if [ "$k" = "$key" ] && [ "$s" = "$slot" ]; then continue; fi
+      printf '%s\t%s\t%s\t%s\n' "$ts" "$k" "$s" "$m" >> "$tmp"
+    done < "$cf"
+  fi
+  if [ -n "$val" ]; then
+    printf '%s\t%s\t%s\t%s\n' "$now" "$key" "$slot" "$val" >> "$tmp"
+  fi
+  mv -f "$tmp" "$cf" 2>/dev/null || rm -f "$tmp" 2>/dev/null || true
+}
+
+# Layer 1 cold-miss pruning: when agy's ValidateRequestedModel error includes an
+# `Available models:` block (cli/store/model_config_manager.go), intersect remaining
+# fallback candidates against those exact labels in priority order to jump in ONE hop.
+# Returns:
+#   0 -> matched candidate printed as `<0-based-index>\t<model>`
+#   1 -> `Available models:` block WAS present, and ZERO candidates matched (abort retries -> exit 14)
+#   2 -> no `Available models:` block in error (walk candidates step-by-step)
+pick_available_fallback() {
+  local raw="$1"; shift
+  local avail=() line entry first first_lc rest in_block=0 cand cn an idx=0
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    if [ "$in_block" -eq 0 ]; then
+      case "$line" in
+        "Available models:"*) in_block=1 ;;
+      esac
+      continue
+    fi
+    case "$line" in
+      "  "[![:space:]]*|$'\t'[![:space:]]*)
+        entry="${line#"${line%%[![:space:]]*}"}"
+        entry="${entry%"${entry##*[![:space:]]}"}"
+        first="${entry%%[[:space:]]*}"
+        first_lc="$(printf '%s' "$first" | tr '[:upper:]' '[:lower:]')"
+        rest="${entry#"$first"}"
+        rest="${rest#"${rest%%[![:space:]]*}"}"
+        if [ -n "$rest" ] && [ "$first" = "$first_lc" ]; then
+          avail+=("$(norm_model "$first")" "$(norm_model "$rest")")
+        else
+          avail+=("$(norm_model "$entry")")
+        fi ;;
+      *)
+        break ;;
+    esac
+  done <<EOF
+$raw
+EOF
+  [ "${#avail[@]}" -gt 0 ] || return 2
+  for cand in "$@"; do
+    cn="$(norm_model "$cand")"
+    for an in "${avail[@]}"; do
+      if [ -n "$cn" ] && [ "$cn" = "$an" ]; then
+        printf '%s\t%s' "$idx" "$cand"
+        return 0
+      fi
+    done
+    idx=$(( idx + 1 ))
+  done
+  return 1
+}
+
+# Map canonical lowercase effort (`low|medium|high|xhigh|max`) to display-name title case.
+effort_display_label() {
+  case "$1" in
+    low)    printf 'Low' ;;
+    medium) printf 'Medium' ;;
+    high)   printf 'High' ;;
+    xhigh)  printf 'XHigh' ;;
+    max)    printf 'Max' ;;
+  esac
+}
+
+# Rewrite `(Low|Medium|High|XHigh|Max)` at the end of a display name ($1) to effort ($2).
+# Returns 0 and prints the rewritten name when $1 has a parenthesized effort suffix; returns 1
+# when $1 is an effortless name/slug (caller should pass `--effort` directly to agy).
+rewrite_display_effort() {
+  local m="$1" eff="$2" lbl prefix
+  lbl="$(effort_display_label "$eff")"
+  shopt -s nocasematch
+  case "$m" in
+    *" (low)"|*" (medium)"|*" (high)"|*" (xhigh)"|*" (max)")
+      shopt -u nocasematch
+      prefix="${m% (*}"
+      printf '%s (%s)' "$prefix" "$lbl"
+      return 0 ;;
+  esac
+  shopt -u nocasematch
+  return 1
+}
+
+# Adapt a fallback model ($1) to a requested effort ($2), respecting per-family effort caps
+# (e.g. xhigh/max caps to High on Carbon/Argon/Flash/3.1 Pro; medium maps to High on 3.1 Pro).
+adapt_fallback_effort() {
+  local m="$1" eff="$2" eff_use="$2"
+  [ -n "$eff" ] || { printf '%s' "$m"; return 0; }
+  case "$m" in
+    *"Hydrogen"*)
+      [ "$eff_use" = "max" ] && eff_use="xhigh" ;;
+    *"3.1 Pro ("*)
+      case "$eff_use" in low) eff_use="low" ;; *) eff_use="high" ;; esac ;;
+    *"Carbon"*|*"Argon"*|*"Flash ("*)
+      case "$eff_use" in xhigh|max) eff_use="high" ;; esac ;;
+  esac
+  rewrite_display_effort "$m" "$eff_use" || printf '%s' "$m"
+}
 
 # True when an agy error blob says the requested --model does not exist or is unavailable
 # on this plan/project/location. ONE definition, used by both the exit-14 classifier and
-# the pro-tier fallback trigger (#104): if agy rewords the message, both move together.
+# the tier fallback trigger (#104): if agy rewords the message, both move together.
 model_unavailable_blob() {
   shopt -s nocasematch
   case "$1" in
@@ -137,25 +342,10 @@ is_print_timeout() {
 }
 
 # Optional side channel for AGY_USAGE / AGY_SIGNAL.
-#
-# WHY this exists: these lines go to stderr so they never pollute the conductor's
-# context — but this skill also tells the conductor to keep its context lean, and
-# the natural way to do that is `agy-delegate ... 2>&1 | tail -N`. stdout (the
-# digest) is written after the usage line, so `tail` keeps the digest and throws
-# the usage line away. Measured in the wild: a benchmark harness lost most of its
-# Gemini-side cost data exactly this way, which made the hybrid look cheaper than
-# it was. A file the caller names cannot be truncated by a pipe.
-#
-# Set AGY_USAGE_LOG=/path/to/log (or the plugin option `usage_log`). Appended to,
-# never truncated; failure to write is non-fatal (measurement must not break work).
 USAGE_LOG="${AGY_USAGE_LOG:-${CLAUDE_PLUGIN_OPTION_USAGE_LOG:-}}"
 USAGE_LOG_WARNED=0
 tee_usage() { # $1 = the full line, already formatted
   [ -n "$USAGE_LOG" ] || return 0
-  # Create the parent directory when missing (#103: setting AGY_USAGE_LOG=/tmp/sub/usage.log
-  # silently produced nothing because `>>` does not create parent directories). If mkdir or
-  # the append still fails (e.g. /nonexistent-dir/x.log under /), stay non-fatal, suppress
-  # the raw bash redirection error (`2>/dev/null` BEFORE `>>`), and emit a single clean notice.
   local dir
   dir="$(dirname "$USAGE_LOG")"
   if [ -d "$dir" ] || mkdir -p "$dir" 2>/dev/null; then
@@ -170,11 +360,9 @@ tee_usage() { # $1 = the full line, already formatted
 }
 
 # Emit a one-line machine-readable failure signal to stderr. $1=status $2=reason.
-# QUOTA failures advertise `--continue` so a caller knows how to resume the session.
 signal() {
   local status="$1" reason="$2" retry="" line
   [ "$status" = "QUOTA_EXHAUSTED" ] && retry="--continue"
-  # sanitize reason so the JSON stays single-line and valid (no quotes/backslashes/newlines)
   reason="$(printf '%s' "$reason" | tr '\n\r\t' '   ' | tr -d '"\\' | cut -c1-200)"
   line="$(printf 'AGY_SIGNAL {"status":"%s","reason":"%s","model":"%s","retry":"%s"}' \
     "$status" "$reason" "${MODEL:-}" "$retry")"
@@ -182,46 +370,7 @@ signal() {
   tee_usage "$line"
 }
 
-# The write-without-grant failure (issue #10) has changed shape three times, and the
-# LAST change silently killed this branch. agy 1.1.3 soft-denied: rc=0, empty stdout,
-# "auto-denied" on stderr. By 1.1.13 it is a HARD error — rc=1, and the diagnostic reads
-# `permission check failed for write_file "...": user denied permission for
-# write_file(...)`, which contains none of the old anchors and lands in the rc != 0
-# branch, above the soft-deny check entirely. So the most documented failure in this
-# plugin came back as a bare "agy exited 1" with none of the guidance below.
-#
-# 0.22.5 checked that the old anchors were still present in the agy binary and concluded
-# exit 15 was intact. The strings were there; the ROUTE was not. Measured on 1.1.13:
-# both a plain write and `--mode accept-edits` produce the hard error.
-#
-# Then 1.1.20 moved it BACK. agy's own notes: print mode no longer treats "permission
-# denials as fatal run failures with non-zero exit codes". Measured on 1.1.25: rc 0, an
-# envelope saying SUCCESS with an EMPTY response, and the soft-deny notice on stderr again,
-# reworded — `jetski: no output produced — a tool required the "write_file" permission
-# that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under
-# permissions.allow in settings.json (e.g. write_file(<target>)). Alternatively, re-run
-# with --dangerously-skip-permissions to auto-approve all tools.` Asking for text around
-# the write changes nothing: agy drops the reply and prints the notice. So the rc 0 +
-# empty route below is the CURRENT one, and the rc != 0 route covers 1.1.13-1.1.19.
-#
-# 1.1.27 then gave the denial a structured form: the envelope carries
-# `denied_actions` naming the refused tools. Measured on 1.2.0 the rest is unchanged
-# (rc 0, SUCCESS, empty response, the notice), so the JSON path now reads that field
-# FIRST and names the tool here; the anchors stay for plain-text mode and older agy.
-# 1.1.28 also made URL reads ask first, so a fetch without a grant lands here too.
-#
-# One function, called from every branch, so the shapes cannot drift apart again.
 permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
-  # The rc != 0 path dumps $ERR before it classifies, so echoing it again here printed
-  # agy's diagnostic twice on the plain-stderr shape. Both reviewers caught it.
-  # An `if`, not `cond || { ...; }`. The group is the LAST element of that list, so a
-  # failure inside it is NOT exempt from `set -e` — and this file runs `set -euo pipefail`
-  # (line 60). With $ERR empty the group returns 1, the shell exits, and the guidance and
-  # the AGY_SIGNAL below never run. Only the callers keep that from happening today.
-  #
-  # The first version of this comment said the file uses `set -uo pipefail` and called the
-  # risk theoretical. That was copied from doctor.sh, which really has no `-e`. A reviewer
-  # checked the line instead of believing the sentence.
   if [ "${1:-}" != shown ] && [ -s "$ERR" ]; then
     cat "$ERR" >&2
   fi
@@ -229,53 +378,43 @@ permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
     echo "agy-delegate: agy denied a tool even though --yolo (--dangerously-skip-permissions) was passed${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — blocked by policy and not performed. On agy 1.5.2+, Gemini Enterprise admin policy (enforce_unsandboxed_command_review, enforce_outside_workspace_file_review, or an admin permissionPreset), explicit permissions.deny rules, and the system command denylist override --dangerously-skip-permissions in headless mode. Keep file/command targets inside the workspace (--dir), inspect resolved rules with agy-doctor, or check your organization's admin policy." >&2
     signal PERMISSION_DENIED "policy_blocked: agy denied a tool despite --yolo${DENIED_ACTIONS:+ (denied: $DENIED_ACTIONS)} — blocked by enterprise admin policy or permissions.deny"
   else
-    echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt)${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — the denied action was not performed. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. For a URL READ the rule is read_url(<target>) — agy 1.1.28 made fetching URLs ask first, so headless it is denied without one. Other tools (web search / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
+    echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt)${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — the denied action was not performed. For a FILE WRITE, use a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — or on agy 1.5.7+ pass --mode accept-edits for in-workspace writes (measured on agy 1.1.13–1.5.6, --mode accept-edits was NOT a headless write grant and was denied like a plain write; it never grants shell commands); --yolo also works and approves ALL tools. For a URL READ pass --allow-url or add read_url(<target>) (agy 1.1.28+). Other tools (web search / Vertex AI Search / terminal) need --yolo unless a rule covers them. If a rule is ALREADY in place, run agy-doctor to verify it parses." >&2
     signal PERMISSION_DENIED "agy denied a permissioned tool in headless${DENIED_ACTIONS:+ (denied: $DENIED_ACTIONS)} — add a permissions.allow rule or pass --yolo"
   fi
   exit 15
 }
 
-# Print the header comment between "# Usage:" and "# Exit codes:" (anchored to
-# content, not line numbers, so it never desyncs when the header changes).
+# Print the header comment between "# Usage:" and "# Exit codes:".
 usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
 
 # --- map a tier to an exact agy model name (see `agy models`) ---
-# Defaults are Gemini, but each tier is remappable to any agy model via userConfig
-# (env), so non-Vertex/non-Gemini plans (Claude/GPT) work without code changes.
+# Primary 3-tier Gemini 4 lineup: flash = Hydrogen (High), flash-lo = Hydrogen (Low),
+# pro = Carbon (High); plus power/cost aliases argon and flash-38.
 model_for_tier() {
   case "$1" in
-    flash)    echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 3.8 Flash (High)}" ;;
-    flash-lo) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 3.8 Flash (Low)}" ;;
-    pro)      echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Argon (High)}" ;;
-    *) die "unknown tier '$1' (use flash | flash-lo | pro)" ;;
+    flash)         echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 4 Hydrogen (High)}" ;;
+    flash-lo|lite) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 4 Hydrogen (Low)}" ;;
+    pro)           echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Carbon (High)}" ;;
+    argon)         echo "${CLAUDE_PLUGIN_OPTION_TIER_ARGON:-Gemini 4 Argon (High)}" ;;
+    flash-38)      echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_38:-Gemini 3.8 Flash (High)}" ;;
+    *) die "unknown tier '$1' (use flash | flash-lo | lite | pro | argon | flash-38)" ;;
   esac
 }
 
-# True when running under WSL (Windows Subsystem for Linux).
 on_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; }
 
-# True on native Windows (Git Bash / MSYS / Cygwin) — NOT WSL. On native Windows
-# without a real console (ConPTY), agy v1.0.x can hard-hang with a 0-byte log when
-# its stdio is redirected (the issue this wall-clock guard defends against).
 on_windows_native() {
   case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
   case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
   return 1
 }
 
-# Resolve a usable `timeout`-style command: GNU coreutils `timeout`, or macOS
-# Homebrew's `gtimeout`. Echoes the command name, or empty if neither exists.
-# We wrap agy in this so a headless/no-TTY hang (agy never returns) is bounded by
-# wall-clock — agy's own --print-timeout can't fire if it hangs before starting.
 timeout_cmd() {
   if command -v timeout  >/dev/null 2>&1; then echo timeout;  return 0; fi
   if command -v gtimeout >/dev/null 2>&1; then echo gtimeout; return 0; fi
   return 1
 }
 
-# Convert an agy-style duration (e.g. 5m, 300s, 1h, or a bare number=seconds) to
-# whole seconds, then add a small head-room margin so the OUTER wall-clock guard
-# fires only AFTER agy's own --print-timeout has had its chance. Echoes seconds.
 outer_timeout_secs() {
   local d="${1:-5m}" n unit secs min_pad
   n="${d%[smh]}"; unit="${d#"$n"}"
@@ -286,12 +425,7 @@ outer_timeout_secs() {
     s|'') secs=$(( n )) ;;
     *) secs=$(( n )) ;;
   esac
-  # 0 means unbounded (matches `agy --print-timeout 0`): disable the outer guard too
-  # instead of killing an unbounded run after min_pad seconds.
   [ "$secs" -eq 0 ] && { echo 0; return 0; }
-  # head-room so the OUTER guard never pre-empts agy's own --print-timeout on a
-  # legitimately-slow-but-progressing call, and leaves >=30s for agy 1.5.5+'s bounded
-  # headless shutdown: +25% of the budget, min 35s (overridable in tests), capped 120s.
   min_pad="${_AGY_OUTER_MIN_PAD:-35}"
   case "$min_pad" in (*[!0-9]*|'') min_pad=35 ;; esac
   local pad=$(( secs / 4 ))
@@ -302,31 +436,38 @@ outer_timeout_secs() {
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    -t|--tier)      need "$#" "$1"; TIER="$2"; TIER_EXPLICIT=1; shift 2 ;;
-    -d|--dir)       need "$#" "$1"; ADD_DIRS+=("$2"); shift 2 ;;
-    --timeout)      need "$#" "$1"; TIMEOUT="$2"; shift 2 ;;
-    --yolo)         YOLO=1; shift ;;
-    --sandbox)      SANDBOX=1; shift ;;
-    --digest)       DIGEST=1; shift ;;               # ask agy for a digest-only reply
-    --mode)         need "$#" "$1"; MODE="$2"; shift 2
-                    case "$MODE" in accept-edits|plan|auto) ;;
-                      *) die "invalid --mode '$MODE' (use accept-edits | plan | auto; agy >= 1.1.0, auto >= 1.3.5)" ;;
-                    esac ;;
-    -c|--continue)  CONTINUE=1; shift ;;            # resume most recent agy conversation
-    --conversation) need "$#" "$1"; CONV_ID="$2"; shift 2 ;; # resume a specific conversation by ID
-    -m|--model)     need "$#" "$1"; MODEL="$2"; shift 2 ;;
-    --allow-slash-commands) ALLOW_SLASH=1; shift ;; # keep leading /command expansion enabled
-    --print-command) PRINT_CMD=1; shift ;;          # dry run: show the resolved agy command
-    -h|--help)      usage ;;
-    -)              PROMPT="$(cat)"; shift ;;       # read prompt from stdin
-    --)             shift; PROMPT="${*:-}"; break ;;
-    -*)             die "unknown option '$1'" ;;
-    *)              PROMPT="$*"; break ;;            # rest is the prompt
+    -t|--tier)          need "$#" "$1"; TIER="$2"; TIER_EXPLICIT=1; shift 2 ;;
+    -e|--effort)        need "$#" "$1"; EFFORT="$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')"; shift 2
+                        case "$EFFORT" in low|medium|high|xhigh|max) ;;
+                          *) die "invalid --effort '$EFFORT' (use low | medium | high | xhigh | max)" ;;
+                        esac ;;
+    -d|--dir|--add-dir) need "$#" "$1"; ADD_DIRS+=("$2"); shift 2 ;;
+    --timeout)          need "$#" "$1"; TIMEOUT="$2"; shift 2 ;;
+    --read-only)        READ_ONLY=1; shift ;;
+    --allow-url)        READ_ONLY=1; ALLOW_URL=1; shift ;;
+    --settings)         need "$#" "$1"; CUSTOM_SETTINGS="$2"; shift 2 ;;
+    --json-schema)      need "$#" "$1"; JSON_SCHEMA="$2"; shift 2 ;;
+    --yolo)             YOLO=1; shift ;;
+    --sandbox)          SANDBOX=1; shift ;;
+    --digest)           DIGEST=1; shift ;;
+    --mode)             need "$#" "$1"; MODE="$2"; shift 2
+                        case "$MODE" in accept-edits|plan|auto) ;;
+                          *) die "invalid --mode '$MODE' (use accept-edits | plan | auto; agy >= 1.1.0, auto >= 1.3.5)" ;;
+                        esac ;;
+    -c|--continue)      CONTINUE=1; shift ;;
+    --conversation)     need "$#" "$1"; CONV_ID="$2"; shift 2 ;;
+    -m|--model)         need "$#" "$1"; MODEL="$2"; shift 2 ;;
+    --allow-slash-commands) ALLOW_SLASH=1; shift ;;
+    --print-command)    PRINT_CMD=1; shift ;;
+    -h|--help)          usage ;;
+    -)                  PROMPT="$(cat)"; shift ;;
+    --)                 shift; PROMPT="${*:-}"; break ;;
+    -*)                 die "unknown option '$1'" ;;
+    *)                  PROMPT="$*"; break ;;
   esac
 done
 
 [ -n "$PROMPT" ] || die "no prompt given (pass a string, or '-' to read stdin)"
-# --print-command is a dry run (introspection), so it doesn't require agy on PATH.
 if [ "$PRINT_CMD" -ne 1 ] && ! command -v agy >/dev/null 2>&1; then
   echo "agy-delegate: 'agy' not found on PATH — install the Antigravity CLI first" >&2
   signal AGY_MISSING "agy not on PATH"
@@ -335,8 +476,7 @@ fi
 
 # Resolve the executor model. Precedence:
 #   --model > explicit --tier > userConfig default_model > default tier (mapped).
-# agy is multi-model; tiers default to Gemini but are remappable (see model_for_tier).
-USAGE_TIER=""   # the tier the model was derived from; empty when --model/default_model chose it
+USAGE_TIER=""
 if [ -z "$MODEL" ]; then
   if [ "$TIER_EXPLICIT" -eq 1 ]; then
     MODEL="$(model_for_tier "$TIER")"
@@ -344,19 +484,30 @@ if [ -z "$MODEL" ]; then
   elif [ -n "${CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL:-}" ]; then
     MODEL="$CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL"
   else
-    # default tier from userConfig; a bad value shouldn't make every call die.
     case "$TIER" in
-      flash|flash-lo|pro) ;;
+      flash|flash-lo|lite|pro|argon|flash-38) ;;
       *) echo "agy-delegate: invalid default tier '$TIER' (set CLAUDE_PLUGIN_OPTION_DEFAULT_TIER to flash|flash-lo|pro); using flash" >&2; TIER="flash" ;;
     esac
     MODEL="$(model_for_tier "$TIER")"
     USAGE_TIER="$TIER"
   fi
 fi
+[ "$USAGE_TIER" = "lite" ] && USAGE_TIER="flash-lo"
 
-# WSL gotcha: agy reads --add-dir over the /mnt/* Windows mount via a slow 9p bridge,
-# so even trivial calls can take 20s+. Warn (don't fail); the fix is to move the repo
-# into the WSL Linux filesystem (~).
+# Apply --effort: when $MODEL carries a parenthesized display-name effort suffix
+# (e.g. "Gemini 4 Hydrogen (High)"), rewrite the suffix directly (`agy` rejects --effort
+# on non-gateway display names); otherwise pass `--effort` through to `agy` (base slugs,
+# custom models, or gateway models).
+PASS_RAW_EFFORT=0
+if [ -n "$EFFORT" ]; then
+  if REWRITTEN_MODEL="$(rewrite_display_effort "$MODEL" "$EFFORT")"; then
+    MODEL="$REWRITTEN_MODEL"
+  else
+    PASS_RAW_EFFORT=1
+  fi
+fi
+
+# WSL gotcha: agy reads --add-dir over the /mnt/* Windows mount via a slow 9p bridge.
 if on_wsl; then
   for d in "${ADD_DIRS[@]:-}"; do
     [ -n "$d" ] || continue
@@ -366,110 +517,91 @@ if on_wsl; then
   done
 fi
 
-# Heads-up: a likely write task with no visible write grant. Headless agy's write
-# behavior has shifted across versions (describe-only pre-1.1.0; scratch-divert
-# 1.1.0-1.1.2; soft-deny on 1.1.3+; hard error by 1.1.13; soft again from 1.1.20, measured
-# on 1.1.25), and without a grant YOUR WORKSPACE IS UNTOUCHED either way (issue #10).
-#
-# There are TWO grants, and this used to claim there was one. A `write_file(<dir>)`
-# rule under `permissions.allow` in ~/.gemini/antigravity-cli/settings.json grants
-# headless writes beneath that path with no --yolo at all — confirmed on agy 1.1.9 by
-# a controlled A/B (#37): covered target wrote, uncovered target came back
-# PERMISSION_DENIED with the rule as the only variable. The match is a RECURSIVE
-# PREFIX, not one directory. agy's own denial text names the rule and offers --yolo as
-# the alternative, so the CLI has been saying this for a while and we were not.
-#
-# We cannot see settings.json from here (it is not ours, and --dir is not where it
-# lives), so this stays a warning rather than a check — but it must not assert that
-# --yolo is required. It fired immediately before a write that then succeeded.
-# (--mode accept-edits is NOT a grant: measured on agy 1.1.13, where the flag is
-#  actually applied since 1.1.12, the write is denied exactly like one without it.)
-# Best-effort heuristic; warn only. --print-command (dry run) is exempt.
-if [ "$YOLO" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
+# Heads-up: a likely write task with no visible write grant (--yolo or agy 1.5.7+ --mode accept-edits).
+# Suppress when --read-only is explicitly requested.
+if [ "$YOLO" -eq 0 ] && [ "$MODE" != "accept-edits" ] && [ "$READ_ONLY" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task and --yolo is not set. Headless agy will NOT touch your workspace without a write grant (it describes / scratch-diverts / soft-denies / fails outright depending on version; the workspace is untouched either way, and since 1.1.3 the run says so on stderr; issue #10). Two grants work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which is the narrower one and needs no flag; or --yolo, which auto-approves ALL tools. If a rule already covers your target, ignore this — but <dir> is a placeholder, and agy-doctor will tell you whether yours actually parses. Otherwise add one, or pass --yolo on a dedicated branch, and verify with git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task and no explicit write grant (--yolo or, on agy 1.5.7+, --mode accept-edits) is set. Without a write grant, headless agy will NOT touch your workspace (issue #10). Grants that work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which needs no flag; --mode accept-edits on agy 1.5.7+ (workspace write_file only, no terminal; denied on 1.1.13–1.5.6); or --yolo, which auto-approves ALL tools. Verify with agy-doctor and git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
 
-# --digest: append an explicit output contract so agy returns a compact digest
-# instead of raw content. Ingesting digests (never dumps) is the plugin's single
-# biggest cost lever — it keeps the conductor's context lean (issue #5).
-# (Appended AFTER the write-task heuristic so that scans the user's prompt only.)
+# --digest: append an explicit output contract so agy returns a compact digest.
 if [ "$DIGEST" -eq 1 ]; then
   PROMPT="$PROMPT
 
 OUTPUT CONTRACT (digest): reply with ONLY a compact digest — short bullets (findings / decisions / errors, with file:line references where useful). NO full file contents, NO raw logs, NO long code blocks. End with exactly one line: DIGEST: <one-sentence summary>."
 fi
 
-# --- assemble agy args ---
-# NOTE: in agy, -p/--print/--prompt TAKES THE PROMPT AS ITS VALUE, so it must come
-# last with the prompt attached. Other flags go before it.
-ARGS=(--model "$MODEL" --print-timeout "$TIMEOUT")
-for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
-[ "$YOLO" -eq 1 ]      && ARGS+=(--dangerously-skip-permissions)
-[ -n "$MODE" ]         && ARGS+=(--mode "$MODE")     # agy >= 1.1.0
-[ "$SANDBOX" -eq 1 ]   && ARGS+=(--sandbox)
-[ "$CONTINUE" -eq 1 ]  && ARGS+=(--continue)        # keep working context on the cheap (Gemini) side
-[ -n "$CONV_ID" ]      && ARGS+=(--conversation "$CONV_ID")
-
-# --- structured output (agy >= 1.1.8) -----------------------------------------
-# agy gained `--output-format json`, which is strictly better for a wrapper than
-# scraping prose: it carries status/error explicitly and a real `usage` object
-# (input/output/thinking/cache_read tokens). We use it INTERNALLY and keep the
-# stdout contract unchanged — callers still get the model's text on stdout — while
-# classification gets the structured error and token usage goes to stderr as an
-# AGY_USAGE line (stderr, so it never pollutes the conductor's context).
-#
-# Gated three ways, falling back to plain text if any is unmet:
-#   * agy actually advertises --output-format (older versions don't),
-#   * python3 is available to parse (the bash-only path stays dependency-free),
-#   * the user hasn't opted out (structured_output=off).
-# NOTE: agy 1.1.8 emits a RAW newline inside the "response" string, which strict
-# JSON parsers reject — so we parse with strict=False. (Reported upstream.)
-# Resolved BEFORE the capability probe below, not just before the main call: the
-# probe was the one unbounded `agy` invocation left in this script. Measured, it
-# returns in ~0.08s — but doctor's own hint documents a hang this release does NOT
-# fix (agy blocking internally while an MCP server never finishes connecting), and
-# an unguarded call is an unguarded call.
 TO_CMD="$(timeout_cmd || true)"
 
-# One trap for every temp file this script makes, installed before the first one
-# exists. Declaring them empty up front means the probe's file is covered too —
-# it used to be cleaned by a trailing `rm -f`, which a SIGINT during the probe
-# skips. `rm -f ""` is a silent no-op, so the unset ones cost nothing.
-HELPF=""; ERR=""; OUTF=""; RESP=""; JERR=""; JDEN=""; PROMPTF=""
-trap 'rm -f "$HELPF" "$ERR" "$OUTF" "$RESP" "$JERR" "$JDEN" "$PROMPTF" 2>/dev/null' EXIT
+# One trap for every temp file this script makes, installed before the first one exists.
+HELPF=""; ERR=""; OUTF=""; RESP=""; JERR=""; JRAWERR=""; JDEN=""; PROMPTF=""
+trap 'rm -f "$HELPF" "$ERR" "$OUTF" "$RESP" "$JERR" "$JRAWERR" "$JDEN" "$PROMPTF" 2>/dev/null' EXIT
 
 HELP_OUT=""
 if [ "$PRINT_CMD" -ne 1 ]; then
-  # Capability probe. Deliberately NOT `agy --help | grep -q`: `grep -q` exits at
-  # the first match and closes the pipe, so `agy --help` can die of SIGPIPE (141)
-  # and, under `set -o pipefail`, the whole pipeline reads as "failed" — silently
-  # disabling JSON mode. That race actually bit a benchmark run (~75% of calls on a
-  # loaded container), and it is indistinguishable from "no delegation happened",
-  # which is the worst kind of failure. Capture once, match with a shell glob.
-  # Same pipe hazard as the main call (issue #37): route via a temp file so
-  # inherited MCP children can never hold the capture pipe open.
   HELPF="$(mktemp "${TMPDIR:-/tmp}/agy-help.XXXXXX")"
-  # 10s is >100x the measured time; it fires only on a real hang, and degrading
-  # to the plain-text path is the right failure — the main call still works.
   if [ -n "$TO_CMD" ]; then
     "$TO_CMD" --kill-after=5 10 agy --help >"$HELPF" 2>&1 || true
   else
     agy --help >"$HELPF" 2>&1 || true
   fi
-  # `|| true` so the assignment cannot fail under `set -e` and skip the rm.
   HELP_OUT="$(cat "$HELPF" 2>/dev/null || true)"; rm -f "$HELPF"
 fi
 
-# Suppress slash-command / skill expansion on delegated prose by default so prompts
-# starting with `/clear`, `/credits`, or `/remote-control` (e.g. a pasted transcript
-# or diff) never abort with exit 2 or short-circuit the turn. `--mode plan` rides on
-# `/plan` expansion inside agy, so keep expansion enabled when MODE=plan or when the
-# caller explicitly asked for `--allow-slash-commands`.
+# --- assemble agy args ---
+# Keep `--model "$MODEL"` at ARGS[0..1] so the fallback loop can update ARGS[1] in place,
+# and keep `-p "$PROMPT"` strictly last for short prompts (agy 1.1.18 flag ordering).
+ARGS=(--model "$MODEL" --print-timeout "$TIMEOUT")
+[ "$PASS_RAW_EFFORT" -eq 1 ] && ARGS+=(--effort "$EFFORT")
+for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
+[ "$YOLO" -eq 1 ]      && ARGS+=(--dangerously-skip-permissions)
+[ -n "$MODE" ]         && ARGS+=(--mode "$MODE")
+[ "$SANDBOX" -eq 1 ]   && ARGS+=(--sandbox)
+[ "$CONTINUE" -eq 1 ]  && ARGS+=(--continue)
+[ -n "$CONV_ID" ]      && ARGS+=(--conversation "$CONV_ID")
+[ -n "$JSON_SCHEMA" ]  && ARGS+=(--json-schema "$JSON_SCHEMA")
+
+# Ephemeral session settings (`--settings`, agy >= 1.4.10):
+# - Explicit `--settings <json>` wins; errors clearly if the installed agy lacks `--settings`.
+# - `--read-only` (`--allow-url`) injects `toolPermission="request-review"` + `agentMode=""`
+#   when agy supports `--settings`; on agy < 1.4.10 (before 1.5.7 default Auto mode existed),
+#   omit `--settings` cleanly and NEVER inject `--mode plan`.
+if [ -n "$CUSTOM_SETTINGS" ]; then
+  if [ "$PRINT_CMD" -eq 1 ]; then
+    ARGS+=(--settings "$CUSTOM_SETTINGS")
+  else
+    case "$HELP_OUT" in
+      *--settings*) ARGS+=(--settings "$CUSTOM_SETTINGS") ;;
+      *) die "--settings requires agy >= 1.4.10 (current agy --help does not advertise --settings)" ;;
+    esac
+  fi
+elif [ "$READ_ONLY" -eq 1 ]; then
+  # Under `toolPermission: "request-review"`, agy auto-grants `read_file(<wsPath>)` for cwd
+  # and every `--add-dir` (`PermissionGrantsFor`), while `read_file(*)` would match `*` across
+  # the entire host filesystem (`CoversPath`). On Gemini Enterprise / Gateway accounts running
+  # Permissions V1 (`!PermissionsV2`), `ApplySettingsToConfig` also appends `write_file(<wsPath>)`
+  # into `effectiveGrants.Allow` — add `"ask":["write_file(*)","command(*)"]` (`Ask > Allow`) so
+  # headless mode soft-denies both workspace writes and shell commands across V1 and V2 alike.
+  if [ "$ALLOW_URL" -eq 1 ]; then
+    RO_SETTINGS='{"agentMode":"","toolPermission":"request-review","permissions":{"allow":["read_url(*)"],"ask":["write_file(*)","command(*)"]}}'
+  else
+    RO_SETTINGS='{"agentMode":"","toolPermission":"request-review","permissions":{"allow":[],"ask":["write_file(*)","command(*)"]}}'
+  fi
+  if [ "$PRINT_CMD" -eq 1 ]; then
+    ARGS+=(--settings "$RO_SETTINGS")
+  else
+    case "$HELP_OUT" in
+      *--settings*) ARGS+=(--settings "$RO_SETTINGS") ;;
+    esac
+  fi
+fi
+
+# Suppress slash-command / skill expansion on delegated prose by default unless MODE=plan
+# or `--allow-slash-commands` was passed.
 if [ "$ALLOW_SLASH" -eq 0 ] && [ "$MODE" != "plan" ]; then
   case "$HELP_OUT" in
     *--disable-slash-commands*) ARGS+=(--disable-slash-commands) ;;
@@ -520,38 +652,75 @@ if [ "$PROMPT_VIA_STDIN" -eq 1 ]; then
   PROMPTF="$(mktemp "${TMPDIR:-/tmp}/agy-prompt.XXXXXX")"
   printf '%s' "$PROMPT" >"$PROMPTF"
 fi
-
-# Per-invocation temp file for stderr (mktemp avoids the race + symlink risk of a
-# fixed /tmp path when multiple delegations run concurrently). Cleaned up on exit.
 ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
-# stdout goes to a file too, never a command-substitution pipe: agy's stdio MCP
-# children inherit our stdout and can outlive agy, so `$(agy ...)` blocks forever
-# waiting for EOF even after `timeout` kills agy itself (issue #37). A regular
-# file is inherited harmlessly. agy 1.1.24 fixed the upstream cause (FD_CLOEXEC on
-# the preserved streams); the file route stays — it costs nothing, and older agy hangs.
 OUTF="$(mktemp "${TMPDIR:-/tmp}/agy-out.XXXXXX")"
 
-# Wall-clock guard: on a non-TTY caller (the whole point of this wrapper), agy can
-# hard-hang before its own --print-timeout engages (notably native Windows without
-# a ConPTY — see issue #6). Wrap in GNU `timeout`/`gtimeout` when available so we
-# always return instead of hanging forever. `timeout` exits 124 on kill -> map to
-# our TIMEOUT (12) and emit the structured signal, so orchestrators react cleanly.
 TO_SECS="$(outer_timeout_secs "$TIMEOUT")"
 
 if on_windows_native && [ -z "$TO_CMD" ]; then
-  # Native Windows + no timeout binary = highest hang risk with no safety net.
   echo "agy-delegate: WARNING — native Windows without GNU \`timeout\`/\`gtimeout\` on PATH." >&2
   echo "agy-delegate:   headless \`agy -p\` can hang here with a 0-byte log (no ConPTY). If this" >&2
   echo "agy-delegate:   call never returns, run from WSL/macOS/Linux, or install coreutils \`timeout\`." >&2
 fi
 
-# #104: when --tier pro uses the unremapped default (Gemini 4 Argon (High)) on a plan
-# that does not expose Argon (e.g. API-key / GCP project / older agy), fall back through
-# Gemini 3.1 Pro (agy 1.4+ display name) and Gemini 3.1 Pro (High) (pre-1.4 / API-key
-# display name) so those plan shapes work out of the box.
-PRO_FALLBACK_MODELS=()
-if [ "$USAGE_TIER" = "pro" ] && [ -z "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-}" ]; then
-  PRO_FALLBACK_MODELS=("Gemini 3.1 Pro" "Gemini 3.1 Pro (High)")
+# Build Stage B plan-unavailability fallback chain for unremapped tiers (#104 + 0.31.0 Gemini 4):
+# - Layer 2 (warm cache): if a fresh cached fallback exists for this binary + auth signature,
+#   start directly on the cached model with 0s cold-miss penalty.
+# - Layer 1 (cold miss): if ValidateRequestedModel fails and includes `Available models:`,
+#   jump in ONE hop to the highest-priority offered fallback instead of walking dead options.
+PRIMARY_MODEL="$MODEL"
+CACHE_SLOT="${USAGE_TIER}${EFFORT:+:$EFFORT}"
+BASE_FALLBACKS=()
+TIER_FALLBACK_MODELS=()
+USED_CACHED_FALLBACK=0
+
+raw_fb_cands=()
+case "$USAGE_TIER" in
+  pro)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-}" ]; then
+      raw_fb_cands=("Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+    fi ;;
+  flash)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-}" ]; then
+      raw_fb_cands=("Gemini 3.8 Flash (High)" "Gemini 3.7 Flash (High)" "Gemini 3.6 Flash (High)" "Gemini 3.5 Flash")
+    fi ;;
+  flash-lo)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-}" ]; then
+      raw_fb_cands=("Gemini 3.8 Flash (Low)" "Gemini 3.5 Flash Lite" "Gemini 3.7 Flash (Low)" "Gemini 3.1 Flash Lite")
+    fi ;;
+  argon)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_ARGON:-}" ]; then
+      raw_fb_cands=("Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 3.8 Flash (High)")
+    fi ;;
+  flash-38)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_38:-}" ]; then
+      raw_fb_cands=("Gemini 3.7 Flash (High)" "Gemini 3.6 Flash (High)")
+    fi ;;
+esac
+
+for cand in "${raw_fb_cands[@]:-}"; do
+  [ -n "$cand" ] || continue
+  adapted="$(adapt_fallback_effort "$cand" "$EFFORT")"
+  [ "$adapted" = "$PRIMARY_MODEL" ] && continue
+  dup=0
+  for prev in "${BASE_FALLBACKS[@]:-}"; do
+    [ "$prev" = "$adapted" ] && { dup=1; break; }
+  done
+  [ "$dup" -eq 0 ] && BASE_FALLBACKS+=("$adapted")
+done
+if [ "${#BASE_FALLBACKS[@]}" -gt 0 ]; then
+  TIER_FALLBACK_MODELS=("${BASE_FALLBACKS[@]}")
+  if CACHED_FB="$(tier_cache_get "$CACHE_SLOT")" && [ -n "$CACHED_FB" ] && [ "$CACHED_FB" != "$PRIMARY_MODEL" ]; then
+    MODEL="$CACHED_FB"
+    ARGS[1]="$MODEL"
+    USED_CACHED_FALLBACK=1
+    # Keep remaining fallbacks + primary in reserve in case the plan changed since caching.
+    TIER_FALLBACK_MODELS=("$PRIMARY_MODEL")
+    for fb_item in "${BASE_FALLBACKS[@]}"; do
+      [ "$fb_item" = "$CACHED_FB" ] || TIER_FALLBACK_MODELS+=("$fb_item")
+    done
+    echo "agy-delegate: $USAGE_TIER fell back to $MODEL (cached; $PRIMARY_MODEL not on this plan)" >&2
+  fi
 fi
 
 while :; do
@@ -566,7 +735,6 @@ while :; do
     fi
   else
     if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ]; then
-      # --kill-after sends SIGKILL if agy ignores the initial SIGTERM (defensive).
       "$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
       RC=$?
     else
@@ -578,28 +746,13 @@ while :; do
   set -e
 
   # --- unwrap the structured envelope (JSON mode) --------------------------------
-  # Replaces OUT with the model's text so the stdout contract is unchanged, exposes
-  # the structured error for classification, and reports token usage on stderr.
-  # Any parse failure falls back to treating OUT as plain text (never fatal).
-  JSON_STATUS=""; JSON_FINISHED=""; JSON_ERROR=""; JSON_DENIED=""; meta=""
-  # Glob, not ${OUT//[...]/}: stripping the whole string to test emptiness is minutes-to-
-  # hours at tens of KB on macOS /bin/bash 3.2 (n^~2.6); the glob stops at the first hit.
+  JSON_STATUS=""; JSON_FINISHED=""; JSON_ERROR=""; JSON_RAW_ERROR=""; JSON_DENIED=""; meta=""
   if [ "$JSON_MODE" -eq 1 ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
-    # The response can be multi-line, so it goes to a temp file; the single-line
-    # metadata comes back on stdout. (Command substitution strips NUL bytes, so a
-    # NUL-delimited stream is not an option here.)
     RESP="$(mktemp "${TMPDIR:-/tmp}/agy-resp.XXXXXX")"
-    # The error text goes to its OWN file, not back out through `meta`. agy's error
-    # strings quote the offending value (`--model \"foo\"`), and pulling the field out
-    # of `meta` with sed truncates at that first escaped quote — which silently hid the
-    # diagnostic from the classifier, so a bad --model/tier remap reported a generic
-    # "agy failed" (exit 2) instead of MODEL_UNAVAILABLE (14). Let python, which already
-    # has the parsed object, write the raw value out.
     JERR="$(mktemp "${TMPDIR:-/tmp}/agy-err.XXXXXX")"
-    # agy 1.1.27+: `denied_actions` is a list of {action, display_name}; the tool names
-    # come out as one space-separated line, same file discipline as the error text.
+    JRAWERR="$(mktemp "${TMPDIR:-/tmp}/agy-rawerr.XXXXXX")"
     JDEN="$(mktemp "${TMPDIR:-/tmp}/agy-den.XXXXXX")"
-    meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" AGY_DEN_FILE="$JDEN" \
+    meta="$(AGY_JSON="$OUT" AGY_RESP_FILE="$RESP" AGY_ERR_FILE="$JERR" AGY_RAWERR_FILE="$JRAWERR" AGY_DEN_FILE="$JDEN" \
           AGY_MODEL="$MODEL" AGY_TIER="$USAGE_TIER" python3 - <<'PY' 2>/dev/null || true
 import json, os, sys
 raw = os.environ.get("AGY_JSON", "")
@@ -609,10 +762,18 @@ try:
     if not isinstance(d, dict): raise ValueError
 except Exception:
     sys.exit(1)
+resp = str(d.get("response", "") or "")
+# `--json-schema` populates `.structured_output` while `.response` can be empty.
+if not resp.strip() and "structured_output" in d and d.get("structured_output") is not None:
+    so = d.get("structured_output")
+    resp = so if isinstance(so, str) else json.dumps(so, ensure_ascii=False)
 with open(os.environ["AGY_RESP_FILE"], "w", encoding="utf-8") as fh:
-    fh.write(str(d.get("response", "") or ""))
+    fh.write(resp)
+raw_err = str(d.get("error", "") or "")
+with open(os.environ["AGY_RAWERR_FILE"], "w", encoding="utf-8") as fh:
+    fh.write(raw_err)
 with open(os.environ["AGY_ERR_FILE"], "w", encoding="utf-8") as fh:
-    fh.write(" ".join(str(d.get("error", "") or "").split()))
+    fh.write(" ".join(raw_err.split()))
 den = d.get("denied_actions") or []
 names = []
 for a in den if isinstance(den, list) else []:
@@ -624,13 +785,13 @@ u = d.get("usage") or {}
 def n(k):
     v = u.get(k)
     return v if isinstance(v, int) else 0
-def top(k):  # agy 1.2.x: duration_seconds (float) and num_turns (int); 0 when absent
+def top(k):
     v = d.get(k)
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
 one_line = lambda s: " ".join(str(s or "").split())
 out_meta = {
     "status": str(d.get("status", "")),
-    "error": one_line(d.get("error", "")),
+    "error": one_line(raw_err),
     "usage": {"input": n("input_tokens"), "output": n("output_tokens"),
               "thinking": n("thinking_tokens"), "cache_read": n("cache_read_tokens"),
               "total": n("total_tokens")},
@@ -647,36 +808,72 @@ print(json.dumps(out_meta))
 PY
 )"
     if [ -n "$meta" ]; then
-      # `status` and `finished_reason` are bare enums with no quotes inside them, so sed is safe.
       JSON_STATUS="$(printf '%s' "$meta" | sed -n 's/.*"status": *"\([^"]*\)".*/\1/p')"
       JSON_FINISHED="$(printf '%s' "$meta" | sed -n 's/.*"finished_reason": *"\([a-z_]*\)".*/\1/p')"
       JSON_ERROR="$(cat "$JERR" 2>/dev/null)"
+      JSON_RAW_ERROR="$(cat "$JRAWERR" 2>/dev/null)"
       JSON_DENIED="$(cat "$JDEN" 2>/dev/null)"
       OUT="$(cat "$RESP" 2>/dev/null)"
-      # A structured ERROR is authoritative even if agy exited 0.
       [ "$JSON_STATUS" = "ERROR" ] && [ "$RC" -eq 0 ] && RC=1
     fi
-    rm -f "$RESP" "$JERR" "$JDEN"
+    rm -f "$RESP" "$JERR" "$JRAWERR" "$JDEN"
   fi
 
-  if [ "$RC" -ne 0 ] && [ "${#PRO_FALLBACK_MODELS[@]}" -gt 0 ] && ! is_print_timeout; then
+  if [ "$RC" -ne 0 ] && [ "${#TIER_FALLBACK_MODELS[@]}" -gt 0 ] && ! is_print_timeout; then
     probe_blob="$(cat "$ERR" 2>/dev/null)"
     [ -n "$JSON_ERROR" ] && probe_blob="$JSON_ERROR
 $probe_blob"
     if model_unavailable_blob "$probe_blob"; then
-        MODEL="${PRO_FALLBACK_MODELS[0]}"
-        if [ "${#PRO_FALLBACK_MODELS[@]}" -gt 1 ]; then
-          PRO_FALLBACK_MODELS=("${PRO_FALLBACK_MODELS[@]:1}")
+      if [ "$USED_CACHED_FALLBACK" -eq 1 ]; then
+        tier_cache_put "$CACHE_SLOT" ""
+        USED_CACHED_FALLBACK=0
+      fi
+      raw_avail_blob="$(cat "$ERR" 2>/dev/null)"
+      [ -n "$JSON_RAW_ERROR" ] && raw_avail_blob="$JSON_RAW_ERROR
+$raw_avail_blob"
+      set +e
+      picked_fb="$(pick_available_fallback "$raw_avail_blob" "${TIER_FALLBACK_MODELS[@]}")"
+      pick_rc=$?
+      set -e
+      if [ "$pick_rc" -eq 0 ]; then
+        pick_idx="${picked_fb%%$'\t'*}"
+        MODEL="${picked_fb#*$'\t'}"
+        next_idx=$(( pick_idx + 1 ))
+        if [ "$next_idx" -lt "${#TIER_FALLBACK_MODELS[@]}" ]; then
+          TIER_FALLBACK_MODELS=("${TIER_FALLBACK_MODELS[@]:$next_idx}")
         else
-          PRO_FALLBACK_MODELS=()
+          TIER_FALLBACK_MODELS=()
         fi
         ARGS[1]="$MODEL"
-        echo "agy-delegate: pro fell back to $MODEL (Argon not on this plan)" >&2
+        echo "agy-delegate: $USAGE_TIER fell back to $MODEL ($PRIMARY_MODEL not on this plan)" >&2
         continue
+      elif [ "$pick_rc" -eq 1 ]; then
+        # `Available models:` was authoritative and contained NONE of our fallbacks — fail fast.
+        TIER_FALLBACK_MODELS=()
+      else
+        MODEL="${TIER_FALLBACK_MODELS[0]}"
+        if [ "${#TIER_FALLBACK_MODELS[@]}" -gt 1 ]; then
+          TIER_FALLBACK_MODELS=("${TIER_FALLBACK_MODELS[@]:1}")
+        else
+          TIER_FALLBACK_MODELS=()
+        fi
+        ARGS[1]="$MODEL"
+        echo "agy-delegate: $USAGE_TIER fell back to $MODEL ($PRIMARY_MODEL not on this plan)" >&2
+        continue
+      fi
     fi
   fi
   break
 done
+
+# Persist or refresh warm fallback cache once a tier run succeeds.
+if [ "$RC" -eq 0 ] && [ "${#BASE_FALLBACKS[@]}" -gt 0 ]; then
+  if [ "$MODEL" != "$PRIMARY_MODEL" ]; then
+    tier_cache_put "$CACHE_SLOT" "$MODEL"
+  elif [ "$USED_CACHED_FALLBACK" -eq 1 ]; then
+    tier_cache_put "$CACHE_SLOT" ""
+  fi
+fi
 
 if [ -n "$meta" ]; then
   printf 'AGY_USAGE %s\n' "$meta" >&2
@@ -685,11 +882,6 @@ fi
 
 # `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had to
 # kill agy. Treat that as our structured TIMEOUT (exit 12), not a generic failure.
-# Exception: agy 1.4.4 can write its complete result and then never exit, because
-# shutdown waits on a conversation-title request that nothing cancels
-# (google-antigravity/antigravity-cli#1313). A parsed SUCCESS envelope with a
-# non-empty response means the turn finished, so the kill lost nothing: fall through
-# to the normal checks. Plain-text output has no such end marker, so it stays a timeout.
 if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ] && { [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; } \
    && [ "$JSON_STATUS" = "SUCCESS" ] && [ -z "$JSON_FINISHED" ] && ! is_print_timeout && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
   echo "agy-delegate: agy wrote a complete result but did not exit; killed by the wall-clock guard (${TO_SECS}s). See https://github.com/google-antigravity/antigravity-cli/issues/1313" >&2
@@ -704,15 +896,6 @@ if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ] && { [ $RC -eq 124 ] || [ $RC -eq 13
   exit 12
 fi
 
-# agy 1.1.27+: the envelope names the tools it refused to run headless. Measured on
-# 1.2.0: rc 0, SUCCESS, an EMPTY response (also when the prompt asks for text around the
-# write — agy drops the reply), the old notice on stderr, and
-#   "denied_actions":[{"action":"write_file","display_name":"WriteToFile"}]
-# — `read_url` for a URL fetch, which 1.1.28 made ask first. This is the structured
-# signal the stderr anchors further down stood in for. It is checked before anything
-# else about the reply, so it holds whatever the reply looks like; a non-empty reply
-# (never measured) would be printed first so nothing is lost, with the exit code saying
-# the task was not done as asked.
 if [ -n "$JSON_DENIED" ]; then
   DENIED_ACTIONS="$JSON_DENIED"
   if [[ "$OUT" = *[!$' \t\n\r']* ]]; then printf '%s\n' "$OUT"; fi
@@ -734,8 +917,6 @@ case "$RC" in
         printf '%s\n' "$OUT"
       fi
       [ -s "$ERR" ] && cat "$ERR" >&2
-      # The AGY_USAGE line exists only in JSON mode; do not point plain-text callers at a line
-      # that was never printed (review caught the unconditional wording).
       usage_note=""; [ "$JSON_MODE" -eq 1 ] && usage_note="; AGY_USAGE above omits the unfinished step"
       if [ "$has_partial" -eq 1 ]; then
         out_note="the output above is PARTIAL"
@@ -753,32 +934,18 @@ esac
 if [ $RC -ne 0 ]; then
   echo "agy-delegate: agy exited $RC" >&2
   [ -s "$ERR" ] && cat "$ERR" >&2
-  # In JSON mode agy puts the diagnostic in the envelope instead of stderr — relay it
-  # so the failure is still visible to a human reading the transcript.
   [ -n "$JSON_ERROR" ] && printf '%s\n' "$JSON_ERROR" >&2
-  # Best-effort classification into a structured code (the generic 2 is the safe
-  # fallback). Scans agy's diagnostics only — never the model-generated response,
-  # which could contain trigger words and misclassify. In JSON mode (agy >= 1.1.8)
-  # the diagnostic lives in the envelope's `error` field and stderr is typically
-  # empty, so prefer that; otherwise fall back to stderr. Patterns are deliberately
-  # specific to avoid false positives on incidental substrings.
   blob="$(cat "$ERR" 2>/dev/null)"
   [ -n "$JSON_ERROR" ] && blob="$JSON_ERROR
 $blob"
   shopt -s nocasematch
   case "$blob" in
-    # FIRST, because these strings are the most specific ones here and must not be
-    # shadowed. agy 1.1.13-1.1.19 fails the run outright on a denied tool instead of
-    # soft-denying it, so that shape reaches the rc != 0 path and never sees the check
-    # further down. (1.1.20 went back to the soft shape; the rc 0 path below has it.)
     *"user denied permission"*|*"permission check failed"*|*"auto-denied"*|\
     *"permission that headless"*|*"dangerously-skip-permissions"*)
       shopt -u nocasematch; permission_denied shown ;;
   esac
   shopt -u nocasematch
   if model_unavailable_blob "$blob"; then
-    # Checked before quota/timeout substrings so a mistyped --model containing "quota" or
-    # "timed out" (agy quotes `--model "<val>"` in the error) still exits 14, not 10/12.
     echo "agy-delegate: model '$MODEL' is not available on this plan — run \`agy models\`, then fix --model / the tier_* / default_model option." >&2
     signal MODEL_UNAVAILABLE "model not in \`agy models\` (check --model / tier remaps)"; exit 14
   fi
@@ -790,7 +957,7 @@ $blob"
       shopt -u nocasematch; signal QUOTA_EXHAUSTED "agy quota / rate limit / spend cap"; exit 10 ;;
     *unauthenticated*|*unauthorized*|*"sign in"*|*"please authenticate"*|*reauth*|\
     *"gemini_api_key environment variable is not set"*|*"authentication required"*)
-      shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` once (or set GEMINI_API_KEY)"; exit 11 ;;
+      shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` or \`agy acp --login\` (or set GEMINI_API_KEY)"; exit 11 ;;
     *"timed out"*|*"deadline exceeded"*|*"print-timeout"*|*"timeout waiting for cascade"*)
       shopt -u nocasematch; signal TIMEOUT "agy print-timeout / deadline exceeded"; exit 12 ;;
   esac
@@ -798,17 +965,7 @@ $blob"
   signal AGY_FAILED "agy exited $RC"
   exit 2
 fi
-if [[ "$OUT" != *[!$' \t\n\r']* ]]; then   # same glob as above, not the quadratic strip
-  # agy 1.1.3+ soft-denies a tool needing permission in headless mode and returns rc=0
-  # with EMPTY stdout plus an explanatory stderr notice (the evolved issue #10: earlier
-  # versions silently wrote to a scratch dir or only described the edit). 1.1.13-1.1.19
-  # hard-errored instead (handled above); 1.1.20 came back here, and on 1.1.25 the JSON
-  # envelope says SUCCESS with an empty response, so OUT is empty at this point in both
-  # modes. Detect it so the caller gets an actionable signal instead of a bare "empty
-  # output". Since 1.1.27 the JSON path catches the same run earlier, from the
-  # envelope's denied_actions; this block is what plain-text mode and older agy have.
-  # (Before agy 1.1.18 a dropped agent stream ALSO landed here as rc 0 + empty —
-  # a false clean success; 1.1.18 makes that rc != 0, so exit 3 is now a genuine empty.)
+if [[ "$OUT" != *[!$' \t\n\r']* ]]; then
   eblob="$(cat "$ERR" 2>/dev/null)"
   shopt -s nocasematch
   case "$eblob" in
@@ -821,10 +978,6 @@ if [[ "$OUT" != *[!$' \t\n\r']* ]]; then   # same glob as above, not the quadrat
   exit 3
 fi
 
-# Digest-size guard: the cost saving depends on the conductor ingesting a DIGEST,
-# not a raw dump — if the reply is dump-sized, say so on stderr (advisory only;
-# stdout passes through untouched). Tune via the digest_warn_chars plugin option
-# (env CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS; empty = 8000, 0 = off).
 WARN_CHARS="${CLAUDE_PLUGIN_OPTION_DIGEST_WARN_CHARS:-8000}"
 case "$WARN_CHARS" in (*[!0-9]*|'') WARN_CHARS=8000 ;; esac
 if [ "$WARN_CHARS" -gt 0 ] && [ "${#OUT}" -gt "$WARN_CHARS" ]; then

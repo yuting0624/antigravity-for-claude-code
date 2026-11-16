@@ -19,7 +19,8 @@
 #   agy-handoff [options] "<requirement>"        # or `-` to read the requirement from stdin
 # Options:
 #   -d, --dir <repo>            repository root (default: .); refused for $HOME and /
-#   -t, --tier <flash|pro>      executor tier (default: flash — what the measurement used)
+#   -t, --tier <flash|flash-lo|pro>  executor tier (default: flash = Gemini 4 Hydrogen High)
+#   -e, --effort <level>        reasoning effort override (low|medium|high|xhigh|max)
 #   -m, --model <exact name>    exact agy model instead of a tier
 #       --timeout <dur>         executor timeout for the main delegation (default: 120m)
 #       --fixup-timeout <dur>   executor timeout for a fix-up (default: 60m)
@@ -58,7 +59,7 @@ REG="${ANTIGRAVITY_JOBS:-$HOME/.antigravity-jobs}"
 usage() { sed -n '/^# Usage:/,/^# Exit codes/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' | sed '$d'; }
 die() { echo "agy-handoff: $*" >&2; exit 1; }
 
-DIR="."; TIER="flash"; MODEL=""; TIMEOUT="120m"; FIX_TIMEOUT="60m"; VERIFY=""; VERIFY_TIMEOUT=1800
+DIR="."; TIER="flash"; EFFORT=""; MODEL=""; TIMEOUT="120m"; FIX_TIMEOUT="60m"; VERIFY=""; VERIFY_TIMEOUT=1800
 FIXUPS=1; TESTS=""; NO_VERIFY=0; ALLOW_DIRTY=0; NEW_PROJECT="auto"; BACKGROUND=0; JSON=0; PRINT=0; REQ=""
 ORIG_ARGS=("$@")
 need() {
@@ -69,6 +70,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -d|--dir) need "$@"; DIR="$2"; shift 2 ;;
     -t|--tier) need "$@"; TIER="$2"; shift 2 ;;
+    -e|--effort) need "$@"; EFFORT="$2"; shift 2 ;;
     -m|--model) need "$@"; MODEL="$2"; shift 2 ;;
     --timeout) need "$@"; TIMEOUT="$2"; shift 2 ;;
     --fixup-timeout) need "$@"; FIX_TIMEOUT="$2"; shift 2 ;;
@@ -141,6 +143,7 @@ PROMPT1="$REQ
 $CONTRACT"
 
 DELEGATE_OPTS=(--tier "$TIER" --yolo --dir "$DIR")
+[ -n "$EFFORT" ] && DELEGATE_OPTS+=(--effort "$EFFORT")
 [ -n "$MODEL" ] && DELEGATE_OPTS+=(--model "$MODEL")
 
 if [ "$PRINT" = "1" ]; then

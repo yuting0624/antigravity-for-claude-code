@@ -480,7 +480,8 @@ def unit_skills(plan, mf):
             mf.created_json.append(cfg)
 
     plan.add("skills", "ok", "register", cfg,
-             f"read {len(names)} skill(s) in place (entries += {src})", fn)
+             f"read {len(names)} skill(s) in place via global skills.json (entries += {src}; "
+             f"agy 1.5.2+ blocks external paths/symlinks only in workspace .agents/skills.json)", fn)
 
 
 # --- unit: CLAUDE.md ---------------------------------------------------------
@@ -1090,7 +1091,7 @@ def unit_settings(plan, mf, apply_permissions):
                  f"{cc['model']} has no Gemini equivalent; agy's model is left untouched")
     if cc.get("effortLevel"):
         plan.add("settings", "warn", "not-migrated", "effortLevel",
-                 f"{cc['effortLevel']} — in agy this is the --effort flag (low|medium|high), not a setting")
+                 f"{cc['effortLevel']} — in agy this is the --effort flag (low|medium|high|xhigh|max), not a setting")
     if cc.get("env"):
         plan.add("settings", "warn", "not-migrated", "env",
                  f"{len(cc['env'])} variable(s) — Anthropic/Vertex routing, meaningless to agy")
@@ -1247,6 +1248,13 @@ def native_import_env(stage):
     return env
 
 
+def is_plugins_admin_blocked(output):
+    """True when agy 1.5.8+ enterprise pluginControls rejected `agy plugin import claude`."""
+    low = (output or "").lower()
+    return ("plugins are disabled by your organization" in low or
+            "plugins are unavailable until your organization's policy loads" in low)
+
+
 def run_native_import(stage, plugins):
     """Flatten real plugins into a staging HOME and let agy convert them there.
     The importer needs no auth, so nothing touches the real config.
@@ -1394,8 +1402,12 @@ def unit_plugins(plan, mf):
         try:
             rc, out = run_native_import(stage, fresh)
             if rc != 0:
-                print(f"    {SYM['skip']} native importer failed (rc={rc}): "
-                      f"{out.strip().splitlines()[-1] if out.strip() else ''}")
+                last = out.strip().splitlines()[-1] if out.strip() else ""
+                if is_plugins_admin_blocked(out):
+                    print(f"    {SYM['warn']} native plugin import blocked by enterprise "
+                          f"admin policy (pluginControls): {last}")
+                else:
+                    print(f"    {SYM['skip']} native importer failed (rc={rc}): {last}")
                 return False
             for n in postprocess_staged(stage, fresh, plan):
                 print(f"    {SYM['skip']} {n}")

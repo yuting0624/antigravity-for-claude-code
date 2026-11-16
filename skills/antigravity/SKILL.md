@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.30.3
+version: 0.31.0
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -51,23 +51,16 @@ Route each phase to the right model. This is the core policy.
 | Audio / video understanding | **agy** transcribes + digests · **Claude** verifies | Gemini is natively multimodal; no local ffmpeg/speech stack |
 | Deep research (multi-source) | **agy** fans out search/fetch · **Claude** plans, verifies ≥2 sources, synthesizes | offload bulky pages to cheap Gemini; frontier model judges |
 
-Routing tier within agy: `flash` (default, bulk) · `flash-lo` (cheapest, trivial) ·
-`pro` (harder reasoning / reviews / cross-checks).
+Routing tier within agy: `flash` (default, bulk: **Gemini 4 Hydrogen (High)**) · `flash-lo` / `lite` (cheapest, low-latency: **Gemini 4 Hydrogen (Low)**) ·
+`pro` (harder coding / reasoning / reviews / cross-checks: **Gemini 4 Carbon (High)**) · plus convenience aliases `argon` (**Gemini 4 Argon (High)**) and `flash-38` (**Gemini 3.8 Flash (High)**).
 
-**agy is multi-model.** Tiers map to Gemini by default, but you can point delegation at any
-model `agy models` lists (Claude / GPT on plans that expose them) — via `--model <exact name>`,
+**agy is multi-model.** Tiers map to Gemini 4 by default, but you can point delegation at any
+model `agy models` lists (Claude / GPT on plans that expose them) — via `--model <exact name>` (and optional `--effort low|medium|high|xhigh|max`),
 or persistently with the `default_model` / `tier_*` plugin options (in `~/.claude/settings.json`
-`pluginConfigs` or env `CLAUDE_PLUGIN_OPTION_*`). The `pro` tier defaults to **Gemini 4 Argon (High)**
-since 0.29.0 (consumer Google AI plans list Argon instead of 3.1 Pro — as reported in #104, not
-measured here — and enterprise plans on agy 1.4.x, which were measured, renamed
-`gemini-3.1-pro-high`'s display name to `Gemini 3.1 Pro` while also serving
-`Gemini 4 Argon (High)`). When `tier_pro` is unremapped and the active plan does not expose
-Argon, `agy-delegate` automatically falls back to `Gemini 3.1 Pro` (then `Gemini 3.1 Pro (High)`)
-and logs `pro fell back to …` on stderr — check `AGY_USAGE.model` for the model that actually ran.
-The retry fires only on agy's "model not recognized" error, never after a timeout (a timed-out
-attempt exits 12). That rejection is not instant: measured on agy 1.4.2 (enterprise plan, four
-runs) it took 5–37 s per attempt, so a plan with none of the three costs up to three such
-starts — well under one `--print-timeout` each, not three timeouts. Keep the executor a
+`pluginConfigs` or env `CLAUDE_PLUGIN_OPTION_*`). Since 0.31.0, `pro` defaults to **Gemini 4 Carbon (High)** (strongest coding/agentic reasoning), and `flash` / `flash-lo` (`lite`) default to **Gemini 4 Hydrogen (High)** / **(Low)** (~2.5× faster agentic throughput, with `(XHigh)` reasoning effort available via `--effort xhigh`). When `tier_pro`, `tier_flash`, or `tier_flash_lo` is **unremapped** and the active plan does not expose the primary Gemini 4 model (for example Google AI Pro without Carbon/Hydrogen, or Free-tier accounts), `agy-delegate` resolves an entitled fallback in **two layers**:
+1. **Layer 1 (`Available models:` 1-hop Cold-Miss Jump):** when `agy 1.5.x` rejects a model with an `Available models:` list (measured on `agy 1.5.9`), `agy-delegate` intersects its ordered fallback chain (`pro`: Carbon → Argon → `Gemini 3.1 Pro` → `Gemini 3.1 Pro (High)` → `Gemini 3.1 Pro (Low)` → Hydrogen → `Gemini 3.8 Flash (High)`; `flash`: Hydrogen → `Gemini 3.8 Flash (High)` → `Gemini 3.7 Flash (High)` → `Gemini 3.6 Flash (High)` → `Gemini 3.5 Flash`; `flash-lo`: Hydrogen Low → `Gemini 3.8 Flash (Low)` → `Gemini 3.5 Flash Lite` → `Gemini 3.7 Flash (Low)` → `Gemini 3.1 Flash Lite`) with that list and jumps directly to the first entitled candidate in a **single retry** (or exits `14` immediately with zero extra spawns if none match; on older `agy` without `Available models:`, it walks the chain sequentially).
+2. **Layer 2 (`tier-models-v1.tsv` 6h Warm Cache):** resolved fallbacks (and `agy-doctor` pre-seeds) are cached for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` keyed on `(agy binary path + stat, OAuth token presence bit, settings.json & onboarding.json POSIX cksum content signatures, auth env, tier)` — immune to `agy 1.5.9`'s per-invocation `onboarding.json` `mtime` rewrites (measured on `1.5.9`) and OAuth token refreshes — so subsequent calls hit the entitled model on attempt #1 with zero cold-miss delay.
+Check `AGY_USAGE.model` on stderr for the model that actually ran. The retry fires only on agy's model-unavailable error, never after a timeout (a timed-out attempt exits 12). Keep the executor a
 *different, cheaper* model than the Claude conductor: that's what yields the cost saving **and**
 the cross-model verification value (Claude executing Claude loses both).
 
@@ -82,26 +75,13 @@ the cross-model verification value (Claude executing Claude loses both).
 > it would actually run. Below 1.1.11 it does not probe, because there the slash command
 > falls through as prompt text and the model answers as though it had run.
 >
-> The `flash` tiers default to **Gemini 3.8 Flash (High)** / **(Low)** since 0.26.0
-> (3.7 from 0.24.0, 3.5 before). 3.8, 3.7 and 3.6 carry identical list prices —
-> $0.75 in / $3.75 out / $0.075 cached-in per 1M — under a promotion that **ends
-> 2026-12-31** and then settles at $1.50 / $7.50 / $0.15; 3.5 is $1.50 / $9.00 /
-> $0.15 throughout. Two sources, checked 2026-09-03. Price a run with
-> `prices.json`'s `gemini_flash`, which mirrors whatever the flash tier resolves to;
-> `agy-cost-compare` picks that key by tier NAME, not by model.
+> **Gemini 4 & 3.8 Flash pricing in `prices.json`:** **Gemini 4 Hydrogen** (`flash` / `flash-lo` default since 0.31.0) carries standard non-promotional list pricing of **$1.50 in / $7.50 out / $0.075 cached-in per 1M** (95% implicit prefix cache discount ≥ 4,096 tokens). **Gemini 4 Carbon** (`pro` default since 0.31.0) and **Gemini 4 Argon** (`--tier argon`, 0.29.0 `pro` default) carry introductory list pricing of **$2.00 in / $10.00 out / $0.10 cached-in per 1M through 2026-11-30**, settling at **$4.00 / $20.00 / $0.20 from 2026-12-01** (`gemini_carbon_post_2026_12` / `gemini_argon_post_2026_12`). **Gemini 3.8 Flash** (`--tier flash-38`, 0.26.0–0.30.x `flash` default) carries promotional pricing of **$0.75 in / $3.75 out / $0.075 cached-in per 1M through 2026-12-31**, settling at $1.50 / $7.50 / $0.15. `prices.json`'s `gemini_flash` mirrors `gemini_hydrogen`, and `agy-cost-compare` automatically selects the matching `prices.json` deck from `AGY_USAGE.model` after any runtime fallback.
 >
-> **The move is justified on currency at an unchanged list price, not on quality** —
-> no comparison has been run between these models on a build where `--model`
-> actually applies, and an identical per-token price is not an identical per-task
-> cost (thinking bills as output; read the `AGY_USAGE` line). Measured quirk: under
+> **Measured quirk on Gemini 3.8 Flash (High):** under
 > `--digest`, a prompt with nothing to inspect (a bare "reply OK") makes 3.8 High run a
 > command to find something to report — 6 of 7 runs, exit 15 headless without a grant;
 > 3.7 High 0 of 3. With a real task (a file behind `--dir`, pasted code) 3.8 High
-> answered 6 of 6. Give it a task, or drop `--digest` for a ping. If a plan does not
-> serve 3.8 — agy 1.1.25's note lists it for `GEMINI_API_KEY` sign-in; it is also
-> listed on the GCP-project sign-in this was measured on — `doctor` says so and a
-> delegation exits 14 naming the fix; remap `tier_flash` to a name from
-> `agy models` (3.7 and 3.6 cost the same).
+> answered 6 of 6. Give it a task, or drop `--digest` for a ping.
 >
 > **Retracted:** earlier versions of this note quoted token-level comparisons between
 > 3.5 / 3.6 / `flash-medium` (−23% input, `cache_read` +43%, and so on). Those runs were
@@ -112,7 +92,7 @@ the cross-model verification value (Claude executing Claude loses both).
 > is exactly what this repo's own playbook tells you not to report. Pick a tier by what
 > your plan serves and by the published rates until this is re-measured on 1.1.10+.
 >
-> Note: agy 1.1.5 changed `agy models` output to slugs (`gemini-3.5-flash`); both slugs and
+> Note: agy 1.1.5 changed `agy models` output to slugs (`gemini-3.5-flash`), and 1.2.x+ emits two columns (`<slug>  <display name>`); both slugs and
 > display names are accepted by `--model`, and `doctor` matches either.
 
 ## How to call it
@@ -120,13 +100,12 @@ the cross-model verification value (Claude executing Claude loses both).
 ```bash
 agy-delegate [options] "the task prompt"
 ```
-Options: `--tier flash|flash-lo|pro` · `--dir <path>` (workspace, repeatable) ·
-`--timeout 10m` · `--yolo` (auto-approve **ALL** tools — the blunt grant; needed for web search /
-URL reads (agy 1.1.28+; or a `read_url(<target>)` rule) / Vertex AI Search / terminal, and for writes not covered by a `permissions.allow` rule. For a
+Options: `--tier flash|flash-lo|lite|pro|argon|flash-38` · `--effort low|medium|high|xhigh|max` (rewrites `(Effort)` on display names, or passes `--effort` for effortless slugs/custom models) · `--dir <path>` / `--add-dir <path>` (workspace, repeatable) ·
+`--timeout 10m` · `--read-only` (and `--allow-url`: on agy ≥ 1.4.10 synthesizes `--settings` with `request-review`, `permissions.allow: []` — or `["read_url(*)"]` with `--allow-url` — and `permissions.ask: ["write_file(*)", "command(*)"]` so workspace `read_file` stays allowed while writes and shell commands are denied across both consumer and Gemini Enterprise accounts without `--yolo`) · `--settings <json|path>` · `--json-schema <json|path>` (forwards `--json-schema` and serializes `.structured_output` when `.response` is empty) · `--yolo` (auto-approve **ALL** tools — the blunt grant; needed for Vertex AI Search / terminal / subagent spawning, and on agy < 1.4.10 for web search / URL reads (agy 1.1.28+; or a `read_url(<target>)` rule) and for writes not covered by a `permissions.allow` rule. For a
 file write the narrower grant is usually a `write_file(<dir>)` entry in
 `~/.gemini/antigravity-cli/settings.json`, which needs no flag — see below. Run write tasks
 on a branch) · `--mode accept-edits|plan|auto`
-(agy execution mode. `--mode accept-edits` is NOT a headless write grant. Measured on agy 1.1.13 — where the flag is actually applied, since 1.1.12 fixed `--mode` being ignored in headless `-p` entirely — the write is denied exactly like one without it. Earlier notes here said "soft-denied on 1.1.3"; on a build where the flag was never applied, that observation could not tell a denial apart from the flag doing nothing. `plan` = strategize only; `auto` = dynamic plan/execute on agy ≥ 1.3.5) · `--sandbox` ·
+(agy execution mode. `--mode accept-edits` is version-dependent: on **agy ≥ 1.5.7**, it grants in-workspace `write_file`/`edit_file` while keeping terminal commands gated; on **agy 1.1.13–1.5.6**, `--mode accept-edits` was NOT a headless write grant and denied writes just like a plain call. Earlier notes here said "soft-denied on 1.1.3"; on a build before 1.1.12 where `--mode` was ignored in headless `-p` entirely, that observation could not tell a denial apart from the flag doing nothing. `plan` = strategize only; `auto` = dynamic plan/execute on agy ≥ 1.3.5) · `--sandbox` ·
 `--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·
@@ -190,7 +169,7 @@ agy **reads `AGENTS.md`** from the workspace (verified). Keep a single shared
 Antigravity operate under the **same rules** — this raises agy's first-pass success
 rate and keeps output consistent (lower OpEx).
 
-**Rule: when delegating any repo work, always pass `--dir <repo-root>`** so agy loads
+**Rule: when delegating any repo work, always pass `--dir <repo-root>`** (inside the `antigravity-delegate` subagent, pass `--dir .` or a literal subdirectory inside `cwd` — its `PreToolUse` gate blocks paths outside `cwd`) so agy loads
 AGENTS.md and the real code, instead of pasting files into the prompt (cheaper, denser
 context).
 
@@ -513,6 +492,9 @@ Verified behaviors (1.0.12 → 1.1.5):
 - Spawns are real and observable (new conversation threads appear) — but still run the
   verification gates on the merged result; more autonomy = more surface for error.
 
+- **agy ≥ 1.5.9 — dynamic Python workflow orchestration (`run_workflow`) & `/swarm`:**
+  `agy 1.5.9` bundles `run_workflow` (a Python orchestrator script inside `agy` with `agent`, `parallel`, `pipeline`, and `phase` primitives for fanning out over files/modules and aggregating results in code), and `agy 1.5.6+` ships `/swarm` (multi-agent worktree board coordination). Invoke `run_workflow` inside a single `--yolo` delegation when the fan-out logic itself is code; if starting a prompt with a literal `/swarm` slash command, pass `--allow-slash-commands` (since `agy-delegate` passes `--disable-slash-commands` by default on `1.5.4+`).
+
 Caveats: neither pattern is a documented contract yet — `self`+Role works around the
 sandbox allowlist, and even the official docs' static agent-config paths don't match
 observed behavior (upstream #527) — so **re-verify after agy upgrades** (1.0.16 changed
@@ -537,16 +519,16 @@ unverified.**
 1. **Plan (Claude).** Decompose into sub-questions + an explicit list of load-bearing
    claims to verify. Claude owns scope and final synthesis.
 2. **Fan-out fetch (agy, cheap, parallel).** One call per sub-question; force compact
-   stdout so bulky pages stay in Gemini's context, not Claude's:
+   stdout so bulky pages stay in Gemini's context, not Claude's (on `agy < 1.4.10` where `--settings` is absent, replace `--read-only --allow-url` with `--yolo` or a `read_url(<target>)` rule so URL reads don't hit exit 15):
    ```bash
-   "$ROOT" --tier flash --timeout 15m --yolo \
+   "$ROOT" --tier flash --timeout 15m --read-only --allow-url \
      "Use web search for <sub-question>. Return 5-8 bullet findings, each with the
       exact source URL and publication date. Output ONLY findings+URLs+dates."
    ```
 3. **Deepen on key sources (agy).** For each load-bearing claim, name the URL and make
    agy quote the supporting text (turns domain-level citations into verifiable quotes):
    ```bash
-   "$ROOT" --tier pro --yolo \
+   "$ROOT" --tier pro --timeout 10m --read-only --allow-url \
      "Open <URL> and quote the exact sentence(s) supporting: '<claim>'.
       If the page does not support it, reply NOT SUPPORTED."
    ```
@@ -569,18 +551,17 @@ Built-in Google tools (MCP), verified working in headless `--print` mode:
   `search`, `conversational_search`).
 - **Google Cloud Logging**, **Notebooks** (Colab/Jupyter), **Visualization** (charts).
 
-Tool use in headless mode requires `--yolo` (print mode can't show approval prompts);
-search/list tools are read-only so this is low-risk.
+Read-only web/URL tools work with `--read-only --allow-url` on `agy ≥ 1.4.10`; Vertex AI Search and terminal-backed tools in headless mode require `--yolo` (or specific `permissions.allow` rules, since print mode can't show approval prompts).
 
 ## Economics (a financial lever, not the headline)
 
-Routing deterministic, high-volume work to Gemini Flash (≪ Claude per token) is
+Routing deterministic, high-volume work to Gemini 4 Hydrogen (`flash` tier, ≪ Claude per token) is
 **intelligent model routing**: higher CapEx (this harness) for lower OpEx (cheap model
 does the bulk). Use the cost demo as observability:
 ```bash
 agy-cost-compare --tier flash "the task prompt"
 ```
-Estimates only (chars/4; agy exposes no token API in print mode). Set real Vertex rates
+Uses exact `AGY_USAGE` token counts (`input`, `output`, and additive `cache_read`) on `agy ≥ 1.1.8`, falling back to `chars/4` estimates on older plain-text runs. Set real Vertex rates in `prices.json` or
 via `CLAUDE_IN_PER_M`, `CLAUDE_OUT_PER_M`, `GEMINI_IN_PER_M`, `GEMINI_OUT_PER_M`.
 
 ## Prerequisites & limits

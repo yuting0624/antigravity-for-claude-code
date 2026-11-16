@@ -108,16 +108,28 @@ fi
 if [ "$1" = "--help" ]; then
   [ "${STUB_JSON_CAPABLE:-0}" = "1" ] && echo "  --output-format  Output format for print mode (text, json, stream-json)"
   [ "${STUB_SLASH_CAPABLE:-0}" = "1" ] && echo "  --disable-slash-commands  Disable slash command and skill expansion in print mode"
+  if [ "${STUB_SETTINGS_CAPABLE:-0}" = "1" ]; then
+    echo "  --settings  JSON settings override (file path or inline JSON)"
+    echo "  --add-dir   Additional workspace directory"
+    echo "  --json-schema  JSON Schema for structured output"
+  fi
   echo "  --print-timeout  timeout"
   exit 0
+fi
+if [ -n "${STUB_CALL_COUNT_FILE:-}" ]; then
+  _cnt="$(cat "$STUB_CALL_COUNT_FILE" 2>/dev/null || echo 0)"
+  echo "$(( _cnt + 1 ))" > "$STUB_CALL_COUNT_FILE"
 fi
 if [ -n "${STUB_REJECT_MODEL:-}" ]; then
   for _a in "$@"; do
     case "|${STUB_REJECT_MODEL}|" in
       *"|${_a}|"*)
+        if [ -n "${STUB_AVAIL_MODELS:-}" ]; then
+          printf 'error: invalid model selection (--model "%s"): model %s is not recognized as a known model\nAvailable models:\n%b\n' "$_a" "$_a" "$STUB_AVAIL_MODELS" >&2
+        fi
         if [ "${STUB_JSON_CAPABLE:-0}" = "1" ]; then
           printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model %s is not recognized as a known model","usage":{}}' "$_a"
-        else
+        elif [ -z "${STUB_AVAIL_MODELS:-}" ]; then
           echo "Error: invalid --model \"$_a\": model $_a is not recognized as a known model" >&2
         fi
         exit 1 ;;
@@ -268,6 +280,8 @@ case "${STUB_MODE:-text}" in
   # at the first `"` loses it and the failure misclassifies. This is what shipped.
   json_err_quoted) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection (--model \\"X\\" --effort \\"\\"): model X is not recognized as a known model or custom model in settings","usage":{}}'; exit 1 ;;
   json_quota) printf '{"conversation_id":"","status":"ERROR","response":"","error":"quota exceeded for this model","usage":{}}'; exit 1 ;;
+  json_structured_only) printf '{"conversation_id":"c-schema","status":"SUCCESS","response":"","structured_output":{"summary":"ok","count":2},"usage":{"input_tokens":50,"output_tokens":12,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":62}}'; exit 0 ;;
+  json_usage_big) printf '{"conversation_id":"c-u","status":"SUCCESS","response":"USAGE_OK\n","usage":{"input_tokens":100000,"output_tokens":20000,"thinking_tokens":5000,"cache_read_tokens":500000,"total_tokens":120000}}'; exit 0 ;;
   *)       echo "STUB_OK" ;;
 esac
 STUB
@@ -359,15 +373,17 @@ check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
 out=$(STUB_MODE=badmodel "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
 
-# #104: unremapped --tier pro falls back from Gemini 4 Argon (High) to Gemini 3.1 Pro,
-# then to Gemini 3.1 Pro (High) when neither Argon nor 3.1 Pro is on the plan;
+# #104 + 0.31.0: unremapped --tier pro falls back from Gemini 4 Carbon (High) to
+# Gemini 4 Argon (High), then Gemini 3.1 Pro, then Gemini 3.1 Pro (High);
 # explicit tier_pro remap does NOT fall back.
 out=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO" "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
-check "pro tier falls back to Gemini 3.1 Pro when Argon is unavailable (#104)" 0 "$rc" "--model Gemini 3.1 Pro" "$out"
-check "pro tier fallback emits stderr notice (#104)" 0 "$rc" "pro fell back to Gemini 3.1 Pro" "$out"
-out_fb2=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 3.1 Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb2=$?
-check "pro tier falls back to Gemini 3.1 Pro (High) when both Argon and 3.1 Pro are unavailable (#104)" 0 "$rc_fb2" "--model Gemini 3.1 Pro (High)" "$out_fb2"
-err_fb=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok STUB_REJECT_MODEL="$DEF_PRO" "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_fb=$?
+check "pro tier falls back to Gemini 4 Argon (High) when Carbon is unavailable" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
+check "pro tier fallback emits stderr notice (#104)" 0 "$rc" "pro fell back to Gemini 4 Argon (High)" "$out"
+out_fb1=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb1=$?
+check "pro tier falls back to Gemini 3.1 Pro when Carbon and Argon are unavailable (#104)" 0 "$rc_fb1" "--model Gemini 3.1 Pro" "$out_fb1"
+out_fb2=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)|Gemini 3.1 Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb2=$?
+check "pro tier falls back to Gemini 3.1 Pro (High) when Carbon, Argon, and 3.1 Pro are unavailable (#104)" 0 "$rc_fb2" "--model Gemini 3.1 Pro (High)" "$out_fb2"
+err_fb=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_fb=$?
 check "pro tier fallback records Gemini 3.1 Pro in AGY_USAGE (#104)" 0 "$rc_fb" '"model": "Gemini 3.1 Pro"' "$err_fb"
 out_remap_fb=$(STUB_MODE=args STUB_REJECT_MODEL="Custom Pro" CLAUDE_PLUGIN_OPTION_TIER_PRO="Custom Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_remap_fb=$?
 check "explicit tier_pro remap does not fall back to Gemini 3.1 Pro (#104)" 14 "$rc_remap_fb" "MODEL_UNAVAILABLE" "$out_remap_fb"
@@ -677,8 +693,11 @@ out=$(STUB_MODE=args "$DELEGATE" --yolo "implement the parser module" 2>&1); rc=
 if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned even with --yolo"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning when --yolo is set"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" --mode accept-edits "implement the parser module" 2>&1); rc=$?
-if grep -qF "$WARN" <<<"$out"; then echo "ok: --mode accept-edits still warns (it is not a grant on any version)"; PASS=$((PASS+1));
-else echo "FAIL: no warning with --mode accept-edits (should warn since 1.1.3)"; FAIL=$((FAIL+1)); fi
+if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned even with --mode accept-edits (grants workspace writes on agy 1.5.7+)"; FAIL=$((FAIL+1));
+else echo "ok: no write-warning when --mode accept-edits is set (agy 1.5.7+)"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=args "$DELEGATE" --read-only "implement the parser module" 2>&1); rc=$?
+if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned even with --read-only"; FAIL=$((FAIL+1));
+else echo "ok: no write-warning when --read-only is set"; PASS=$((PASS+1)); fi
 out=$(STUB_MODE=args "$DELEGATE" "summarize the changelog in 3 bullets" 2>&1); rc=$?
 if grep -qF "$WARN" <<<"$out"; then echo "FAIL: warned for a non-write prompt"; FAIL=$((FAIL+1));
 else echo "ok: no write-warning for a read/summary prompt"; PASS=$((PASS+1)); fi
@@ -1195,7 +1214,7 @@ check "reason names the wrong first command" 0 0 "not agy-delegate"    "$(gate_w
 # WHY, and told what to do instead, or it retries the same shape.
 check "reason names the pipe count"     0 0 "2 pipes"                 "$(gate_why '"cat f | agy-delegate - | wc"')"
 check "reason rejects any pipeline"     0 0 "a pipeline"              "$(gate_why '"ls | agy-delegate -"')"
-check "reason points at --dir instead"  0 0 "--dir"                   "$(gate_why '"cat f | agy-delegate -"')"
+check "reason points at --dir instead"  0 0 "--dir ."                 "$(gate_why '"cat f | agy-delegate -"')"
 
 # The reason goes into the AGENT'S CONTEXT, and a blocked command routinely carries a
 # delegation prompt. It must describe the syntax and never quote ANY of the command back.
@@ -1221,6 +1240,7 @@ leak_free "right side of a pipe"                 '"git diff | \"SECRETPROMPTMARK
 leak_free "left side of a pipe"                  '"\"SECRETPROMPTMARKER\" | agy-delegate -"'           'SECRETPROMPTMARKER'
 leak_free "name-shaped token (an API key is)"    '"sk-ant-oat01-SECRETPROMPTMARKER x"'                 'SECRETPROMPTMARKER'
 leak_free "plain wrong command"                  '"SECRETPROMPTMARKER --flag x"'                       'SECRETPROMPTMARKER'
+leak_free "unknown delegate option"              '"agy-delegate --SECRETPROMPTMARKER \"hi\""'          'SECRETPROMPTMARKER'
 
 AGENT="$ROOT/agents/antigravity-delegate.md"
 tl=$(grep -m1 '^tools:' "$AGENT")
@@ -2116,13 +2136,20 @@ m = re.search(r'flash\)\s*echo "\$\{CLAUDE_PLUGIN_OPTION_TIER_FLASH:-([^}]*)\}"'
 if not m:
     print("flash tier default not found (model_for_tier pattern changed?)"); raise SystemExit
 default = m.group(1)
-# Derive the key from the default rather than enumerating versions. The previous shape
-# hardcoded 3.5 and 3.6 and told you to "reconcile by hand" for anything else, which is a
-# failure the moment a new Flash ships — the exact situation 3.7 created.
-ver = re.search(r"(\d+)\.(\d+)", default)
-if not ver:
-    print(f"cannot read a version out of the flash default {default!r}"); raise SystemExit
-key = "gemini_flash_%s%s" % ver.groups()
+# Derive the key from the default rather than enumerating versions. Support Gemini 4
+# element codenames (Hydrogen / Carbon / Argon) alongside numeric Flash versions.
+dl = default.lower()
+if "hydrogen" in dl:
+    key = "gemini_hydrogen"
+elif "carbon" in dl:
+    key = "gemini_carbon"
+elif "argon" in dl:
+    key = "gemini_argon"
+else:
+    ver = re.search(r"(\d+)\.(\d+)", default)
+    if not ver:
+        print(f"cannot read a version out of the flash default {default!r}"); raise SystemExit
+    key = "gemini_flash_%s%s" % ver.groups()
 flash, per_model = pj["gemini_flash"], pj.get(key)
 if per_model is None:
     print(f"flash tier is {default!r} but prices.json has no {key} to mirror")
@@ -2140,16 +2167,23 @@ if [ "$out" = "OK" ]; then
   echo "ok: prices.json gemini_flash matches the shipped flash tier"; PASS=$((PASS+1));
 else echo "FAIL: $out"; FAIL=$((FAIL+1)); fi
 
-# agy-cost-compare --tier pro uses gemini_argon when the pro tier resolves to Argon
-# (the 0.29.0 default) and gemini_pro when remapped to 3.1 Pro.
+# agy-cost-compare --tier pro uses gemini_carbon / gemini_argon (out 10.00) by default
+# and gemini_pro (out 12.00) when remapped or fallen back to 3.1 Pro.
 cc_argon=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro uses gemini_argon (out 10.00) by default" 0 "$?" "10.00" "$cc_argon"
+check "agy-cost-compare --tier pro uses gemini_carbon (out 10.00) by default" 0 "$?" "10.00" "$cc_argon"
+cc_argon_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro uses gemini_argon (out 10.00) after fallback from Carbon to Argon" 0 "$?" "10.00" "$cc_argon_fb"
 cc_pro31=$(STUB_MODE=text CLAUDE_PLUGIN_OPTION_TIER_PRO="Gemini 3.1 Pro" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) when remapped to 3.1 Pro" 0 "$?" "12.00" "$cc_pro31"
 cc_pro31_pc=$(STUB_MODE=text CLAUDE_CONFIG_DIR="$PCDIR" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro reads tier_pro from settings.json pluginConfigs (#101)" 0 "$?" "12.00" "$cc_pro31_pc"
-cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) after runtime fallback to 3.1 Pro (#104)" 0 "$?" "12.00" "$cc_pro31_fb"
+cc_fl38_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_FLASH" "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
+check "agy-cost-compare --tier flash switches from Hydrogen (out 7.50) to 3.8 Flash (out 3.75) after fallback" 0 "$?" "3.75" "$cc_fl38_fb"
+cc_u_exact=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_usage_big "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
+check "agy-cost-compare prices exact AGY_USAGE tokens + additive cache_read ($0.3375)" 0 "$?" '$0.3375' "$cc_u_exact"
+check "agy-cost-compare marks AGY_USAGE run as measured rather than chars/4" 0 0 "measured from AGY_USAGE" "$cc_u_exact"
 # A malformed AGY_USAGE line on stderr must not abort the outer price-selection block and
 # silently revert --tier pro to the hardcoded flash-tier fallback rates (0.75 / 3.75).
 BADU_BIN="$TMP/badu-bin"; mkdir -p "$BADU_BIN"
@@ -2586,6 +2620,287 @@ check "gate: agy-handoff --tests -- --verify denied (after --)" 2 "$rc" "--verif
 out=$(printf '%s' '{"tool_input":{"command":"agy-handoff --dir . -- --no-verify \"do x\""}}' | "$GATE" 2>&1); rc=$?
 check "gate: agy-handoff -- --no-verify denied (after --)" 2 "$rc" "--no-verify is not allowed" "$out"
 unset ANTIGRAVITY_JOBS VCOUNT
+
+echo "== v0.31.0 Gemini 4 tiers, 2-layer fallback cache, effort, scoped settings, and doctor 1.5.9 =="
+
+# 1. Tier aliases + --effort suffix rewriting / raw flag forwarding
+out=$(STUB_MODE=args "$DELEGATE" --tier lite "hi" 2>/dev/null); rc=$?
+check "lite tier alias -> Gemini 4 Hydrogen (Low)" 0 "$rc" "--model Gemini 4 Hydrogen (Low)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier argon "hi" 2>/dev/null); rc=$?
+check "argon tier alias -> Gemini 4 Argon (High)" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier flash-38 "hi" 2>/dev/null); rc=$?
+check "flash-38 tier alias -> Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
+
+out=$(STUB_MODE=args "$DELEGATE" --tier flash --effort xhigh "hi" 2>/dev/null); rc=$?
+check "--tier flash --effort xhigh rewrites display suffix to (XHigh)" 0 "$rc" "--model Gemini 4 Hydrogen (XHigh)" "$out"
+if has '--effort' "$out"; then
+  echo "FAIL: --effort flag passed alongside parenthesized display-name suffix"; FAIL=$((FAIL+1));
+else echo "ok: --effort rewrites parenthesized suffix without forwarding raw --effort"; PASS=$((PASS+1)); fi
+
+out=$(STUB_MODE=args "$DELEGATE" --model gemini-4-hydrogen --effort xhigh "hi" 2>/dev/null); rc=$?
+check "effortless slug --model gemini-4-hydrogen --effort xhigh forwards --effort" 0 "$rc" "--effort xhigh" "$out"
+
+out=$(STUB_MODE=args "$DELEGATE" --tier flash --effort bogus "hi" 2>&1); rc=$?
+check "invalid --effort bogus -> exit 1" 1 "$rc" "invalid --effort" "$out"
+
+# Effort fallback adaptation: Hydrogen (XHigh) unavailable -> 3.8 Flash adapts (XHigh) to (High)
+out=$(STUB_MODE=args STUB_REJECT_MODEL="Gemini 4 Hydrogen (XHigh)" "$DELEGATE" --tier flash --effort xhigh "hi" 2>/dev/null); rc=$?
+check "--tier flash --effort xhigh adapts fallback to Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
+
+# 2. Layer 1: `Available models:` 1-hop Cold-Miss Jump (skips intermediate unavailable fallbacks)
+L1_CNT="$TMP/l1-count"; rm -f "$L1_CNT"
+out=$(STUB_MODE=args STUB_CALL_COUNT_FILE="$L1_CNT" \
+      STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)|Gemini 3.1 Pro|Gemini 3.1 Pro (High)|Gemini 3.1 Pro (Low)|Gemini 4 Hydrogen (High)" \
+      STUB_AVAIL_MODELS="  gemini-3.8-flash-high           Gemini 3.8 Flash (High)\n  gemini-3.5-flash-lite           Gemini 3.5 Flash Lite" \
+      "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
+check "Layer 1: Available models jumps straight from Carbon to Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
+check "Layer 1: 1-hop jump makes exactly 2 agy calls (skips 5 intermediate fallbacks)" 0 0 "2" "$(cat "$L1_CNT" 2>/dev/null)"
+
+L1_NOMATCH="$TMP/l1-nomatch"; rm -f "$L1_NOMATCH"
+out=$(STUB_MODE=args STUB_CALL_COUNT_FILE="$L1_NOMATCH" \
+      STUB_REJECT_MODEL="$DEF_PRO" \
+      STUB_AVAIL_MODELS="  claude-sonnet-4-6               Claude Sonnet 4.6" \
+      "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
+check "Layer 1: authoritative Available models with zero matching fallbacks -> exit 14" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
+check "Layer 1: zero-match Available models fails fast in 1 agy call" 0 0 "1" "$(cat "$L1_NOMATCH" 2>/dev/null)"
+
+# 3. Layer 2: `tier-models-v1.tsv` 6h Warm Fingerprinted Fallback Cache
+TCACHE="$TMP/tcache"; THOME="$TMP/thome"; mkdir -p "$THOME/.gemini/antigravity-cli/cache"
+echo '{"access_token":"tok1"}' > "$THOME/.gemini/antigravity-cli/antigravity-oauth-token"
+echo '{"tier":"g1-pro"}' > "$THOME/.gemini/antigravity-cli/cache/onboarding.json"
+L2_CNT="$TMP/l2-count"; rm -f "$L2_CNT"
+out=$(HOME="$THOME" AGY_TIER_CACHE=on AGY_TIER_CACHE_DIR="$TCACHE" STUB_MODE=args STUB_CALL_COUNT_FILE="$L2_CNT" \
+      STUB_REJECT_MODEL="$DEF_PRO" STUB_AVAIL_MODELS="  gemini-3.1-pro-low              Gemini 3.1 Pro (Low)" \
+      "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
+check "Layer 2: cold miss resolves Gemini 3.1 Pro (Low) and populates cache" 0 "$rc" "--model Gemini 3.1 Pro (Low)" "$out"
+check "Layer 2: cold miss took 2 agy calls" 0 0 "2" "$(cat "$L2_CNT" 2>/dev/null)"
+[ -s "$TCACHE/tier-models-v1.tsv" ] && { echo "ok: tier-models-v1.tsv written"; PASS=$((PASS+1)); } || { echo "FAIL: tier-models-v1.tsv missing"; FAIL=$((FAIL+1)); }
+
+rm -f "$L2_CNT"
+out=$(HOME="$THOME" AGY_TIER_CACHE=on AGY_TIER_CACHE_DIR="$TCACHE" STUB_MODE=args STUB_CALL_COUNT_FILE="$L2_CNT" \
+      STUB_REJECT_MODEL="$DEF_PRO" \
+      "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
+check "Layer 2: warm hit uses cached Gemini 3.1 Pro (Low) directly" 0 "$rc" "--model Gemini 3.1 Pro (Low)" "$out"
+check "Layer 2: warm hit makes exactly 1 agy call (zero cold-miss retry)" 0 0 "1" "$(cat "$L2_CNT" 2>/dev/null)"
+
+# Touching onboarding.json (same content, new mtime — agy 1.5.9 rewrites it every call) and
+# refreshing antigravity-oauth-token bytes MUST NOT invalidate the warm cache!
+sleep 1
+touch "$THOME/.gemini/antigravity-cli/cache/onboarding.json"
+echo '{"access_token":"tok1-hourly-refresh-longer-payload"}' > "$THOME/.gemini/antigravity-cli/antigravity-oauth-token"
+rm -f "$L2_CNT"
+out=$(HOME="$THOME" AGY_TIER_CACHE=on AGY_TIER_CACHE_DIR="$TCACHE" STUB_MODE=args STUB_CALL_COUNT_FILE="$L2_CNT" \
+      STUB_REJECT_MODEL="$DEF_PRO" \
+      "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
+check "Layer 2: onboarding.json mtime bump + OAuth token refresh keep warm cache intact" 0 "$rc" "--model Gemini 3.1 Pro (Low)" "$out"
+check "Layer 2: mtime-only rewrite still made 1 agy call (no 50% miss oscillation)" 0 0 "1" "$(cat "$L2_CNT" 2>/dev/null)"
+
+# TTL=0 invalidates warm entry
+rm -f "$L2_CNT"
+out=$(HOME="$THOME" AGY_TIER_CACHE=on AGY_TIER_CACHE_TTL=0 AGY_TIER_CACHE_DIR="$TCACHE" STUB_MODE=args STUB_CALL_COUNT_FILE="$L2_CNT" \
+      STUB_REJECT_MODEL="$DEF_PRO" STUB_AVAIL_MODELS="  gemini-4-argon-high             Gemini 4 Argon (High)" \
+      "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
+check "Layer 2: AGY_TIER_CACHE_TTL=0 invalidates stale cache and re-resolves Argon" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
+check "Layer 2: expired TTL re-probed (2 agy calls)" 0 0 "2" "$(cat "$L2_CNT" 2>/dev/null)"
+
+# Changing onboarding.json CONTENT (e.g. account/plan switch) invalidates fingerprint
+echo '{"tier":"g1-ultra"}' > "$THOME/.gemini/antigravity-cli/cache/onboarding.json"
+rm -f "$L2_CNT"
+out=$(HOME="$THOME" AGY_TIER_CACHE=on AGY_TIER_CACHE_DIR="$TCACHE" STUB_MODE=args STUB_CALL_COUNT_FILE="$L2_CNT" \
+      "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
+check "Layer 2: onboarding.json content change invalidates fingerprint -> tries primary Carbon High" 0 "$rc" "--model $DEF_PRO" "$out"
+check "Layer 2: plan switch ran primary directly (1 agy call)" 0 0 "1" "$(cat "$L2_CNT" 2>/dev/null)"
+
+# Pin exact tier_cache_key() parity between agy-delegate.sh and doctor.sh
+del_ck="$(HOME="$THOME" bash -c 'eval "$(sed -n "/^file_stat_sig()/,/^}/p; /^file_content_sig()/,/^}/p; /^tier_cache_key()/,/^}/p" "'"$DELEGATE"'")"; tier_cache_key')"
+doc_ck="$(HOME="$THOME" bash -c 'eval "$(sed -n "/^file_stat_sig()/,/^}/p; /^file_content_sig()/,/^}/p; /^tier_cache_key()/,/^}/p" "'"$ROOT/scripts/doctor.sh"'")"; tier_cache_key')"
+if [ -n "$del_ck" ] && [ "$del_ck" = "$doc_ck" ]; then
+  echo "ok: agy-delegate.sh and doctor.sh compute identical tier_cache_key()"; PASS=$((PASS+1));
+else echo "FAIL: tier_cache_key() drift between delegate ('$del_ck') and doctor ('$doc_ck')"; FAIL=$((FAIL+1)); fi
+
+# Default `auto` cache gate skips <64KB test stubs so sibling tests never leak cached fallbacks
+AUTO_CACHE="$TMP/autocache"
+out=$(AGY_TIER_CACHE_DIR="$AUTO_CACHE" STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO" "$DELEGATE" --tier pro "hi" 2>/dev/null)
+if [ -e "$AUTO_CACHE/tier-models-v1.tsv" ]; then
+  echo "FAIL: auto tier cache wrote tier-models-v1.tsv for a <64KB stub agy binary"; FAIL=$((FAIL+1));
+else echo "ok: auto tier cache skips <64KB stub agy binaries (Guardrail 4)"; PASS=$((PASS+1)); fi
+
+# 4. Scoped headless permissions: --read-only, --allow-url, --json-schema, and agy-media.sh
+out=$(STUB_SETTINGS_CAPABLE=1 STUB_MODE=args "$DELEGATE" --read-only --allow-url "research x" 2>/dev/null); rc=$?
+check "--read-only --allow-url synthesizes --settings on agy >= 1.4.10" 0 "$rc" "--settings" "$out"
+check "--read-only --allow-url includes read_url(*) in permissions.allow" 0 "$rc" "read_url(*)" "$out"
+check "--read-only --allow-url includes ask write_file(*) + command(*) for Enterprise V1" 0 "$rc" '"ask":["write_file(*)","command(*)"]' "$out"
+if has '--dangerously-skip-permissions' "$out" || has '--mode plan' "$out"; then
+  echo "FAIL: --read-only injected --yolo or --mode plan"; FAIL=$((FAIL+1));
+else echo "ok: --read-only uses request-review + permissions.allow without --yolo or --mode plan"; PASS=$((PASS+1)); fi
+if has 'read_file(*)' "$out" || has 'list_dir' "$out" || has 'search_web' "$out"; then
+  echo "FAIL: --read-only emitted host-wide read_file(*) or invalid grant action: $out"; FAIL=$((FAIL+1));
+else echo "ok: --read-only never emits host-wide read_file(*) or invalid grant actions"; PASS=$((PASS+1)); fi
+out_ro_nourl=$(STUB_SETTINGS_CAPABLE=1 STUB_MODE=args "$DELEGATE" --read-only "review x" 2>/dev/null); rc_ro_nourl=$?
+check "--read-only without --allow-url sets empty permissions.allow []" 0 "$rc_ro_nourl" '"allow":[]' "$out_ro_nourl"
+check "--read-only without --allow-url sets ask write_file(*) + command(*)" 0 "$rc_ro_nourl" '"ask":["write_file(*)","command(*)"]' "$out_ro_nourl"
+
+# Guardrail 1: on agy < 1.4.10 (no --settings in --help), --read-only omits --settings AND never injects --mode plan
+out=$(STUB_SETTINGS_CAPABLE=0 STUB_MODE=args "$DELEGATE" --read-only --allow-url "research x" 2>/dev/null); rc=$?
+if has '--settings' "$out" || has '--mode plan' "$out"; then
+  echo "FAIL: --read-only passed --settings or --mode plan to an older agy (< 1.4.10): $out"; FAIL=$((FAIL+1));
+else echo "ok: --read-only omits --settings and never injects --mode plan on agy < 1.4.10 (Guardrail 1)"; PASS=$((PASS+1)); fi
+
+# Scoped agy-media.sh (Guardrail 2 + Enterprise V1 cwd isolation + still-image prompt adaptation)
+MDIR2="$TMP/media-scoped"; mkdir -p "$MDIR2"
+SPECIAL_WAV="$MDIR2/my \"quoted\" clip.wav"
+STILL_PNG="$MDIR2/test.png"
+: > "$SPECIAL_WAV"; : > "$STILL_PNG"
+media_cmd=$(STUB_SETTINGS_CAPABLE=1 "$MEDIA" --print-command "$SPECIAL_WAV" 2>"$TMP/m-scoped.err"); rc=$?
+media_err="$(cat "$TMP/m-scoped.err")"
+check "agy-media on agy >= 1.4.10 passes --add-dir + --settings" 0 "$rc" "--settings" "$media_cmd"
+check "agy-media scopes write_file to the transcript output file" 0 "$rc" "write_file" "$media_cmd"
+check "agy-media scoped prompt explicitly forbids run_command" 0 "$rc" "never call run_command" "$media_cmd"
+if has '--yolo' "$media_cmd" || has 'WHOLE MACHINE' "$media_err"; then
+  echo "FAIL: agy-media still passed --yolo or emitted WHOLE MACHINE warning on --settings-capable agy: $media_cmd / $media_err"; FAIL=$((FAIL+1));
+else echo "ok: agy-media drops --yolo and machine-wide warning when --settings & --add-dir are supported"; PASS=$((PASS+1)); fi
+# Verify the synthesized --settings payload is valid JSON even when $OUT contains quotes & spaces
+ms_json="$(bash -c 'eval "set -- $1"; while [ $# -gt 0 ]; do [ "$1" = --settings ] && { printf "%s" "$2"; break; }; shift; done' _ "$media_cmd")"
+if python3 -c 'import json, sys; d = json.loads(sys.argv[1]); assert d["permissions"]["allow"][0].startswith("write_file(")' "$ms_json" 2>/dev/null; then
+  echo "ok: agy-media --settings JSON is valid with quotes and spaces in filename (Guardrail 2)"; PASS=$((PASS+1));
+else echo "FAIL: agy-media --settings JSON failed to parse for quoted filename: $ms_json"; FAIL=$((FAIL+1)); fi
+# Still-image prompt omits audio speaker timestamps while preserving VISUALS & digest contract, and runs in $DIR
+png_cmd=$(STUB_SETTINGS_CAPABLE=1 "$MEDIA" --print-command "$STILL_PNG" 2>/dev/null); rc_png=$?
+check "agy-media still image (.png) uses image/OCR prompt with VISUALS" 0 "$rc_png" "VISUALS" "$png_cmd"
+check "agy-media still image (.png) forbids run_command in scoped mode" 0 "$rc_png" "never call run_command" "$png_cmd"
+if has 'Speaker 1/2' "$png_cmd"; then
+  echo "FAIL: agy-media still image (.png) asked for audio Speaker 1/2 diarization"; FAIL=$((FAIL+1));
+else echo "ok: agy-media still image (.png) omits audio speaker diarization"; PASS=$((PASS+1)); fi
+# Verify agy-media cd's into $DIR before invoking $DELEGATE (prevents caller cwd leaking into V1 workspace grants)
+cat > "$TMP/pwd-delegate.sh" <<'STUB'
+#!/usr/bin/env bash
+pwd
+STUB
+chmod +x "$TMP/pwd-delegate.sh"
+media_pwd=$(cd "$TMP" && AGY_DELEGATE="$TMP/pwd-delegate.sh" "$MEDIA" "$STILL_PNG" 2>/dev/null); rc_mpwd=$?
+check "agy-media invokes agy-delegate with cwd set to media directory ($MDIR2)" 0 "$rc_mpwd" "$MDIR2" "$media_pwd"
+
+# --json-schema: falls back to compact serialized .structured_output when .response is ""
+out=$(STUB_JSON_CAPABLE=1 STUB_SETTINGS_CAPABLE=1 STUB_MODE=json_structured_only \
+      "$DELEGATE" --json-schema '{"type":"object"}' "extract" 2>/dev/null); rc=$?
+check "--json-schema extracts .structured_output when .response is empty -> exit 0" 0 "$rc" '{"summary": "ok", "count": 2}' "$out"
+
+# 5. PreToolUse Bash gate (`validate-delegate-bash.sh`): --settings blocked, -d/--dir/--add-dir workspace-confined
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --settings \"{\\\"toolPermission\\\":\\\"always-proceed\\\"}\" \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks raw --settings on agy-delegate" 2 "$rc" "--settings is not allowed" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --settings=/tmp/evil.json \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --settings= on agy-delegate" 2 "$rc" "--settings is not allowed" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --add-dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --add-dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --dir=/etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --dir=/etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -d ../outside \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks -d ../outside escaping workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-handoff --dir /etc \"do x\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-handoff --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --add-dir ../outside \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --add-dir .. escaping workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --add-dir ~/secret \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --add-dir ~ home expansion" 2 "$rc" "outside the current working directory" "$out"
+GATE_WS="$TMP/gate-ws"; mkdir -p "$GATE_WS/sub"
+( cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --read-only --dir sub --add-dir sub \"hi\""}}' | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: allows --read-only and in-workspace --dir / --add-dir sub" 0 "$rc"
+# Option mis-pairing bypasses (value-taking flags carrying "-d" before --dir / --settings):
+out=$(printf '%s' '{"tool_input":{"command":"agy-handoff --tests -d --dir /etc \"do x\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-handoff --tests -d --dir /etc option mis-pairing" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -m -d --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-delegate -m -d --dir /etc option mis-pairing" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -m -d --settings \"{}\" \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-delegate -m -d --settings option mis-pairing" 2 "$rc" "--settings is not allowed" "$out"
+# Shell parameter / brace / glob expansion in directory flags (assert "shell expansion" so JSON parse errors cannot pass for free):
+gate_cmd_err() {
+  python3 -c 'import json,sys; print(json.dumps({"tool_input": {"command": sys.argv[1]}}))' "$1" | "$GATE" 2>&1
+}
+out=$(gate_cmd_err 'agy-delegate --dir $HOME/.ssh "hi"'); rc=$?
+check "gate: blocks unquoted \$HOME expansion in --dir" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --dir "$HOME/.ssh" "hi"'); rc=$?
+check "gate: blocks double-quoted \$HOME expansion in --dir" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --dir=${PWD}/.. "hi"'); rc=$?
+check "gate: blocks \${PWD}/.. expansion in --dir=" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --dir={.,/etc} "hi"'); rc=$?
+check "gate: blocks brace expansion in --dir=" 2 "$rc" "shell expansion" "$out"
+# Symlink escape, agy-job start --dir, -d with no value, and explicit hook payload cwd:
+ln -sf /etc "$GATE_WS/sym-escape"
+out=$(cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --dir sym-escape \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks symlink inside workspace pointing to /etc" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-job start --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-job start --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-job --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks agy-job --dir /etc outside workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(printf '%s' '{"tool_input":{"command":"agy-delegate -d"}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks -d with no directory value" 2 "$rc" "-d requires a directory path" "$out"
+( cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir sub \"hi\""}}))' "$GATE_WS" | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: honors explicit cwd in PreToolUse hook JSON payload" 0 "$rc"
+out=$(cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir /etc \"hi\""}}))' "$GATE_WS" | "$GATE" 2>&1); rc=$?
+check "gate: blocks /etc when explicit cwd in hook JSON is workspace" 2 "$rc" "outside the current working directory" "$out"
+out=$(cd / && python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir .. \"hi\""}}))' "$GATE_WS/sub" | "$GATE" 2>&1); rc=$?
+check "gate: subdirectory cwd blocks parent repo root (--dir ..)" 2 "$rc" "outside the current working directory" "$out"
+( cd "$GATE_WS" && python3 -c 'import json,sys; print(json.dumps({"tool_input": {"command": "agy-handoff --dir . -- \"- add a retry to fetch()\""}}))' | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: allows dash-led agy-handoff requirement after --" 0 "$rc"
+# --json-schema: inline JSON `{...}` allowed (even containing `$defs`/`{}`); file-path form restricted to cwd:
+( cd "$GATE_WS" && python3 -c 'import json,sys; print(json.dumps({"tool_input": {"command": "agy-delegate --json-schema '\''{\"type\":\"object\",\"$defs\":{}}'\'' \"hi\""}}))' | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: allows inline JSON object on --json-schema" 0 "$rc"
+( cd "$GATE_WS" && python3 -c 'import json,sys; print(json.dumps({"tool_input": {"command": "agy-delegate --json-schema sub/schema.json \"hi\""}}))' | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: allows in-workspace file path on --json-schema" 0 "$rc"
+out=$(gate_cmd_err 'agy-delegate --json-schema /etc/passwd "hi"'); rc=$?
+check "gate: blocks out-of-workspace file path on --json-schema" 2 "$rc" "outside the current working directory" "$out"
+out=$(gate_cmd_err 'agy-job start --json-schema $HOME/.ssh/id_rsa "hi"'); rc=$?
+check "gate: blocks shell expansion in --json-schema path on agy-job start" 2 "$rc" "shell expansion" "$out"
+out=$(gate_cmd_err 'agy-delegate --json-schema "{/etc/shadow" "hi"'); rc=$?
+check "gate: blocks invalid {-prefixed path on --json-schema (json.loads required)" 2 "$rc" "shell expansion" "$out"
+
+# 6. doctor.sh 0.31.0: fallback `ok` + >64KB cache pre-seed, col-2 `/model` probe, and MDM routeWebFetch warning
+DOC159="$TMP/doc159"; DOC159_H="$TMP/doc159-home"; DOC159_C="$TMP/doc159-cache"
+mkdir -p "$DOC159" "$DOC159_H/.gemini/antigravity-cli"
+cat > "$DOC159_H/admin_settings.json" <<'JSON'
+{"gateway":{"url":"https://gw.corp.example","routeWebFetch":true}}
+JSON
+{
+  cat <<'STUB'
+#!/usr/bin/env bash
+[ "$1" = --version ] && { echo "1.5.9"; exit 0; }
+if [ "$1" = models ]; then
+  printf '%s\n' \
+    "gemini-3.8-flash-high           Gemini 3.8 Flash (High)" \
+    "gemini-3.8-flash-low            Gemini 3.8 Flash (Low)" \
+    "gemini-3.1-pro-low              Gemini 3.1 Pro (Low)" \
+    "gemini-3.5-flash-lite           Gemini 3.5 Flash Lite"
+  exit 0
+fi
+for a in "$@"; do
+  if [ "$a" = /model ]; then
+    # Guardrail 3: agy 1.5.x returns an opaque slug in col 1 and the exact display name in col 2
+    printf 'opaque-38-flash-slug\tGemini 3.8 Flash (High)\n'
+    exit 0
+  fi
+done
+exit 0
+STUB
+  # Pad > 65536 bytes so doctor's real-binary gate pre-seeds tier-models-v1.tsv (Guardrail 4)
+  python3 -c 'print("# " + ("x" * 70000))'
+} > "$DOC159/agy"
+chmod +x "$DOC159/agy"
+doc159_out="$(HOME="$DOC159_H" AGY_ADMIN_SETTINGS_PATH="$DOC159_H/admin_settings.json" AGY_TIER_CACHE_DIR="$DOC159_C" PATH="$DOC159:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1)"
+check "doctor reports ok (not warn) when unremapped pro resolves via fallback to Gemini 3.1 Pro (Low)" 0 0 "tier 'pro' fallback model present: Gemini 3.1 Pro (Low)" "$doc159_out"
+check "doctor reports ok when unremapped flash resolves via fallback to Gemini 3.8 Flash (High)" 0 0 "tier 'flash' fallback model present: Gemini 3.8 Flash (High)" "$doc159_out"
+check "doctor col-2 /model probe confirms Gemini 3.8 Flash (High) despite divergent col-1 slug (Guardrail 3)" 0 0 "--model takes effect (asked for 'Gemini 3.8 Flash (High)', agy reports 'opaque-38-flash-slug')" "$doc159_out"
+check "doctor warns on enterprise MDM gateway.routeWebFetch=true (agy 1.5.9)" 0 0 "routeWebFetch=true" "$doc159_out"
+if [ -s "$DOC159_C/tier-models-v1.tsv" ] && grep -q "Gemini 3.1 Pro (Low)" "$DOC159_C/tier-models-v1.tsv"; then
+  echo "ok: doctor pre-seeds tier-models-v1.tsv for >64KB agy binary"; PASS=$((PASS+1));
+else echo "FAIL: doctor did not pre-seed tier-models-v1.tsv for >64KB agy binary"; FAIL=$((FAIL+1)); fi
+
+# Guardrail 3 negative check: single-column mismatch (no tab) must NOT copy col 1 into col 2 (`cut -s -f2`)
+probe_single_bad="$(probe_doctor 1.5.9 "gemini-3.6-flash-low")"
+if has 'does NOT take effect' "$probe_single_bad"; then
+  echo "ok: single-column /model mismatch still warns (cut -s -f2 guard)"; PASS=$((PASS+1));
+else echo "FAIL: single-column /model mismatch was accepted: $probe_single_bad"; FAIL=$((FAIL+1)); fi
 
 echo ""
 if [ "$SKIP" -gt 0 ]; then
