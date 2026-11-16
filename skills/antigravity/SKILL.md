@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.30.2
+version: 0.30.3
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -130,11 +130,10 @@ on a branch) · `--mode accept-edits|plan|auto`
 `--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·
-`--print-command` (dry run: show the resolved `agy` call, don't run it) · pipe a long
+`--print-command` (dry run: show the resolved `agy` call without running or probing `agy --help`; capability-gated flags such as `--output-format json` and `--disable-slash-commands` are added on live runs) · `--allow-slash-commands` (re-enable leading `/command` or `/skill` expansion in print mode; by default `--disable-slash-commands` is passed when `MODE != plan` on agy builds that advertise it, measured on 1.5.9, so prompts starting with `/clear` or `/credits` are sent as literal prose) · pipe a long
 prompt with a trailing `-`.
 
-The wrapper handles agy's quirks (prompt is the value of `-p`; non-TTY stdout drop via
-`< /dev/null`). On **agy ≥ 1.1.8** it also runs agy with `--output-format json`
+The wrapper handles agy's quirks (up to 64 KB, prompt is the value of `-p` with non-TTY stdin detached via `< /dev/null`; above 64 KB, prompt is passed via a rewindable temp file on stdin without `-p` to avoid Linux `E2BIG` — measured on agy 1.4.8 and 1.5.9 with `--output-format json`; `--continue`/`--conversation` + `> 64 KB` combinations are stub-tested). On **agy ≥ 1.1.8** it also runs agy with `--output-format json`
 internally: **stdout still gives you the model's text unchanged**, but failures are
 classified from the structured `error` instead of scraped prose, and the executor's real
 token usage (input / output / thinking / **cache_read**) is reported as an `AGY_USAGE
@@ -166,11 +165,11 @@ generation to happen entirely on Gemini with **zero Claude tokens spent writing*
 the unit to the **`antigravity-delegate` subagent** (its only file-acting tool is the
 wrapper; it returns a digest for you to verify). Either way, *you* still own verification.
 
-**Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout (incl. an expired `--print-timeout`, which agy 1.1.28+ returns as a **partial** reply with rc 0 — the wrapper prints it and still exits 12; a complete JSON `SUCCESS` reply after which agy never exits, seen on agy 1.4.4, is printed and exits 0 with a stderr warning) · `13`
+**Structured failures.** The wrapper exits `10` quota · `11` auth · `12` timeout (incl. an expired `--print-timeout`, which returns a **partial** reply — rc 0 on agy 1.1.28–1.4.x, rc 3 with `finished_reason` / `AGY_ERROR` `"print_timeout"` on agy 1.5.0+ for both mid-turn and background-task timeouts — so the wrapper prints the partial reply and still exits 12; a complete JSON `SUCCESS` reply after which agy never exits, seen on agy 1.4.4, is printed and exits 0 with a stderr warning) · `13`
 agy-missing · `14` model-unavailable (a `--model` / `tier_*` / `default_model` name not in
-`agy models` — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
+`agy models`, or unavailable on this plan/project/location — agy ≥ 1.1.2 hard-fails instead of silently downgrading) · `15`
 permission-denied (a tool needed permission headless — BOTH the soft deny, agy 1.1.3+ and
-again from 1.1.20, and 1.1.13's hard error — add a `permissions.allow` rule or pass `--yolo`;
+again from 1.1.20, and 1.1.13's hard error — add a `permissions.allow` rule or pass `--yolo`, or if `--yolo` was already set, check Gemini Enterprise admin policy / `permissions.deny` rules (`policy_blocked`, agy 1.5.2+);
 since 1.1.27 the wrapper names the refused tool from the envelope's `denied_actions`)
 (besides `2` failed / `3` empty). On agy ≥ 1.1.8 these are derived from the structured
 `status`/`error` envelope rather than stderr pattern-matching, so the classification is
@@ -540,7 +539,7 @@ unverified.**
 2. **Fan-out fetch (agy, cheap, parallel).** One call per sub-question; force compact
    stdout so bulky pages stay in Gemini's context, not Claude's:
    ```bash
-   "$ROOT" --tier flash --yolo \
+   "$ROOT" --tier flash --timeout 15m --yolo \
      "Use web search for <sub-question>. Return 5-8 bullet findings, each with the
       exact source URL and publication date. Output ONLY findings+URLs+dates."
    ```

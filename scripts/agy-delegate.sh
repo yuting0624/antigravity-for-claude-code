@@ -8,8 +8,10 @@
 # stdout — for delegation, cross-model checks, or offloading bulk work.
 #
 # Why a wrapper instead of calling `agy` directly:
-#   * `agy --print` silently drops stdout when stdin is a non-TTY -> we always
-#     redirect `< /dev/null` so it never blocks waiting for input.
+#   * `agy --print` silently drops stdout when stdin is a non-TTY -> we detach
+#     stdin (`< /dev/null`) for short prompts and pipe via a rewindable temp file
+#     (`< "$PROMPTF"` without `-p`, measured on agy 1.4.8 and 1.5.9) above 64 KB
+#     to avoid Linux E2BIG.
 #   * agy v1.0.x has NO `--output-format json`, so callers must parse plain text.
 #     This wrapper guarantees: non-empty stdout on success, non-zero exit on
 #     failure or empty output.
@@ -37,15 +39,20 @@
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
 #       --conversation <id>          Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
-#       --print-command              Print the resolved agy command and exit (dry run)
+#       --allow-slash-commands       Keep agy's leading `/command` expansion enabled in print mode
+#                                    (by default --disable-slash-commands is passed when MODE != plan
+#                                    so literal `/clear` or `/credits` text in prompts never aborts)
+#       --print-command              Print the resolved agy command and exit (dry run; skips agy --help probe)
 #   -h, --help                       Show this help
 #
 # Exit codes: 0 ok | 1 usage | 2 agy failed | 3 empty | 10 quota | 11 auth | 12 timeout
 #             |    (agy's own, the wall-clock guard, or — agy 1.1.28+ — a --print-timeout that
-#             |    expired mid-turn: agy then returns the PARTIAL reply with rc 0 and one stderr
-#             |    line; the wrapper prints that partial reply and still exits 12). Not when
-#             |    JSON mode has a complete SUCCESS reply and agy just failed to exit after it
-#             |    (agy 1.4.4): that prints the reply, warns on stderr and exits 0
+#             |    expired mid-turn or while waiting on background tasks: agy 1.1.28–1.4.x returns
+#             |    the PARTIAL reply with rc 0, and agy 1.5.0+ exits 3 with finished_reason /
+#             |    AGY_ERROR reason "print_timeout"; the wrapper prints that partial reply and
+#             |    still exits 12). Not when JSON mode has a complete SUCCESS reply and agy just
+#             |    failed to exit after it (agy 1.4.4): that prints the reply, warns on stderr and
+#             |    exits 0
 #             | 13 agy missing | 14 model unavailable (--model / tier remap not in `agy models`)
 #             | 15 permission denied — a tool needed permission headless. BOTH shapes:
 #             |    the soft deny (rc 0, empty stdout, "auto-denied" on stderr — agy 1.1.3+, and
@@ -92,6 +99,7 @@ ADD_DIRS=()
 PROMPT=""
 CONTINUE=0
 CONV_ID=""
+ALLOW_SLASH=0
 PRINT_CMD=0
 DENIED_ACTIONS=""   # tool names from the envelope's denied_actions (agy 1.1.27+), for the message
 
@@ -100,17 +108,32 @@ die() { echo "agy-delegate: $*" >&2; exit 1; }
 # (avoids `shift 2` aborting under `set -e` with a cryptic "shift count" error).
 need() { [ "$1" -ge 2 ] || die "option '$2' needs a value"; }
 
-# True when an agy error blob says the requested --model does not exist on this plan.
-# ONE definition, used by both the exit-14 classifier and the pro-tier fallback trigger
-# (#104): if agy rewords the message, both move together — a drift between the two
-# would make the fallback quietly stop firing while exit 14 still said what it says.
+# True when an agy error blob says the requested --model does not exist or is unavailable
+# on this plan/project/location. ONE definition, used by both the exit-14 classifier and
+# the pro-tier fallback trigger (#104): if agy rewords the message, both move together.
 model_unavailable_blob() {
   shopt -s nocasematch
   case "$1" in
-    *"invalid --model"*|*"is not recognized as a known model"*|*"not a known model"*)
+    *"invalid --model"*|*"is not recognized as a known model"*|*"not a known model"*|\
+    *"model "*" is unavailable:"*|*"model "*" is currently available to"*|*"model "*" is no longer available"*|\
+    *"model was not found, or your project does not have access"*|\
+    *"model is not supported in the selected location"*)
       shopt -u nocasematch; return 0 ;;
   esac
   shopt -u nocasematch; return 1
+}
+
+# True when agy's own --print-timeout cut the turn off (mid-turn or while waiting on
+# non-daemon background tasks). Covers both agy 1.1.28–1.4.x (rc 0 + `[agy] print timeout...`
+# on stderr) and agy >= 1.5.0 (#115, reported on 1.5.1 with `[agy] print timeout after ...
+# returning partial output` and measured on 1.5.9 with rc 3 + `finished_reason: "print_timeout"`
+# in the JSON envelope and `AGY_ERROR: {..."reason":"print_timeout"...}` on stderr; background-task
+# `[agy]` shape from agy 1.5.x diagnostics). Never scans prose or model replies:
+# `[,{]"reason"` cannot match an escaped `\"reason\"` inside an error string.
+is_print_timeout() {
+  [ "${JSON_FINISHED:-}" = "print_timeout" ] && return 0
+  [ -s "$ERR" ] || return 1
+  grep -qE '^AGY_ERROR: \{.*[,{]"reason": *"print_timeout"[,}]|^\[agy\] print timeout after [^ ]+ with (turn in progress; returning partial output|[0-9]+ background task\(s\) still running; terminating them)'$'\r''?$' "$ERR" 2>/dev/null
 }
 
 # Optional side channel for AGY_USAGE / AGY_SIGNAL.
@@ -202,8 +225,13 @@ permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   if [ "${1:-}" != shown ] && [ -s "$ERR" ]; then
     cat "$ERR" >&2
   fi
-  echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt)${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — the denied action was not performed. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. For a URL READ the rule is read_url(<target>) — agy 1.1.28 made fetching URLs ask first, so headless it is denied without one. Other tools (web search / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
-  signal PERMISSION_DENIED "agy denied a permissioned tool in headless${DENIED_ACTIONS:+ (denied: $DENIED_ACTIONS)} — add a permissions.allow rule or pass --yolo"
+  if [ "${YOLO:-0}" -eq 1 ]; then
+    echo "agy-delegate: agy denied a tool even though --yolo (--dangerously-skip-permissions) was passed${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — blocked by policy and not performed. On agy 1.5.2+, Gemini Enterprise admin policy (enforce_unsandboxed_command_review, enforce_outside_workspace_file_review, or an admin permissionPreset), explicit permissions.deny rules, and the system command denylist override --dangerously-skip-permissions in headless mode. Keep file/command targets inside the workspace (--dir), inspect resolved rules with agy-doctor, or check your organization's admin policy." >&2
+    signal PERMISSION_DENIED "policy_blocked: agy denied a tool despite --yolo${DENIED_ACTIONS:+ (denied: $DENIED_ACTIONS)} — blocked by enterprise admin policy or permissions.deny"
+  else
+    echo "agy-delegate: agy denied a tool that needs permission (headless can't prompt)${DENIED_ACTIONS:+ — denied: $DENIED_ACTIONS} — the denied action was not performed. For a FILE WRITE, the narrower fix is a permissions.allow rule covering the target in ~/.gemini/antigravity-cli/settings.json — write_file(<dir>) matches recursively beneath <dir> — which needs no flag; --yolo also works but auto-approves ALL tools. For a URL READ the rule is read_url(<target>) — agy 1.1.28 made fetching URLs ask first, so headless it is denied without one. Other tools (web search / Vertex AI Search / terminal) need --yolo unless a rule covers them. \`--mode accept-edits\` is NOT a write grant: measured on agy 1.1.13 it is denied exactly like a plain write. agy's own message above names the specific permission it wanted. If a rule is ALREADY in place and you are still reading this, suspect the rule: run agy-doctor, because an entry agy cannot parse grants nothing. (A command(...) rule naming no command ALSO auto-approved everything before agy 1.1.11; a mistyped write_file() never did.)" >&2
+    signal PERMISSION_DENIED "agy denied a permissioned tool in headless${DENIED_ACTIONS:+ (denied: $DENIED_ACTIONS)} — add a permissions.allow rule or pass --yolo"
+  fi
   exit 15
 }
 
@@ -249,7 +277,7 @@ timeout_cmd() {
 # whole seconds, then add a small head-room margin so the OUTER wall-clock guard
 # fires only AFTER agy's own --print-timeout has had its chance. Echoes seconds.
 outer_timeout_secs() {
-  local d="${1:-5m}" n unit secs
+  local d="${1:-5m}" n unit secs min_pad
   n="${d%[smh]}"; unit="${d#"$n"}"
   case "$n" in (*[!0-9]*|'') n=300; unit=s ;; esac
   case "$unit" in
@@ -258,10 +286,16 @@ outer_timeout_secs() {
     s|'') secs=$(( n )) ;;
     *) secs=$(( n )) ;;
   esac
+  # 0 means unbounded (matches `agy --print-timeout 0`): disable the outer guard too
+  # instead of killing an unbounded run after min_pad seconds.
+  [ "$secs" -eq 0 ] && { echo 0; return 0; }
   # head-room so the OUTER guard never pre-empts agy's own --print-timeout on a
-  # legitimately-slow-but-progressing call: +25% of the budget, min 10s, capped 120s.
+  # legitimately-slow-but-progressing call, and leaves >=30s for agy 1.5.5+'s bounded
+  # headless shutdown: +25% of the budget, min 35s (overridable in tests), capped 120s.
+  min_pad="${_AGY_OUTER_MIN_PAD:-35}"
+  case "$min_pad" in (*[!0-9]*|'') min_pad=35 ;; esac
   local pad=$(( secs / 4 ))
-  [ "$pad" -lt 10 ]  && pad=10
+  [ "$pad" -lt "$min_pad" ] && pad="$min_pad"
   [ "$pad" -gt 120 ] && pad=120
   echo $(( secs + pad ))
 }
@@ -281,6 +315,7 @@ while [ $# -gt 0 ]; do
     -c|--continue)  CONTINUE=1; shift ;;            # resume most recent agy conversation
     --conversation) need "$#" "$1"; CONV_ID="$2"; shift 2 ;; # resume a specific conversation by ID
     -m|--model)     need "$#" "$1"; MODEL="$2"; shift 2 ;;
+    --allow-slash-commands) ALLOW_SLASH=1; shift ;; # keep leading /command expansion enabled
     --print-command) PRINT_CMD=1; shift ;;          # dry run: show the resolved agy command
     -h|--help)      usage ;;
     -)              PROMPT="$(cat)"; shift ;;       # read prompt from stdin
@@ -405,8 +440,41 @@ TO_CMD="$(timeout_cmd || true)"
 # exists. Declaring them empty up front means the probe's file is covered too —
 # it used to be cleaned by a trailing `rm -f`, which a SIGINT during the probe
 # skips. `rm -f ""` is a silent no-op, so the unset ones cost nothing.
-HELPF=""; ERR=""; OUTF=""
-trap 'rm -f "$HELPF" "$ERR" "$OUTF" 2>/dev/null' EXIT
+HELPF=""; ERR=""; OUTF=""; RESP=""; JERR=""; JDEN=""; PROMPTF=""
+trap 'rm -f "$HELPF" "$ERR" "$OUTF" "$RESP" "$JERR" "$JDEN" "$PROMPTF" 2>/dev/null' EXIT
+
+HELP_OUT=""
+if [ "$PRINT_CMD" -ne 1 ]; then
+  # Capability probe. Deliberately NOT `agy --help | grep -q`: `grep -q` exits at
+  # the first match and closes the pipe, so `agy --help` can die of SIGPIPE (141)
+  # and, under `set -o pipefail`, the whole pipeline reads as "failed" — silently
+  # disabling JSON mode. That race actually bit a benchmark run (~75% of calls on a
+  # loaded container), and it is indistinguishable from "no delegation happened",
+  # which is the worst kind of failure. Capture once, match with a shell glob.
+  # Same pipe hazard as the main call (issue #37): route via a temp file so
+  # inherited MCP children can never hold the capture pipe open.
+  HELPF="$(mktemp "${TMPDIR:-/tmp}/agy-help.XXXXXX")"
+  # 10s is >100x the measured time; it fires only on a real hang, and degrading
+  # to the plain-text path is the right failure — the main call still works.
+  if [ -n "$TO_CMD" ]; then
+    "$TO_CMD" --kill-after=5 10 agy --help >"$HELPF" 2>&1 || true
+  else
+    agy --help >"$HELPF" 2>&1 || true
+  fi
+  # `|| true` so the assignment cannot fail under `set -e` and skip the rm.
+  HELP_OUT="$(cat "$HELPF" 2>/dev/null || true)"; rm -f "$HELPF"
+fi
+
+# Suppress slash-command / skill expansion on delegated prose by default so prompts
+# starting with `/clear`, `/credits`, or `/remote-control` (e.g. a pasted transcript
+# or diff) never abort with exit 2 or short-circuit the turn. `--mode plan` rides on
+# `/plan` expansion inside agy, so keep expansion enabled when MODE=plan or when the
+# caller explicitly asked for `--allow-slash-commands`.
+if [ "$ALLOW_SLASH" -eq 0 ] && [ "$MODE" != "plan" ]; then
+  case "$HELP_OUT" in
+    *--disable-slash-commands*) ARGS+=(--disable-slash-commands) ;;
+  esac
+fi
 
 JSON_MODE=0
 raw_so="${CLAUDE_PLUGIN_OPTION_STRUCTURED_OUTPUT:-on}"
@@ -414,37 +482,45 @@ case "$(printf '%s' "$raw_so" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
   off|false|0|no|disabled) ;;
   *)
     if [ "$PRINT_CMD" -ne 1 ] && command -v python3 >/dev/null 2>&1; then
-      # Capability probe. Deliberately NOT `agy --help | grep -q`: `grep -q` exits at
-      # the first match and closes the pipe, so `agy --help` can die of SIGPIPE (141)
-      # and, under `set -o pipefail`, the whole pipeline reads as "failed" — silently
-      # disabling JSON mode. That race actually bit a benchmark run (~75% of calls on a
-      # loaded container), and it is indistinguishable from "no delegation happened",
-      # which is the worst kind of failure. Capture once, match with a shell glob.
-      # Same pipe hazard as the main call (issue #37): route via a temp file so
-      # inherited MCP children can never hold the capture pipe open.
-      HELPF="$(mktemp "${TMPDIR:-/tmp}/agy-help.XXXXXX")"
-      # 15s is ~180x the measured time; it fires only on a real hang, and losing
-      # JSON mode is the right failure — the plain-text path still works.
-      if [ -n "$TO_CMD" ]; then
-        "$TO_CMD" --kill-after=5 15 agy --help >"$HELPF" 2>&1 || true
-      else
-        agy --help >"$HELPF" 2>&1 || true
-      fi
-      # `|| true` so the assignment cannot fail under `set -e` and skip the rm.
-      agy_help="$(cat "$HELPF" 2>/dev/null || true)"; rm -f "$HELPF"
-      case "$agy_help" in
+      case "$HELP_OUT" in
         *--output-format*) JSON_MODE=1; ARGS+=(--output-format json) ;;
       esac
     fi ;;
 esac
 
+# --- decide prompt delivery (detach stdin up to 64 KB; temp file above 64 KB) ---
+# Linux enforces MAX_ARG_STRLEN = 131072 bytes (128 KB) per single argv string, even
+# when ARG_MAX is 2 MB, so a 130–200 KB log digest (`cloud-debug.sh`) or large `git diff`
+# passed via `-p "$PROMPT"` fails immediately with `Argument list too long` (E2BIG).
+# Above 64 KB (measured in bytes under LC_ALL=C; 16384-char pre-filter covers worst-case
+# 4-byte UTF-8), write the prompt to a regular temp file and pass `< "$PROMPTF"` without
+# `-p` — verified on agy 1.4.8 and 1.5.9 (162.6 KB prompt), agy reads non-TTY stdin
+# directly into print mode, and a regular file rewinds cleanly if the fallback loop
+# retries. Keep `-p "$PROMPT" < /dev/null` up to 64 KB.
+PROMPT_VIA_STDIN=0
+prompt_bytes=0
+if [ "${#PROMPT}" -gt 16384 ]; then
+  prompt_bytes="$(LC_ALL=C; printf '%s' "${#PROMPT}")"
+  if [ "$prompt_bytes" -gt 65536 ]; then
+    PROMPT_VIA_STDIN=1
+  fi
+fi
+
 # --- dry run: print the resolved (shell-quoted) agy invocation and exit ---
 if [ "$PRINT_CMD" -eq 1 ]; then
-  { printf 'agy'; printf ' %q' "${ARGS[@]}" -p "$PROMPT"; printf '\n'; }
+  if [ "$PROMPT_VIA_STDIN" -eq 1 ]; then
+    { printf 'agy'; printf ' %q' "${ARGS[@]}"; printf ' < <prompt-file:%sB>\n' "$prompt_bytes"; }
+  else
+    { printf 'agy'; printf ' %q' "${ARGS[@]}" -p "$PROMPT"; printf '\n'; }
+  fi
   exit 0
 fi
 
-# --- run (always detach stdin so non-TTY stdout is not dropped) ---
+if [ "$PROMPT_VIA_STDIN" -eq 1 ]; then
+  PROMPTF="$(mktemp "${TMPDIR:-/tmp}/agy-prompt.XXXXXX")"
+  printf '%s' "$PROMPT" >"$PROMPTF"
+fi
+
 # Per-invocation temp file for stderr (mktemp avoids the race + symlink risk of a
 # fixed /tmp path when multiple delegations run concurrently). Cleaned up on exit.
 ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
@@ -480,13 +556,23 @@ fi
 
 while :; do
   set +e
-  if [ -n "$TO_CMD" ]; then
-    # --kill-after sends SIGKILL if agy ignores the initial SIGTERM (defensive).
-    "$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
-    RC=$?
+  if [ "$PROMPT_VIA_STDIN" -eq 1 ]; then
+    if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ]; then
+      "$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" < "$PROMPTF" >"$OUTF" 2>"$ERR"
+      RC=$?
+    else
+      agy "${ARGS[@]}" < "$PROMPTF" >"$OUTF" 2>"$ERR"
+      RC=$?
+    fi
   else
-    agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
-    RC=$?
+    if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ]; then
+      # --kill-after sends SIGKILL if agy ignores the initial SIGTERM (defensive).
+      "$TO_CMD" --kill-after=10 "$TO_SECS" agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
+      RC=$?
+    else
+      agy "${ARGS[@]}" -p "$PROMPT" < /dev/null >"$OUTF" 2>"$ERR"
+      RC=$?
+    fi
   fi
   OUT="$(cat "$OUTF" 2>/dev/null)"
   set -e
@@ -495,7 +581,7 @@ while :; do
   # Replaces OUT with the model's text so the stdout contract is unchanged, exposes
   # the structured error for classification, and reports token usage on stderr.
   # Any parse failure falls back to treating OUT as plain text (never fatal).
-  JSON_STATUS=""; JSON_ERROR=""; JSON_DENIED=""; meta=""
+  JSON_STATUS=""; JSON_FINISHED=""; JSON_ERROR=""; JSON_DENIED=""; meta=""
   # Glob, not ${OUT//[...]/}: stripping the whole string to test emptiness is minutes-to-
   # hours at tens of KB on macOS /bin/bash 3.2 (n^~2.6); the glob stops at the first hit.
   if [ "$JSON_MODE" -eq 1 ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
@@ -542,7 +628,7 @@ def top(k):  # agy 1.2.x: duration_seconds (float) and num_turns (int); 0 when a
     v = d.get(k)
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
 one_line = lambda s: " ".join(str(s or "").split())
-print(json.dumps({
+out_meta = {
     "status": str(d.get("status", "")),
     "error": one_line(d.get("error", "")),
     "usage": {"input": n("input_tokens"), "output": n("output_tokens"),
@@ -553,12 +639,17 @@ print(json.dumps({
     "tier": os.environ.get("AGY_TIER", ""),
     "duration_seconds": top("duration_seconds"),
     "num_turns": top("num_turns"),
-}))
+}
+fr = one_line(d.get("finished_reason", ""))
+if fr:
+    out_meta["finished_reason"] = fr
+print(json.dumps(out_meta))
 PY
 )"
     if [ -n "$meta" ]; then
-      # `status` is a bare enum with no quotes inside it, so sed is safe there.
+      # `status` and `finished_reason` are bare enums with no quotes inside them, so sed is safe.
       JSON_STATUS="$(printf '%s' "$meta" | sed -n 's/.*"status": *"\([^"]*\)".*/\1/p')"
+      JSON_FINISHED="$(printf '%s' "$meta" | sed -n 's/.*"finished_reason": *"\([a-z_]*\)".*/\1/p')"
       JSON_ERROR="$(cat "$JERR" 2>/dev/null)"
       JSON_DENIED="$(cat "$JDEN" 2>/dev/null)"
       OUT="$(cat "$RESP" 2>/dev/null)"
@@ -568,7 +659,7 @@ PY
     rm -f "$RESP" "$JERR" "$JDEN"
   fi
 
-  if [ "$RC" -ne 0 ] && [ "${#PRO_FALLBACK_MODELS[@]}" -gt 0 ]; then
+  if [ "$RC" -ne 0 ] && [ "${#PRO_FALLBACK_MODELS[@]}" -gt 0 ] && ! is_print_timeout; then
     probe_blob="$(cat "$ERR" 2>/dev/null)"
     [ -n "$JSON_ERROR" ] && probe_blob="$JSON_ERROR
 $probe_blob"
@@ -599,12 +690,12 @@ fi
 # (google-antigravity/antigravity-cli#1313). A parsed SUCCESS envelope with a
 # non-empty response means the turn finished, so the kill lost nothing: fall through
 # to the normal checks. Plain-text output has no such end marker, so it stays a timeout.
-if [ -n "$TO_CMD" ] && { [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; } \
-   && [ "$JSON_STATUS" = "SUCCESS" ] && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
+if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ] && { [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ]; } \
+   && [ "$JSON_STATUS" = "SUCCESS" ] && [ -z "$JSON_FINISHED" ] && ! is_print_timeout && [[ "$OUT" = *[!$' \t\n\r']* ]]; then
   echo "agy-delegate: agy wrote a complete result but did not exit; killed by the wall-clock guard (${TO_SECS}s). See https://github.com/google-antigravity/antigravity-cli/issues/1313" >&2
   RC=0
 fi
-if [ -n "$TO_CMD" ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; }; then
+if [ -n "$TO_CMD" ] && [ "$TO_SECS" -gt 0 ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; } && ! is_print_timeout; then
   echo "agy-delegate: agy hit the wall-clock guard (${TO_SECS}s) and was terminated — likely a headless/no-TTY hang." >&2
   if on_windows_native; then
     echo "agy-delegate:   native Windows: agy needs a console (ConPTY); run delegation from WSL/macOS/Linux." >&2
@@ -628,23 +719,36 @@ if [ -n "$JSON_DENIED" ]; then
   permission_denied
 fi
 
-# agy 1.1.28 changed what --print-timeout does mid-turn: it returns the PARTIAL reply it
-# has and exits 0, with one line on stderr — measured on 1.2.0:
-#   [agy] print timeout after 5s with turn in progress; returning partial output
-# — and the envelope says SUCCESS with every usage counter at zero. Left alone, that is a
-# truncated reply handed to the conductor as a finished one, and the spend unrecorded.
-# Keep the contract (exit 12 = timeout) but print what agy returned first: a partial
-# reply is worth having as long as the exit code says what it is. Anchored on agy's
-# stderr line only; the reply is never scanned.
-if [ "$RC" -eq 0 ] && grep -qE 'print timeout after .*returning partial output' "$ERR" 2>/dev/null; then
-  if [[ "$OUT" = *[!$' \t\n\r']* ]]; then printf '%s\n' "$OUT"; fi
-  # The AGY_USAGE line exists only in JSON mode; do not point plain-text callers at a line
-  # that was never printed (review caught the unconditional wording).
-  usage_note=""; [ "$JSON_MODE" -eq 1 ] && usage_note=", so the AGY_USAGE line above undercounts"
-  echo "agy-delegate: agy's --print-timeout ($TIMEOUT) expired mid-turn — the output above is PARTIAL (agy 1.1.28+ returns it with rc 0 and reports no usage for the turn${usage_note}). Raise --timeout or narrow the task; --continue resumes the same conversation." >&2
-  signal TIMEOUT "agy print-timeout ($TIMEOUT) expired mid-turn — partial output printed to stdout"
-  exit 12
-fi
+# agy 1.1.28–1.4.x returns a mid-turn --print-timeout as rc 0 + partial reply + `[agy] print timeout...`
+# on stderr; agy 1.5.0+ (#115, reported on 1.5.1, measured on 1.5.9) exits 3 for both mid-turn and
+# background-task wait timeouts, setting `finished_reason: "print_timeout"` in the JSON
+# envelope (with the partial response in `.response`) and `AGY_ERROR: {..."reason":"print_timeout"}`
+# on stderr. Keep the contract (exit 12 = timeout) and print whatever partial reply agy produced
+# first, including when a post-timeout shutdown hang caused `timeout` to kill agy (rc 124/137).
+case "$RC" in
+  0|1|3|124|137)
+    if is_print_timeout; then
+      has_partial=0
+      if [[ "$OUT" = *[!$' \t\n\r']* ]]; then
+        has_partial=1
+        printf '%s\n' "$OUT"
+      fi
+      [ -s "$ERR" ] && cat "$ERR" >&2
+      # The AGY_USAGE line exists only in JSON mode; do not point plain-text callers at a line
+      # that was never printed (review caught the unconditional wording).
+      usage_note=""; [ "$JSON_MODE" -eq 1 ] && usage_note="; AGY_USAGE above omits the unfinished step"
+      if [ "$has_partial" -eq 1 ]; then
+        out_note="the output above is PARTIAL"
+        sig_note="partial output printed to stdout"
+      else
+        out_note="no output was produced before expiry (PARTIAL turn)"
+        sig_note="no output produced before expiry"
+      fi
+      echo "agy-delegate: agy's --print-timeout ($TIMEOUT) expired — ${out_note} (agy 1.1.28–1.4.x exits 0; agy 1.5.0+ exits 3${usage_note}). Raise --timeout or narrow the task; --continue resumes the same conversation." >&2
+      signal TIMEOUT "agy print-timeout ($TIMEOUT) expired — ${sig_note}"
+      exit 12
+    fi ;;
+esac
 
 if [ $RC -ne 0 ]; then
   echo "agy-delegate: agy exited $RC" >&2
@@ -670,22 +774,27 @@ $blob"
     *"user denied permission"*|*"permission check failed"*|*"auto-denied"*|\
     *"permission that headless"*|*"dangerously-skip-permissions"*)
       shopt -u nocasematch; permission_denied shown ;;
-    *quota*|*"rate limit"*|*"resource exhausted"*|*"credits balance is too low"*|*"insufficient credits"*|*"spend cap"*)
-      shopt -u nocasematch; signal QUOTA_EXHAUSTED "agy quota / rate limit"; exit 10 ;;
-    *unauthenticated*|*unauthorized*|*"sign in"*|*"please authenticate"*|*reauth*)
-      shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` once"; exit 11 ;;
-    *"timed out"*|*"deadline exceeded"*|*"print-timeout"*)
-      shopt -u nocasematch; signal TIMEOUT "agy print-timeout / deadline exceeded"; exit 12 ;;
   esac
   shopt -u nocasematch
   if model_unavailable_blob "$blob"; then
-    # agy >= 1.1.2 hard-fails (instead of silently downgrading) when --model can't be
-    # resolved — common when a tier_* / default_model remap points at a model this plan
-    # doesn't expose. Surface it as its own actionable category. The patterns live in
-    # model_unavailable_blob(), shared with the pro-tier fallback trigger above.
+    # Checked before quota/timeout substrings so a mistyped --model containing "quota" or
+    # "timed out" (agy quotes `--model "<val>"` in the error) still exits 14, not 10/12.
     echo "agy-delegate: model '$MODEL' is not available on this plan — run \`agy models\`, then fix --model / the tier_* / default_model option." >&2
     signal MODEL_UNAVAILABLE "model not in \`agy models\` (check --model / tier remaps)"; exit 14
   fi
+  shopt -s nocasematch
+  case "$blob" in
+    *quota*|*"rate limit"*|*"resource exhausted"*|*"credits balance is too low"*|\
+    *"insufficient credits"*|*"spend cap"*|*"spend cap breached"*|*monetization_denied*|\
+    *"individual quota reached"*|*"ai.studio/spend"*|*"billing#prepay"*)
+      shopt -u nocasematch; signal QUOTA_EXHAUSTED "agy quota / rate limit / spend cap"; exit 10 ;;
+    *unauthenticated*|*unauthorized*|*"sign in"*|*"please authenticate"*|*reauth*|\
+    *"gemini_api_key environment variable is not set"*|*"authentication required"*)
+      shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` once (or set GEMINI_API_KEY)"; exit 11 ;;
+    *"timed out"*|*"deadline exceeded"*|*"print-timeout"*|*"timeout waiting for cascade"*)
+      shopt -u nocasematch; signal TIMEOUT "agy print-timeout / deadline exceeded"; exit 12 ;;
+  esac
+  shopt -u nocasematch
   signal AGY_FAILED "agy exited $RC"
   exit 2
 fi

@@ -216,7 +216,10 @@ delegate "$PROMPT1" "$TIMEOUT" "$LAST_OUT"; RC1=$?
 DELEGATIONS=$((DELEGATIONS+1))
 [ "$RC1" -eq 12 ] && TIMED_OUT=1
 case "$RC1" in
-  10|11|13|14|15) echo "agy-handoff: executor unavailable (agy-delegate exit $RC1); nothing verified" >&2; exit "$RC1" ;;
+  10|11|13|14|15)
+    echo "agy-handoff: executor unavailable (agy-delegate exit $RC1); nothing verified" >&2
+    [ "$RC1" -eq 15 ] && echo "agy-handoff:   policy_blocked despite --yolo (enterprise admin policy or permissions.deny)" >&2
+    exit "$RC1" ;;
 esac
 [ "$RC1" -eq 0 ] || echo "agy-handoff: note: the executor returned exit $RC1; verifying whatever landed" >&2
 
@@ -241,7 +244,12 @@ $CONTRACT"
     delegate "$FIXPROMPT" "$FIX_TIMEOUT" "$LAST_OUT"; RCF=$?
     DELEGATIONS=$((DELEGATIONS+1))
     [ "$RCF" -eq 12 ] && TIMED_OUT=1
-    case "$RCF" in 10|11|13|14|15) echo "agy-handoff: executor unavailable during fix-up (exit $RCF)" >&2; exit "$RCF" ;; esac
+    case "$RCF" in
+      10|11|13|14|15)
+        echo "agy-handoff: executor unavailable during fix-up (exit $RCF)" >&2
+        [ "$RCF" -eq 15 ] && echo "agy-handoff:   policy_blocked despite --yolo (enterprise admin policy or permissions.deny)" >&2
+        exit "$RCF" ;;
+    esac
     verify "$VOUT"; VRC=$?
   done
 fi

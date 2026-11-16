@@ -58,11 +58,11 @@ rc_label() {
     6)  echo 'TESTS modified — a protected --tests file was edited by the executor (agy-handoff)' ;;
     10) echo 'QUOTA — retry later with --continue' ;;
     11) echo 'AUTH required — run `agy` once interactively' ;;
-    12) echo 'TIMEOUT — raise --timeout or narrow scope (agy 1.1.28+: the PARTIAL reply is in the output; --continue resumes the conversation)' ;;
+    12) echo 'TIMEOUT — raise --timeout or narrow scope (agy 1.1.28+: the PARTIAL reply is in the output, rc 0 on 1.1.28–1.4.x / rc 3 on 1.5.0+; --continue resumes the conversation)' ;;
     13) echo 'agy MISSING — install the Antigravity CLI' ;;
     14) echo 'MODEL unavailable — check `agy models` / tier remap' ;;
     # Both denial shapes: the soft deny (agy 1.1.3+, and again from 1.1.20) and 1.1.13's hard error.
-    15) echo 'PERMISSION denied (soft on 1.1.3+, a hard error by 1.1.13, soft again from 1.1.20; named in denied_actions since 1.1.27) — add a permissions.allow rule, or --yolo' ;;
+    15) echo 'PERMISSION denied (soft on 1.1.3+, a hard error by 1.1.13, soft again from 1.1.20; named in denied_actions since 1.1.27; policy_blocked under --yolo on 1.5.2+) — add a permissions.allow rule, pass --yolo, or check admin policy' ;;
     *)  echo 'error' ;;
   esac
 }

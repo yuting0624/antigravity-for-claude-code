@@ -60,7 +60,7 @@ ARCHITECTURE (the "Agent グラウンドデザイン"):
 - GROUNDING: each specialist uses the built-in google_search tool as its SOLE tool (mixing
   google_search with custom function tools errors; if a specialist needs both, wrap the
   search in a sub-agent via AgentTool). No Vertex AI Search this round.
-- Model: gemini-2.5-flash for the specialists.
+- Model: gemini-3.8-flash for the specialists.
 
 EVAL CONTRACT (you own it; gate = `adk eval` green before deploy):
 - CASE1 happy path: brief "Add SSO login (SAML + OIDC) to our web app." -> requirements,

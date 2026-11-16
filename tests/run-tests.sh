@@ -107,6 +107,7 @@ fi
 # exercise both the structured (agy >= 1.1.8) and the plain-text fallback paths.
 if [ "$1" = "--help" ]; then
   [ "${STUB_JSON_CAPABLE:-0}" = "1" ] && echo "  --output-format  Output format for print mode (text, json, stream-json)"
+  [ "${STUB_SLASH_CAPABLE:-0}" = "1" ] && echo "  --disable-slash-commands  Disable slash command and skill expansion in print mode"
   echo "  --print-timeout  timeout"
   exit 0
 fi
@@ -177,6 +178,88 @@ case "${STUB_MODE:-text}" in
   partial_timeout_120) echo '[agy] print timeout after 5s with turn in progress; returning partial output' >&2; printf '# The Cogwheels of Antiquity\n\nIn the spring of 1900, a crew of Greek sponge divers'; exit 0 ;;
   # Negative control: the timeout WORDING inside the reply, with clean stderr, is a success.
   json_reply_mentions_timeout) printf '{"conversation_id":"c1","status":"SUCCESS","response":"JSONBODY: agy logs print timeout after 5s with turn in progress; returning partial output when it gives up\n","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'; exit 0 ;;
+  # CRLF stderr on Windows native agy.exe < 1.5.0 (#13).
+  crlf_partial_timeout_120) printf '[agy] print timeout after 5s with turn in progress; returning partial output\r\n' >&2; printf 'CRLF_PARTIAL_BODY'; exit 0 ;;
+  # agy 1.5.0+ (#115, reported on 1.5.1, measured on 1.5.9): --print-timeout exits 3, sets status=ERROR
+  # and finished_reason="print_timeout" in the JSON envelope while carrying the partial response,
+  # and writes both `error:` and `AGY_ERROR: {..."reason":"print_timeout"}` to stderr.
+  json_partial_timeout_151)
+    printf '%s\n' \
+      '[agy] print timeout after 5m0s with turn in progress; returning partial output' \
+      'error: print timeout after 5m0s with the turn still in progress; the response is partial' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s with the turn still in progress; the response is partial","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf '{"conversation_id":"5f164e4e-1d46-457b-8eac-40a36004bd1c","status":"ERROR","response":"# Partial Research Findings\n\n- Finding 1 (https://example.com, 2026-10-01)","error":"print timeout after 5m0s with the turn still in progress; the response is partial","duration_seconds":184.2,"num_turns":1,"usage":{"input_tokens":41200,"output_tokens":620,"thinking_tokens":310,"cache_read_tokens":89000,"total_tokens":41820},"finished_reason":"print_timeout"}'
+    exit 3 ;;
+  partial_timeout_151)
+    printf '%s\n' \
+      '[agy] print timeout after 5m0s with turn in progress; returning partial output' \
+      'error: print timeout after 5m0s with the turn still in progress; the response is partial' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s with the turn still in progress; the response is partial","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf '# Partial Plain Findings\n\n- Bullet before timeout'
+    exit 3 ;;
+  json_empty_timeout_159)
+    printf '%s\n' \
+      '[agy] print timeout after 8s with turn in progress; returning partial output' \
+      'error: print timeout after 8s with the turn still in progress; the response is partial' \
+      'AGY_ERROR: {"short_error":"print timeout after 8s with the turn still in progress; the response is partial","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf '{"conversation_id":"a328b41a-31f5-4dbb-8fb3-a87b1b25ee5f","status":"ERROR","response":"","error":"print timeout after 8s with the turn still in progress; the response is partial","duration_seconds":0,"num_turns":1,"usage":{"input_tokens":0,"output_tokens":0,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":0},"finished_reason":"print_timeout"}'
+    exit 3 ;;
+  json_bgtask_timeout_151)
+    printf '%s\n' \
+      'root agent idle; waiting up to 5m0s for 1 background task(s)' \
+      'terminating 1 background task(s) on exit' \
+      '[agy] print timeout after 5m0s with 1 background task(s) still running; terminating them' \
+      'error: print timeout after 5m0s while the agent was waiting on 1 background task(s); the response may be incomplete; terminated conv/task-45 (pytest -q, running 5m0s)' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s while the agent was waiting on 1 background task(s); the response may be incomplete; terminated conv/task-45 (pytest -q, running 5m0s)","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout","tasks":[{"id":"conv/task-45","description":"pytest -q","elapsed_seconds":300}]}' >&2
+    printf '{"conversation_id":"c-bg","status":"ERROR","response":"Started pytest in the background; waiting for results.","error":"print timeout after 5m0s while the agent was waiting on 1 background task(s); the response may be incomplete; terminated conv/task-45 (pytest -q, running 5m0s)","duration_seconds":300,"num_turns":1,"usage":{"input_tokens":12000,"output_tokens":95,"thinking_tokens":40,"cache_read_tokens":0,"total_tokens":12095},"finished_reason":"print_timeout"}'
+    exit 3 ;;
+  bgtask_timeout_151)
+    printf '%s\n' \
+      'root agent idle; waiting up to 5m0s for 1 background task(s)' \
+      'terminating 1 background task(s) on exit' \
+      '[agy] print timeout after 5m0s with 1 background task(s) still running; terminating them' \
+      'error: print timeout after 5m0s while the agent was waiting on 1 background task(s); the response may be incomplete; terminated conv/task-45 (pytest -q, running 5m0s)' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s while the agent was waiting on 1 background task(s); the response may be incomplete; terminated conv/task-45 (pytest -q, running 5m0s)","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout","tasks":[{"id":"conv/task-45","description":"pytest -q","elapsed_seconds":300}]}' >&2
+    printf 'Started pytest in the background; waiting for results.'
+    exit 3 ;;
+  bgtask_race_timeout_151)
+    printf '%s\n' \
+      'error: print timeout after 5m0s while the agent was waiting on background task(s); the response may be incomplete' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s while the agent was waiting on background task(s); the response may be incomplete","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf 'Root reply before background task wake-up.'
+    exit 3 ;;
+  startup_timeout_151)
+    echo 'error: timeout waiting for cascade to start running' >&2
+    exit 1 ;;
+  json_partial_timeout_badmodel_words)
+    printf '%s\n' \
+      'AGY_ERROR: {"short_error":"print timeout after 5m0s while probing: model foo is not recognized as a known model","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf '{"conversation_id":"c-ptbm","status":"ERROR","response":"Partial note before timeout.","error":"print timeout after 5m0s while probing: model foo is not recognized as a known model","duration_seconds":300,"num_turns":1,"usage":{},"finished_reason":"print_timeout"}'
+    exit 3 ;;
+  json_partial_timeout_151_hang)
+    printf '%s\n' \
+      '[agy] print timeout after 1s with turn in progress; returning partial output' \
+      'error: print timeout after 1s with the turn still in progress; the response is partial' \
+      'AGY_ERROR: {"short_error":"print timeout after 1s with the turn still in progress; the response is partial","status":"DEADLINE_EXCEEDED","retryable":false,"reason":"print_timeout"}' >&2
+    printf '{"conversation_id":"c-hang","status":"ERROR","response":"PARTIAL_BEFORE_HANG\n","error":"print timeout after 1s with the turn still in progress; the response is partial","duration_seconds":1,"num_turns":1,"usage":{"input_tokens":10,"output_tokens":5,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":15},"finished_reason":"print_timeout"}'
+    sleep 20; exit 3 ;;
+  json_rc3_err_mentions_print_timeout)
+    printf '%s\n' \
+      'error: internal failure while handling prompt: investigate print timeout DEADLINE_EXCEEDED and "reason":"print_timeout"' \
+      'AGY_ERROR: {"short_error":"internal failure while handling prompt: investigate print timeout DEADLINE_EXCEEDED and \"reason\":\"print_timeout\"","status":"INTERNAL","error_code":500,"code_kind":"http","retryable":false}' >&2
+    printf '{"conversation_id":"c-err","status":"ERROR","response":"","error":"internal failure while handling prompt: investigate print timeout DEADLINE_EXCEEDED and \"reason\":\"print_timeout\"","duration_seconds":2.1,"num_turns":1,"usage":{},"finished_reason":"error"}'
+    exit 3 ;;
+  # >64KB stdin prompt inspection: echoes stdin byte count + argv flags.
+  stdin_info) printf 'stdin_bytes=%d flags=%s\n' "$(wc -c | tr -d ' ')" "$*"; exit 0 ;;
+  # agy 1.5.x expanded classifier shapes:
+  vertex_badmodel_153) echo 'error: The requested model was not found, or your project does not have access to it.' >&2; exit 3 ;;
+  vertex_badloc_153)   echo 'error: Selected model is not supported in the selected location' >&2; exit 3 ;;
+  consumer_unavail)    echo 'error: invalid model selection: model Gemini 4 Carbon is unavailable: Upgrade to Ultra' >&2; exit 1 ;;
+  transient_503_unavail) echo 'error: service is unavailable: try again later' >&2; exit 1 ;;
+  badmodel_quota_word) echo 'error: invalid model selection (--model "quota-timed-out-model"): model quota-timed-out-model is not recognized as a known model' >&2; exit 1 ;;
+  spend_cap_15x)       echo 'error: MONETIZATION_DENIED: spend cap breached for project' >&2; exit 3 ;;
+  prepay_15x)          echo 'error: billing required — visit https://ai.studio/spend or cloud.google.com/billing#prepay' >&2; exit 3 ;;
+  missing_gemini_key)  echo 'Error: modelProvider is set to "gemini" in settings.json, but the GEMINI_API_KEY environment variable is not set.' >&2; exit 1 ;;
   # Same denial without the JSON envelope, for older agy / the plain-text fallback path.
   harddeny) echo 'permission check failed for write_file "/tmp/x/probe.txt": user denied permission for write_file(/tmp/x/probe.txt)' >&2; exit 1 ;;
   json_err) printf '{"conversation_id":"","status":"ERROR","response":"","error":"invalid model selection: model X is not recognized as a known model","usage":{}}'; exit 1 ;;
@@ -473,12 +556,13 @@ check "agy soft-deny (no permission) -> exit 15 + signal" 15 "$rc" "PERMISSION_D
 # mapped to TIMEOUT (exit 12), not hang the wrapper forever (issue #6). Requires a
 # real `timeout`/`gtimeout`; skip cleanly if neither is on PATH.
 if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
-  # outer guard for --timeout 1s = 1 + min-pad(10) = 11s; sleep well past it.
-  out=$(STUB_MODE=text STUB_SLEEP=20 "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
+  # Production min-pad is 35s (agy 1.5.5+'s 30s headless shutdown cap); shorten to 10s here
+  # so --timeout 1s -> 11s < 20s stub sleep keeps CI fast.
+  out=$(_AGY_OUTER_MIN_PAD=10 STUB_MODE=text STUB_SLEEP=20 "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
   check "hanging agy -> wall-clock guard kills it -> exit 12" 12 "$rc" "TIMEOUT" "$out"
   # A complete SUCCESS envelope followed by a hang (#1313 upstream) is a finished run:
   # the reply goes to stdout, the warning to stderr, and the exit is 0.
-  so="$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok_hang "$DELEGATE" --timeout 1s "hi" 2>"$TMP/hang.err")"; rc=$?
+  so="$(_AGY_OUTER_MIN_PAD=10 STUB_JSON_CAPABLE=1 STUB_MODE=json_ok_hang "$DELEGATE" --timeout 1s "hi" 2>"$TMP/hang.err")"; rc=$?
   se="$(cat "$TMP/hang.err")"
   check "complete JSON result, then agy hangs -> reply printed, exit 0" 0 "$rc" "JSONBODY" "$so"
   check "complete JSON result, then agy hangs -> warns that agy did not exit" 0 "$rc" "did not exit" "$se"
@@ -486,11 +570,30 @@ if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; th
     echo "FAIL: a finished run killed after the fact emitted AGY_SIGNAL"; FAIL=$((FAIL+1))
   else echo "ok: a finished run killed after the fact emits no AGY_SIGNAL"; PASS=$((PASS+1)); fi
   # Plain text has no end-of-result marker, so the same hang stays a timeout.
-  out=$(STUB_MODE=text_ok_hang "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
+  out=$(_AGY_OUTER_MIN_PAD=10 STUB_MODE=text_ok_hang "$DELEGATE" --timeout 1s "hi" 2>&1); rc=$?
   check "plain-text output, then agy hangs -> still exit 12" 12 "$rc" "TIMEOUT" "$out"
+  # A print-timeout partial envelope followed by a shutdown hang must preserve partial stdout AND exit 12.
+  pt_hang_so="$(_AGY_OUTER_MIN_PAD=10 STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_151_hang "$DELEGATE" --timeout 1s "hi" 2>"$TMP/pthang.err")"; pt_hang_rc=$?
+  check "print-timeout partial JSON, then agy hangs -> exit 12 (#115 + #110)" 12 "$pt_hang_rc" "PARTIAL_BEFORE_HANG" "$pt_hang_so"
+  check "print-timeout partial JSON, then agy hangs -> TIMEOUT signal" 12 "$pt_hang_rc" "TIMEOUT" "$(cat "$TMP/pthang.err")"
+  # --timeout 0 / 0s means unbounded (matches agy --print-timeout 0): outer timeout must not fire at min-pad.
+  t0_out=$(_AGY_OUTER_MIN_PAD=1 STUB_MODE=text STUB_SLEEP=2 "$DELEGATE" --timeout 0 "hi" 2>&1); t0_rc=$?
+  check "--timeout 0 disables outer wall-clock guard instead of killing after min-pad" 0 "$t0_rc" "STUB_OK" "$t0_out"
+  t0s_out=$(_AGY_OUTER_MIN_PAD=1 STUB_MODE=text STUB_SLEEP=2 "$DELEGATE" --timeout 0s "hi" 2>&1); t0s_rc=$?
+  check "--timeout 0s disables outer wall-clock guard" 0 "$t0s_rc" "STUB_OK" "$t0s_out"
 else
   echo "ok: (skipped) hang-guard test — no timeout/gtimeout on PATH"; PASS=$((PASS+1))
 fi
+# Direct unit assertions on outer_timeout_secs (fails against unfixed code where 0 -> 10 and 10s -> 20):
+ots_0="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0')"
+ots_0s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0s')"
+ots_10s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 10s')"
+if [ "$ots_0" = "0" ] && [ "$ots_0s" = "0" ]; then
+  echo "ok: outer_timeout_secs 0 and 0s -> exact 0 (not 10)"; PASS=$((PASS+1));
+else echo "FAIL: outer_timeout_secs 0/0s returned '$ots_0'/'$ots_0s'"; FAIL=$((FAIL+1)); fi
+if [ "$ots_10s" = "45" ]; then
+  echo "ok: outer_timeout_secs 10s uses 35s default min pad (45s)"; PASS=$((PASS+1));
+else echo "FAIL: outer_timeout_secs 10s returned '$ots_10s', want 45"; FAIL=$((FAIL+1)); fi
 
 # userConfig default tier via env; explicit --tier still wins
 out=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_DEFAULT_TIER=pro "$DELEGATE" "hi" 2>/dev/null); rc=$?
@@ -663,6 +766,119 @@ else echo "ok: plain-mode timeout note does not mention a nonexistent AGY_USAGE 
 # Negative control: the same wording inside the reply with clean stderr is a success.
 nt_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_timeout "$DELEGATE" "review it" 2>/dev/null); nt_rc=$?
 check "timeout wording inside the reply alone never classifies" 0 "$nt_rc" "JSONBODY" "$nt_out"
+
+# agy 1.5.0+ (#115) + v0.30.3 contract checks. Keep $out/$rc untouched (live softdeny capture above).
+pt_crlf_out=$(STUB_MODE=crlf_partial_timeout_120 "$DELEGATE" --timeout 5s "essay" 2>"$TMP/ptcrlf.err"); pt_crlf_rc=$?
+check "CRLF [agy] print-timeout stderr line matches portably -> exit 12 (#13)" 12 "$pt_crlf_rc" "CRLF_PARTIAL_BODY" "$pt_crlf_out"
+
+pt15_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_151 "$DELEGATE" --timeout 5m "research topic" 2>"$TMP/pt15.err"); pt15_rc=$?
+pt15_err="$(cat "$TMP/pt15.err")"
+check "agy 1.5.1 print-timeout mid-turn (json, rc 3) -> exit 12 (#115)" 12 "$pt15_rc" "TIMEOUT" "$pt15_err"
+check "agy 1.5.1 print-timeout mid-turn (json) -> prints partial reply on stdout (#115)" 12 "$pt15_rc" "Partial Research Findings" "$pt15_out"
+check "agy 1.5.1 print-timeout mid-turn (json) -> marks output PARTIAL (#115)" 12 "$pt15_rc" "PARTIAL" "$pt15_err"
+check "agy 1.5.1 print-timeout mid-turn (json) -> preserves AGY_USAGE + finished_reason (#115)" 12 "$pt15_rc" '"finished_reason": "print_timeout"' "$pt15_err"
+if has 'AGY_FAILED' "$pt15_err"; then
+  echo "FAIL: agy 1.5.1 print-timeout emitted AGY_FAILED instead of TIMEOUT (#115)"; FAIL=$((FAIL+1));
+else echo "ok: agy 1.5.1 print-timeout does not emit AGY_FAILED (#115)"; PASS=$((PASS+1)); fi
+
+pt15p_out=$(STUB_MODE=partial_timeout_151 "$DELEGATE" --timeout 5m "research topic" 2>"$TMP/pt15p.err"); pt15p_rc=$?
+pt15p_err="$(cat "$TMP/pt15p.err")"
+check "agy 1.5.1 print-timeout mid-turn (plain, rc 3) -> exit 12 + partial stdout (#115)" 12 "$pt15p_rc" "Partial Plain Findings" "$pt15p_out"
+if has 'AGY_USAGE' "$pt15p_err"; then
+  echo "FAIL: plain-mode 1.5.1 timeout note mentions nonexistent AGY_USAGE"; FAIL=$((FAIL+1));
+else echo "ok: plain-mode 1.5.1 timeout note omits AGY_USAGE"; PASS=$((PASS+1)); fi
+
+pt15e_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_empty_timeout_159 "$DELEGATE" --timeout 8s "essay" 2>"$TMP/pt15e.err"); pt15e_rc=$?
+pt15e_err="$(cat "$TMP/pt15e.err")"
+check "agy 1.5.9 print-timeout before first token (empty response, rc 3) -> exit 12 (#115)" 12 "$pt15e_rc" "TIMEOUT" "$pt15e_err"
+if [ -n "$pt15e_out" ]; then
+  echo "FAIL: empty partial response printed stray stdout: '$pt15e_out'"; FAIL=$((FAIL+1));
+else echo "ok: empty partial response leaves stdout empty"; PASS=$((PASS+1)); fi
+
+pt15bg_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_bgtask_timeout_151 "$DELEGATE" --timeout 5m "run suite" 2>"$TMP/pt15bg.err"); pt15bg_rc=$?
+pt15bg_err="$(cat "$TMP/pt15bg.err")"
+check "agy 1.5.1 background-task print-timeout (json, rc 3) -> exit 12 + preserves reply (#115)" 12 "$pt15bg_rc" "Started pytest in the background" "$pt15bg_out"
+check "agy 1.5.1 background-task print-timeout relays abandoned task info (#115)" 12 "$pt15bg_rc" "terminated conv/task-45" "$pt15bg_err"
+pt15bgp_out=$(STUB_MODE=bgtask_timeout_151 "$DELEGATE" --timeout 5m "run suite" 2>"$TMP/pt15bgp.err"); pt15bgp_rc=$?
+check "agy 1.5.1 background-task print-timeout (plain, rc 3) -> exit 12 + preserves reply (#115)" 12 "$pt15bgp_rc" "Started pytest in the background" "$pt15bgp_out"
+pt15bgr_out=$(STUB_MODE=bgtask_race_timeout_151 "$DELEGATE" --timeout 5m "run suite" 2>"$TMP/pt15bgr.err"); pt15bgr_rc=$?
+check "agy 1.5.1 background-task completion race (AGY_ERROR only, no [agy] line) -> exit 12 (#115)" 12 "$pt15bgr_rc" "Root reply before background task" "$pt15bgr_out"
+
+pt15st_err=$(STUB_MODE=startup_timeout_151 "$DELEGATE" --timeout 5s "hi" 2>&1); pt15st_rc=$?
+check "agy startup timeout waiting for cascade -> exit 12" 12 "$pt15st_rc" "TIMEOUT" "$pt15st_err"
+
+pt15pro_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_badmodel_words "$DELEGATE" --tier pro --timeout 5m "research" 2>&1 >/dev/null); pt15pro_rc=$?
+check "pro tier print-timeout (rc 3) exits 12 without model fallback" 12 "$pt15pro_rc" "TIMEOUT" "$pt15pro_err"
+if has 'fell back to' "$pt15pro_err"; then
+  echo "FAIL: pro tier retried fallback model after a print-timeout"; FAIL=$((FAIL+1));
+else echo "ok: pro tier does not fall back after a print-timeout (even with model-unavailable words in error)"; PASS=$((PASS+1)); fi
+
+nc15_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_rc3_err_mentions_print_timeout "$DELEGATE" "debug #115" 2>&1); nc15_rc=$?
+check "real rc=3 error mentioning 'print timeout' stays exit 2 (no false TIMEOUT)" 2 "$nc15_rc" "AGY_FAILED" "$nc15_err"
+
+# Linux MAX_ARG_STRLEN E2BIG fix: >64KB prompts travel via `< "$PROMPTF"` without `-p`,
+# rewinding cleanly across pro-tier fallback retries; <=64KB keeps `-p "$PROMPT" < /dev/null`.
+v0303_big70k="$(python3 -c 'import sys; sys.stdout.write("A" * 70000)')"
+v0303_si=$(printf '%s' "$v0303_big70k" | STUB_MODE=stdin_info "$DELEGATE" - 2>/dev/null); v0303_rc=$?
+check ">64KB prompt (70000B) delivered via stdin file" 0 "$v0303_rc" "stdin_bytes=70000" "$v0303_si"
+if has ' -p ' " $v0303_si "; then
+  echo "FAIL: >64KB prompt still passed -p on argv (would E2BIG at 128KB on Linux)"; FAIL=$((FAIL+1));
+else echo "ok: >64KB prompt omits -p from argv"; PASS=$((PASS+1)); fi
+v0303_si_fb=$(printf '%s' "$v0303_big70k" | STUB_MODE=stdin_info STUB_REJECT_MODEL="$DEF_PRO" "$DELEGATE" --tier pro - 2>/dev/null); v0303_fb_rc=$?
+check ">64KB prompt rewinds cleanly across pro-tier fallback retry" 0 "$v0303_fb_rc" "stdin_bytes=70000" "$v0303_si_fb"
+v0303_jp75k="$(python3 -c 'import sys; sys.stdout.write("あ" * 25000)')"
+v0303_si_jp=$(printf '%s' "$v0303_jp75k" | STUB_MODE=stdin_info "$DELEGATE" - 2>/dev/null); v0303_jp_rc=$?
+check ">64KB multibyte UTF-8 prompt (25000 chars = 75000B) delivered via stdin file" 0 "$v0303_jp_rc" "stdin_bytes=75000" "$v0303_si_jp"
+v0303_emoji68k="$(python3 -c 'import sys; sys.stdout.write("\U0001f680" * 17000)')"
+v0303_si_em=$(printf '%s' "$v0303_emoji68k" | STUB_MODE=stdin_info "$DELEGATE" - 2>/dev/null); v0303_em_rc=$?
+check ">64KB 4-byte emoji prompt (17000 chars = 68000B) delivered via stdin file" 0 "$v0303_em_rc" "stdin_bytes=68000" "$v0303_si_em"
+v0303_dry_big=$(printf '%s' "$v0303_big70k" | "$DELEGATE" --print-command - 2>/dev/null); v0303_dry_rc=$?
+check ">64KB --print-command reflects stdin file route (no -p)" 0 "$v0303_dry_rc" "< <prompt-file:70000B>" "$v0303_dry_big"
+if has ' -p ' " $v0303_dry_big "; then
+  echo "FAIL: >64KB --print-command still printed -p"; FAIL=$((FAIL+1));
+else echo "ok: >64KB --print-command omits -p"; PASS=$((PASS+1)); fi
+v0303_short=$(STUB_MODE=stdin_info "$DELEGATE" "short prompt" 2>/dev/null); v0303_sh_rc=$?
+check "<=64KB prompt keeps -p and /dev/null stdin" 0 "$v0303_sh_rc" "stdin_bytes=0" "$v0303_short"
+
+# Default --disable-slash-commands when advertised and MODE != plan; omitted on --mode plan or --allow-slash-commands.
+v0303_sc1=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" "/clear and summarize" 2>/dev/null); v0303_sc1_rc=$?
+check "--disable-slash-commands added by default when agy advertises it" 0 "$v0303_sc1_rc" "--disable-slash-commands" "$v0303_sc1"
+v0303_sc2=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" --mode plan "design auth" 2>/dev/null); v0303_sc2_rc=$?
+check "--mode plan returns resolved args" 0 "$v0303_sc2_rc" "--mode plan" "$v0303_sc2"
+if has '--disable-slash-commands' "$v0303_sc2"; then
+  echo "FAIL: --disable-slash-commands passed under --mode plan (cancels plan mode)"; FAIL=$((FAIL+1));
+else echo "ok: --mode plan keeps slash expansion enabled"; PASS=$((PASS+1)); fi
+v0303_sc3=$(STUB_SLASH_CAPABLE=1 STUB_MODE=args "$DELEGATE" --allow-slash-commands "/model" 2>/dev/null); v0303_sc3_rc=$?
+check "--allow-slash-commands returns resolved args" 0 "$v0303_sc3_rc" "/model" "$v0303_sc3"
+if has '--disable-slash-commands' "$v0303_sc3"; then
+  echo "FAIL: --allow-slash-commands still passed --disable-slash-commands"; FAIL=$((FAIL+1));
+else echo "ok: --allow-slash-commands opts out of --disable-slash-commands"; PASS=$((PASS+1)); fi
+
+# Expanded agy 1.5.x classifiers: exit 14 (preceding quota/timeout), exit 10, exit 11, and YOLO=1 exit 15.
+v0303_c1=$(STUB_MODE=vertex_badmodel_153 "$DELEGATE" "hi" 2>&1); v0303_c1_rc=$?
+check "agy 1.5.3 Vertex 'model was not found, or your project does not have access' -> exit 14" 14 "$v0303_c1_rc" "MODEL_UNAVAILABLE" "$v0303_c1"
+v0303_c2=$(STUB_MODE=vertex_badloc_153 "$DELEGATE" "hi" 2>&1); v0303_c2_rc=$?
+check "agy 1.5.3 Vertex 'not supported in the selected location' -> exit 14" 14 "$v0303_c2_rc" "MODEL_UNAVAILABLE" "$v0303_c2"
+v0303_c3=$(STUB_MODE=consumer_unavail "$DELEGATE" "hi" 2>&1); v0303_c3_rc=$?
+check "consumer plan-gated 'model ... is unavailable:' -> exit 14" 14 "$v0303_c3_rc" "MODEL_UNAVAILABLE" "$v0303_c3"
+v0303_c3_neg=$(STUB_MODE=transient_503_unavail "$DELEGATE" --tier pro "hi" 2>&1); v0303_c3_neg_rc=$?
+check "generic 'service is unavailable:' stays exit 2 (not MODEL_UNAVAILABLE 14)" 2 "$v0303_c3_neg_rc" "AGY_FAILED" "$v0303_c3_neg"
+if has 'fell back to' "$v0303_c3_neg"; then
+  echo "FAIL: generic 'service is unavailable:' triggered pro-tier model fallback"; FAIL=$((FAIL+1));
+else echo "ok: generic 'service is unavailable:' does not trigger model fallback"; PASS=$((PASS+1)); fi
+v0303_c4=$(STUB_MODE=badmodel_quota_word "$DELEGATE" --model "quota-timed-out-model" "hi" 2>&1); v0303_c4_rc=$?
+check "unknown --model containing 'quota'/'timed-out' words still exits 14 (not 10/12)" 14 "$v0303_c4_rc" "MODEL_UNAVAILABLE" "$v0303_c4"
+v0303_c5=$(STUB_MODE=spend_cap_15x "$DELEGATE" "hi" 2>&1); v0303_c5_rc=$?
+check "Vertex MONETIZATION_DENIED / spend cap breached -> exit 10" 10 "$v0303_c5_rc" "QUOTA_EXHAUSTED" "$v0303_c5"
+v0303_c6=$(STUB_MODE=prepay_15x "$DELEGATE" "hi" 2>&1); v0303_c6_rc=$?
+check "Gemini API ai.studio/spend / billing#prepay -> exit 10" 10 "$v0303_c6_rc" "QUOTA_EXHAUSTED" "$v0303_c6"
+v0303_c7=$(STUB_MODE=missing_gemini_key "$DELEGATE" "hi" 2>&1); v0303_c7_rc=$?
+check "modelProvider=gemini without GEMINI_API_KEY -> exit 11" 11 "$v0303_c7_rc" "AUTH_REQUIRED" "$v0303_c7"
+v0303_c8=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_denied_actions_120 "$DELEGATE" --yolo "write a file" 2>&1 >/dev/null); v0303_c8_rc=$?
+check "--yolo permission denial -> exit 15 with policy_blocked signal" 15 "$v0303_c8_rc" "policy_blocked" "$v0303_c8"
+if has 'or pass --yolo' "$v0303_c8"; then
+  echo "FAIL: --yolo denial still told caller to 'pass --yolo'"; FAIL=$((FAIL+1));
+else echo "ok: --yolo denial explains admin policy / permissions.deny override"; PASS=$((PASS+1)); fi
 
 check "exit-15 message offers the narrower grant first" 15 "$rc" "permissions.allow" "$out"
 # The message must not hand the pre-1.1.11 match-everything history to the placeholder it
@@ -2270,10 +2486,14 @@ check "pass path -> exit 0" 0 "$rc" "PASS" "$out"
 check "pass path: one delegation" 0 "$rc" "1 delegation(s), 0 fix-up(s)" "$out"
 check "pass path: verify ran once" 0 "$rc" "1" "$(cat "$TMP/vcount")"
 check "pass path without --tests warns that test files are not protected" 0 "$rc" "no --tests given — test files are not protected; 0 test-like file(s) changed" "$out"
-# --no-verify + executor timeout -> exit 12 (not exit 2)
+# --no-verify + executor timeout -> exit 12 (not exit 2), including agy 1.5.1 rc=3 print-timeout (#115)
 hreset
 out=$(STUB_MODE=timeout "$HANDOFF" --dir "$HREPO" --new-project off --no-verify "do x" 2>/dev/null); rc=$?
 check "--no-verify + executor timeout -> exit 12" 12 "$rc" "EXECUTOR_FAILED" "$out"
+hreset
+out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_partial_timeout_151 "$HANDOFF" --dir "$HREPO" --new-project off --no-verify --json "do x" 2>/dev/null); rc=$?
+check "--no-verify + agy 1.5.1 rc=3 print-timeout -> exit 12 (#115)" 12 "$rc" '"exit": 12' "$out"
+check "--no-verify + agy 1.5.1 rc=3 print-timeout preserves partial executor_said (#115)" 12 "$rc" "Partial Research Findings" "$out"
 
 # fix-up: verify fails once, the fix-up prompt quotes the failure, then passes
 hreset
@@ -2307,6 +2527,7 @@ check "badmodel -> exit 14 and no verification" 14 "$rc" "executor unavailable (
 hreset
 out=$(STUB_MODE=harddeny "$HANDOFF" --dir "$HREPO" --new-project off --verify "$TMP/vfy.sh" "do x" 2>&1); rc=$?
 check "harddeny -> exit 15 and no verification" 15 "$rc" "executor unavailable (agy-delegate exit 15)" "$out"
+check "handoff exit 15 notes policy_blocked despite --yolo" 15 "$rc" "policy_blocked despite --yolo" "$out"
 [ ! -e "$TMP/vcount" ] || { echo "FAIL: harddeny path ran the verify command"; FAIL=$((FAIL+1)); }
 
 # a protected test file modified by the "executor" (simulated by the verify script) -> exit 6
