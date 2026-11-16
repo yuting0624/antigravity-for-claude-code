@@ -2394,28 +2394,28 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# #117 (d): atomic `.final` TOCTOU race guard — if a job subshell claims `$jd/.final` just
-# before exiting while `$pid` is still alive during `cancel`, `cancel` must NOT overwrite
-# completion with `cancelled` or delete `$jd/rc`.
+# #117 (d): atomic `$jd/final` TOCTOU race guard — if a job subshell claims `$jd/final`
+# (`rc:0`) just before moving `rc.tmp` to `rc` while `$pid` is still alive during `cancel`,
+# `cancel` reads `rc:0` immediately, prints `not running`, and never writes `cancelled`.
 RACE_JID="20261116-000001-race117"
-mkdir -p "$ANTIGRAVITY_JOBS/$RACE_JID/.final"
+mkdir -p "$ANTIGRAVITY_JOBS/$RACE_JID"
+printf 'rc:0\n' > "$ANTIGRAVITY_JOBS/$RACE_JID/final"
 printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:01Z\ntask=toctou race test\n' "$RACE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$RACE_JID/meta"
-( sleep 0.03; echo 0 > "$ANTIGRAVITY_JOBS/$RACE_JID/rc"; sleep 5 ) >/dev/null 2>&1 &
-race_pid=$!
+sleep 5 >/dev/null 2>&1 & race_pid=$!
 echo "$race_pid" > "$ANTIGRAVITY_JOBS/$RACE_JID/pid"
 race_out=$("$JOB" cancel "$RACE_JID" 2>&1); race_rc=$?
-check "TOCTOU race: cancel after job claims .final reports 'not running' (#117)" 0 "$race_rc" "not running" "$race_out"
-if [ ! -f "$ANTIGRAVITY_JOBS/$RACE_JID/cancelled" ] && [ "$(cat "$ANTIGRAVITY_JOBS/$RACE_JID/rc" 2>/dev/null)" = "0" ]; then
-  echo "ok: TOCTOU race: finished job's rc=0 preserved and cancelled marker not written (#117)"; PASS=$((PASS+1))
+check "TOCTOU race: cancel after job claims final=rc:0 reports 'not running' (#117)" 0 "$race_rc" "not running" "$race_out"
+if [ ! -f "$ANTIGRAVITY_JOBS/$RACE_JID/cancelled" ] && [ "$(cat "$ANTIGRAVITY_JOBS/$RACE_JID/final" 2>/dev/null)" = "rc:0" ]; then
+  echo "ok: TOCTOU race: finished job's final=rc:0 preserved and cancelled marker not written (#117)"; PASS=$((PASS+1))
 else
-  echo "FAIL: TOCTOU race clobbered rc or wrote cancelled marker (#117)"; FAIL=$((FAIL+1))
+  echo "FAIL: TOCTOU race clobbered final or wrote cancelled marker (#117)"; FAIL=$((FAIL+1))
 fi
 race_st=$("$JOB" status "$RACE_JID" 2>/dev/null)
-check "TOCTOU race: job status stays state=done (rc=0: ok) (#117)" 0 0 "state=done (rc=0: ok)" "$race_st"
+check "TOCTOU race: job status renders state=done (rc=0: ok) from final=rc:0 even before rc file lands (#117)" 0 0 "state=done (rc=0: ok)" "$race_st"
 kill "$race_pid" 2>/dev/null || true; wait "$race_pid" 2>/dev/null || true
 
 # Live concurrent race: start a short job (~0.1s) and race `cancel` against normal completion;
-# atomic `mkdir $jd/.final` guarantees exactly one of `rc` or `cancelled` exists (never both).
+# atomic `claim_final` guarantees exactly one of `rc` or `cancelled` exists (never both).
 live_race_id=$(STUB_MODE=text STUB_SLEEP=0.1 "$JOB" start --tier flash "live race task" 2>/dev/null)
 sleep 0.1 2>/dev/null || sleep 1
 "$JOB" cancel "$live_race_id" >/dev/null 2>&1 || true
@@ -2451,7 +2451,7 @@ fi
 kill "$reuse_pid" 2>/dev/null || true; wait "$reuse_pid" 2>/dev/null || true
 
 # #117 (f): interrupted `cancel` (`INT`/`TERM`/`HUP` during the SIGSTOP freeze window) must
-# un-stop `$tree`, roll back `$jd/cancelled` + `$jd/.final`, and exit 130 (never swallow
+# un-stop `$tree`, roll back `$jd/cancelled` + `$jd/final`, and exit 130 (never swallow
 # the signal), leaving the still-running job cleanly re-cancellable.
 INT_BIN="$TMP/int-bin"; INT_CNT="$TMP/int-ps.cnt"; mkdir -p "$INT_BIN"
 rm -f "$INT_CNT"
@@ -2477,42 +2477,35 @@ echo "$cancel_runner" > "$TMP/cancel-runner.pid"
 wait "$cancel_runner"; int_cancel_rc=$?
 int_cancel_out="$(cat "$TMP/int-cancel.out" 2>/dev/null || true)"
 if [ "$int_cancel_rc" -eq 130 ] && ! has 'cancelled' "$int_cancel_out" \
-   && [ ! -f "$ANTIGRAVITY_JOBS/$int_jid/cancelled" ] && [ ! -d "$ANTIGRAVITY_JOBS/$int_jid/.final" ]; then
-  echo "ok: SIGTERM during SIGSTOP window aborts cancel (rc=130) and rolls back .final + cancelled"; PASS=$((PASS+1))
+   && [ ! -f "$ANTIGRAVITY_JOBS/$int_jid/cancelled" ] && [ ! -f "$ANTIGRAVITY_JOBS/$int_jid/final" ]; then
+  echo "ok: SIGTERM during SIGSTOP window aborts cancel (rc=130) and rolls back final + cancelled"; PASS=$((PASS+1))
 else
-  echo "FAIL: interrupted cancel swallowed signal or left .final/cancelled wedged (rc=$int_cancel_rc, out='$int_cancel_out')"; FAIL=$((FAIL+1))
+  echo "FAIL: interrupted cancel swallowed signal or left final/cancelled wedged (rc=$int_cancel_rc, out='$int_cancel_out')"; FAIL=$((FAIL+1))
 fi
 retry_cancel_out=$("$JOB" cancel "$int_jid" 2>&1); retry_cancel_rc=$?
 check "job remains cleanly cancellable after interrupted cancel" 0 "$retry_cancel_rc" "cancelled $int_jid" "$retry_cancel_out"
 
-# #117 (g): interrupted LOSING `cancel` (where another owner already created `.final` and is
-# mid-write) must disarm its trap (`owns_final=0`) and NEVER wipe the owner's `.final` / `cancelled`.
-LOSE_JID="20261116-000003-lose117"
-mkdir -p "$ANTIGRAVITY_JOBS/$LOSE_JID/.final"
-printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:03Z\ntask=losing cancel trap test\n' "$LOSE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$LOSE_JID/meta"
-sleep 5 >/dev/null 2>&1 & lose_pid=$!
-echo "$lose_pid" > "$ANTIGRAVITY_JOBS/$LOSE_JID/pid"
-LOSE_BIN="$TMP/lose-bin"; mkdir -p "$LOSE_BIN"
-cat > "$LOSE_BIN/sleep" <<STUB
-#!/usr/bin/env bash
-for _w in 1 2 3 4 5 6 7 8 9 10; do [ -s "$TMP/lose-runner.pid" ] && break; /bin/sleep 0.02 2>/dev/null || /bin/sleep 1; done
-# Write the winner's cancelled marker while the losing cancel is waiting in its poll loop, then signal the loser:
-: > "$ANTIGRAVITY_JOBS/$LOSE_JID/cancelled"
-[ -s "$TMP/lose-runner.pid" ] && { kill -TERM "\$(cat "$TMP/lose-runner.pid")" 2>/dev/null || true; }
-exec /bin/sleep "\$@"
-STUB
-chmod +x "$LOSE_BIN/sleep"
-rm -f "$TMP/lose-runner.pid"
-PATH="$LOSE_BIN:$PATH" "$JOB" cancel "$LOSE_JID" >/dev/null 2>&1 &
-lose_runner=$!
-echo "$lose_runner" > "$TMP/lose-runner.pid"
-wait "$lose_runner" 2>/dev/null || true
-if [ -d "$ANTIGRAVITY_JOBS/$LOSE_JID/.final" ] && [ -f "$ANTIGRAVITY_JOBS/$LOSE_JID/cancelled" ]; then
-  echo "ok: interrupted losing cancel preserves winner's .final and cancelled markers"; PASS=$((PASS+1))
+# #117 (g): self-healing recovery if an earlier `cancel` was SIGKILLed (`kill -9`) right after
+# `claim_final` wrote `final=cancelled` (even with the job tree left SIGSTOPped) — a second
+# `cancel` must finish terminating the live/stopped tree instead of reporting "already cancelled"
+# or "not running", and a third `cancel` then reports "already cancelled".
+HEAL_JID="20261116-000003-heal117"
+mkdir -p "$ANTIGRAVITY_JOBS/$HEAL_JID"
+printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:03Z\ntask=sigkill recovery test\n' "$HEAL_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$HEAL_JID/meta"
+printf 'cancelled\n' > "$ANTIGRAVITY_JOBS/$HEAL_JID/final"
+sleep 30 >/dev/null 2>&1 & heal_pid=$!
+kill -STOP "$heal_pid" 2>/dev/null || true
+echo "$heal_pid" > "$ANTIGRAVITY_JOBS/$HEAL_JID/pid"
+heal_out=$("$JOB" cancel "$HEAL_JID" 2>&1); heal_rc=$?
+check "recovery cancel finishes killing surviving SIGSTOPped job after earlier SIGKILLed cancel" 0 "$heal_rc" "cancelled $HEAL_JID" "$heal_out"
+if ! kill -0 "$heal_pid" 2>/dev/null && [ -f "$ANTIGRAVITY_JOBS/$HEAL_JID/cancelled" ]; then
+  echo "ok: recovery cancel terminated surviving stopped process and ensured cancelled marker"; PASS=$((PASS+1))
 else
-  echo "FAIL: interrupted losing cancel wiped winner's .final or cancelled marker"; FAIL=$((FAIL+1))
+  echo "FAIL: recovery cancel left stopped process alive or missed cancelled marker"; FAIL=$((FAIL+1))
+  kill -9 "$heal_pid" 2>/dev/null || true
 fi
-kill "$lose_pid" 2>/dev/null || true; wait "$lose_pid" 2>/dev/null || true
+heal_out2=$("$JOB" cancel "$HEAL_JID" 2>&1); heal_rc2=$?
+check "subsequent cancel after recovery reports 'already cancelled'" 0 "$heal_rc2" "already cancelled" "$heal_out2"
 
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
 # only left the subshell, so status/result/cancel carried on with jd="" and printed

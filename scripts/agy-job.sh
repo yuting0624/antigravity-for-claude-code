@@ -51,17 +51,37 @@ pid_alive() {
   return 0
 }
 
+# Atomically claims `$jd/final` with payload $2 (`rc:<code>` or `cancelled`) by hard-linking
+# a pre-populated temp file (`link(2)` leaves zero gap between lock acquisition and payload
+# visibility, even under SIGKILL; falls back to POSIX `set -C` `O_CREAT|O_EXCL` if `ln` is
+# unsupported on the filesystem).
+claim_final() {
+  local jd="$1" val="$2" tmp="$1/.claim.$$.$RANDOM" ok=0
+  printf '%s\n' "$val" > "$tmp" 2>/dev/null || return 1
+  if ln "$tmp" "$jd/final" 2>/dev/null; then
+    ok=1
+  elif [ ! -e "$jd/final" ] && ( set -C; printf '%s\n' "$val" > "$jd/final" ) 2>/dev/null; then
+    ok=1
+  fi
+  rm -f "$tmp" 2>/dev/null || true
+  [ "$ok" -eq 1 ]
+}
+
 # echoes running | done | failed | cancelled. (rc is read directly from the file by
 # callers — a global set here would NOT survive the `$(job_state ...)` subshell.)
 # Both normal completion (`start` / `agy-handoff --background`) and `cancel` claim
-# `$jd/.final` via atomic `mkdir` before writing `$jd/rc` or `$jd/cancelled`, so the two
-# markers are mutually exclusive without `cancel` ever deleting a finished job's `$jd/rc`.
+# `$jd/final` atomically via `claim_final`, so `rc` and `cancelled` are mutually exclusive
+# with zero gap between claiming `.final` and recording which side won.
 job_state() {
-  local jd="$1" rc
+  local jd="$1" rc fv
+  fv="$(cat "$jd/final" 2>/dev/null || true)"
   if [ -f "$jd/rc" ]; then
     rc="$(cat "$jd/rc")"
     if [ "$rc" = "0" ]; then echo "done"; else echo "failed"; fi
-  elif [ -f "$jd/cancelled" ]; then
+  elif case "$fv" in rc:*) true ;; *) false ;; esac; then
+    rc="${fv#rc:}"
+    if [ "$rc" = "0" ]; then echo "done"; else echo "failed"; fi
+  elif [ "$fv" = "cancelled" ] || [ -f "$jd/cancelled" ]; then
     echo "cancelled"
   elif [ -f "$jd/pid" ] && pid_alive "$jd" "$(cat "$jd/pid" 2>/dev/null || true)"; then
     echo "running"
@@ -161,8 +181,7 @@ abort_cancel() {
   trap - INT TERM HUP
   [ -n "$t" ] && resume_tree "$t"
   if [ "$owned" = "1" ] && [ -n "$jd" ]; then
-    rm -f "$jd/cancelled" 2>/dev/null || true
-    rmdir "$jd/.final" 2>/dev/null || true
+    rm -f "$jd/cancelled" "$jd/final" 2>/dev/null || true
   fi
   exit 130
 }
@@ -195,7 +214,7 @@ case "$cmd" in
     jd="$REG/$id"; mkdir -p "$jd"
     { echo "id=$id"; echo "cwd=$PWD"; echo "started=$(date -u +%FT%TZ 2>/dev/null || date)";
       echo "task=$(printf '%s' "${!#}" | tr '\n' ' ' | cut -c1-200)"; } > "$jd/meta"
-    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; rc=$?; if mkdir "$jd/.final" 2>/dev/null; then echo "$rc" >"$jd/rc.tmp" && mv -f "$jd/rc.tmp" "$jd/rc"; fi ) >/dev/null 2>&1 &
+    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; rc=$?; if claim_final "$jd" "rc:$rc"; then printf '%s\n' "$rc" >"$jd/rc.tmp" && mv -f "$jd/rc.tmp" "$jd/rc"; fi ) >/dev/null 2>&1 &
     bg_pid=$!
     echo "$bg_pid" > "$jd/pid"
     pstart="$(ps -p "$bg_pid" -o lstart= 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
@@ -220,6 +239,10 @@ case "$cmd" in
   status)
     jd="$(jobdir "${1:-}")" || exit 1; st="$(job_state "$jd")"
     rc="$(cat "$jd/rc" 2>/dev/null || true)"
+    if [ -z "$rc" ]; then
+      fv="$(cat "$jd/final" 2>/dev/null || true)"
+      case "$fv" in rc:*) rc="${fv#rc:}" ;; esac
+    fi
     echo "job:    $(basename "$jd")"
     sed 's/^/  /' "$jd/meta" 2>/dev/null
     if [ "$st" != "cancelled" ] && [ -n "$rc" ]; then
@@ -242,28 +265,43 @@ case "$cmd" in
       exit 0
     fi
     rc="$(cat "$jd/rc" 2>/dev/null || true)"
+    if [ -z "$rc" ]; then
+      fv="$(cat "$jd/final" 2>/dev/null || true)"
+      case "$fv" in rc:*) rc="${fv#rc:}" ;; esac
+    fi
     echo "[exit rc=${rc:-?}${rc:+: $(rc_label "$rc")}]" >&2
     ;;
   cancel)
     jd="$(jobdir "${1:-}")" || exit 1
-    if [ -f "$jd/cancelled" ]; then echo "already cancelled"; exit 0; fi
+    fv="$(cat "$jd/final" 2>/dev/null || true)"
+    case "$fv" in rc:*) echo "not running"; exit 0 ;; esac
     if [ -f "$jd/rc" ]; then echo "not running"; exit 0; fi
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
-    if pid_alive "$jd" "$pid"; then
+    already_claimed=0
+    if [ "$fv" = "cancelled" ] || [ -f "$jd/cancelled" ]; then
+      # If an earlier cancel died via SIGKILL after claiming `final` while the job tree
+      # is still alive (or SIGSTOPped), fall through to finish terminating it.
+      if ! pid_alive "$jd" "$pid"; then echo "already cancelled"; exit 0; fi
+      already_claimed=1
+    fi
+    if [ "$already_claimed" -eq 1 ] || pid_alive "$jd" "$pid"; then
       owns_final=0; tree=""
-      trap 'abort_cancel "$jd" "$owns_final" "${tree:-}"' INT TERM HUP
-      if mkdir "$jd/.final" 2>/dev/null; then
-        owns_final=1
+      if [ "$already_claimed" -eq 0 ]; then
+        trap 'abort_cancel "$jd" "$owns_final" "${tree:-}"' INT TERM HUP
+        if claim_final "$jd" "cancelled"; then
+          owns_final=1
+        else
+          trap - INT TERM HUP
+          fv="$(cat "$jd/final" 2>/dev/null || true)"
+          if [ "$fv" = "cancelled" ] || [ -f "$jd/cancelled" ]; then
+            if ! pid_alive "$jd" "$pid"; then echo "already cancelled"; exit 0; fi
+          else
+            echo "not running"
+            exit 0
+          fi
+        fi
       else
-        # Lost the atomic race to normal completion (subshell writing $jd/rc) or a
-        # concurrent cancel — disarm our trap immediately so we never touch the winner's state.
-        trap - INT TERM HUP
-        for _ in 1 2 3 4 5; do
-          { [ -f "$jd/cancelled" ] || [ -f "$jd/rc" ]; } && break
-          sleep 0.05 2>/dev/null || sleep 1
-        done
-        if [ -f "$jd/cancelled" ]; then echo "already cancelled"; else echo "not running"; fi
-        exit 0
+        trap 'abort_cancel "" "0" "${tree:-}"' INT TERM HUP
       fi
       : > "$jd/cancelled"
       tree="$(job_tree "$pid" "$$")"
