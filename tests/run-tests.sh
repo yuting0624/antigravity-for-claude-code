@@ -2231,12 +2231,139 @@ done
 out=$("$JOB" result "$id" 2>/dev/null); rc=$?
 check "job result -> output when done" 0 "$rc" "STUB_OK" "$out"
 
-cid=$(STUB_MODE=text STUB_SLEEP=10 "$JOB" start --tier flash "long task" 2>/dev/null)
-sleep 0.5; "$JOB" cancel "$cid" >/dev/null 2>&1; sleep 0.5
-out=$("$JOB" status "$cid" 2>/dev/null)
-if grep -q "state=running" <<<"$out"; then
-  echo "FAIL: job cancel (still running)"; FAIL=$((FAIL+1))
-else echo "ok: job cancel stops it"; PASS=$((PASS+1)); fi
+# finished job cancel -> "not running" (not "already cancelled")
+fin_cancel_out=$("$JOB" cancel "$id" 2>&1); fin_cancel_rc=$?
+check "job cancel on already-finished job -> exit 0 + 'not running'" 0 "$fin_cancel_rc" "not running" "$fin_cancel_out"
+
+# #117 (a): 4-level POSIX job process tree (job subshell -> agy-delegate -> timeout/gtimeout
+# -> stub agy ignoring SIGTERM -> child sleep 30). `agy-job cancel` must snapshot the whole
+# descendant tree before signaling, escalate SIGTERM -> SIGKILL when a node ignores SIGTERM,
+# leave 0 surviving descendants, and record state=cancelled (no rc= crash label).
+JT_BIN="$TMP/jobtree-bin"; JT_PIDS="$TMP/jobtree.pids"; mkdir -p "$JT_BIN"
+rm -f "$JT_PIDS"
+cat > "$JT_BIN/agy" <<'STUB'
+#!/usr/bin/env bash
+[ "$1" = "models" ] && { echo "gemini-4-hydrogen-high"; exit 0; }
+[ "$1" = "--help" ] && { echo "  --print-timeout timeout"; exit 0; }
+trap '' TERM
+sleep 30 &
+leaf=$!
+printf '%s\n%s\n%s\n' "$$" "$PPID" "$leaf" > "$JT_PIDS_FILE"
+wait "$leaf"
+STUB
+chmod +x "$JT_BIN/agy"
+cid=$(PATH="$JT_BIN:$PATH" JT_PIDS_FILE="$JT_PIDS" "$JOB" start --tier flash --timeout 30s "long tree task" 2>/dev/null)
+for _ in $(seq 1 30); do [ -s "$JT_PIDS" ] && break; sleep 0.1; done
+jt_root_pid="$(cat "$ANTIGRAVITY_JOBS/$cid/pid" 2>/dev/null || true)"
+jt_all_pids="$jt_root_pid $(tr '\n' ' ' < "$JT_PIDS" 2>/dev/null || true)"
+jt_pre_alive=0; jt_pre_total=0
+for _p in $jt_all_pids; do
+  [ -n "$_p" ] || continue
+  jt_pre_total=$((jt_pre_total+1))
+  kill -0 "$_p" 2>/dev/null && jt_pre_alive=$((jt_pre_alive+1))
+done
+if [ "$jt_pre_total" -ge 4 ] && [ "$jt_pre_alive" -eq "$jt_pre_total" ]; then
+  echo "ok: 4-level job tree live before cancel ($jt_pre_alive/$jt_pre_total PIDs alive, #117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: 4-level job tree did not come up cleanly before cancel ($jt_pre_alive/$jt_pre_total alive)"; FAIL=$((FAIL+1))
+fi
+jt_cancel_out=$("$JOB" cancel "$cid" 2>&1); jt_cancel_rc=$?
+check "job cancel prints 'cancelled <id>' (#117)" 0 "$jt_cancel_rc" "cancelled $cid" "$jt_cancel_out"
+jt_post_alive=0
+for _p in $jt_all_pids; do
+  [ -n "$_p" ] || continue
+  kill -0 "$_p" 2>/dev/null && jt_post_alive=$((jt_post_alive+1))
+done
+if [ "$jt_post_alive" -eq 0 ]; then
+  echo "ok: job cancel terminates entire 4-level descendant tree (0/$jt_pre_total surviving PIDs, #117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: job cancel left $jt_post_alive/$jt_pre_total job-tree PIDs alive (#117)"; FAIL=$((FAIL+1))
+fi
+if [ -f "$ANTIGRAVITY_JOBS/$cid/cancelled" ] && [ ! -f "$ANTIGRAVITY_JOBS/$cid/rc" ]; then
+  echo "ok: job cancel writes cancelled marker and suppresses rc file (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: cancelled marker missing or rc file written on cancel (#117)"; FAIL=$((FAIL+1))
+fi
+jt_st_out=$("$JOB" status "$cid" 2>/dev/null); jt_st_rc=$?
+check "job status reports state=cancelled (#117)" 0 "$jt_st_rc" "state=cancelled" "$jt_st_out"
+if [ -n "$jt_st_out" ] && ! has 'rc=' "$jt_st_out" && ! has 'state=failed' "$jt_st_out"; then
+  echo "ok: cancelled job status omits misleading crash rc= label (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: cancelled job status still rendered rc= or state=failed: $jt_st_out"; FAIL=$((FAIL+1))
+fi
+jt_ls_out=$("$JOB" list 2>/dev/null); jt_ls_rc=$?
+check "job list shows cancelled state (#117)" 0 "$jt_ls_rc" "cancelled" "$jt_ls_out"
+printf 'PARTIAL_JOB_OUT\n' > "$ANTIGRAVITY_JOBS/$cid/out"
+printf 'PARTIAL_JOB_ERR\n' > "$ANTIGRAVITY_JOBS/$cid/err"
+jt_res_out=$("$JOB" result "$cid" 2>"$TMP/jt-res.err"); jt_res_rc=$?
+jt_res_err="$(cat "$TMP/jt-res.err")"
+check "job result on cancelled job exits 0 and prints captured stdout (#117)" 0 "$jt_res_rc" "PARTIAL_JOB_OUT" "$jt_res_out"
+check "job result on cancelled job prints captured stderr (#117)" 0 "$jt_res_rc" "PARTIAL_JOB_ERR" "$jt_res_err"
+check "job result on cancelled job prints [cancelled] on stderr (#117)" 0 "$jt_res_rc" "[cancelled]" "$jt_res_err"
+if [ -n "$jt_res_err" ] && ! has '[exit rc=' "$jt_res_err"; then
+  echo "ok: cancelled job result omits [exit rc=?] (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: cancelled job result still printed [exit rc=...]: $jt_res_err"; FAIL=$((FAIL+1))
+fi
+jt_cancel2_out=$("$JOB" cancel "$cid" 2>&1); jt_cancel2_rc=$?
+check "second job cancel reports 'already cancelled' (#117)" 0 "$jt_cancel2_rc" "already cancelled" "$jt_cancel2_out"
+
+# #117 (b): simulated Windows Git Bash (`MINGW64_NT-10.0-26200`) `ps -e` + `taskkill.exe /T /F`
+# across rows both with leading status flags ('S'/'I') and without, plus unrelated processes.
+WIN_BIN="$TMP/win-bin"; WIN_TK_LOG="$TMP/win-taskkill.log"; mkdir -p "$WIN_BIN"
+rm -f "$WIN_TK_LOG"
+sleep 30 & wp_root=$!
+sleep 30 & wp_del=$!
+sleep 30 & wp_to=$!
+sleep 30 & wp_agy=$!
+sleep 30 & wu_1=$!
+sleep 30 & wu_2=$!
+WIN_JID="20261116-000000-win117"
+mkdir -p "$ANTIGRAVITY_JOBS/$WIN_JID"
+printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:00Z\ntask=win git bash test\n' "$WIN_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$WIN_JID/meta"
+echo "$wp_root" > "$ANTIGRAVITY_JOBS/$WIN_JID/pid"
+cat > "$WIN_BIN/uname" <<'STUB'
+#!/usr/bin/env bash
+echo "MINGW64_NT-10.0-26200"
+STUB
+cat > "$WIN_BIN/ps" <<STUB
+#!/usr/bin/env bash
+if [ "\${1:-}" = "-e" ]; then
+  printf '      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND\n'
+  printf '  %7d       1 %7d      41200  ?         197609 14:22:01 /usr/bin/bash\n' "$wp_root" "$wp_root"
+  printf 'S %7d %7d %7d      41504  pty0      197609 14:22:01 /usr/bin/bash\n' "$wp_del" "$wp_root" "$wp_root"
+  printf 'I %7d %7d %7d      42112  pty0      197609 14:22:01 /usr/bin/timeout\n' "$wp_to" "$wp_del" "$wp_root"
+  printf '  %7d %7d %7d      42888  ?         197609 14:22:02 /c/Users/u/AppData/Local/agy/bin/agy\n' "$wp_agy" "$wp_to" "$wp_root"
+  printf 'S %7d       1 %7d      55000  pty1      197609 14:10:00 /usr/bin/bash\n' "$wu_1" "$wu_1"
+  printf '  %7d %7d %7d      55001  pty1      197609 14:10:05 /usr/bin/vim\n' "$wu_2" "$wu_1" "$wu_1"
+  exit 0
+fi
+exec /bin/ps "\$@"
+STUB
+cat > "$WIN_BIN/taskkill.exe" <<STUB
+#!/usr/bin/env bash
+printf '%s|%s|%s\n' "\${MSYS_NO_PATHCONV:-}" "\${MSYS2_ARG_CONV_EXCL:-}" "\$*" >> "$WIN_TK_LOG"
+exit 0
+STUB
+chmod +x "$WIN_BIN/uname" "$WIN_BIN/ps" "$WIN_BIN/taskkill.exe"
+win_cancel_out=$(PATH="$WIN_BIN:$PATH" "$JOB" cancel "$WIN_JID" 2>&1); win_cancel_rc=$?
+check "Windows Git Bash cancel prints 'cancelled <id>' (#117)" 0 "$win_cancel_rc" "cancelled $WIN_JID" "$win_cancel_out"
+win_tk_actual="$(tr '\n' ';' < "$WIN_TK_LOG" 2>/dev/null || true)"
+win_tk_want="1|*|/PID 42888 /T /F;1|*|/PID 42112 /T /F;1|*|/PID 41504 /T /F;1|*|/PID 41200 /T /F;"
+if [ "$win_tk_actual" = "$win_tk_want" ]; then
+  echo "ok: Windows Git Bash cancel calls taskkill.exe /T /F with MSYS_NO_PATHCONV=1 in leaves-first WINPID order and skips unrelated WINPIDs (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: Windows Git Bash taskkill.exe log mismatch (#117): got '$win_tk_actual', want '$win_tk_want'"; FAIL=$((FAIL+1))
+fi
+if ! kill -0 "$wp_root" 2>/dev/null && ! kill -0 "$wp_del" 2>/dev/null \
+   && ! kill -0 "$wp_to" 2>/dev/null && ! kill -0 "$wp_agy" 2>/dev/null \
+   && kill -0 "$wu_1" 2>/dev/null && kill -0 "$wu_2" 2>/dev/null; then
+  echo "ok: Windows Git Bash cancel kills all 4 job PIDs and leaves unrelated processes untouched (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: Windows Git Bash cancel PID survival mismatch (#117)"; FAIL=$((FAIL+1))
+fi
+kill "$wu_1" "$wu_2" 2>/dev/null || true
+wait "$wu_1" "$wu_2" 2>/dev/null || true
 
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
 # only left the subshell, so status/result/cancel carried on with jd="" and printed
@@ -2803,10 +2930,27 @@ check "gate: blocks agy-handoff --dir /etc outside workspace" 2 "$rc" "outside t
 out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --add-dir ../outside \"hi\""}}' | "$GATE" 2>&1); rc=$?
 check "gate: blocks --add-dir .. escaping workspace" 2 "$rc" "outside the current working directory" "$out"
 out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --add-dir ~/secret \"hi\""}}' | "$GATE" 2>&1); rc=$?
-check "gate: blocks --add-dir ~ home expansion" 2 "$rc" "outside the current working directory" "$out"
-GATE_WS="$TMP/gate-ws"; mkdir -p "$GATE_WS/sub"
+check "gate: blocks --add-dir ~ home expansion with metacharacter reason" 2 "$rc" "shell expansion, ~, globs, or braces" "$out"
+if [ -n "$out" ] && ! has 'outside the current working directory' "$out"; then
+  echo "ok: gate metacharacter rejection does not misreport ~ as outside cwd"; PASS=$((PASS+1))
+else
+  echo "FAIL: gate metacharacter rejection still claimed outside cwd: $out"; FAIL=$((FAIL+1))
+fi
+GATE_WS="$TMP/gate-ws"; mkdir -p "$GATE_WS/sub" "$GATE_WS/app/[id]"
+out=$(cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --dir \"app/[id]\" \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks bracket metacharacters in in-cwd --dir with specific message" 2 "$rc" "shell expansion, ~, globs, or braces" "$out"
+if [ -n "$out" ] && ! has 'outside the current working directory' "$out"; then
+  echo "ok: gate does not report in-cwd app/[id] as outside cwd"; PASS=$((PASS+1))
+else
+  echo "FAIL: gate misreported in-cwd app/[id] as outside cwd: $out"; FAIL=$((FAIL+1))
+fi
+check "gate: BLOCK_MSG clarifies --yolo still grants machine-wide tool execution" 2 "$rc" "--yolo still grants machine-wide tool execution" "$out"
 ( cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --read-only --dir sub --add-dir sub \"hi\""}}' | "$GATE" >/dev/null 2>&1 ); rc=$?
 check "gate: allows --read-only and in-workspace --dir / --add-dir sub" 0 "$rc"
+( cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --yolo --dir sub \"hi\""}}' | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate: allows --yolo with in-workspace --dir sub" 0 "$rc"
+out=$(cd "$GATE_WS" && printf '%s' '{"tool_input":{"command":"agy-delegate --yolo --dir /etc \"hi\""}}' | "$GATE" 2>&1); rc=$?
+check "gate: blocks --yolo with out-of-workspace --dir /etc" 2 "$rc" "outside the current working directory" "$out"
 # Option mis-pairing bypasses (value-taking flags carrying "-d" before --dir / --settings):
 out=$(printf '%s' '{"tool_input":{"command":"agy-handoff --tests -d --dir /etc \"do x\""}}' | "$GATE" 2>&1); rc=$?
 check "gate: blocks agy-handoff --tests -d --dir /etc option mis-pairing" 2 "$rc" "outside the current working directory" "$out"

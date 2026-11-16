@@ -8,11 +8,11 @@
 # Usage:
 #   agy-job.sh start  [agy-delegate options] "task"   # -> prints a JOB_ID, returns now
 #   agy-job.sh list                                    # jobs started from this dir
-#   agy-job.sh status <id>                             # running | done(rc) | failed
+#   agy-job.sh status <id>                             # running | done(rc) | failed | cancelled
 #   agy-job.sh result <id>                             # print stdout (+rc) when finished
-#   agy-job.sh cancel <id>                             # terminate a running job
+#   agy-job.sh cancel <id>                             # terminate a running job (and its tree)
 #
-# Jobs live under ${ANTIGRAVITY_JOBS:-~/.antigravity-jobs}/<id>/ (out, err, rc, meta).
+# Jobs live under ${ANTIGRAVITY_JOBS:-~/.antigravity-jobs}/<id>/ (out, err, rc, cancelled, meta).
 #
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -34,18 +34,87 @@ jobdir() {
   echo "$hits"
 }
 
-# echoes running | done | failed. (rc is read directly from the file by callers —
-# a global set here would NOT survive the `$(job_state ...)` command-substitution subshell.)
+# echoes running | done | failed | cancelled. (rc is read directly from the file by
+# callers — a global set here would NOT survive the `$(job_state ...)` subshell.)
 job_state() {
   local jd="$1" rc
-  if [ -f "$jd/rc" ]; then
+  if [ -f "$jd/cancelled" ]; then
+    echo "cancelled"
+  elif [ -f "$jd/rc" ]; then
     rc="$(cat "$jd/rc")"
     if [ "$rc" = "0" ]; then echo "done"; else echo "failed"; fi
   elif [ -f "$jd/pid" ] && kill -0 "$(cat "$jd/pid")" 2>/dev/null; then
-    echo running
+    echo "running"
   else
-    echo failed   # pid gone, no rc recorded = crashed/killed
+    echo "failed"   # pid gone, no rc recorded = crashed/killed
   fi
+}
+
+# Emits "<pid> <ppid> <winpid>" rows across active processes (winpid is "-" off Windows).
+# On Git Bash / MSYS2 / Cygwin (`ps -e`), rows may carry a leading 1-letter status flag
+# (`S`, `I`, `R`, `O`) in column 1 while the header row starts directly with `PID`:
+# compute PPID/WINPID offsets relative to PID from NR==1 (default +1, +3), then locate
+# each row's numeric PID at $1 or $2 (#117).
+proc_table() {
+  case "$(uname -s 2>/dev/null)" in
+    MINGW*|MSYS*|CYGWIN*)
+      ps -e 2>/dev/null | awk '
+        BEGIN { d_ppid = 1; d_win = 3; has_win = 1 }
+        NR == 1 && ($1 == "PID" || $2 == "PID") {
+          h_pid = 0; h_ppid = 0; h_win = 0
+          for (k = 1; k <= NF; k++) {
+            if ($k == "PID")    h_pid = k
+            if ($k == "PPID")   h_ppid = k
+            if ($k == "WINPID") h_win = k
+          }
+          if (h_pid > 0 && h_ppid > 0) d_ppid = h_ppid - h_pid
+          if (h_pid > 0 && h_win > 0)  { d_win = h_win - h_pid; has_win = 1 }
+          else                         { has_win = 0 }
+          next
+        }
+        {
+          i = ($1 ~ /^[0-9]+$/) ? 1 : 2
+          pid = $i; ppid = $(i + d_ppid)
+          win = has_win ? $(i + d_win) : "-"
+          if (pid ~ /^[0-9]+$/ && ppid ~ /^[0-9]+$/) {
+            if (win !~ /^[0-9]+$/) win = "-"
+            print pid, ppid, win
+          }
+        }' ;;
+    *)
+      ps -eo pid=,ppid= 2>/dev/null | awk '
+        $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1, $2, "-" }' ;;
+  esac
+}
+
+# Echoes "<pid> <winpid>" for $1 and all its descendants in post-order (deepest leaves
+# first, $1 last), excluding the current agy-job shell ($2) and its subshell/ps/awk pipeline.
+job_tree() {
+  proc_table | awk -v root="$1" -v self="$2" '
+    $1 == self || $2 == self { next }
+    {
+      if (!($1 in pp)) ord[++m] = $1
+      pp[$1] = $2
+      w[$1] = $3
+    }
+    END {
+      if (root == "" || root == self) exit
+      q[1] = root; n = 1; seen[root] = 1
+      for (head = 1; head <= n; head++) {
+        cur = q[head]
+        for (idx = 1; idx <= m; idx++) {
+          p = ord[idx]
+          if (!(p in seen) && pp[p] == cur) {
+            q[++n] = p
+            seen[p] = 1
+          }
+        }
+      }
+      for (k = n; k >= 1; k--) {
+        p = q[k]
+        print p, ((p in w) ? w[p] : "-")
+      }
+    }'
 }
 
 # Human label for a delegate / hand-off exit code (mirrors agy-delegate.sh / agy-handoff.sh codes).
@@ -76,7 +145,7 @@ case "$cmd" in
     jd="$REG/$id"; mkdir -p "$jd"
     { echo "id=$id"; echo "cwd=$PWD"; echo "started=$(date -u +%FT%TZ 2>/dev/null || date)";
       echo "task=$(printf '%s' "${!#}" | tr '\n' ' ' | cut -c1-200)"; } > "$jd/meta"
-    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; echo $? >"$jd/rc" ) >/dev/null 2>&1 &
+    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; rc=$?; [ -f "$jd/cancelled" ] || echo "$rc" >"$jd/rc" ) >/dev/null 2>&1 &
     echo $! > "$jd/pid"
     disown 2>/dev/null || true
     echo "$id"
@@ -90,7 +159,7 @@ case "$cmd" in
       [ "${ALL:-0}" = "1" ] || [ "$cwd" = "$PWD" ] || continue
       found=1
       st="$(job_state "$jd")"
-      printf '%-32s %-8s %s\n' "$(basename "$jd")" "$st" \
+      printf '%-32s %-9s %s\n' "$(basename "$jd")" "$st" \
         "$(sed -n 's/^task=//p' "$jd/meta" 2>/dev/null)"
     done
     [ "$found" = "1" ] || echo "(no jobs for $PWD — set ALL=1 to see all)"
@@ -100,25 +169,81 @@ case "$cmd" in
     rc="$(cat "$jd/rc" 2>/dev/null || true)"
     echo "job:    $(basename "$jd")"
     sed 's/^/  /' "$jd/meta" 2>/dev/null
-    if [ -n "$rc" ]; then echo "  state=$st (rc=$rc: $(rc_label "$rc"))"; else echo "  state=$st"; fi
+    if [ "$st" != "cancelled" ] && [ -n "$rc" ]; then
+      echo "  state=$st (rc=$rc: $(rc_label "$rc"))"
+    else
+      echo "  state=$st"
+    fi
     sig="$(grep -m1 '^AGY_SIGNAL ' "$jd/err" 2>/dev/null || true)"
     if [ -n "$sig" ]; then echo "  signal=${sig#AGY_SIGNAL }"; fi
     ;;
   result)
     jd="$(jobdir "${1:-}")" || exit 1; st="$(job_state "$jd")"
     if [ "$st" = "running" ]; then echo "still running — try again later"; exit 2; fi
-    rc="$(cat "$jd/rc" 2>/dev/null || true)"
     [ -s "$jd/err" ] && { echo "----- stderr -----" >&2; cat "$jd/err" >&2; }
     cat "$jd/out" 2>/dev/null
+    if [ "$st" = "cancelled" ]; then
+      echo "[cancelled]" >&2
+      exit 0
+    fi
+    rc="$(cat "$jd/rc" 2>/dev/null || true)"
     echo "[exit rc=${rc:-?}${rc:+: $(rc_label "$rc")}]" >&2
     ;;
   cancel)
     jd="$(jobdir "${1:-}")" || exit 1
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-      pkill -P "$pid" 2>/dev/null || true   # children (agy) first
-      kill "$pid" 2>/dev/null || true
+      : > "$jd/cancelled"
+      rm -f "$jd/rc" 2>/dev/null || true
+      tree="$(job_tree "$pid" "$$")"
+      is_win=0
+      case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) is_win=1 ;; esac
+      while read -r p w; do
+        [ -n "$p" ] || continue
+        if [ "$is_win" -eq 1 ] && [ -n "${w:-}" ] && [ "$w" != "-" ]; then
+          case "$w" in
+            *[!0-9]*) ;;
+            *) MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$w" /T /F >/dev/null 2>&1 || true ;;
+          esac
+        fi
+        kill "$p" 2>/dev/null || true
+      done <<EOF
+$tree
+EOF
+      for _ in 1 2 3; do
+        alive=0
+        while read -r p _; do
+          [ -n "$p" ] || continue
+          if kill -0 "$p" 2>/dev/null; then alive=1; break; fi
+        done <<EOF
+$tree
+EOF
+        [ "$alive" -eq 0 ] && break
+        sleep 0.1 2>/dev/null || sleep 1
+      done
+      if [ "${alive:-0}" -eq 1 ]; then
+        while read -r p _; do
+          [ -n "$p" ] || continue
+          kill -0 "$p" 2>/dev/null && { kill -9 "$p" 2>/dev/null || true; }
+        done <<EOF
+$tree
+EOF
+        for _ in 1 2 3 4 5; do
+          alive=0
+          while read -r p _; do
+            [ -n "$p" ] || continue
+            if kill -0 "$p" 2>/dev/null; then alive=1; break; fi
+          done <<EOF
+$tree
+EOF
+          [ "$alive" -eq 0 ] && break
+          sleep 0.05 2>/dev/null || sleep 1
+        done
+      fi
+      rm -f "$jd/rc" 2>/dev/null || true
       echo "cancelled $(basename "$jd")"
+    elif [ -f "$jd/cancelled" ]; then
+      echo "already cancelled"
     else
       echo "not running"
     fi

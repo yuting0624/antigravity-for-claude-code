@@ -10,7 +10,7 @@ Show background agy delegation jobs.
 - Otherwise list jobs started from this directory:
   `agy-job list`
 
-Report each job's id, state (running / done / failed), and task. For finished jobs,
+Report each job's id, state (running / done / failed / cancelled), and task. For finished jobs,
 remind the user they can fetch output with `/antigravity:result <id>`.
 
 If an unremapped tier job (`--tier pro`, `--tier flash`, `--tier flash-lo`) was retried with

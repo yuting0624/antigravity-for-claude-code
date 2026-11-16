@@ -147,7 +147,7 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   an actionable message instead of a bare "empty output" or "agy exited 1".
 - Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
   background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
-  `/antigravity:status` / `/antigravity:result <id>` (interactive sessions only).
+  `/antigravity:status`, `/antigravity:result <id>`, or `/antigravity:cancel <id>` (since 0.31.1, `agy-job cancel` terminates the full descendant process tree across POSIX and Windows Git Bash/MSYS and records `state=cancelled`; interactive sessions only).
 
 ---
 
@@ -168,7 +168,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | 11 | not authenticated (incl. `"modelProvider": "gemini"` in `settings.json` without `GEMINI_API_KEY`) | run `agy` once interactively (or `agy acp --login` over SSH) to sign in, or export `GEMINI_API_KEY` |
 | 12 | timeout (agy's own, the wall-clock guard, or — agy 1.1.28+ — a `--print-timeout` that expired mid-turn or while waiting on background tasks: agy 1.1.28–1.4.x returns the **partial** reply with rc 0, and agy 1.5.0+ exits 3 with `finished_reason: "print_timeout"` / `AGY_ERROR` `"reason":"print_timeout"`; the wrapper prints any partial reply and exits 12. In `agy-handoff`, exit 12 is returned when an executor call timed out and verification also failed — if the tests pass despite a timed-out turn, `agy-handoff` exits 0. Not a timeout: a complete JSON `SUCCESS` reply after which agy never exits — agy 1.4.4, [antigravity-cli#1313](https://github.com/google-antigravity/antigravity-cli/issues/1313) — is printed, warned about on stderr, and exits 0 once the wall-clock guard kills agy) | raise `--timeout`, narrow the task, or `--continue` the same conversation; on Windows see the hang section above |
 | 13 | agy not on PATH | install the Antigravity CLI |
-| 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` or isn't entitled in this plan/project/location (agy ≥ 1.1.2 hard-fails instead of silently downgrading). An **unremapped** `--tier pro`, `--tier flash`, or `--tier flash-lo` (`lite`) automatically resolves plan-entitled fallbacks (`pro`: Carbon → Argon → `Gemini 3.1 Pro` → `Gemini 3.1 Pro (High)` → `Gemini 3.1 Pro (Low)` → Hydrogen → `Gemini 3.8 Flash (High)`; `flash`: Hydrogen → `Gemini 3.8 Flash (High)` → `Gemini 3.7 Flash (High)` → `Gemini 3.6 Flash (High)` → `Gemini 3.5 Flash`; `flash-lo`: Hydrogen Low → `Gemini 3.8 Flash (Low)` → `Gemini 3.5 Flash Lite` → `Gemini 3.7 Flash (Low)` → `Gemini 3.1 Flash Lite`): on `agy 1.5.x` (fallback path measured on `1.5.9`; primary Gemini 4 consumer-plan entitlement from `agy 1.5.x` model catalogs), it parses `Available models:` from the error output to jump directly to the first entitled candidate in a single retry (or exit 14 immediately if none match), and caches the resolved model for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` keyed by `(agy binary stat, OAuth presence bit, settings.json & onboarding.json POSIX cksum, auth env, tier)` (also pre-seeded by `agy-doctor`). Explicit `tier_*` remaps and `--model` never fall back — run `agy models` and fix the name |
+| 14 | model unavailable | the `--model` / `tier_*` / `default_model` name isn't in `agy models` or isn't entitled in this plan/project/location (agy ≥ 1.1.2 hard-fails instead of silently downgrading). An **unremapped** `--tier pro`, `--tier flash`, or `--tier flash-lo` (`lite`) automatically resolves plan-entitled fallbacks (`pro`: Carbon → Argon → `Gemini 3.1 Pro` → `Gemini 3.1 Pro (High)` → `Gemini 3.1 Pro (Low)` → Hydrogen → `Gemini 3.8 Flash (High)`; `flash`: Hydrogen → `Gemini 3.8 Flash (High)` → `Gemini 3.7 Flash (High)` → `Gemini 3.6 Flash (High)` → `Gemini 3.5 Flash`; `flash-lo`: Hydrogen Low → `Gemini 3.8 Flash (Low)` → `Gemini 3.5 Flash Lite` → `Gemini 3.7 Flash (Low)` → `Gemini 3.1 Flash Lite`): on `agy 1.5.x` (primary `Gemini 4 Hydrogen (High/Low/XHigh)`, `Gemini 4 Carbon (High/Medium)`, and `Gemini 4 Argon (High)` verified live on `agy 1.5.9` via Vertex AI ADC `AGY_ADC_AUTH=true`, alongside the 2-layer OAuth fallback path), it parses `Available models:` from the error output to jump directly to the first entitled candidate in a single retry (or exit 14 immediately if none match), and caches the resolved model for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` keyed by `(agy binary stat, OAuth presence bit, settings.json & onboarding.json POSIX cksum, auth env, tier)` (also pre-seeded by `agy-doctor`). Explicit `tier_*` remaps and `--model` never fall back — run `agy models` and fix the name (for Google Workspace accounts missing Gemini 4 under OAuth, see below) |
 | 15 | permission denied | a tool needed permission headless — **both** shapes: the soft deny (rc 0, empty stdout, `auto-denied` on stderr — agy 1.1.3+, and again from 1.1.20, measured on 1.1.25) and 1.1.13's hard error (rc 1, `user denied permission`); since 1.1.27 the tool is also named in the envelope's `denied_actions` (measured on 1.2.0). Add a `permissions.allow` rule covering the target, or pass `--yolo`; if `--yolo` was already passed (`policy_blocked`, agy 1.5.2+), a Gemini Enterprise admin policy or `permissions.deny` rule overrode it — keep targets inside `--dir` or check `agy-doctor` |
 | 16 | python3 not on PATH (`agy-migrate` only) | install python3 (`brew install python3`) |
 | 17 | one or more migration steps failed (`agy-migrate` only) | read the named steps; the run is still revertible with `agy-migrate --uninstall --apply` |
@@ -187,6 +187,26 @@ task — a file behind `--dir`, or code pasted into the prompt — 3.8 High answ
 
 **Fix:** give it a task, or drop `--digest` for a ping. `--yolo` here would grant a
 command the task never needed.
+
+---
+
+## Google Workspace OAuth login only lists ~6 models (no Gemini 4 Hydrogen / Carbon / Argon)
+
+**Symptom:** signing in to `agy` with a Google Workspace account shows only ~6 starter models in `agy models` (`Gemini 3.8 Flash (High/Medium/Low)`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B` — no `Gemini 4 Hydrogen`, `Gemini 4 Carbon`, or `Gemini 4 Argon`), even when `~/.gemini/antigravity-cli/settings.json` already configures `"gcp": {"project": "<project>", "location": "global"}` or Google Workspace licenses are assigned.
+
+**Cause** (verified on `agy 1.5.9`):
+- Choosing **`1. Google OAuth`** during interactive login stores a consumer OAuth token (`"auth_method": "consumer"` in `~/.gemini/antigravity-cli/antigravity-oauth-token`). Under consumer OAuth, `settings.json`'s `"gcp"` block is ignored at runtime (it only pre-fills interactive GCP setup prompts), and Google Workspace accounts cannot subscribe to consumer Google One AI Pro / Ultra plans — so they resolve to Antigravity's starter quota regardless of Google Workspace Admin Console licenses (even Workspace AI add-ons do not unlock Gemini 4 on the consumer OAuth path).
+- Unremapped `--tier flash` / `flash-lo` / `pro` delegations continue to run automatically via the 2-layer fallback (`Gemini 3.8 Flash`), while direct access to primary `Gemini 4 Hydrogen`, `Gemini 4 Carbon`, and `Gemini 4 Argon` requires Google Cloud project auth or Vertex AI ADC.
+
+**Fix** (pick either — no Google Workspace Admin Console change needed):
+1. **Persistent OAuth login bound to a Google Cloud project (no env vars needed):** run `agy` interactively, run `/logout`, and sign back in selecting **`2. Use a Google Cloud project`** → **`1. Continue with Google Cloud`** → **`2. Pay As You Go`** (bills Vertex AI usage directly to your Google Cloud project; no seat license required) or **`1. Subscriptions`** (if your account holds an active Google Cloud **Gemini Enterprise** license; legacy Gemini Code Assist Standard/Enterprise SKUs do not entitle Antigravity). Confirm your project ID and `global` location — this saves `"auth_method": "gcp"` in `antigravity-oauth-token`.
+2. **Headless / VM / SSH via Vertex AI Application Default Credentials (`AGY_ADC_AUTH=true`):** authenticate ADC (`gcloud auth application-default login`, or attach a VM service account with Vertex AI access) and export in your shell profile (`~/.bashrc` / `~/.zshrc`, or the `"env"` block in `~/.claude/settings.json` for Claude Code):
+   ```bash
+   export AGY_ADC_AUTH=true
+   export GOOGLE_CLOUD_PROJECT=<your-gcp-project-id>
+   export GOOGLE_CLOUD_LOCATION=global
+   ```
+   Verified live on `agy 1.5.9`: `AGY_ADC_AUTH=true` exposes the full 33-model Vertex catalog directly (`Gemini 4 Hydrogen (High/Low/XHigh)`, `Gemini 4 Carbon (High/Medium/Low)`, `Gemini 4 Argon (High/Medium/Low)`), and `~/.cache/antigravity-claude/tier-models-v1.tsv` isolates ADC and OAuth cache keys automatically.
 
 ---
 
