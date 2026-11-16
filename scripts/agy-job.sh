@@ -34,13 +34,24 @@ jobdir() {
   echo "$hits"
 }
 
-# True when $2 is alive AND matches the `ps -p ... -o lstart=` timestamp captured at job
-# start (when available), preventing a recycled PID from keeping a crashed job "running"
-# or making `cancel` signal an unrelated process tree. On Windows Git Bash / stubs where
-# `ps -p -o lstart=` returns empty, falls back to `kill -0`.
+# True when $1 responds to `kill -0` AND is not an unreaped zombie (`Z` state in POSIX
+# `ps -p <pid> -o stat=`; degrades to plain `kill -0` on MSYS/BusyBox where `-o stat=` is
+# unsupported or empty).
+proc_alive() {
+  local p="${1:-}" st
+  [ -n "$p" ] && kill -0 "$p" 2>/dev/null || return 1
+  st="$(ps -p "$p" -o stat= 2>/dev/null | sed 's/^[[:space:]]*//')"
+  case "$st" in Z*|z*) return 1 ;; esac
+  return 0
+}
+
+# True when $2 is alive (`proc_alive`) AND matches the `ps -p ... -o lstart=` timestamp
+# captured at job start (when available), preventing a recycled PID from keeping a crashed
+# job "running" or making `cancel` signal an unrelated process tree. Degrades gracefully to
+# `proc_alive` / `kill -0` on MSYS/BusyBox or stubs where `-o lstart=` returns empty.
 pid_alive() {
   local jd="$1" p="${2:-}" want cur
-  [ -n "$p" ] && kill -0 "$p" 2>/dev/null || return 1
+  proc_alive "$p" || return 1
   if [ -s "$jd/pid_start" ]; then
     want="$(cat "$jd/pid_start" 2>/dev/null || true)"
     cur="$(ps -p "$p" -o lstart= 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
@@ -291,11 +302,12 @@ case "$cmd" in
         if claim_final "$jd" "cancelled"; then
           owns_final=1
         else
-          trap - INT TERM HUP
           fv="$(cat "$jd/final" 2>/dev/null || true)"
           if [ "$fv" = "cancelled" ] || [ -f "$jd/cancelled" ]; then
-            if ! pid_alive "$jd" "$pid"; then echo "already cancelled"; exit 0; fi
+            if ! pid_alive "$jd" "$pid"; then trap - INT TERM HUP; echo "already cancelled"; exit 0; fi
+            trap 'abort_cancel "" "0" "${tree:-}"' INT TERM HUP
           else
+            trap - INT TERM HUP
             echo "not running"
             exit 0
           fi
@@ -343,7 +355,7 @@ EOF
         alive=0
         while read -r p _; do
           [ -n "$p" ] || continue
-          if kill -0 "$p" 2>/dev/null; then alive=1; break; fi
+          if proc_alive "$p"; then alive=1; break; fi
         done <<EOF
 $tree
 EOF
@@ -353,7 +365,7 @@ EOF
       if [ "${alive:-0}" -eq 1 ]; then
         while read -r p _; do
           [ -n "$p" ] || continue
-          if kill -0 "$p" 2>/dev/null; then
+          if proc_alive "$p"; then
             kill -9 "$p" 2>/dev/null || true
             [ "$is_win" -eq 0 ] && { kill -CONT "$p" 2>/dev/null || true; }
           fi
@@ -364,7 +376,7 @@ EOF
           alive=0
           while read -r p _; do
             [ -n "$p" ] || continue
-            if kill -0 "$p" 2>/dev/null; then alive=1; break; fi
+            if proc_alive "$p"; then alive=1; break; fi
           done <<EOF
 $tree
 EOF

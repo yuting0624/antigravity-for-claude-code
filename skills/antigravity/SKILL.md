@@ -154,7 +154,10 @@ since 1.1.27 the wrapper names the refused tool from the envelope's `denied_acti
 `status`/`error` envelope rather than stderr pattern-matching, so the classification is
 reliable. It prints a `AGY_SIGNAL {...}` line on stderr;
 `agy-job status`/`result` surface it, so you can react (e.g. retry quota with `--continue`,
-fix the model name, or add `--yolo`) instead of scraping prose.
+fix the model name, or add `--yolo`) instead of scraping prose. (Note: `agy-job result <id>`
+itself exits `2` only while the job is still running and exits `0` once output can be read —
+check `agy-job status` or stderr's `[exit rc=...]` vs `[cancelled]` trailer for the job's
+outcome.)
 
 **If Claude itself is running headless (`claude -p`, one-shot):** run delegations
 **synchronously** — let `agy-delegate` BLOCK and return before you continue. Do NOT
@@ -163,8 +166,8 @@ background a delegation expecting a later turn / "harness re-invocation": there 
 interactive session that will be re-invoked; there `agy-job cancel <id>` stops the job's
 descendant process tree — measured live on Linux with `agy 1.5.9`, CI-tested with stubs on
 macOS `/bin/bash 3.2`, and stub-tested for Windows Git Bash `ps -e` + `taskkill /T /F` from
-the #117 report — and marks `state=cancelled`, with `agy-job result` printing `[cancelled]`
-on stderr and exiting `0`, just as finished jobs exit `0` and report `[exit rc=...]` on stderr.)
+the #117 report, where `SIGSTOP` parent-freeze against hand-off respawn is POSIX-only — and
+marks `state=cancelled`.)
 
 ## Shared harness: one AGENTS.md for both AIs
 

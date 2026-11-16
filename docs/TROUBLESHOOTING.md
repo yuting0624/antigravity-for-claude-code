@@ -147,7 +147,7 @@ whether the run admits it ([#10](https://github.com/yuting0624/antigravity-for-c
   an actionable message instead of a bare "empty output" or "agy exited 1".
 - Long write tasks can exceed Claude Code's ~2-min synchronous Bash limit → run them as a
   background job: `ID=$(agy-job start --tier pro --dir . "<task>")`, then
-  `/antigravity:status`, `/antigravity:result <id>`, or `/antigravity:cancel <id>` (since 0.31.1, `agy-job cancel` terminates the full descendant process tree — measured live on Linux, CI-tested with stubs on macOS `/bin/bash 3.2`, and stub-tested for Windows Git Bash `ps -e` + `taskkill /T /F` from [#117](https://github.com/yuting0624/antigravity-for-claude-code/issues/117) — and records `state=cancelled`; `agy-job result` exits `2` while running and exits `0` once finished or cancelled, printing `[exit rc=...]` or `[cancelled]` on stderr; interactive sessions only).
+  `/antigravity:status`, `/antigravity:result <id>`, or `/antigravity:cancel <id>` (since 0.31.1, `agy-job cancel` terminates the full descendant process tree — measured live on Linux, CI-tested with stubs on macOS `/bin/bash 3.2`, and stub-tested for Windows Git Bash `ps -e` + `taskkill /T /F` from [#117](https://github.com/yuting0624/antigravity-for-claude-code/issues/117); `SIGSTOP` parent-freeze against hand-off respawn and `ps -p` PID-reuse checks apply on POSIX and degrade to top-down `taskkill /T /F` + `kill -0` on Git Bash/BusyBox — and records `state=cancelled`; `agy-job result` exits `2` while running and exits `0` once finished or cancelled, printing `[exit rc=...]` or `[cancelled]` on stderr; interactive sessions only).
 
 ---
 

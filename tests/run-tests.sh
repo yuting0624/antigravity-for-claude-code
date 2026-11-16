@@ -2318,6 +2318,7 @@ sleep 30 & wp_to=$!
 sleep 30 & wp_agy=$!
 sleep 30 & wu_1=$!
 sleep 30 & wu_2=$!
+sleep 0.1 2>/dev/null || sleep 1
 WIN_JID="20261116-000000-win117"
 mkdir -p "$ANTIGRAVITY_JOBS/$WIN_JID"
 printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:00Z\ntask=win git bash test\n' "$WIN_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$WIN_JID/meta"
@@ -2402,6 +2403,7 @@ mkdir -p "$ANTIGRAVITY_JOBS/$RACE_JID"
 printf 'rc:0\n' > "$ANTIGRAVITY_JOBS/$RACE_JID/final"
 printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:01Z\ntask=toctou race test\n' "$RACE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$RACE_JID/meta"
 sleep 5 >/dev/null 2>&1 & race_pid=$!
+sleep 0.1 2>/dev/null || sleep 1
 echo "$race_pid" > "$ANTIGRAVITY_JOBS/$RACE_JID/pid"
 race_out=$("$JOB" cancel "$RACE_JID" 2>&1); race_rc=$?
 check "TOCTOU race: cancel after job claims final=rc:0 reports 'not running' (#117)" 0 "$race_rc" "not running" "$race_out"
@@ -2435,6 +2437,7 @@ fi
 # `status` nor `cancel` may treat or signal that unrelated process as the job.
 REUSE_JID="20261116-000002-reuse117"
 sleep 30 >/dev/null 2>&1 & reuse_pid=$!
+sleep 0.1 2>/dev/null || sleep 1
 mkdir -p "$ANTIGRAVITY_JOBS/$REUSE_JID"
 printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:02Z\ntask=reused pid test\n' "$REUSE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$REUSE_JID/meta"
 echo "$reuse_pid" > "$ANTIGRAVITY_JOBS/$REUSE_JID/pid"
@@ -2485,26 +2488,36 @@ fi
 retry_cancel_out=$("$JOB" cancel "$int_jid" 2>&1); retry_cancel_rc=$?
 check "job remains cleanly cancellable after interrupted cancel" 0 "$retry_cancel_rc" "cancelled $int_jid" "$retry_cancel_out"
 
-# #117 (g): self-healing recovery if an earlier `cancel` was SIGKILLed (`kill -9`) right after
-# `claim_final` wrote `final=cancelled` (even with the job tree left SIGSTOPped) — a second
-# `cancel` must finish terminating the live/stopped tree instead of reporting "already cancelled"
-# or "not running", and a third `cancel` then reports "already cancelled".
-HEAL_JID="20261116-000003-heal117"
-mkdir -p "$ANTIGRAVITY_JOBS/$HEAL_JID"
-printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:03Z\ntask=sigkill recovery test\n' "$HEAL_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$HEAL_JID/meta"
-printf 'cancelled\n' > "$ANTIGRAVITY_JOBS/$HEAL_JID/final"
-sleep 30 >/dev/null 2>&1 & heal_pid=$!
-kill -STOP "$heal_pid" 2>/dev/null || true
-echo "$heal_pid" > "$ANTIGRAVITY_JOBS/$HEAL_JID/pid"
-heal_out=$("$JOB" cancel "$HEAL_JID" 2>&1); heal_rc=$?
-check "recovery cancel finishes killing surviving SIGSTOPped job after earlier SIGKILLed cancel" 0 "$heal_rc" "cancelled $HEAL_JID" "$heal_out"
-if ! kill -0 "$heal_pid" 2>/dev/null && [ -f "$ANTIGRAVITY_JOBS/$HEAL_JID/cancelled" ]; then
-  echo "ok: recovery cancel terminated surviving stopped process and ensured cancelled marker"; PASS=$((PASS+1))
+# #117 (g): self-healing recovery + non-owner interrupt safety:
+# When `final=cancelled` was already claimed by an earlier `cancel` (e.g. killed by SIGKILL
+# mid-flight or racing concurrently) while the real detached job is still alive/stopped:
+#   1) an interrupted recovery/losing `cancel` (`owns_final=0`) exits 130, resumes `$tree`,
+#      and preserves `final=cancelled` without wiping the owner's marker;
+#   2) a subsequent `cancel` finishes terminating the surviving job tree; and
+#   3) a third `cancel` reports "already cancelled".
+heal_jid=$(STUB_MODE=text STUB_SLEEP=20 "$JOB" start --tier flash "sigkill recovery task" 2>/dev/null)
+sleep 0.2 2>/dev/null || sleep 1
+heal_pid="$(cat "$ANTIGRAVITY_JOBS/$heal_jid/pid" 2>/dev/null || true)"
+printf 'cancelled\n' > "$ANTIGRAVITY_JOBS/$heal_jid/final"
+rm -f "$INT_CNT" "$TMP/cancel-runner.pid"
+PATH="$INT_BIN:$PATH" "$JOB" cancel "$heal_jid" >"$TMP/lose-int.out" 2>&1 &
+lose_int_runner=$!
+echo "$lose_int_runner" > "$TMP/cancel-runner.pid"
+wait "$lose_int_runner"; lose_int_rc=$?
+if [ "$lose_int_rc" -eq 130 ] && [ "$(cat "$ANTIGRAVITY_JOBS/$heal_jid/final" 2>/dev/null)" = "cancelled" ]; then
+  echo "ok: interrupted non-owner cancel exits 130 and preserves owner's final=cancelled marker"; PASS=$((PASS+1))
 else
-  echo "FAIL: recovery cancel left stopped process alive or missed cancelled marker"; FAIL=$((FAIL+1))
-  kill -9 "$heal_pid" 2>/dev/null || true
+  echo "FAIL: interrupted non-owner cancel rc=$lose_int_rc or wiped final marker"; FAIL=$((FAIL+1))
 fi
-heal_out2=$("$JOB" cancel "$HEAL_JID" 2>&1); heal_rc2=$?
+kill -STOP "$heal_pid" 2>/dev/null || true
+heal_out=$("$JOB" cancel "$heal_jid" 2>&1); heal_rc=$?
+check "recovery cancel finishes killing surviving SIGSTOPped job after earlier SIGKILLed cancel" 0 "$heal_rc" "cancelled $heal_jid" "$heal_out"
+if ! kill -0 "$heal_pid" 2>/dev/null && [ -f "$ANTIGRAVITY_JOBS/$heal_jid/cancelled" ]; then
+  echo "ok: recovery cancel terminated surviving stopped job and ensured cancelled marker"; PASS=$((PASS+1))
+else
+  echo "FAIL: recovery cancel left stopped job alive or missed cancelled marker"; FAIL=$((FAIL+1))
+fi
+heal_out2=$("$JOB" cancel "$heal_jid" 2>&1); heal_rc2=$?
 check "subsequent cancel after recovery reports 'already cancelled'" 0 "$heal_rc2" "already cancelled" "$heal_out2"
 
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
