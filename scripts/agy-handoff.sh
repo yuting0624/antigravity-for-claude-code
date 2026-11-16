@@ -174,7 +174,11 @@ if [ "$BACKGROUND" = "1" ]; then
     case "$a" in -) continue ;; *) clean+=("$a") ;; esac
   done
   ( nohup "${BASH_SOURCE[0]}" ${clean[@]+"${clean[@]}"} - < "$jd/requirement" >"$jd/out" 2>"$jd/err"; rc=$?; if mkdir "$jd/.final" 2>/dev/null; then echo "$rc" >"$jd/rc.tmp" && mv -f "$jd/rc.tmp" "$jd/rc"; fi ) >/dev/null 2>&1 &
-  echo $! > "$jd/pid"; disown 2>/dev/null || true
+  bg_pid=$!
+  echo "$bg_pid" > "$jd/pid"
+  pstart="$(ps -p "$bg_pid" -o lstart= 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+  [ -n "$pstart" ] && printf '%s\n' "$pstart" > "$jd/pid_start"
+  disown 2>/dev/null || true
   echo "$id"
   exit 0
 fi

@@ -2430,6 +2430,61 @@ else
   echo "FAIL: concurrent completion vs cancel wrote both or neither marker (#117)"; FAIL=$((FAIL+1))
 fi
 
+# #117 (e): reused-PID protection — if a job crashed without writing `rc` and the OS later
+# recycles `$pid` for an unrelated process with a different `ps -p ... -o lstart=`, neither
+# `status` nor `cancel` may treat or signal that unrelated process as the job.
+REUSE_JID="20261116-000002-reuse117"
+sleep 30 >/dev/null 2>&1 & reuse_pid=$!
+mkdir -p "$ANTIGRAVITY_JOBS/$REUSE_JID"
+printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:02Z\ntask=reused pid test\n' "$REUSE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$REUSE_JID/meta"
+echo "$reuse_pid" > "$ANTIGRAVITY_JOBS/$REUSE_JID/pid"
+echo "Thu Jan  1 00:00:00 1970" > "$ANTIGRAVITY_JOBS/$REUSE_JID/pid_start"
+reuse_st=$("$JOB" status "$REUSE_JID" 2>/dev/null)
+check "reused PID with mismatched pid_start reports state=failed (not running)" 0 0 "state=failed" "$reuse_st"
+reuse_cancel=$("$JOB" cancel "$REUSE_JID" 2>&1); reuse_rc=$?
+check "reused PID with mismatched pid_start prints 'not running' on cancel" 0 "$reuse_rc" "not running" "$reuse_cancel"
+if kill -0 "$reuse_pid" 2>/dev/null; then
+  echo "ok: cancel did not signal unrelated process occupying recycled PID"; PASS=$((PASS+1))
+else
+  echo "FAIL: cancel killed unrelated process occupying recycled PID"; FAIL=$((FAIL+1))
+fi
+kill "$reuse_pid" 2>/dev/null || true; wait "$reuse_pid" 2>/dev/null || true
+
+# #117 (f): interrupted `cancel` (`INT`/`TERM`/`HUP` during the SIGSTOP freeze window) must
+# un-stop `$tree`, roll back `$jd/cancelled` + `$jd/.final`, and exit 130 (never swallow
+# the signal), leaving the still-running job cleanly re-cancellable.
+INT_BIN="$TMP/int-bin"; INT_CNT="$TMP/int-ps.cnt"; mkdir -p "$INT_BIN"
+rm -f "$INT_CNT"
+cat > "$INT_BIN/ps" <<STUB
+#!/usr/bin/env bash
+if [ "\${1:-}" = "-eo" ]; then
+  n=\$(cat "$INT_CNT" 2>/dev/null || echo 0); n=\$((n+1)); echo "\$n" > "$INT_CNT"
+  if [ "\$n" -eq 2 ]; then
+    for _w in 1 2 3 4 5 6 7 8 9 10; do [ -s "$TMP/cancel-runner.pid" ] && break; sleep 0.02 2>/dev/null || sleep 1; done
+    # 2nd ps -eo runs inside the catch-up re-snapshot while \$tree is SIGSTOPped:
+    [ -s "$TMP/cancel-runner.pid" ] && { kill -TERM "\$(cat "$TMP/cancel-runner.pid")" 2>/dev/null || true; }
+  fi
+fi
+exec /bin/ps "\$@"
+STUB
+chmod +x "$INT_BIN/ps"
+int_jid=$(STUB_MODE=text STUB_SLEEP=20 "$JOB" start --tier flash "interruptible cancel task" 2>/dev/null)
+sleep 0.2 2>/dev/null || sleep 1
+rm -f "$TMP/cancel-runner.pid"
+PATH="$INT_BIN:$PATH" "$JOB" cancel "$int_jid" >"$TMP/int-cancel.out" 2>&1 &
+cancel_runner=$!
+echo "$cancel_runner" > "$TMP/cancel-runner.pid"
+wait "$cancel_runner"; int_cancel_rc=$?
+int_cancel_out="$(cat "$TMP/int-cancel.out" 2>/dev/null || true)"
+if [ "$int_cancel_rc" -eq 130 ] && ! has 'cancelled' "$int_cancel_out" \
+   && [ ! -f "$ANTIGRAVITY_JOBS/$int_jid/cancelled" ] && [ ! -d "$ANTIGRAVITY_JOBS/$int_jid/.final" ]; then
+  echo "ok: SIGTERM during SIGSTOP window aborts cancel (rc=130) and rolls back .final + cancelled"; PASS=$((PASS+1))
+else
+  echo "FAIL: interrupted cancel swallowed signal or left .final/cancelled wedged (rc=$int_cancel_rc, out='$int_cancel_out')"; FAIL=$((FAIL+1))
+fi
+retry_cancel_out=$("$JOB" cancel "$int_jid" 2>&1); retry_cancel_rc=$?
+check "job remains cleanly cancellable after interrupted cancel" 0 "$retry_cancel_rc" "cancelled $int_jid" "$retry_cancel_out"
+
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
 # only left the subshell, so status/result/cancel carried on with jd="" and printed
 # `state=failed` with rc 0 — a caller reading the state was told a run had failed when

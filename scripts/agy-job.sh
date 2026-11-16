@@ -34,6 +34,23 @@ jobdir() {
   echo "$hits"
 }
 
+# True when $2 is alive AND matches the `ps -p ... -o lstart=` timestamp captured at job
+# start (when available), preventing a recycled PID from keeping a crashed job "running"
+# or making `cancel` signal an unrelated process tree. On Windows Git Bash / stubs where
+# `ps -p -o lstart=` returns empty, falls back to `kill -0`.
+pid_alive() {
+  local jd="$1" p="${2:-}" want cur
+  [ -n "$p" ] && kill -0 "$p" 2>/dev/null || return 1
+  if [ -s "$jd/pid_start" ]; then
+    want="$(cat "$jd/pid_start" 2>/dev/null || true)"
+    cur="$(ps -p "$p" -o lstart= 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    if [ -n "$want" ] && [ -n "$cur" ] && [ "$want" != "$cur" ]; then
+      return 1
+    fi
+  fi
+  return 0
+}
+
 # echoes running | done | failed | cancelled. (rc is read directly from the file by
 # callers — a global set here would NOT survive the `$(job_state ...)` subshell.)
 # Both normal completion (`start` / `agy-handoff --background`) and `cancel` claim
@@ -46,10 +63,10 @@ job_state() {
     if [ "$rc" = "0" ]; then echo "done"; else echo "failed"; fi
   elif [ -f "$jd/cancelled" ]; then
     echo "cancelled"
-  elif [ -f "$jd/pid" ] && kill -0 "$(cat "$jd/pid")" 2>/dev/null; then
+  elif [ -f "$jd/pid" ] && pid_alive "$jd" "$(cat "$jd/pid" 2>/dev/null || true)"; then
     echo "running"
   else
-    echo "failed"   # pid gone, no rc recorded = crashed/killed
+    echo "failed"   # pid gone (or recycled), no rc recorded = crashed/killed
   fi
 }
 
@@ -139,6 +156,17 @@ ${1:-}
 EOF
 }
 
+abort_cancel() {
+  local jd="${1:-}" t="${2:-}"
+  trap - INT TERM HUP
+  [ -n "$t" ] && resume_tree "$t"
+  if [ -n "$jd" ]; then
+    rm -f "$jd/cancelled" 2>/dev/null || true
+    rmdir "$jd/.final" 2>/dev/null || true
+  fi
+  exit 130
+}
+
 # Human label for a delegate / hand-off exit code (mirrors agy-delegate.sh / agy-handoff.sh codes).
 rc_label() {
   case "$1" in
@@ -168,7 +196,10 @@ case "$cmd" in
     { echo "id=$id"; echo "cwd=$PWD"; echo "started=$(date -u +%FT%TZ 2>/dev/null || date)";
       echo "task=$(printf '%s' "${!#}" | tr '\n' ' ' | cut -c1-200)"; } > "$jd/meta"
     ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; rc=$?; if mkdir "$jd/.final" 2>/dev/null; then echo "$rc" >"$jd/rc.tmp" && mv -f "$jd/rc.tmp" "$jd/rc"; fi ) >/dev/null 2>&1 &
-    echo $! > "$jd/pid"
+    bg_pid=$!
+    echo "$bg_pid" > "$jd/pid"
+    pstart="$(ps -p "$bg_pid" -o lstart= 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [ -n "$pstart" ] && printf '%s\n' "$pstart" > "$jd/pid_start"
     disown 2>/dev/null || true
     echo "$id"
     ;;
@@ -216,15 +247,27 @@ case "$cmd" in
     if [ -f "$jd/cancelled" ]; then echo "already cancelled"; exit 0; fi
     if [ -f "$jd/rc" ]; then echo "not running"; exit 0; fi
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    if pid_alive "$jd" "$pid"; then
+      tree=""
+      trap 'abort_cancel "$jd" "${tree:-}"' INT TERM HUP
       if ! mkdir "$jd/.final" 2>/dev/null; then
-        # Lost the atomic race to normal completion (subshell writing $jd/rc) or a concurrent cancel.
+        # Lost the atomic race to normal completion (subshell writing $jd/rc), a concurrent
+        # cancel, or an earlier cancel killed by SIGKILL right after `mkdir .final`.
         for _ in 1 2 3; do
           { [ -f "$jd/cancelled" ] || [ -f "$jd/rc" ]; } && break
           sleep 0.05 2>/dev/null || sleep 1
         done
-        if [ -f "$jd/cancelled" ]; then echo "already cancelled"; else echo "not running"; fi
-        exit 0
+        if [ -f "$jd/cancelled" ]; then trap - INT TERM HUP; echo "already cancelled"; exit 0; fi
+        if [ -f "$jd/rc" ] || ! pid_alive "$jd" "$pid"; then
+          trap - INT TERM HUP
+          [ ! -f "$jd/rc" ] && { rmdir "$jd/.final" 2>/dev/null || true; }
+          echo "not running"
+          exit 0
+        fi
+        # Stale empty `.final` while job is still alive: reclaim it.
+        rmdir "$jd/.final" 2>/dev/null && mkdir "$jd/.final" 2>/dev/null || {
+          trap - INT TERM HUP; echo "not running"; exit 0;
+        }
       fi
       : > "$jd/cancelled"
       tree="$(job_tree "$pid" "$$")"
@@ -234,7 +277,6 @@ case "$cmd" in
         # Freeze parents top-down BEFORE any child exits so parent shells (e.g. agy-handoff
         # or fallback loops) cannot wake on a killed child and spawn a new process, then
         # re-snapshot once (space-separated for BSD awk) to catch anything forked in between.
-        trap 'resume_tree "$tree"' INT TERM HUP
         while read -r p _; do
           [ -n "$p" ] && { kill -STOP "$p" 2>/dev/null || true; }
         done <<EOF
@@ -249,6 +291,7 @@ EOF
 $tree
 EOF
       fi
+      trap - INT TERM HUP
       while read -r p w; do
         [ -n "$p" ] || continue
         if [ "$is_win" -eq 1 ] && [ -n "${w:-}" ] && [ "$w" != "-" ]; then
@@ -262,7 +305,6 @@ EOF
       done <<EOF
 $tree
 EOF
-      [ "$is_win" -eq 0 ] && trap - INT TERM HUP
       for _ in 1 2 3; do
         alive=0
         while read -r p _; do
