@@ -2349,9 +2349,9 @@ chmod +x "$WIN_BIN/uname" "$WIN_BIN/ps" "$WIN_BIN/taskkill.exe"
 win_cancel_out=$(PATH="$WIN_BIN:$PATH" "$JOB" cancel "$WIN_JID" 2>&1); win_cancel_rc=$?
 check "Windows Git Bash cancel prints 'cancelled <id>' (#117)" 0 "$win_cancel_rc" "cancelled $WIN_JID" "$win_cancel_out"
 win_tk_actual="$(tr '\n' ';' < "$WIN_TK_LOG" 2>/dev/null || true)"
-win_tk_want="1|*|/PID 42888 /T /F;1|*|/PID 42112 /T /F;1|*|/PID 41504 /T /F;1|*|/PID 41200 /T /F;"
+win_tk_want="1|*|/PID 41200 /T /F;1|*|/PID 41504 /T /F;1|*|/PID 42112 /T /F;1|*|/PID 42888 /T /F;"
 if [ "$win_tk_actual" = "$win_tk_want" ]; then
-  echo "ok: Windows Git Bash cancel calls taskkill.exe /T /F with MSYS_NO_PATHCONV=1 in leaves-first WINPID order and skips unrelated WINPIDs (#117)"; PASS=$((PASS+1))
+  echo "ok: Windows Git Bash cancel calls taskkill.exe /T /F with MSYS_NO_PATHCONV=1 in top-down WINPID order and skips unrelated WINPIDs (#117)"; PASS=$((PASS+1))
 else
   echo "FAIL: Windows Git Bash taskkill.exe log mismatch (#117): got '$win_tk_actual', want '$win_tk_want'"; FAIL=$((FAIL+1))
 fi
@@ -2364,6 +2364,55 @@ else
 fi
 kill "$wu_1" "$wu_2" 2>/dev/null || true
 wait "$wu_1" "$wu_2" 2>/dev/null || true
+
+# #117 (c): parent-respawn guard — freezing parents top-down with SIGSTOP before killing
+# children prevents a parent wrapper (e.g. agy-handoff verify/fix-up) from waking on a
+# dead child and spawning a new process outside the initial snapshot.
+RSP_DEL="$TMP/respawn-del.sh"; RSP_C1="$TMP/respawn-c1.pid"; RSP_C2="$TMP/respawn-c2.pid"
+rm -f "$RSP_C1" "$RSP_C2"
+cat > "$RSP_DEL" <<STUB
+#!/usr/bin/env bash
+sleep 30 &
+c1=\$!
+echo "\$c1" > "$RSP_C1"
+wait "\$c1"
+# If cancel killed the child while this parent was still running unpaused, this line runs:
+sleep 30 &
+echo "\$!" > "$RSP_C2"
+wait
+STUB
+chmod +x "$RSP_DEL"
+rsp_id=$(AGY_DELEGATE="$RSP_DEL" "$JOB" start "respawn guard task" 2>/dev/null)
+for _ in $(seq 1 30); do [ -s "$RSP_C1" ] && break; sleep 0.1; done
+rsp_c1_pid="$(cat "$RSP_C1" 2>/dev/null || true)"
+"$JOB" cancel "$rsp_id" >/dev/null 2>&1
+if [ -n "$rsp_c1_pid" ] && ! kill -0 "$rsp_c1_pid" 2>/dev/null && [ ! -s "$RSP_C2" ]; then
+  echo "ok: top-down SIGSTOP+SIGTERM prevents parent wrapper from spawning a follow-up child on cancel (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: parent wrapper spawned follow-up child or c1 survived during cancel (#117)"
+  [ -s "$RSP_C2" ] && kill -9 "$(cat "$RSP_C2")" 2>/dev/null || true
+  FAIL=$((FAIL+1))
+fi
+
+# #117 (d): atomic `.final` TOCTOU race guard — if a job subshell claims `$jd/.final` just
+# before exiting while `$pid` is still alive during `cancel`, `cancel` must NOT overwrite
+# completion with `cancelled` or delete `$jd/rc`.
+RACE_JID="20261116-000001-race117"
+mkdir -p "$ANTIGRAVITY_JOBS/$RACE_JID/.final"
+printf 'id=%s\ncwd=%s\nstarted=2026-11-16T00:00:01Z\ntask=toctou race test\n' "$RACE_JID" "$PWD" > "$ANTIGRAVITY_JOBS/$RACE_JID/meta"
+( sleep 0.03; echo 0 > "$ANTIGRAVITY_JOBS/$RACE_JID/rc"; sleep 5 ) >/dev/null 2>&1 &
+race_pid=$!
+echo "$race_pid" > "$ANTIGRAVITY_JOBS/$RACE_JID/pid"
+race_out=$("$JOB" cancel "$RACE_JID" 2>&1); race_rc=$?
+check "TOCTOU race: cancel after job claims .final reports 'not running' (#117)" 0 "$race_rc" "not running" "$race_out"
+if [ ! -f "$ANTIGRAVITY_JOBS/$RACE_JID/cancelled" ] && [ "$(cat "$ANTIGRAVITY_JOBS/$RACE_JID/rc" 2>/dev/null)" = "0" ]; then
+  echo "ok: TOCTOU race: finished job's rc=0 preserved and cancelled marker not written (#117)"; PASS=$((PASS+1))
+else
+  echo "FAIL: TOCTOU race clobbered rc or wrote cancelled marker (#117)"; FAIL=$((FAIL+1))
+fi
+race_st=$("$JOB" status "$RACE_JID" 2>/dev/null)
+check "TOCTOU race: job status stays state=done (rc=0: ok) (#117)" 0 0 "state=done (rc=0: ok)" "$race_st"
+kill "$race_pid" 2>/dev/null || true; wait "$race_pid" 2>/dev/null || true
 
 # #96: an unknown id must NOT be reported as a failed job. `die` inside `$(jobdir ...)`
 # only left the subshell, so status/result/cancel carried on with jd="" and printed

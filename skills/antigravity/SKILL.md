@@ -57,7 +57,7 @@ Routing tier within agy: `flash` (default, bulk: **Gemini 4 Hydrogen (High)**) �
 **agy is multi-model.** Tiers map to Gemini 4 by default, but you can point delegation at any
 model `agy models` lists (Claude / GPT on plans that expose them) — via `--model <exact name>` (and optional `--effort low|medium|high|xhigh|max`),
 or persistently with the `default_model` / `tier_*` plugin options (in `~/.claude/settings.json`
-`pluginConfigs` or env `CLAUDE_PLUGIN_OPTION_*`). Since 0.31.0, `pro` defaults to **Gemini 4 Carbon (High)** (strongest coding/agentic reasoning), and `flash` / `flash-lo` (`lite`) default to **Gemini 4 Hydrogen (High)** / **(Low)** (~2.5× faster agentic throughput, with `(XHigh)` reasoning effort available via `--effort xhigh`) — verified live on `agy 1.5.9` via Vertex AI ADC (`AGY_ADC_AUTH=true`) across `Hydrogen (High/Low/XHigh)`, `Carbon (High/Medium)`, and `Argon (High)`. When `tier_pro`, `tier_flash`, or `tier_flash_lo` is **unremapped** and the active plan does not expose the primary Gemini 4 model (for example Google AI Pro without Carbon/Hydrogen, Free-tier accounts, or Google Workspace accounts signed in via consumer `1. Google OAuth` instead of `2. Use a Google Cloud project` / `AGY_ADC_AUTH=true` — see `docs/TROUBLESHOOTING.md`), `agy-delegate` resolves an entitled fallback in **two layers**:
+`pluginConfigs` or env `CLAUDE_PLUGIN_OPTION_*`). Since 0.31.0, `pro` defaults to **Gemini 4 Carbon (High)** (strongest coding/agentic reasoning), and `flash` / `flash-lo` (`lite`) default to **Gemini 4 Hydrogen (High)** / **(Low)** (~2.5× faster agentic throughput, with `(XHigh)` reasoning effort available via `--effort xhigh`) — measured manually on Linux with `agy 1.5.9` via Vertex AI ADC (`AGY_ADC_AUTH=true`) across `Hydrogen (High/Low/XHigh)`, `Carbon (High/Medium)`, and `Argon (High)`. When `tier_pro`, `tier_flash`, or `tier_flash_lo` is **unremapped** and the active plan does not expose the primary Gemini 4 model (for example Google AI Pro without Carbon/Hydrogen, Free-tier accounts, or Google Workspace accounts signed in via consumer `1. Google OAuth` instead of `2. Use a Google Cloud project` / `AGY_ADC_AUTH=true` — see `docs/TROUBLESHOOTING.md`), `agy-delegate` resolves an entitled fallback in **two layers**:
 1. **Layer 1 (`Available models:` 1-hop Cold-Miss Jump):** when `agy 1.5.x` rejects a model with an `Available models:` list (measured on `agy 1.5.9`), `agy-delegate` intersects its ordered fallback chain (`pro`: Carbon → Argon → `Gemini 3.1 Pro` → `Gemini 3.1 Pro (High)` → `Gemini 3.1 Pro (Low)` → Hydrogen → `Gemini 3.8 Flash (High)`; `flash`: Hydrogen → `Gemini 3.8 Flash (High)` → `Gemini 3.7 Flash (High)` → `Gemini 3.6 Flash (High)` → `Gemini 3.5 Flash`; `flash-lo`: Hydrogen Low → `Gemini 3.8 Flash (Low)` → `Gemini 3.5 Flash Lite` → `Gemini 3.7 Flash (Low)` → `Gemini 3.1 Flash Lite`) with that list and jumps directly to the first entitled candidate in a **single retry** (or exits `14` immediately with zero extra spawns if none match; on older `agy` without `Available models:`, it walks the chain sequentially).
 2. **Layer 2 (`tier-models-v1.tsv` 6h Warm Cache):** resolved fallbacks (and `agy-doctor` pre-seeds) are cached for 6 hours in `~/.cache/antigravity-claude/tier-models-v1.tsv` keyed on `(agy binary path + stat, OAuth token presence bit, settings.json & onboarding.json POSIX cksum content signatures, auth env, tier)` — immune to `agy 1.5.9`'s per-invocation `onboarding.json` `mtime` rewrites (measured on `1.5.9`) and OAuth token refreshes — so subsequent calls hit the entitled model on attempt #1 with zero cold-miss delay.
 Check `AGY_USAGE.model` on stderr for the model that actually ran. The retry fires only on agy's model-unavailable error, never after a timeout (a timed-out attempt exits 12). Keep the executor a
@@ -153,14 +153,17 @@ since 1.1.27 the wrapper names the refused tool from the envelope's `denied_acti
 (besides `2` failed / `3` empty). On agy ≥ 1.1.8 these are derived from the structured
 `status`/`error` envelope rather than stderr pattern-matching, so the classification is
 reliable. It prints a `AGY_SIGNAL {...}` line on stderr;
-`agy-job status`/`result` surface it (`agy-job cancel <id>` terminates the full descendant process tree across POSIX and Windows Git Bash/MSYS and marks `state=cancelled`, printing `[cancelled]` on `result`), so you can react (e.g. retry quota with `--continue`,
+`agy-job status`/`result` surface it, so you can react (e.g. retry quota with `--continue`,
 fix the model name, or add `--yolo`) instead of scraping prose.
 
 **If Claude itself is running headless (`claude -p`, one-shot):** run delegations
 **synchronously** — let `agy-delegate` BLOCK and return before you continue. Do NOT
 background a delegation expecting a later turn / "harness re-invocation": there is none in
 `-p` mode, so you'd exit before the work finishes. (Backgrounding is only valid in an
-interactive session that will be re-invoked.)
+interactive session that will be re-invoked; there `agy-job cancel <id>` stops the job's
+descendant process tree — measured on Linux, and stub-tested for Windows Git Bash `ps -e` +
+`taskkill /T /F` from the #117 report — and marks `state=cancelled`, printing `[cancelled]`
+on `result`.)
 
 ## Shared harness: one AGENTS.md for both AIs
 

@@ -36,13 +36,16 @@ jobdir() {
 
 # echoes running | done | failed | cancelled. (rc is read directly from the file by
 # callers — a global set here would NOT survive the `$(job_state ...)` subshell.)
+# Both normal completion (`start` / `agy-handoff --background`) and `cancel` claim
+# `$jd/.final` via atomic `mkdir` before writing `$jd/rc` or `$jd/cancelled`, so the two
+# markers are mutually exclusive without `cancel` ever deleting a finished job's `$jd/rc`.
 job_state() {
   local jd="$1" rc
-  if [ -f "$jd/cancelled" ]; then
-    echo "cancelled"
-  elif [ -f "$jd/rc" ]; then
+  if [ -f "$jd/rc" ]; then
     rc="$(cat "$jd/rc")"
     if [ "$rc" = "0" ]; then echo "done"; else echo "failed"; fi
+  elif [ -f "$jd/cancelled" ]; then
+    echo "cancelled"
   elif [ -f "$jd/pid" ] && kill -0 "$(cat "$jd/pid")" 2>/dev/null; then
     echo "running"
   else
@@ -87,10 +90,11 @@ proc_table() {
   esac
 }
 
-# Echoes "<pid> <winpid>" for $1 and all its descendants in post-order (deepest leaves
-# first, $1 last), excluding the current agy-job shell ($2) and its subshell/ps/awk pipeline.
+# Echoes "<pid> <winpid>" for the whitespace-separated root PID(s) in $1 and all their
+# descendants in top-down breadth-first order (root/parents first, deepest leaves last),
+# excluding the current agy-job shell ($2) and its subshell/ps/awk pipeline.
 job_tree() {
-  proc_table | awk -v root="$1" -v self="$2" '
+  proc_table | awk -v roots="$1" -v self="$2" '
     $1 == self || $2 == self { next }
     {
       if (!($1 in pp)) ord[++m] = $1
@@ -98,8 +102,15 @@ job_tree() {
       w[$1] = $3
     }
     END {
-      if (root == "" || root == self) exit
-      q[1] = root; n = 1; seen[root] = 1
+      nr = split(roots, rlist, /[[:space:]]+/)
+      n = 0
+      for (r = 1; r <= nr; r++) {
+        rt = rlist[r]
+        if (rt != "" && rt != self && !(rt in seen)) {
+          q[++n] = rt
+          seen[rt] = 1
+        }
+      }
       for (head = 1; head <= n; head++) {
         cur = q[head]
         for (idx = 1; idx <= m; idx++) {
@@ -110,7 +121,7 @@ job_tree() {
           }
         }
       }
-      for (k = n; k >= 1; k--) {
+      for (k = 1; k <= n; k++) {
         p = q[k]
         print p, ((p in w) ? w[p] : "-")
       }
@@ -145,7 +156,7 @@ case "$cmd" in
     jd="$REG/$id"; mkdir -p "$jd"
     { echo "id=$id"; echo "cwd=$PWD"; echo "started=$(date -u +%FT%TZ 2>/dev/null || date)";
       echo "task=$(printf '%s' "${!#}" | tr '\n' ' ' | cut -c1-200)"; } > "$jd/meta"
-    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; rc=$?; [ -f "$jd/cancelled" ] || echo "$rc" >"$jd/rc" ) >/dev/null 2>&1 &
+    ( nohup "$DELEGATE" "$@" >"$jd/out" 2>"$jd/err"; rc=$?; if mkdir "$jd/.final" 2>/dev/null; then echo "$rc" >"$jd/rc.tmp" && mv -f "$jd/rc.tmp" "$jd/rc"; fi ) >/dev/null 2>&1 &
     echo $! > "$jd/pid"
     disown 2>/dev/null || true
     echo "$id"
@@ -191,13 +202,40 @@ case "$cmd" in
     ;;
   cancel)
     jd="$(jobdir "${1:-}")" || exit 1
+    if [ -f "$jd/cancelled" ]; then echo "already cancelled"; exit 0; fi
+    if [ -f "$jd/rc" ]; then echo "not running"; exit 0; fi
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      if ! mkdir "$jd/.final" 2>/dev/null; then
+        # Lost the atomic race to normal completion (subshell writing $jd/rc) or a concurrent cancel.
+        for _ in 1 2 3; do
+          { [ -f "$jd/cancelled" ] || [ -f "$jd/rc" ]; } && break
+          sleep 0.05 2>/dev/null || sleep 1
+        done
+        if [ -f "$jd/cancelled" ]; then echo "already cancelled"; else echo "not running"; fi
+        exit 0
+      fi
       : > "$jd/cancelled"
-      rm -f "$jd/rc" 2>/dev/null || true
       tree="$(job_tree "$pid" "$$")"
       is_win=0
       case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) is_win=1 ;; esac
+      if [ "$is_win" -eq 0 ]; then
+        # Freeze parents top-down BEFORE any child exits so parent shells (e.g. agy-handoff
+        # or fallback loops) cannot wake on a killed child and spawn a new process, then
+        # re-snapshot once to catch anything forked between ps and SIGSTOP.
+        while read -r p _; do
+          [ -n "$p" ] && { kill -STOP "$p" 2>/dev/null || true; }
+        done <<EOF
+$tree
+EOF
+        roots="$(printf '%s\n' "$tree" | awk '{print $1}')"
+        tree="$(job_tree "$roots" "$$")"
+        while read -r p _; do
+          [ -n "$p" ] && { kill -STOP "$p" 2>/dev/null || true; }
+        done <<EOF
+$tree
+EOF
+      fi
       while read -r p w; do
         [ -n "$p" ] || continue
         if [ "$is_win" -eq 1 ] && [ -n "${w:-}" ] && [ "$w" != "-" ]; then
@@ -207,6 +245,7 @@ case "$cmd" in
           esac
         fi
         kill "$p" 2>/dev/null || true
+        [ "$is_win" -eq 0 ] && { kill -CONT "$p" 2>/dev/null || true; }
       done <<EOF
 $tree
 EOF
@@ -224,7 +263,10 @@ EOF
       if [ "${alive:-0}" -eq 1 ]; then
         while read -r p _; do
           [ -n "$p" ] || continue
-          kill -0 "$p" 2>/dev/null && { kill -9 "$p" 2>/dev/null || true; }
+          if kill -0 "$p" 2>/dev/null; then
+            kill -9 "$p" 2>/dev/null || true
+            [ "$is_win" -eq 0 ] && { kill -CONT "$p" 2>/dev/null || true; }
+          fi
         done <<EOF
 $tree
 EOF
@@ -240,7 +282,6 @@ EOF
           sleep 0.05 2>/dev/null || sleep 1
         done
       fi
-      rm -f "$jd/rc" 2>/dev/null || true
       echo "cancelled $(basename "$jd")"
     elif [ -f "$jd/cancelled" ]; then
       echo "already cancelled"
