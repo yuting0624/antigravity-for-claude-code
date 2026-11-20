@@ -65,8 +65,8 @@ cannot write files even via the shell. Never reconstruct file contents in your r
 agy-delegate [options] "<task>"
 ```
 
-Options: `--tier flash|flash-lo|pro` (`flash` = Gemini 4 Hydrogen High, `flash-lo` = Hydrogen Low,
-`pro` = Gemini 4 Carbon High; plus `--effort low|medium|high|xhigh|max`) · `--dir .`
+Options: `--tier flash|flash-lo|pro|neon` (`flash` = Gemini 4 Hydrogen High, `flash-lo` = Hydrogen Low,
+`pro` / `neon` = Gemini 4 Neon High; plus `--effort low|medium|high|xhigh|max`) · `--dir .`
 (pass `.` or a literal subdirectory inside the current working directory — the `PreToolUse` gate blocks
 `--settings` and confines `-d`/`--dir`/`--add-dir` to `cwd`; always prefer `--dir .` over pasting code) · `--read-only` (`--allow-url` when URL reads are needed; neutralizes
 `agy 1.5.7+` default `Auto` mode) · `--mode accept-edits` (approves workspace file edits without

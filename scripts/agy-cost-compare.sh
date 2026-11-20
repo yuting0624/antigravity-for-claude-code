@@ -15,7 +15,7 @@
 #     with the real rates for your project before quoting numbers. Per 1M tokens, USD.
 #
 # Usage:
-#   agy-cost-compare.sh [-t flash|flash-lo|lite|pro|argon|flash-38] [-m model] [-e effort] [--yolo] "the task prompt"
+#   agy-cost-compare.sh [-t flash|flash-lo|lite|pro|neon|carbon|argon|flash-38] [-m model] [-e effort] [--yolo] "the task prompt"
 #
 # Env overrides (USD per 1M tokens):
 #   CLAUDE_IN_PER_M  CLAUDE_OUT_PER_M     (default: prices.json claude_opus,
@@ -54,11 +54,13 @@ PROMPT="${*:-}"
 # overridden below if agy-delegate reports a different model in AGY_USAGE or a runtime fallback.
 FLASH_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 4 Hydrogen (High)}"
 FLASH_LO_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 4 Hydrogen (Low)}"
-PRO_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Carbon (High)}"
+PRO_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Neon (High)}"
 case "$TIER" in
   flash)         RESOLVED_MODEL="$FLASH_MODEL" ;;
   flash-lo|lite) RESOLVED_MODEL="$FLASH_LO_MODEL" ;;
   pro)           RESOLVED_MODEL="$PRO_MODEL" ;;
+  neon)          RESOLVED_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_NEON:-Gemini 4 Neon (High)}" ;;
+  carbon)        RESOLVED_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_CARBON:-Gemini 4 Carbon (High)}" ;;
   argon)         RESOLVED_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_ARGON:-Gemini 4 Argon (High)}" ;;
   flash-38)      RESOLVED_MODEL="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_38:-Gemini 3.8 Flash (High)}" ;;
   *)             RESOLVED_MODEL="$FLASH_MODEL" ;;
@@ -111,6 +113,7 @@ import json, os, re, shlex, sys
 def deck_for_model(pm, tier, d):
     s = (pm or "").lower()
     for check, key in (
+        ("neon" in s, "gemini_neon"),
         ("carbon" in s, "gemini_carbon"),
         ("argon" in s, "gemini_argon"),
         ("hydrogen" in s, "gemini_hydrogen"),
@@ -127,7 +130,9 @@ def deck_for_model(pm, tier, d):
         if check and key in d:
             return d[key]
     tier_map = {
-        "pro": "gemini_carbon",
+        "pro": "gemini_neon",
+        "neon": "gemini_neon",
+        "carbon": "gemini_carbon",
         "argon": "gemini_argon",
         "flash-38": "gemini_flash_38",
     }
