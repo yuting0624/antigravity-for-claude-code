@@ -16,8 +16,8 @@
 #     plain-text fallback, non-empty stdout guarantee, and structured AGY_USAGE /
 #     AGY_SIGNAL telemetry on stderr.
 #   * Human-friendly Gemini 4 tier names (`flash` = Hydrogen High, `flash-lo` =
-#     Hydrogen Low, `pro` = Carbon High) with 1-hop `Available models:` pruning
-#     and a 6-hour fingerprinted warm fallback cache on plans without Carbon/Hydrogen.
+#     Hydrogen Low, `pro` = Neon High) with 1-hop `Available models:` pruning
+#     and a 6-hour fingerprinted warm fallback cache on plans without Neon/Carbon/Hydrogen.
 #
 # Usage:
 #   agy-delegate.sh [options] "the task prompt"
@@ -25,8 +25,8 @@
 #
 # Options:
 #   -t, --tier <flash|flash-lo|pro>  Model tier (default: flash = Gemini 4 Hydrogen High;
-#                                    flash-lo/lite = Hydrogen Low; pro = Gemini 4 Carbon High;
-#                                    power aliases: argon, flash-38)
+#                                    flash-lo/lite = Hydrogen Low; pro = Gemini 4 Neon High;
+#                                    power aliases: neon, carbon, argon, flash-38)
 #   -e, --effort <low|medium|high|xhigh|max>
 #                                    Reasoning effort override (rewrites tier display-name suffix,
 #                                    or passes --effort to agy for base slugs / gateway models)
@@ -303,7 +303,7 @@ adapt_fallback_effort() {
   local m="$1" eff="$2" eff_use="$2"
   [ -n "$eff" ] || { printf '%s' "$m"; return 0; }
   case "$m" in
-    *"Hydrogen"*)
+    *"Hydrogen"*|*"Neon"*)
       [ "$eff_use" = "max" ] && eff_use="xhigh" ;;
     *"3.1 Pro ("*)
       case "$eff_use" in low) eff_use="low" ;; *) eff_use="high" ;; esac ;;
@@ -389,15 +389,17 @@ usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; ex
 
 # --- map a tier to an exact agy model name (see `agy models`) ---
 # Primary 3-tier Gemini 4 lineup: flash = Hydrogen (High), flash-lo = Hydrogen (Low),
-# pro = Carbon (High); plus power/cost aliases argon and flash-38.
+# pro = Neon (High); plus power/cost aliases neon, carbon, argon, and flash-38.
 model_for_tier() {
   case "$1" in
     flash)         echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 4 Hydrogen (High)}" ;;
     flash-lo|lite) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 4 Hydrogen (Low)}" ;;
-    pro)           echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Carbon (High)}" ;;
+    pro)           echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Neon (High)}" ;;
+    neon)          echo "${CLAUDE_PLUGIN_OPTION_TIER_NEON:-Gemini 4 Neon (High)}" ;;
+    carbon)        echo "${CLAUDE_PLUGIN_OPTION_TIER_CARBON:-Gemini 4 Carbon (High)}" ;;
     argon)         echo "${CLAUDE_PLUGIN_OPTION_TIER_ARGON:-Gemini 4 Argon (High)}" ;;
     flash-38)      echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_38:-Gemini 3.8 Flash (High)}" ;;
-    *) die "unknown tier '$1' (use flash | flash-lo | lite | pro | argon | flash-38)" ;;
+    *) die "unknown tier '$1' (use flash | flash-lo | lite | pro | neon | carbon | argon | flash-38)" ;;
   esac
 }
 
@@ -485,7 +487,7 @@ if [ -z "$MODEL" ]; then
     MODEL="$CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL"
   else
     case "$TIER" in
-      flash|flash-lo|lite|pro|argon|flash-38) ;;
+      flash|flash-lo|lite|pro|neon|carbon|argon|flash-38) ;;
       *) echo "agy-delegate: invalid default tier '$TIER' (set CLAUDE_PLUGIN_OPTION_DEFAULT_TIER to flash|flash-lo|pro); using flash" >&2; TIER="flash" ;;
     esac
     MODEL="$(model_for_tier "$TIER")"
@@ -678,7 +680,15 @@ raw_fb_cands=()
 case "$USAGE_TIER" in
   pro)
     if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-}" ]; then
-      raw_fb_cands=("Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+      raw_fb_cands=("Gemini 4 Carbon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+    fi ;;
+  neon)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_NEON:-}" ]; then
+      raw_fb_cands=("Gemini 4 Carbon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+    fi ;;
+  carbon)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_CARBON:-}" ]; then
+      raw_fb_cands=("Gemini 4 Neon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
     fi ;;
   flash)
     if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-}" ]; then
