@@ -373,17 +373,19 @@ check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
 out=$(STUB_MODE=badmodel "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
 
-# #104 + 0.31.0: unremapped --tier pro falls back from Gemini 4 Carbon (High) to
-# Gemini 4 Argon (High), then Gemini 3.1 Pro, then Gemini 3.1 Pro (High);
+# #104 + Neon default: unremapped --tier pro falls back from Gemini 4 Neon (High) to
+# Gemini 4 Carbon (High), Gemini 4 Argon (High), Gemini 3.1 Pro, then Gemini 3.1 Pro (High);
 # explicit tier_pro remap does NOT fall back.
 out=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO" "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
-check "pro tier falls back to Gemini 4 Argon (High) when Carbon is unavailable" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
-check "pro tier fallback emits stderr notice (#104)" 0 "$rc" "pro fell back to Gemini 4 Argon (High)" "$out"
-out_fb1=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb1=$?
-check "pro tier falls back to Gemini 3.1 Pro when Carbon and Argon are unavailable (#104)" 0 "$rc_fb1" "--model Gemini 3.1 Pro" "$out_fb1"
-out_fb2=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)|Gemini 3.1 Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb2=$?
-check "pro tier falls back to Gemini 3.1 Pro (High) when Carbon, Argon, and 3.1 Pro are unavailable (#104)" 0 "$rc_fb2" "--model Gemini 3.1 Pro (High)" "$out_fb2"
-err_fb=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_fb=$?
+check "pro tier falls back to Gemini 4 Carbon (High) when Neon is unavailable" 0 "$rc" "--model Gemini 4 Carbon (High)" "$out"
+check "pro tier fallback emits stderr notice (#104)" 0 "$rc" "pro fell back to Gemini 4 Carbon (High)" "$out"
+out_fb_argon=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb_argon=$?
+check "pro tier falls back to Gemini 4 Argon (High) when Neon and Carbon are unavailable" 0 "$rc_fb_argon" "--model Gemini 4 Argon (High)" "$out_fb_argon"
+out_fb1=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb1=$?
+check "pro tier falls back to Gemini 3.1 Pro when Neon, Carbon, and Argon are unavailable (#104)" 0 "$rc_fb1" "--model Gemini 3.1 Pro" "$out_fb1"
+out_fb2=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)|Gemini 3.1 Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb2=$?
+check "pro tier falls back to Gemini 3.1 Pro (High) when Neon, Carbon, Argon, and 3.1 Pro are unavailable (#104)" 0 "$rc_fb2" "--model Gemini 3.1 Pro (High)" "$out_fb2"
+err_fb=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_fb=$?
 check "pro tier fallback records Gemini 3.1 Pro in AGY_USAGE (#104)" 0 "$rc_fb" '"model": "Gemini 3.1 Pro"' "$err_fb"
 out_remap_fb=$(STUB_MODE=args STUB_REJECT_MODEL="Custom Pro" CLAUDE_PLUGIN_OPTION_TIER_PRO="Custom Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_remap_fb=$?
 check "explicit tier_pro remap does not fall back to Gemini 3.1 Pro (#104)" 14 "$rc_remap_fb" "MODEL_UNAVAILABLE" "$out_remap_fb"
@@ -2141,6 +2143,8 @@ default = m.group(1)
 dl = default.lower()
 if "hydrogen" in dl:
     key = "gemini_hydrogen"
+elif "neon" in dl:
+    key = "gemini_neon"
 elif "carbon" in dl:
     key = "gemini_carbon"
 elif "argon" in dl:
@@ -2167,17 +2171,19 @@ if [ "$out" = "OK" ]; then
   echo "ok: prices.json gemini_flash matches the shipped flash tier"; PASS=$((PASS+1));
 else echo "FAIL: $out"; FAIL=$((FAIL+1)); fi
 
-# agy-cost-compare --tier pro uses gemini_carbon / gemini_argon (out 10.00) by default
-# and gemini_pro (out 12.00) when remapped or fallen back to 3.1 Pro.
-cc_argon=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro uses gemini_carbon (out 10.00) by default" 0 "$?" "10.00" "$cc_argon"
-cc_argon_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro uses gemini_argon (out 10.00) after fallback from Carbon to Argon" 0 "$?" "10.00" "$cc_argon_fb"
+# agy-cost-compare --tier pro uses gemini_neon (out 15.00) by default,
+# gemini_carbon / gemini_argon (out 10.00) on fallback, and gemini_pro (out 12.00) on 3.1 Pro.
+cc_neon=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro uses gemini_neon (out 15.00) by default" 0 "$?" "15.00" "$cc_neon"
+cc_neon_alias=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier neon "hi" 2>/dev/null)
+check "agy-cost-compare --tier neon uses gemini_neon (out 15.00)" 0 "$?" "15.00" "$cc_neon_alias"
+cc_carbon_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro uses gemini_carbon (out 10.00) after fallback from Neon to Carbon" 0 "$?" "10.00" "$cc_carbon_fb"
 cc_pro31=$(STUB_MODE=text CLAUDE_PLUGIN_OPTION_TIER_PRO="Gemini 3.1 Pro" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) when remapped to 3.1 Pro" 0 "$?" "12.00" "$cc_pro31"
 cc_pro31_pc=$(STUB_MODE=text CLAUDE_CONFIG_DIR="$PCDIR" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro reads tier_pro from settings.json pluginConfigs (#101)" 0 "$?" "12.00" "$cc_pro31_pc"
-cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) after runtime fallback to 3.1 Pro (#104)" 0 "$?" "12.00" "$cc_pro31_fb"
 cc_fl38_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_FLASH" "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
 check "agy-cost-compare --tier flash switches from Hydrogen (out 7.50) to 3.8 Flash (out 3.75) after fallback" 0 "$?" "3.75" "$cc_fl38_fb"
@@ -2194,7 +2200,7 @@ echo "STUB_OK"
 STUB
 chmod +x "$BADU_BIN/agy"
 cc_badu=$(PATH="$BADU_BIN:$PATH" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro survives malformed AGY_USAGE without reverting to flash rates" 0 "$?" "10.00" "$cc_badu"
+check "agy-cost-compare --tier pro survives malformed AGY_USAGE without reverting to flash rates" 0 "$?" "15.00" "$cc_badu"
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"
@@ -2908,6 +2914,12 @@ echo "== v0.31.0 Gemini 4 tiers, 2-layer fallback cache, effort, scoped settings
 # 1. Tier aliases + --effort suffix rewriting / raw flag forwarding
 out=$(STUB_MODE=args "$DELEGATE" --tier lite "hi" 2>/dev/null); rc=$?
 check "lite tier alias -> Gemini 4 Hydrogen (Low)" 0 "$rc" "--model Gemini 4 Hydrogen (Low)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier neon "hi" 2>/dev/null); rc=$?
+check "neon tier alias -> Gemini 4 Neon (High)" 0 "$rc" "--model Gemini 4 Neon (High)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier neon --effort xhigh "hi" 2>/dev/null); rc=$?
+check "--tier neon --effort xhigh rewrites display suffix to (XHigh)" 0 "$rc" "--model Gemini 4 Neon (XHigh)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier carbon "hi" 2>/dev/null); rc=$?
+check "carbon tier alias -> Gemini 4 Carbon (High)" 0 "$rc" "--model Gemini 4 Carbon (High)" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --tier argon "hi" 2>/dev/null); rc=$?
 check "argon tier alias -> Gemini 4 Argon (High)" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --tier flash-38 "hi" 2>/dev/null); rc=$?
@@ -2932,11 +2944,11 @@ check "--tier flash --effort xhigh adapts fallback to Gemini 3.8 Flash (High)" 0
 # 2. Layer 1: `Available models:` 1-hop Cold-Miss Jump (skips intermediate unavailable fallbacks)
 L1_CNT="$TMP/l1-count"; rm -f "$L1_CNT"
 out=$(STUB_MODE=args STUB_CALL_COUNT_FILE="$L1_CNT" \
-      STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)|Gemini 3.1 Pro|Gemini 3.1 Pro (High)|Gemini 3.1 Pro (Low)|Gemini 4 Hydrogen (High)" \
+      STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)|Gemini 3.1 Pro|Gemini 3.1 Pro (High)|Gemini 3.1 Pro (Low)|Gemini 4 Hydrogen (High)" \
       STUB_AVAIL_MODELS="  gemini-3.8-flash-high           Gemini 3.8 Flash (High)\n  gemini-3.5-flash-lite           Gemini 3.5 Flash Lite" \
       "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
-check "Layer 1: Available models jumps straight from Carbon to Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
-check "Layer 1: 1-hop jump makes exactly 2 agy calls (skips 5 intermediate fallbacks)" 0 0 "2" "$(cat "$L1_CNT" 2>/dev/null)"
+check "Layer 1: Available models jumps straight from Neon to Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
+check "Layer 1: 1-hop jump makes exactly 2 agy calls (skips 6 intermediate fallbacks)" 0 0 "2" "$(cat "$L1_CNT" 2>/dev/null)"
 
 L1_NOMATCH="$TMP/l1-nomatch"; rm -f "$L1_NOMATCH"
 out=$(STUB_MODE=args STUB_CALL_COUNT_FILE="$L1_NOMATCH" \

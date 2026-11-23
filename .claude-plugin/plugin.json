@@ -22,7 +22,7 @@
     "default_tier": {
       "type": "string",
       "title": "Default Antigravity tier",
-      "description": "Tier used by agy-delegate.sh when --tier is not passed. One of: flash (Gemini 4 Hydrogen High, default — fast agentic bulk work), flash-lo (Gemini 4 Hydrogen Low, cheapest/trivial), pro (Gemini 4 Carbon High, frontier reasoning/review).",
+      "description": "Tier used by agy-delegate.sh when --tier is not passed. One of: flash (Gemini 4 Hydrogen High, default — fast agentic bulk work), flash-lo (Gemini 4 Hydrogen Low, cheapest/trivial), pro (Gemini 4 Neon High, frontier reasoning/review), or aliases neon, carbon, argon, flash-38.",
       "default": "flash"
     },
     "timeout": {
@@ -58,7 +58,13 @@
     "tier_pro": {
       "type": "string",
       "title": "Model for the 'pro' tier",
-      "description": "Override the exact agy model the 'pro' tier maps to (default: Gemini 4 Carbon (High); auto-falls-back through Gemini 4 Argon (High) and Gemini 3.1 Pro when Carbon is unavailable on the plan). Use a name from `agy models`.",
+      "description": "Override the exact agy model the 'pro' tier maps to (default: Gemini 4 Neon (High); auto-falls-back through Gemini 4 Carbon (High), Gemini 4 Argon (High), and Gemini 3.1 Pro when Neon is unavailable on the plan). Use a name from `agy models`.",
+      "default": ""
+    },
+    "tier_neon": {
+      "type": "string",
+      "title": "Model for the 'neon' tier alias",
+      "description": "Override the exact agy model the 'neon' tier alias maps to (default: Gemini 4 Neon (High)). Use a name from `agy models`.",
       "default": ""
     },
     "structured_output": {
