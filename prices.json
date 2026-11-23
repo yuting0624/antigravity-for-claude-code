@@ -55,13 +55,13 @@
     "out": 7.5,
     "cached_in": 0.15
   },
-  "_comment": "Per-1M-token USD on Vertex AI / Gemini API (global endpoints; regional/multi-region carry a ~10% premium). Re-verified 2026-11-15 against cloud.google.com/vertex-ai/generative-ai/pricing and platform.claude.com/docs/en/about-claude/pricing for agy 1.5.9 models: Claude Opus 5.5 (4/20), Claude Sonnet 5.5 (2/10), Gemini 4 Carbon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Argon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Hydrogen (1.50/7.50, cached 0.075), Gemini 3.8 Flash (0.75/3.75 promo through 2026-12-31), Gemini 3.1 Pro (2/12, cached 0.20). VERIFY against your own invoice before quoting: some pay-as-you-go projects already bill standard 4/20 on Argon/Carbon, and promo end dates can move.",
+  "_comment": "Per-1M-token USD on Vertex AI / Gemini API (global endpoints; regional/multi-region carry a ~10% premium). Re-verified 2026-11-19 against cloud.google.com/vertex-ai/generative-ai/pricing and ai.google.dev/gemini-api/docs/pricing: Claude Opus 5.5 (4/20), Claude Sonnet 5.5 (2/10), Gemini 4 Neon (3/15, cached 0.15), Gemini 4 Carbon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Argon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Hydrogen (1.50/7.50, cached 0.075), Gemini 3.8 Flash (0.75/3.75 promo through 2026-12-31), Gemini 3.1 Pro (2/12, cached 0.20). VERIFY against your own invoice before quoting: some pay-as-you-go projects already bill standard 4/20 on Argon/Carbon, and promo end dates can move.",
   "_sources": [
     "cloud.google.com/vertex-ai/generative-ai/pricing",
     "ai.google.dev/gemini-api/docs/pricing",
     "platform.claude.com/docs/en/about-claude/pricing"
   ],
-  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only (Opus 5.5 / Sonnet 5.5: 5-minute cache write = 1.25x input, cache read = 0.05x input — the Opus 4.x generation read at 0.10x). Gemini prices cached input at a flat rate (cached_in: 95% off on Gemini 4 Carbon/Argon/Hydrogen >= 4,096 tokens, 90% off on Gemini 3.x) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
+  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only (Opus 5.5 / Sonnet 5.5: 5-minute cache write = 1.25x input, cache read = 0.05x input — the Opus 4.x generation read at 0.10x). Gemini prices cached input at a flat rate (cached_in: 95% off on Gemini 4 Neon/Carbon/Argon/Hydrogen >= 4,096 tokens, 90% off on Gemini 3.x) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
   "claude_opus": {
     "in": 4.0,
     "out": 20.0
@@ -75,7 +75,13 @@
     "out": 12.0,
     "cached_in": 0.2
   },
-  "_gemini_carbon_argon_note": "Gemini 4 Carbon (`pro` tier default since 0.31.0) and Gemini 4 Argon (`argon` alias and first `pro` fallback on Google AI Pro plans where Carbon is Ultra-only) carry identical global list prices: introductory 2.00 / 10.00 / 0.10 through 2026-11-30, moving to standard `_post_2026_12` (4.00 / 20.00 / 0.20) on 2026-12-01 — copy `_post_2026_12` over then.",
+  "_gemini_neon_note": "Gemini 4 Neon (`pro` tier default and `neon` alias): global list rate 3.00 in / 15.00 out (includes thinking tokens) / 0.15 cached_in (95% implicit prefix cache discount); non-global endpoints +10% (3.30 / 16.50 / 0.165). Verified 2026-11-19.",
+  "gemini_neon": {
+    "in": 3.0,
+    "out": 15.0,
+    "cached_in": 0.15
+  },
+  "_gemini_carbon_argon_note": "Gemini 4 Carbon (`carbon` alias and first `pro` fallback) and Gemini 4 Argon (`argon` alias and second `pro` fallback) carry identical global list prices: introductory 2.00 / 10.00 / 0.10 through 2026-11-30, moving to standard `_post_2026_12` (4.00 / 20.00 / 0.20) on 2026-12-01 — copy `_post_2026_12` over then.",
   "gemini_carbon": {
     "in": 2.0,
     "out": 10.0,

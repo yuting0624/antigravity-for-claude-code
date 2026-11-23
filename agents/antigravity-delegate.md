@@ -65,15 +65,15 @@ cannot write files even via the shell. Never reconstruct file contents in your r
 agy-delegate [options] "<task>"
 ```
 
-Options: `--tier flash|flash-lo|pro` (`flash` = Gemini 4 Hydrogen High, `flash-lo` = Hydrogen Low,
-`pro` = Gemini 4 Carbon High; plus `--effort low|medium|high|xhigh|max`) · `--dir .`
+Options: `--tier flash|flash-lo|pro|neon|carbon|argon|flash-38` (`flash` = Gemini 4 Hydrogen High, `flash-lo` = Hydrogen Low,
+`pro` / `neon` = Gemini 4 Neon High, `carbon` = Gemini 4 Carbon High, `argon` = Gemini 4 Argon High, `flash-38` = Gemini 3.8 Flash High; plus `--effort low|medium|high|xhigh|max`) · `--dir .`
 (pass `.` or a literal subdirectory inside the current working directory — the `PreToolUse` gate blocks
 `--settings` and confines `-d`/`--dir`/`--add-dir` to `cwd`; always prefer `--dir .` over pasting code) · `--read-only` (`--allow-url` when URL reads are needed; neutralizes
 `agy 1.5.7+` default `Auto` mode) · `--mode accept-edits` (approves workspace file edits without
 terminal on `agy 1.5.7+`) · `--yolo` (approves all tools and shell commands — a grant over the machine,
 not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert under
 `--yolo`) · `--json-schema '<schema>'` ·
-`--timeout 10m` · `-c`/`--continue` to hold state on the cheap side.
+`--timeout <dur>` (e.g. `10m`, `900s`, or bare seconds `900`; defaults to `5m` read/plan, `25m` write runs — note `25m` exceeds Claude Code's 10m synchronous Bash cap, so pass `timeout: 600000` on Bash and detach multi-minute interactive write jobs with `agy-job start`) · `-c`/`--continue` to hold state on the cheap side.
 
 ## Cost discipline (why this subagent exists)
 
@@ -93,7 +93,7 @@ not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert unde
 
 - **Write / build** (scaffold, implement, generate tests, migrate): agentic mode, and the
   write needs a grant. For pure file edits inside `--dir` on `agy 1.5.7+`, `--mode accept-edits`
-  auto-approves workspace `write_file` without granting shell execution; when the task also runs
+  auto-approves workspace `write_file` without granting shell execution; headless `--mode accept-edits` denies every shell command (`run_command`), so when using `--mode accept-edits` without `--yolo`, explicitly instruct `agy` in the prompt to **create/edit files only and NOT run shell, test, linter, or git commands** (otherwise the run hits a command denial as soon as it tries to verify). When the task also runs
   tests/linters or needs broader tools, pass `--yolo` (or rely on a `permissions.allow`
   `write_file(<dir>)` rule in `~/.gemini/antigravity-cli/settings.json`). If they say a rule is in place and the write is
   still denied (soft on older agy, a hard error by 1.1.13, soft again from 1.1.20 and named in `denied_actions` since 1.1.27 — the wrapper reports exit 15
@@ -110,9 +110,10 @@ not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert unde
 
 1. agy's `===DIGEST===` (files changed, key decisions, context-for-next-step).
 2. A short **"VERIFY THIS"** line stating exactly what the caller must run/check
-   (e.g. "run `pytest -q`", "review the diff on branch X", "corroborate the cited
+   (e.g. "run `pytest -q`", "check `git status` and review `git diff` on branch X", "corroborate the cited
    URLs"). Never assert the work is correct or done — agy's self-reported pass is a
    claim, not evidence.
+3. **Never assert workspace edit state.** Because your `PreToolUse` gate blocks `git` and shell commands, you cannot inspect workspace state: never claim "no edits were made" or "nothing changed" when `agy` returns empty output or exits non-zero (`3`, `12`, `15`), as `agy` may have modified files before stopping. Report only the wrapper exit code, any `AGY_SIGNAL`, and the returned digest (or that stdout was empty), and always tell the caller in **VERIFY THIS** to check `git status` and `git diff`.
 
 ## Structured failures (wrapper exit codes)
 
@@ -120,6 +121,9 @@ The wrapper exits non-zero and prints an `AGY_SIGNAL {...}` line on failure:
 
 - `10` quota / rate limit → report it; suggest the caller retry later with `--continue`.
 - `11` auth required → tell the caller to run `agy` once interactively to sign in.
-- `12` timeout → suggest a larger `--timeout` or a narrower task.
+- `12` timeout → suggest a larger `--timeout` or a narrower task (and tell the caller to check `git status` / `git diff` on write tasks).
 - `13` agy missing → report the install step (https://antigravity.google/docs/cli-using).
-- `2` generic agy failure · `3` empty output → report the stderr and suggest `--tier pro` or a sharper spec.
+- `14` model unavailable (`MODEL_UNAVAILABLE`) → report the unavailable model and suggest checking `agy models` or using an unremapped tier.
+- `15` permission denied (`PERMISSION_DENIED`, covering both the soft deny from 1.1.3+ / 1.1.20+ and 1.1.13's hard error, naming the refused tool from `denied_actions` or stderr) → report the refused tool from `AGY_SIGNAL`, tell the caller to check `git status` / `git diff` for partial edits, and suggest `--mode accept-edits` (file edits only), a `permissions.allow` rule, or `--yolo`.
+- `16` CLI flag/option error (`CLI_FLAG_ERROR`) → `agy` rejected a CLI flag or option value; report the relayed stderr and fix the invocation rather than treating it as a permission or timeout error.
+- `2` generic agy failure · `3` empty output → report the exit code and stderr (never claim no edits occurred on a write run; tell the caller to check `git status`), and suggest `--tier pro` or a sharper spec.

@@ -16,8 +16,8 @@
 #     plain-text fallback, non-empty stdout guarantee, and structured AGY_USAGE /
 #     AGY_SIGNAL telemetry on stderr.
 #   * Human-friendly Gemini 4 tier names (`flash` = Hydrogen High, `flash-lo` =
-#     Hydrogen Low, `pro` = Carbon High) with 1-hop `Available models:` pruning
-#     and a 6-hour fingerprinted warm fallback cache on plans without Carbon/Hydrogen.
+#     Hydrogen Low, `pro` = Neon High) with 1-hop `Available models:` pruning
+#     and a 6-hour fingerprinted warm fallback cache on plans without Neon/Carbon/Hydrogen.
 #
 # Usage:
 #   agy-delegate.sh [options] "the task prompt"
@@ -25,13 +25,15 @@
 #
 # Options:
 #   -t, --tier <flash|flash-lo|pro>  Model tier (default: flash = Gemini 4 Hydrogen High;
-#                                    flash-lo/lite = Hydrogen Low; pro = Gemini 4 Carbon High;
-#                                    power aliases: argon, flash-38)
+#                                    flash-lo/lite = Hydrogen Low; pro = Gemini 4 Neon High;
+#                                    power aliases: neon, carbon, argon, flash-38)
 #   -e, --effort <low|medium|high|xhigh|max>
 #                                    Reasoning effort override (rewrites tier display-name suffix,
 #                                    or passes --effort to agy for base slugs / gateway models)
 #   -d, --dir, --add-dir <path>      Add a workspace dir (repeatable)
-#       --timeout <dur>              Print-mode timeout, e.g. 10m, or 0 for unbounded (default: 5m)
+#       --timeout <dur>              Print-mode timeout, e.g. 10m, 900s, bare seconds 900, or 0 for
+#                                    unbounded (default: 5m for read/plan; 25m for write runs with
+#                                    --mode accept-edits, --mode auto, or --yolo)
 #       --read-only                  Enforce read-only session settings on agy >= 1.4.10
 #                                    (agentMode="", toolPermission="request-review", allow=[]);
 #                                    neutralizes agy 1.5.7+ default Auto mode
@@ -70,9 +72,12 @@
 #             | 15 permission denied — a tool needed permission headless. BOTH shapes:
 #             |    the soft deny (rc 0, empty stdout, "auto-denied" on stderr — agy 1.1.3+, and
 #             |    again from 1.1.20; since 1.1.27 the envelope also names the tool in
-#             |    denied_actions, measured on 1.2.0) and 1.1.13's hard error (rc 1, "user
-#             |    denied permission", 1.1.13-1.1.19). Add a permissions.allow rule, or --yolo.
+#             |    denied_actions, measured on 1.2.0, with stderr tool-name fallback when absent)
+#             |    and 1.1.13's hard error (rc 1, "user denied permission", 1.1.13-1.1.19).
+#             |    Add a permissions.allow rule, or --yolo.
 #             |    URL reads need a grant too since 1.1.28 (read_url(<target>), --allow-url, or --yolo).
+#             | 16 cli flag/option error (CLI_FLAG_ERROR) — agy rejected a CLI flag or option
+#             |    value (e.g. invalid --settings JSON, invalid --json-schema, or unknown flag)
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
 # orchestrators (e.g. agy-job.sh) can react without scraping prose:
@@ -91,7 +96,8 @@ set -euo pipefail
 load_plugin_options
 
 TIER="${CLAUDE_PLUGIN_OPTION_DEFAULT_TIER:-flash}"
-TIMEOUT="${CLAUDE_PLUGIN_OPTION_TIMEOUT:-5m}"
+TIMEOUT=""
+TIMEOUT_EXPLICIT=0
 TIER_EXPLICIT=0
 MODEL=""
 EFFORT=""
@@ -279,11 +285,21 @@ effort_display_label() {
   esac
 }
 
-# Rewrite `(Low|Medium|High|XHigh|Max)` at the end of a display name ($1) to effort ($2).
-# Returns 0 and prints the rewritten name when $1 has a parenthesized effort suffix; returns 1
-# when $1 is an effortless name/slug (caller should pass `--effort` directly to agy).
+# Rewrite `(Low|Medium|High|XHigh|Max)` at the end of a display name ($1) to effort ($2),
+# respecting per-family effort caps (`max` -> `xhigh` on Hydrogen/Neon; `xhigh|max` -> `high`
+# on Carbon/Argon/Flash; non-low -> `high` on 3.1 Pro). Returns 0 and prints the rewritten
+# name when $1 has a parenthesized effort suffix; returns 1 when $1 is an effortless name/slug
+# (caller should pass `--effort` directly to agy).
 rewrite_display_effort() {
   local m="$1" eff="$2" lbl prefix
+  case "$m" in
+    *"Hydrogen"*|*"Neon"*)
+      [ "$eff" = "max" ] && eff="xhigh" ;;
+    *"3.1 Pro ("*)
+      case "$eff" in low) eff="low" ;; *) eff="high" ;; esac ;;
+    *"Carbon"*|*"Argon"*|*"Flash ("*)
+      case "$eff" in xhigh|max) eff="high" ;; esac ;;
+  esac
   lbl="$(effort_display_label "$eff")"
   shopt -s nocasematch
   case "$m" in
@@ -297,20 +313,12 @@ rewrite_display_effort() {
   return 1
 }
 
-# Adapt a fallback model ($1) to a requested effort ($2), respecting per-family effort caps
-# (e.g. xhigh/max caps to High on Carbon/Argon/Flash/3.1 Pro; medium maps to High on 3.1 Pro).
+# Adapt a fallback model ($1) to a requested effort ($2), leaving effortless names (e.g.
+# "Gemini 3.1 Pro" or "Gemini 3.5 Flash") unchanged.
 adapt_fallback_effort() {
-  local m="$1" eff="$2" eff_use="$2"
+  local m="$1" eff="$2"
   [ -n "$eff" ] || { printf '%s' "$m"; return 0; }
-  case "$m" in
-    *"Hydrogen"*)
-      [ "$eff_use" = "max" ] && eff_use="xhigh" ;;
-    *"3.1 Pro ("*)
-      case "$eff_use" in low) eff_use="low" ;; *) eff_use="high" ;; esac ;;
-    *"Carbon"*|*"Argon"*|*"Flash ("*)
-      case "$eff_use" in xhigh|max) eff_use="high" ;; esac ;;
-  esac
-  rewrite_display_effort "$m" "$eff_use" || printf '%s' "$m"
+  rewrite_display_effort "$m" "$eff" || printf '%s' "$m"
 }
 
 # True when an agy error blob says the requested --model does not exist or is unavailable
@@ -370,6 +378,131 @@ signal() {
   tee_usage "$line"
 }
 
+# True when agy exited before starting a run because it rejected a CLI flag, option value,
+# or positional argument (Go flag.CommandLine.Parse errors + `Usage of agy:` on rc 2, or
+# pre-flight --settings / --json-schema / --input-format validation errors on rc 1/2).
+# Checked BEFORE permission and timeout classifiers because `Usage of agy:` mentions both
+# `--dangerously-skip-permissions` and `--print-timeout`.
+cli_flag_error_blob() {
+  local b="$1" rc="${2:-1}"
+  shopt -s nocasematch
+  case "$b" in
+    *"flag provided but not defined"*|*"flags provided but not defined"*|\
+    *"unknown flag"*|*"unknown shorthand flag"*|*"flag needs an argument"*|\
+    *"invalid boolean value"*|*"invalid value "*" for flag "*|\
+    *"missing unit in duration"*|*"unknown unit "*" in duration"*|\
+    *"invalid --json-schema"*|*"reading --json-schema"*|*"--json-schema can only be used"*|\
+    *"reading --settings file"*|*"--settings must be a json object"*|\
+    *"invalid --settings"*|*"error: --settings:"*|\
+    *"unknown --input-format"*|*"--input-format "*" requires --output-format"*|\
+    *"--print and --prompt-interactive are mutually exclusive"*|\
+    *"as its prompt, so the intended prompt was left"*|*"error: unexpected argument "*)
+      shopt -u nocasematch; return 0 ;;
+  esac
+  shopt -u nocasematch
+  if [ "$rc" -eq 2 ]; then
+    case "$b" in
+      "Usage of "*|*$'\n'"Usage of "*) return 0 ;;
+    esac
+  fi
+  return 1
+}
+
+# Fallback when JSON `.denied_actions` (agy 1.1.27+) is absent or empty (plain-text mode,
+# agy 1.1.3–1.1.26 soft-denies, or hard-error denials): extract ONLY tool/action identifiers
+# from diagnostic text ($ERR / $JSON_ERROR — never $OUT model replies), never paths or args.
+extract_denied_actions() {
+  local raw="${1:-}" cands="" out="" line lc seg q rest tok prefix
+  [ -n "$raw" ] || return 0
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    [ -n "$line" ] || continue
+    lc="$(printf '%s' "$line" | tr '[:upper:]' '[:lower:]')"
+    case "$lc" in
+      *"required the "*\"*" permission"*)
+        seg="$line"
+        shopt -s nocasematch
+        seg="${seg#*required the }"
+        seg="${seg%% permission*}"
+        shopt -u nocasematch
+        rest="$seg"
+        while :; do
+          case "$rest" in
+            *\"*\"*)
+              rest="${rest#*\"}"
+              q="${rest%%\"*}"
+              case "$q" in ''|*[!A-Za-z0-9_:-]*|[!A-Za-z_]*) ;; *) cands="$cands $q" ;; esac
+              rest="${rest#*\"}" ;;
+            *) break ;;
+          esac
+        done ;;
+    esac
+    case "$lc" in
+      *\"*" tool"*"require"*"approval"*)
+        seg="$line"
+        shopt -s nocasematch
+        seg="${seg%% tool*}"
+        shopt -u nocasematch
+        rest="$seg"
+        while :; do
+          case "$rest" in
+            *\"*\"*)
+              rest="${rest#*\"}"
+              q="${rest%%\"*}"
+              case "$q" in ''|*[!A-Za-z0-9_:-]*|[!A-Za-z_]*) ;; *) cands="$cands $q" ;; esac
+              rest="${rest#*\"}" ;;
+            *) break ;;
+          esac
+        done ;;
+    esac
+    case "$lc" in
+      *"permission check failed for "*)
+        rest="$line"
+        shopt -s nocasematch
+        rest="${rest#*permission check failed for }"
+        shopt -u nocasematch
+        tok="${rest%%[!A-Za-z0-9_:-]*}"
+        case "$tok" in ''|*[!A-Za-z0-9_:-]*|[!A-Za-z_]*) ;; *) cands="$cands $tok" ;; esac ;;
+    esac
+    case "$lc" in
+      *"denied permission for "*)
+        rest="$line"
+        shopt -s nocasematch
+        rest="${rest#*denied permission for }"
+        shopt -u nocasematch
+        tok="${rest%%[!A-Za-z0-9_:-]*}"
+        case "$tok" in ''|*[!A-Za-z0-9_:-]*|[!A-Za-z_]*) ;; *) cands="$cands $tok" ;; esac ;;
+    esac
+    case "$lc" in
+      *"auto-denied"*|*"denied permission"*|*"permission denied"*)
+        rest="$line"
+        while :; do
+          case "$rest" in
+            *\(*)
+              prefix="${rest%%\(*}"
+              rest="${rest#*\(}"
+              case "$rest" in s\)*) continue ;; esac
+              tok="${prefix##*[!A-Za-z0-9_:-]}"
+              case "$tok" in ''|*[!A-Za-z0-9_:-]*|[!A-Za-z_]*) ;; *) cands="$cands $tok" ;; esac ;;
+            *) break ;;
+          esac
+        done ;;
+    esac
+  done <<EOF
+$raw
+EOF
+  for tok in $cands; do
+    case "$tok" in
+      tool|tools|action|actions|permission|permissions|rule|rules|e|g) continue ;;
+    esac
+    case " $out " in
+      *" $tok "*) ;;
+      *) out="${out:+$out }$tok" ;;
+    esac
+  done
+  printf '%s' "$out"
+}
+
 permission_denied() {   # $1 = "shown" when the caller already echoed $ERR
   if [ "${1:-}" != shown ] && [ -s "$ERR" ]; then
     cat "$ERR" >&2
@@ -389,15 +522,17 @@ usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; ex
 
 # --- map a tier to an exact agy model name (see `agy models`) ---
 # Primary 3-tier Gemini 4 lineup: flash = Hydrogen (High), flash-lo = Hydrogen (Low),
-# pro = Carbon (High); plus power/cost aliases argon and flash-38.
+# pro = Neon (High); plus power/cost aliases neon, carbon, argon, and flash-38.
 model_for_tier() {
   case "$1" in
     flash)         echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 4 Hydrogen (High)}" ;;
     flash-lo|lite) echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 4 Hydrogen (Low)}" ;;
-    pro)           echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Carbon (High)}" ;;
+    pro)           echo "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Neon (High)}" ;;
+    neon)          echo "${CLAUDE_PLUGIN_OPTION_TIER_NEON:-Gemini 4 Neon (High)}" ;;
+    carbon)        echo "${CLAUDE_PLUGIN_OPTION_TIER_CARBON:-Gemini 4 Carbon (High)}" ;;
     argon)         echo "${CLAUDE_PLUGIN_OPTION_TIER_ARGON:-Gemini 4 Argon (High)}" ;;
     flash-38)      echo "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_38:-Gemini 3.8 Flash (High)}" ;;
-    *) die "unknown tier '$1' (use flash | flash-lo | lite | pro | argon | flash-38)" ;;
+    *) die "unknown tier '$1' (use flash | flash-lo | lite | pro | neon | carbon | argon | flash-38)" ;;
   esac
 }
 
@@ -415,20 +550,129 @@ timeout_cmd() {
   return 1
 }
 
+# Validate and normalize a timeout string to a non-negative ASCII Go duration:
+# - Bare non-negative integer seconds (`900` -> `900s`, `0` -> `0s`).
+# - Non-negative Go duration (`5m`, `1h30m`, `500ms`, `1.5m`, `100µs` -> `100us`).
+# - Returns 1 on empty, negative, or non-Go-duration values.
+normalize_timeout() {
+  local d="${1:-}" out="" rem intpart dot frac u u_us1=$'\xc2\xb5s' u_us2=$'\xce\xbc''s'
+  [ -n "$d" ] || return 1
+  case "$d" in
+    *[!0-9]*) ;;
+    *)
+      [ "${#d}" -le 12 ] || return 1
+      printf '%ds' "$(( 10#$d ))"
+      return 0 ;;
+  esac
+  rem="$d"
+  while [ -n "$rem" ]; do
+    intpart=""
+    while :; do
+      case "$rem" in
+        [0-9]*) intpart="${intpart}${rem%"${rem#?}"}"; rem="${rem#?}" ;;
+        *) break ;;
+      esac
+    done
+    dot=""; frac=""
+    case "$rem" in
+      .*)
+        dot="."
+        rem="${rem#.}"
+        while :; do
+          case "$rem" in
+            [0-9]*) frac="${frac}${rem%"${rem#?}"}"; rem="${rem#?}" ;;
+            *) break ;;
+          esac
+        done ;;
+    esac
+    [ -n "$intpart" ] || [ -n "$frac" ] || return 1
+    [ "${#intpart}" -le 12 ] || return 1
+    case "$rem" in
+      ns*)        u="ns"; rem="${rem#??}" ;;
+      us*)        u="us"; rem="${rem#??}" ;;
+      "$u_us1"*)  u="us"; rem="${rem#"$u_us1"}" ;;
+      "$u_us2"*)  u="us"; rem="${rem#"$u_us2"}" ;;
+      ms*)        u="ms"; rem="${rem#??}" ;;
+      s*)         u="s";  rem="${rem#?}" ;;
+      m*)         u="m";  rem="${rem#?}" ;;
+      h*)         u="h";  rem="${rem#?}" ;;
+      *)          return 1 ;;
+    esac
+    out="${out}${intpart}${dot}${frac}${u}"
+  done
+  printf '%s' "$out"
+  return 0
+}
+
+# Self-contained outer wall-clock guard calculator (extracted standalone by tests/run-tests.sh;
+# do not call external helpers or place `}` at column 0 before function end).
 outer_timeout_secs() {
-  local d="${1:-5m}" n unit secs min_pad
-  n="${d%[smh]}"; unit="${d#"$n"}"
-  case "$n" in (*[!0-9]*|'') n=300; unit=s ;; esac
-  case "$unit" in
-    h) secs=$(( n * 3600 )) ;;
-    m) secs=$(( n * 60 )) ;;
-    s|'') secs=$(( n )) ;;
-    *) secs=$(( n )) ;;
+  local d="${1:-5m}" rem intpart frac f3 u total_ms=0 any_pos=0 secs min_pad pad
+  local u_us1=$'\xc2\xb5s' u_us2=$'\xce\xbc''s'
+  case "$d" in
+    *[!0-9]*)
+      rem="$d"
+      while [ -n "$rem" ]; do
+        intpart=""
+        while :; do
+          case "$rem" in
+            [0-9]*) intpart="${intpart}${rem%"${rem#?}"}"; rem="${rem#?}" ;;
+            *) break ;;
+          esac
+        done
+        frac=""
+        case "$rem" in
+          .*)
+            rem="${rem#.}"
+            while :; do
+              case "$rem" in
+                [0-9]*) frac="${frac}${rem%"${rem#?}"}"; rem="${rem#?}" ;;
+                *) break ;;
+              esac
+            done ;;
+        esac
+        if [ -z "$intpart" ] && [ -z "$frac" ]; then total_ms=300000; any_pos=1; break; fi
+        if [ "${#intpart}" -gt 9 ]; then intpart="${intpart:0:9}"; fi
+        case "$rem" in
+          ns*)        u="ns"; rem="${rem#??}" ;;
+          us*)        u="us"; rem="${rem#??}" ;;
+          "$u_us1"*)  u="us"; rem="${rem#"$u_us1"}" ;;
+          "$u_us2"*)  u="us"; rem="${rem#"$u_us2"}" ;;
+          ms*)        u="ms"; rem="${rem#??}" ;;
+          s*)         u="s";  rem="${rem#?}" ;;
+          m*)         u="m";  rem="${rem#?}" ;;
+          h*)         u="h";  rem="${rem#?}" ;;
+          *)          total_ms=300000; any_pos=1; break ;;
+        esac
+        case "${intpart}${frac}" in *[1-9]*) any_pos=1 ;; esac
+        [ -n "$intpart" ] || intpart="0"
+        f3="${frac}000"
+        f3="${f3%"${f3#???}"}"
+        case "$u" in
+          h)  total_ms=$(( total_ms + 10#$intpart * 3600000 + 10#$f3 * 3600 )) ;;
+          m)  total_ms=$(( total_ms + 10#$intpart * 60000 + 10#$f3 * 60 )) ;;
+          s)  total_ms=$(( total_ms + 10#$intpart * 1000 + 10#$f3 )) ;;
+          ms) total_ms=$(( total_ms + 10#$intpart + (10#$f3 > 0 ? 1 : 0) )) ;;
+          us) total_ms=$(( total_ms + (10#$intpart + 999) / 1000 )) ;;
+          ns) total_ms=$(( total_ms + (10#$intpart + 999999) / 1000000 )) ;;
+        esac
+      done
+      if [ "$any_pos" -eq 0 ]; then
+        secs=0
+      else
+        secs=$(( (total_ms + 999) / 1000 ))
+        [ "$secs" -lt 1 ] && secs=1
+      fi
+      ;;
+    '')
+      secs=300 ;;
+    *)
+      if [ "${#d}" -gt 9 ]; then secs=999999999; else secs=$(( 10#$d )); fi ;;
   esac
   [ "$secs" -eq 0 ] && { echo 0; return 0; }
   min_pad="${_AGY_OUTER_MIN_PAD:-35}"
   case "$min_pad" in (*[!0-9]*|'') min_pad=35 ;; esac
-  local pad=$(( secs / 4 ))
+  pad=$(( secs / 4 ))
   [ "$pad" -lt "$min_pad" ] && pad="$min_pad"
   [ "$pad" -gt 120 ] && pad=120
   echo $(( secs + pad ))
@@ -442,7 +686,11 @@ while [ $# -gt 0 ]; do
                           *) die "invalid --effort '$EFFORT' (use low | medium | high | xhigh | max)" ;;
                         esac ;;
     -d|--dir|--add-dir) need "$#" "$1"; ADD_DIRS+=("$2"); shift 2 ;;
-    --timeout)          need "$#" "$1"; TIMEOUT="$2"; shift 2 ;;
+    --timeout)          need "$#" "$1"
+                        if ! TIMEOUT="$(normalize_timeout "$2")"; then
+                          die "invalid --timeout '$2' (expected Go duration like 5m, 300s, 1h30m, bare seconds like 900, or 0 for unbounded)"
+                        fi
+                        TIMEOUT_EXPLICIT=1; shift 2 ;;
     --read-only)        READ_ONLY=1; shift ;;
     --allow-url)        READ_ONLY=1; ALLOW_URL=1; shift ;;
     --settings)         need "$#" "$1"; CUSTOM_SETTINGS="$2"; shift 2 ;;
@@ -468,6 +716,30 @@ while [ $# -gt 0 ]; do
 done
 
 [ -n "$PROMPT" ] || die "no prompt given (pass a string, or '-' to read stdin)"
+
+# Resolve effective timeout when --timeout was not explicitly passed. Precedence:
+#   explicit --timeout > AGY_TIMEOUT > CLAUDE_PLUGIN_OPTION_TIMEOUT > mode-aware default
+#   (25m for write runs under --mode accept-edits / --mode auto / --yolo; 5m for read/plan).
+if [ "$TIMEOUT_EXPLICIT" -eq 0 ]; then
+  default_to="5m"
+  if [ "$READ_ONLY" -eq 0 ] && [ "$MODE" != "plan" ] && { [ "$YOLO" -eq 1 ] || [ "$MODE" = "accept-edits" ] || [ "$MODE" = "auto" ]; }; then
+    default_to="25m"
+  fi
+  if [ -n "${AGY_TIMEOUT:-}" ]; then
+    if ! TIMEOUT="$(normalize_timeout "$AGY_TIMEOUT")"; then
+      echo "agy-delegate: invalid AGY_TIMEOUT '$AGY_TIMEOUT' (expected Go duration or bare seconds); using $default_to" >&2
+      TIMEOUT="$default_to"
+    fi
+  elif [ -n "${CLAUDE_PLUGIN_OPTION_TIMEOUT:-}" ]; then
+    if ! TIMEOUT="$(normalize_timeout "$CLAUDE_PLUGIN_OPTION_TIMEOUT")"; then
+      echo "agy-delegate: invalid timeout option '$CLAUDE_PLUGIN_OPTION_TIMEOUT' (expected Go duration or bare seconds); using $default_to" >&2
+      TIMEOUT="$default_to"
+    fi
+  else
+    TIMEOUT="$default_to"
+  fi
+fi
+
 if [ "$PRINT_CMD" -ne 1 ] && ! command -v agy >/dev/null 2>&1; then
   echo "agy-delegate: 'agy' not found on PATH — install the Antigravity CLI first" >&2
   signal AGY_MISSING "agy not on PATH"
@@ -485,7 +757,7 @@ if [ -z "$MODEL" ]; then
     MODEL="$CLAUDE_PLUGIN_OPTION_DEFAULT_MODEL"
   else
     case "$TIER" in
-      flash|flash-lo|lite|pro|argon|flash-38) ;;
+      flash|flash-lo|lite|pro|neon|carbon|argon|flash-38) ;;
       *) echo "agy-delegate: invalid default tier '$TIER' (set CLAUDE_PLUGIN_OPTION_DEFAULT_TIER to flash|flash-lo|pro); using flash" >&2; TIER="flash" ;;
     esac
     MODEL="$(model_for_tier "$TIER")"
@@ -678,7 +950,15 @@ raw_fb_cands=()
 case "$USAGE_TIER" in
   pro)
     if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_PRO:-}" ]; then
-      raw_fb_cands=("Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+      raw_fb_cands=("Gemini 4 Carbon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+    fi ;;
+  neon)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_NEON:-}" ]; then
+      raw_fb_cands=("Gemini 4 Carbon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
+    fi ;;
+  carbon)
+    if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_CARBON:-}" ]; then
+      raw_fb_cands=("Gemini 4 Neon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)")
     fi ;;
   flash)
     if [ -z "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-}" ]; then
@@ -721,6 +1001,11 @@ if [ "${#BASE_FALLBACKS[@]}" -gt 0 ]; then
     done
     echo "agy-delegate: $USAGE_TIER fell back to $MODEL (cached; $PRIMARY_MODEL not on this plan)" >&2
   fi
+fi
+
+PRE_RUN_CACHE_KEY=""
+if [ "${#BASE_FALLBACKS[@]}" -gt 0 ] && tier_cache_enabled; then
+  PRE_RUN_CACHE_KEY="$(tier_cache_key)"
 fi
 
 while :; do
@@ -866,8 +1151,10 @@ $raw_avail_blob"
   break
 done
 
-# Persist or refresh warm fallback cache once a tier run succeeds.
-if [ "$RC" -eq 0 ] && [ "${#BASE_FALLBACKS[@]}" -gt 0 ]; then
+# Persist or refresh warm fallback cache once a tier run succeeds, unless `agy`'s
+# background auto-updater replaced the binary mid-run (so an old binary's fallback
+# never poisons the newly installed binary's stat fingerprint).
+if [ "$RC" -eq 0 ] && [ "${#BASE_FALLBACKS[@]}" -gt 0 ] && [ -n "$PRE_RUN_CACHE_KEY" ] && [ "$(tier_cache_key)" = "$PRE_RUN_CACHE_KEY" ]; then
   if [ "$MODEL" != "$PRIMARY_MODEL" ]; then
     tier_cache_put "$CACHE_SLOT" "$MODEL"
   elif [ "$USED_CACHED_FALLBACK" -eq 1 ]; then
@@ -938,11 +1225,18 @@ if [ $RC -ne 0 ]; then
   blob="$(cat "$ERR" 2>/dev/null)"
   [ -n "$JSON_ERROR" ] && blob="$JSON_ERROR
 $blob"
+  if cli_flag_error_blob "$blob" "$RC"; then
+    echo "agy-delegate: agy rejected a CLI flag or option value (check --settings, --json-schema, or agy --help)." >&2
+    signal CLI_FLAG_ERROR "agy rejected a CLI flag or option value (exit $RC)"
+    exit 16
+  fi
   shopt -s nocasematch
   case "$blob" in
     *"user denied permission"*|*"permission check failed"*|*"auto-denied"*|\
-    *"permission that headless"*|*"dangerously-skip-permissions"*)
-      shopt -u nocasematch; permission_denied shown ;;
+    *"permission that headless"*|*"re-run with --dangerously-skip-permissions"*)
+      shopt -u nocasematch
+      [ -z "$DENIED_ACTIONS" ] && DENIED_ACTIONS="$(extract_denied_actions "$blob")"
+      permission_denied shown ;;
   esac
   shopt -u nocasematch
   if model_unavailable_blob "$blob"; then
@@ -958,7 +1252,7 @@ $blob"
     *unauthenticated*|*unauthorized*|*"sign in"*|*"please authenticate"*|*reauth*|\
     *"gemini_api_key environment variable is not set"*|*"authentication required"*)
       shopt -u nocasematch; signal AUTH_REQUIRED "agy not authenticated — run \`agy\` or \`agy acp --login\` (or set GEMINI_API_KEY)"; exit 11 ;;
-    *"timed out"*|*"deadline exceeded"*|*"print-timeout"*|*"timeout waiting for cascade"*)
+    *"timed out"*|*"deadline exceeded"*|*"--print-timeout expired"*|*"timeout waiting for cascade"*)
       shopt -u nocasematch; signal TIMEOUT "agy print-timeout / deadline exceeded"; exit 12 ;;
   esac
   shopt -u nocasematch
@@ -969,8 +1263,9 @@ if [[ "$OUT" != *[!$' \t\n\r']* ]]; then
   eblob="$(cat "$ERR" 2>/dev/null)"
   shopt -s nocasematch
   case "$eblob" in
-    *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"dangerously-skip-permissions"*)
+    *"auto-denied"*|*"permissions.allow"*|*"permission that headless"*|*"re-run with --dangerously-skip-permissions"*)
       shopt -u nocasematch
+      [ -z "$DENIED_ACTIONS" ] && DENIED_ACTIONS="$(extract_denied_actions "$eblob")"
       permission_denied ;;
   esac
   shopt -u nocasematch

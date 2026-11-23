@@ -46,7 +46,7 @@
 # Exit codes: 0 verified | 1 usage/refused | 2 executor failed and nothing verified |
 #             4 verification still failing after the fix-ups | 6 a named test file was modified |
 #             10 quota | 11 auth | 12 executor timeout (and verification failed) | 13 agy missing |
-#             14 model unavailable | 15 permission denied
+#             14 model unavailable | 15 permission denied | 16 cli flag/option error
 #
 # AGY_USAGE / AGY_SIGNAL lines from every delegation pass through on stderr (and into
 # $AGY_USAGE_LOG when set), so `measure-session.py` prices a hand-off like any delegation.
@@ -230,7 +230,7 @@ delegate "$PROMPT1" "$TIMEOUT" "$LAST_OUT"; RC1=$?
 DELEGATIONS=$((DELEGATIONS+1))
 [ "$RC1" -eq 12 ] && TIMED_OUT=1
 case "$RC1" in
-  10|11|13|14|15)
+  1|10|11|13|14|15|16)
     echo "agy-handoff: executor unavailable (agy-delegate exit $RC1); nothing verified" >&2
     [ "$RC1" -eq 15 ] && echo "agy-handoff:   policy_blocked despite --yolo (enterprise admin policy or permissions.deny)" >&2
     exit "$RC1" ;;
@@ -259,7 +259,7 @@ $CONTRACT"
     DELEGATIONS=$((DELEGATIONS+1))
     [ "$RCF" -eq 12 ] && TIMED_OUT=1
     case "$RCF" in
-      10|11|13|14|15)
+      1|10|11|13|14|15|16)
         echo "agy-handoff: executor unavailable during fix-up (exit $RCF)" >&2
         [ "$RCF" -eq 15 ] && echo "agy-handoff:   policy_blocked despite --yolo (enterprise admin policy or permissions.deny)" >&2
         exit "$RCF" ;;

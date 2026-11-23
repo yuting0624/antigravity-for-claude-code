@@ -158,7 +158,7 @@ first_present_fallback() {
     flash-lo)
       cands=("Gemini 3.8 Flash (Low)" "Gemini 3.5 Flash Lite" "Gemini 3.7 Flash (Low)" "Gemini 3.1 Flash Lite") ;;
     pro)
-      cands=("Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)") ;;
+      cands=("Gemini 4 Carbon (High)" "Gemini 4 Argon (High)" "Gemini 3.1 Pro" "Gemini 3.1 Pro (High)" "Gemini 3.1 Pro (Low)" "Gemini 4 Hydrogen (High)" "Gemini 3.8 Flash (High)") ;;
   esac
   for cand in "${cands[@]:-}"; do
     [ -n "$cand" ] || continue
@@ -173,7 +173,7 @@ first_present_fallback() {
 # Suggest up to 3 candidate models from $MODELS when a tier model is missing (#102, #104).
 # Ranks direct substring matches (either $n contains $want, e.g. "Gemini 4 Argon" ->
 # "Gemini 4 Argon (High)", or $want contains the normalized display name, e.g.
-# "Gemini 3.1 Pro (High)" -> "Gemini 3.1 Pro") AHEAD of generic family matches (carbon/argon/pro
+# "Gemini 3.1 Pro (High)" -> "Gemini 3.1 Pro") AHEAD of generic family matches (neon/carbon/argon/pro
 # or hydrogen/flash) across the entire model list, so earlier family rows never bury a direct match
 # that appears later in `agy models`. Specialist orchestrator/coordinator entries are
 # skipped on generic family matches.
@@ -181,7 +181,7 @@ suggest_models() {
   local want line first first_lc rest disp n nd fam="flash"
   local direct=() family=() picked=() item
   want="$(norm_model "$1")"
-  case "$want" in *carbon*|*argon*|*pro*|*opus*|*sonnet*) fam="pro" ;; esac
+  case "$want" in *neon*|*carbon*|*argon*|*pro*|*opus*|*sonnet*) fam="pro" ;; esac
   while IFS= read -r line; do
     line="${line#"${line%%[![:space:]]*}"}"
     line="${line%"${line##*[![:space:]]}"}"
@@ -203,7 +203,7 @@ suggest_models() {
       direct+=("$disp")
     else
       case "$n" in *orchestrator*|*coordinator*) continue ;; esac
-      if [ "$fam" = "pro" ] && case "$n" in *carbon*|*argon*|*pro*|*opus*|*sonnet*) true ;; *) false ;; esac; then
+      if [ "$fam" = "pro" ] && case "$n" in *neon*|*carbon*|*argon*|*pro*|*opus*|*sonnet*) true ;; *) false ;; esac; then
         family+=("$disp")
       elif [ "$fam" = "flash" ] && case "$n" in *hydrogen*|*flash*) true ;; *) false ;; esac; then
         family+=("$disp")
@@ -517,7 +517,7 @@ if command -v agy >/dev/null 2>&1; then
     # plan fallbacks; pinned against agy-delegate.sh in tests/run-tests.sh).
     FLASH="${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-Gemini 4 Hydrogen (High)}"
     FLASH_LO="${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-Gemini 4 Hydrogen (Low)}"
-    PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Carbon (High)}"
+    PRO="${CLAUDE_PLUGIN_OPTION_TIER_PRO:-Gemini 4 Neon (High)}"
     check_tier_slot "flash"    "$FLASH"    "${CLAUDE_PLUGIN_OPTION_TIER_FLASH:-}"
     PROBE_M="${LAST_EFFECTIVE_TIER_MODEL:-$FLASH}"
     check_tier_slot "flash-lo" "$FLASH_LO" "${CLAUDE_PLUGIN_OPTION_TIER_FLASH_LO:-}"

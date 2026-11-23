@@ -282,6 +282,50 @@ case "${STUB_MODE:-text}" in
   json_quota) printf '{"conversation_id":"","status":"ERROR","response":"","error":"quota exceeded for this model","usage":{}}'; exit 1 ;;
   json_structured_only) printf '{"conversation_id":"c-schema","status":"SUCCESS","response":"","structured_output":{"summary":"ok","count":2},"usage":{"input_tokens":50,"output_tokens":12,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":62}}'; exit 0 ;;
   json_usage_big) printf '{"conversation_id":"c-u","status":"SUCCESS","response":"USAGE_OK\n","usage":{"input_tokens":100000,"output_tokens":20000,"thinking_tokens":5000,"cache_read_tokens":500000,"total_tokens":120000}}'; exit 0 ;;
+  # v0.31.2 (#123): CLI flag parse & option validation errors (must classify as exit 16 CLI_FLAG_ERROR,
+  # never exit 15 PERMISSION_DENIED or exit 12 TIMEOUT despite Usage of agy: mentioning both flags).
+  flag_undef_singular)
+    printf '%s\n' \
+      'flag provided but not defined: -bogus' \
+      'Usage of agy:' \
+      '  -dangerously-skip-permissions' \
+      '        Auto-approve all tool permissions' \
+      '  -print-timeout duration' \
+      '        Timeout for print mode (default 5m0s)' >&2
+    exit 2 ;;
+  flag_undef_plural)
+    printf '%s\n' \
+      'flags provided but not defined: -bogus-flag' \
+      'Usage of agy:' \
+      '  -dangerously-skip-permissions' \
+      '  -print-timeout duration' >&2
+    exit 2 ;;
+  flag_bad_duration)
+    printf '%s\n' \
+      'invalid value "900" for flag -print-timeout: time: missing unit in duration "900"' \
+      'Usage of agy:' \
+      '  -dangerously-skip-permissions' \
+      '  -print-timeout duration' >&2
+    exit 2 ;;
+  flag_bad_settings)
+    echo 'Error: --settings must be a JSON object, got array' >&2
+    exit 1 ;;
+  flag_bad_schema)
+    echo 'Error: invalid --json-schema: unexpected end of JSON input' >&2
+    exit 1 ;;
+  json_reply_mentions_flag_err)
+    printf '{"conversation_id":"c-fl","status":"SUCCESS","response":"JSONBODY: Go prints flag provided but not defined and Usage of agy: on rc 2\n","usage":{"input_tokens":8,"output_tokens":4,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12}}'
+    exit 0 ;;
+  softdeny_multi_15x)
+    echo 'no output produced — a tool required the "command", "write_file" permissions that headless mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow in settings.json (e.g. command(<target>), write_file(<target>)). Alternatively, re-run with --dangerously-skip-permissions to auto-approve all tools.' >&2
+    exit 0 ;;
+  softdeny_approval_15x)
+    echo 'no output produced — the "SendInput" tool(s) required approval that headless mode cannot prompt for, so it was auto-denied.' >&2
+    exit 0 ;;
+  json_denied_precedence)
+    echo 'no output produced — a tool required the "write_file" permission that headless mode cannot prompt for, so it was auto-denied. Alternatively, re-run with --dangerously-skip-permissions to auto-approve all tools.' >&2
+    printf '{"conversation_id":"c-prec","status":"SUCCESS","response":"","usage":{"input_tokens":10,"output_tokens":2,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":12},"denied_actions":[{"action":"mcp_tool","display_name":"McpTool"}]}'
+    exit 0 ;;
   *)       echo "STUB_OK" ;;
 esac
 STUB
@@ -373,17 +417,19 @@ check "agy timeout -> exit 12 + signal" 12 "$rc" "TIMEOUT" "$out"
 out=$(STUB_MODE=badmodel "$DELEGATE" "hi" 2>&1); rc=$?
 check "agy bad --model -> exit 14 + signal" 14 "$rc" "MODEL_UNAVAILABLE" "$out"
 
-# #104 + 0.31.0: unremapped --tier pro falls back from Gemini 4 Carbon (High) to
-# Gemini 4 Argon (High), then Gemini 3.1 Pro, then Gemini 3.1 Pro (High);
+# #104 + Neon default: unremapped --tier pro falls back from Gemini 4 Neon (High) to
+# Gemini 4 Carbon (High), Gemini 4 Argon (High), Gemini 3.1 Pro, then Gemini 3.1 Pro (High);
 # explicit tier_pro remap does NOT fall back.
 out=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO" "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
-check "pro tier falls back to Gemini 4 Argon (High) when Carbon is unavailable" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
-check "pro tier fallback emits stderr notice (#104)" 0 "$rc" "pro fell back to Gemini 4 Argon (High)" "$out"
-out_fb1=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb1=$?
-check "pro tier falls back to Gemini 3.1 Pro when Carbon and Argon are unavailable (#104)" 0 "$rc_fb1" "--model Gemini 3.1 Pro" "$out_fb1"
-out_fb2=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)|Gemini 3.1 Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb2=$?
-check "pro tier falls back to Gemini 3.1 Pro (High) when Carbon, Argon, and 3.1 Pro are unavailable (#104)" 0 "$rc_fb2" "--model Gemini 3.1 Pro (High)" "$out_fb2"
-err_fb=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_fb=$?
+check "pro tier falls back to Gemini 4 Carbon (High) when Neon is unavailable" 0 "$rc" "--model Gemini 4 Carbon (High)" "$out"
+check "pro tier fallback emits stderr notice (#104)" 0 "$rc" "pro fell back to Gemini 4 Carbon (High)" "$out"
+out_fb_argon=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb_argon=$?
+check "pro tier falls back to Gemini 4 Argon (High) when Neon and Carbon are unavailable" 0 "$rc_fb_argon" "--model Gemini 4 Argon (High)" "$out_fb_argon"
+out_fb1=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb1=$?
+check "pro tier falls back to Gemini 3.1 Pro when Neon, Carbon, and Argon are unavailable (#104)" 0 "$rc_fb1" "--model Gemini 3.1 Pro" "$out_fb1"
+out_fb2=$(STUB_MODE=args STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)|Gemini 3.1 Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_fb2=$?
+check "pro tier falls back to Gemini 3.1 Pro (High) when Neon, Carbon, Argon, and 3.1 Pro are unavailable (#104)" 0 "$rc_fb2" "--model Gemini 3.1 Pro (High)" "$out_fb2"
+err_fb=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_ok STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$DELEGATE" --tier pro "hi" 2>&1 >/dev/null); rc_fb=$?
 check "pro tier fallback records Gemini 3.1 Pro in AGY_USAGE (#104)" 0 "$rc_fb" '"model": "Gemini 3.1 Pro"' "$err_fb"
 out_remap_fb=$(STUB_MODE=args STUB_REJECT_MODEL="Custom Pro" CLAUDE_PLUGIN_OPTION_TIER_PRO="Custom Pro" "$DELEGATE" --tier pro "hi" 2>&1); rc_remap_fb=$?
 check "explicit tier_pro remap does not fall back to Gemini 3.1 Pro (#104)" 14 "$rc_remap_fb" "MODEL_UNAVAILABLE" "$out_remap_fb"
@@ -760,9 +806,9 @@ check "agy 1.1.25 soft deny (plain-text mode) -> exit 15" 15 "$sd25_rc" "PERMISS
 # same anchor words inside the model's text, with clean diagnostics, are a success.
 nc_out=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_denial "$DELEGATE" "review it" 2>/dev/null); nc_rc=$?
 check "denial wording inside the reply alone never classifies (model text is not scanned)" 0 "$nc_rc" "JSONBODY" "$nc_out"
-# agy 1.1.27+: the envelope names the refused tool and the wrapper reads that first. The
-# soft route would still land this fixture on 15, so what separates the two paths is the
-# tool NAME in the signal — remove the denied_actions block and it disappears.
+# agy 1.1.27+: the envelope names the refused tool in `.denied_actions` and the wrapper reads
+# that first (falling back to diagnostic stderr/error extraction via extract_denied_actions()
+# only when `.denied_actions` is absent or empty; precedence is tested directly below).
 da_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_denied_actions_120 "$DELEGATE" "write a file" 2>&1 >/dev/null); da_rc=$?
 check "agy 1.2.0 denied_actions (write_file) -> exit 15" 15 "$da_rc" "PERMISSION_DENIED" "$da_err"
 check "agy 1.2.0 denied_actions names the tool in the signal" 15 "$da_rc" "denied: write_file" "$da_err"
@@ -2137,10 +2183,12 @@ if not m:
     print("flash tier default not found (model_for_tier pattern changed?)"); raise SystemExit
 default = m.group(1)
 # Derive the key from the default rather than enumerating versions. Support Gemini 4
-# element codenames (Hydrogen / Carbon / Argon) alongside numeric Flash versions.
+# element codenames (Hydrogen / Neon / Carbon / Argon) alongside numeric Flash versions.
 dl = default.lower()
 if "hydrogen" in dl:
     key = "gemini_hydrogen"
+elif "neon" in dl:
+    key = "gemini_neon"
 elif "carbon" in dl:
     key = "gemini_carbon"
 elif "argon" in dl:
@@ -2167,17 +2215,19 @@ if [ "$out" = "OK" ]; then
   echo "ok: prices.json gemini_flash matches the shipped flash tier"; PASS=$((PASS+1));
 else echo "FAIL: $out"; FAIL=$((FAIL+1)); fi
 
-# agy-cost-compare --tier pro uses gemini_carbon / gemini_argon (out 10.00) by default
-# and gemini_pro (out 12.00) when remapped or fallen back to 3.1 Pro.
-cc_argon=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro uses gemini_carbon (out 10.00) by default" 0 "$?" "10.00" "$cc_argon"
-cc_argon_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro uses gemini_argon (out 10.00) after fallback from Carbon to Argon" 0 "$?" "10.00" "$cc_argon_fb"
+# agy-cost-compare --tier pro uses gemini_neon (out 15.00) by default,
+# gemini_carbon / gemini_argon (out 10.00) on fallback, and gemini_pro (out 12.00) on 3.1 Pro.
+cc_neon=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro uses gemini_neon (out 15.00) by default" 0 "$?" "15.00" "$cc_neon"
+cc_neon_alias=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier neon "hi" 2>/dev/null)
+check "agy-cost-compare --tier neon uses gemini_neon (out 15.00)" 0 "$?" "15.00" "$cc_neon_alias"
+cc_carbon_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro uses gemini_carbon (out 10.00) after fallback from Neon to Carbon" 0 "$?" "10.00" "$cc_carbon_fb"
 cc_pro31=$(STUB_MODE=text CLAUDE_PLUGIN_OPTION_TIER_PRO="Gemini 3.1 Pro" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) when remapped to 3.1 Pro" 0 "$?" "12.00" "$cc_pro31"
 cc_pro31_pc=$(STUB_MODE=text CLAUDE_CONFIG_DIR="$PCDIR" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro reads tier_pro from settings.json pluginConfigs (#101)" 0 "$?" "12.00" "$cc_pro31_pc"
-cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) after runtime fallback to 3.1 Pro (#104)" 0 "$?" "12.00" "$cc_pro31_fb"
 cc_fl38_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_FLASH" "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
 check "agy-cost-compare --tier flash switches from Hydrogen (out 7.50) to 3.8 Flash (out 3.75) after fallback" 0 "$?" "3.75" "$cc_fl38_fb"
@@ -2194,7 +2244,7 @@ echo "STUB_OK"
 STUB
 chmod +x "$BADU_BIN/agy"
 cc_badu=$(PATH="$BADU_BIN:$PATH" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro survives malformed AGY_USAGE without reverting to flash rates" 0 "$?" "10.00" "$cc_badu"
+check "agy-cost-compare --tier pro survives malformed AGY_USAGE without reverting to flash rates" 0 "$?" "15.00" "$cc_badu"
 
 echo "== measure-session.py =="
 SESS="$TMP/sess.jsonl"
@@ -2908,6 +2958,12 @@ echo "== v0.31.0 Gemini 4 tiers, 2-layer fallback cache, effort, scoped settings
 # 1. Tier aliases + --effort suffix rewriting / raw flag forwarding
 out=$(STUB_MODE=args "$DELEGATE" --tier lite "hi" 2>/dev/null); rc=$?
 check "lite tier alias -> Gemini 4 Hydrogen (Low)" 0 "$rc" "--model Gemini 4 Hydrogen (Low)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier neon "hi" 2>/dev/null); rc=$?
+check "neon tier alias -> Gemini 4 Neon (High)" 0 "$rc" "--model Gemini 4 Neon (High)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier neon --effort xhigh "hi" 2>/dev/null); rc=$?
+check "--tier neon --effort xhigh rewrites display suffix to (XHigh)" 0 "$rc" "--model Gemini 4 Neon (XHigh)" "$out"
+out=$(STUB_MODE=args "$DELEGATE" --tier carbon "hi" 2>/dev/null); rc=$?
+check "carbon tier alias -> Gemini 4 Carbon (High)" 0 "$rc" "--model Gemini 4 Carbon (High)" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --tier argon "hi" 2>/dev/null); rc=$?
 check "argon tier alias -> Gemini 4 Argon (High)" 0 "$rc" "--model Gemini 4 Argon (High)" "$out"
 out=$(STUB_MODE=args "$DELEGATE" --tier flash-38 "hi" 2>/dev/null); rc=$?
@@ -2932,11 +2988,11 @@ check "--tier flash --effort xhigh adapts fallback to Gemini 3.8 Flash (High)" 0
 # 2. Layer 1: `Available models:` 1-hop Cold-Miss Jump (skips intermediate unavailable fallbacks)
 L1_CNT="$TMP/l1-count"; rm -f "$L1_CNT"
 out=$(STUB_MODE=args STUB_CALL_COUNT_FILE="$L1_CNT" \
-      STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Argon (High)|Gemini 3.1 Pro|Gemini 3.1 Pro (High)|Gemini 3.1 Pro (Low)|Gemini 4 Hydrogen (High)" \
+      STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)|Gemini 3.1 Pro|Gemini 3.1 Pro (High)|Gemini 3.1 Pro (Low)|Gemini 4 Hydrogen (High)" \
       STUB_AVAIL_MODELS="  gemini-3.8-flash-high           Gemini 3.8 Flash (High)\n  gemini-3.5-flash-lite           Gemini 3.5 Flash Lite" \
       "$DELEGATE" --tier pro "hi" 2>&1); rc=$?
-check "Layer 1: Available models jumps straight from Carbon to Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
-check "Layer 1: 1-hop jump makes exactly 2 agy calls (skips 5 intermediate fallbacks)" 0 0 "2" "$(cat "$L1_CNT" 2>/dev/null)"
+check "Layer 1: Available models jumps straight from Neon to Gemini 3.8 Flash (High)" 0 "$rc" "--model Gemini 3.8 Flash (High)" "$out"
+check "Layer 1: 1-hop jump makes exactly 2 agy calls (skips 6 intermediate fallbacks)" 0 0 "2" "$(cat "$L1_CNT" 2>/dev/null)"
 
 L1_NOMATCH="$TMP/l1-nomatch"; rm -f "$L1_NOMATCH"
 out=$(STUB_MODE=args STUB_CALL_COUNT_FILE="$L1_NOMATCH" \
@@ -2990,7 +3046,7 @@ echo '{"tier":"g1-ultra"}' > "$THOME/.gemini/antigravity-cli/cache/onboarding.js
 rm -f "$L2_CNT"
 out=$(HOME="$THOME" AGY_TIER_CACHE=on AGY_TIER_CACHE_DIR="$TCACHE" STUB_MODE=args STUB_CALL_COUNT_FILE="$L2_CNT" \
       "$DELEGATE" --tier pro "hi" 2>/dev/null); rc=$?
-check "Layer 2: onboarding.json content change invalidates fingerprint -> tries primary Carbon High" 0 "$rc" "--model $DEF_PRO" "$out"
+check "Layer 2: onboarding.json content change invalidates fingerprint -> tries primary Neon High" 0 "$rc" "--model $DEF_PRO" "$out"
 check "Layer 2: plan switch ran primary directly (1 agy call)" 0 0 "1" "$(cat "$L2_CNT" 2>/dev/null)"
 
 # Pin exact tier_cache_key() parity between agy-delegate.sh and doctor.sh
@@ -3202,6 +3258,163 @@ probe_single_bad="$(probe_doctor 1.5.9 "gemini-3.6-flash-low")"
 if has 'does NOT take effect' "$probe_single_bad"; then
   echo "ok: single-column /model mismatch still warns (cut -s -f2 guard)"; PASS=$((PASS+1));
 else echo "FAIL: single-column /model mismatch was accepted: $probe_single_bad"; FAIL=$((FAIL+1)); fi
+
+echo "== v0.31.2 Gemini 4 Neon (#122) & Issue #123 (CLI_FLAG_ERROR, timeout, write default, denied_actions) =="
+
+# 1. PR #122 polish: Neon --effort max -> (XHigh), pro --effort xhigh -> Carbon (High) fallback cap,
+#    --tier carbon -> Neon fallback, and userConfig schema checks (tier_neon, tier_carbon, timeout="")
+out_nmax=$(STUB_MODE=args "$DELEGATE" --tier pro --effort max "hi" 2>/dev/null); rc_nmax=$?
+check "pro --effort max caps display suffix to Gemini 4 Neon (XHigh)" 0 "$rc_nmax" "--model Gemini 4 Neon (XHigh)" "$out_nmax"
+out_nx_fb=$(STUB_MODE=args STUB_REJECT_MODEL="Gemini 4 Neon (XHigh)" "$DELEGATE" --tier pro --effort xhigh "hi" 2>/dev/null); rc_nx_fb=$?
+check "pro --effort xhigh adapts Neon->Carbon fallback from (XHigh) to Gemini 4 Carbon (High)" 0 "$rc_nx_fb" "--model Gemini 4 Carbon (High)" "$out_nx_fb"
+out_cb_fb=$(STUB_MODE=args STUB_REJECT_MODEL="Gemini 4 Carbon (High)" "$DELEGATE" --tier carbon "hi" 2>&1); rc_cb_fb=$?
+check "--tier carbon falls back to Gemini 4 Neon (High) when Carbon is unavailable" 0 "$rc_cb_fb" "--model Gemini 4 Neon (High)" "$out_cb_fb"
+out_cb_remap=$(STUB_MODE=args CLAUDE_PLUGIN_OPTION_TIER_CARBON="Gemini 3.1 Pro" "$DELEGATE" --tier carbon "hi" 2>/dev/null); rc_cb_remap=$?
+check "CLAUDE_PLUGIN_OPTION_TIER_CARBON remaps --tier carbon" 0 "$rc_cb_remap" "--model Gemini 3.1 Pro" "$out_cb_remap"
+pjson_chk=$(ROOT="$ROOT" python3 - <<'PY'
+import json, os
+pj = json.load(open(os.path.join(os.environ["ROOT"], ".claude-plugin", "plugin.json")))
+uc = pj["userConfig"]
+assert pj["version"] == "0.31.2", pj["version"]
+assert uc["timeout"]["default"] == "", uc["timeout"]["default"]
+assert uc["tier_neon"]["default"] == "", uc["tier_neon"]["default"]
+assert uc["tier_carbon"]["default"] == "", uc["tier_carbon"]["default"]
+print("OK")
+PY
+)
+check "plugin.json 0.31.2 has empty default for timeout, tier_neon, and tier_carbon" 0 "$?" "OK" "$pjson_chk"
+
+# 2. Issue #123 Item 1: CLI flag / option errors -> exit 16 CLI_FLAG_ERROR (never exit 15 or 12)
+fl1_out=$(STUB_MODE=flag_undef_singular "$DELEGATE" "hi" 2>&1); fl1_rc=$?
+check "singular 'flag provided but not defined' + Usage -> exit 16 CLI_FLAG_ERROR" 16 "$fl1_rc" '"status":"CLI_FLAG_ERROR"' "$fl1_out"
+if has 'PERMISSION_DENIED' "$fl1_out" || has '"status":"TIMEOUT"' "$fl1_out"; then
+  echo "FAIL: singular flag error misclassified as PERMISSION_DENIED or TIMEOUT: $fl1_out"; FAIL=$((FAIL+1))
+else echo "ok: singular flag error with Usage of agy: does not trigger PERMISSION_DENIED or TIMEOUT"; PASS=$((PASS+1)); fi
+
+fl2_out=$(STUB_MODE=flag_undef_plural "$DELEGATE" "hi" 2>&1); fl2_rc=$?
+check "plural 'flags provided but not defined' (agy 1.5.x) -> exit 16 CLI_FLAG_ERROR" 16 "$fl2_rc" '"status":"CLI_FLAG_ERROR"' "$fl2_out"
+
+fl3_out=$(STUB_MODE=flag_bad_duration "$DELEGATE" "hi" 2>&1); fl3_rc=$?
+check "missing unit in duration + -print-timeout Usage -> exit 16 (not TIMEOUT 12 or PERMISSION 15)" 16 "$fl3_rc" '"status":"CLI_FLAG_ERROR"' "$fl3_out"
+
+fl4_out=$(STUB_SETTINGS_CAPABLE=1 STUB_MODE=flag_bad_settings "$DELEGATE" --settings '[]' "hi" 2>&1); fl4_rc=$?
+check "--settings non-object error -> exit 16 CLI_FLAG_ERROR" 16 "$fl4_rc" '"status":"CLI_FLAG_ERROR"' "$fl4_out"
+
+fl5_out=$(STUB_MODE=flag_bad_schema "$DELEGATE" --json-schema '{bad' "hi" 2>&1); fl5_rc=$?
+check "invalid --json-schema error -> exit 16 CLI_FLAG_ERROR" 16 "$fl5_rc" '"status":"CLI_FLAG_ERROR"' "$fl5_out"
+
+fl_nc=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_reply_mentions_flag_err "$DELEGATE" "explain flags" 2>/dev/null); fl_nc_rc=$?
+check "model reply mentioning 'flag provided but not defined' + 'Usage of agy:' stays exit 0" 0 "$fl_nc_rc" "JSONBODY" "$fl_nc"
+
+# Synced callers for exit 16 (agy-job rc_label + agy-handoff fast abort without verify)
+JREG16="$TMP/jobs16"; mkdir -p "$JREG16/j16" "$JREG16/j1"
+printf 'id=j16\ncwd=%s\nstarted=now\ntask=t\n' "$TMP" > "$JREG16/j16/meta"
+echo "16" > "$JREG16/j16/rc"; echo "rc:16" > "$JREG16/j16/final"
+j16_st=$(ANTIGRAVITY_JOBS="$JREG16" "$ROOT/scripts/agy-job.sh" status j16 2>&1)
+check "agy-job status labels rc=16 as CLI_FLAG_ERROR" 0 "$?" "CLI_FLAG_ERROR" "$j16_st"
+printf 'id=j1\ncwd=%s\nstarted=now\ntask=t\n' "$TMP" > "$JREG16/j1/meta"
+echo "1" > "$JREG16/j1/rc"; echo "rc:1" > "$JREG16/j1/final"
+j1_st=$(ANTIGRAVITY_JOBS="$JREG16" "$ROOT/scripts/agy-job.sh" status j1 2>&1)
+check "agy-job status labels rc=1 as USAGE error" 0 "$?" "USAGE error" "$j1_st"
+
+HREPO16="$TMP/hrepo16"; mkdir -p "$HREPO16"
+( cd "$HREPO16" && git init -q && git config user.email t@e && git config user.name t && echo ok > a.txt && git add a.txt && git commit -qm init )
+rm -f "$TMP/vcount16"
+cat > "$TMP/vfy16.sh" <<V16
+#!/usr/bin/env bash
+echo ran > "$TMP/vcount16"; exit 0
+V16
+chmod +x "$TMP/vfy16.sh"
+ho16_out=$(STUB_MODE=flag_undef_plural "$HANDOFF" --dir "$HREPO16" --new-project off --verify "$TMP/vfy16.sh" "do x" 2>&1); ho16_rc=$?
+check "agy-handoff fast-aborts with exit 16 on CLI_FLAG_ERROR" 16 "$ho16_rc" "executor unavailable (agy-delegate exit 16)" "$ho16_out"
+[ ! -e "$TMP/vcount16" ] && { echo "ok: agy-handoff did not run verify on exit 16"; PASS=$((PASS+1)); } || { echo "FAIL: agy-handoff ran verify after exit 16"; FAIL=$((FAIL+1)); }
+ho1_out=$("$HANDOFF" --dir "$HREPO16" --new-project off --timeout bogus --verify "$TMP/vfy16.sh" "do x" 2>&1); ho1_rc=$?
+check "agy-handoff fast-aborts with exit 1 on delegate usage error (--timeout bogus)" 1 "$ho1_rc" "executor unavailable (agy-delegate exit 1)" "$ho1_out"
+[ ! -e "$TMP/vcount16" ] && { echo "ok: agy-handoff did not run verify on delegate exit 1"; PASS=$((PASS+1)); } || { echo "FAIL: agy-handoff ran verify after delegate exit 1"; FAIL=$((FAIL+1)); }
+
+# 3. Issue #123 Item 2: unit-less --timeout normalization, upfront Go duration validation, and standalone outer_timeout_secs
+out=$("$DELEGATE" --timeout 900 --print-command "hi" 2>/dev/null); rc=$?
+check "--timeout 900 normalizes to --print-timeout 900s" 0 "$rc" "--print-timeout 900s" "$out"
+out=$("$DELEGATE" --timeout 0 --print-command "hi" 2>/dev/null); rc=$?
+check "--timeout 0 normalizes to --print-timeout 0s" 0 "$rc" "--print-timeout 0s" "$out"
+out=$("$DELEGATE" --timeout 1h30m --print-command "hi" 2>/dev/null); rc=$?
+check "--timeout 1h30m preserved" 0 "$rc" "--print-timeout 1h30m" "$out"
+out=$("$DELEGATE" --timeout 500ms --print-command "hi" 2>/dev/null); rc=$?
+check "--timeout 500ms preserved" 0 "$rc" "--print-timeout 500ms" "$out"
+out=$("$DELEGATE" --timeout 1.5m --print-command "hi" 2>/dev/null); rc=$?
+check "--timeout 1.5m preserved" 0 "$rc" "--print-timeout 1.5m" "$out"
+out=$("$DELEGATE" --timeout $'100\xc2\xb5s' --print-command "hi" 2>/dev/null); rc=$?
+check "--timeout 100µs normalizes to ASCII --print-timeout 100us" 0 "$rc" "--print-timeout 100us" "$out"
+
+for bad_to in bogus "" "-5s" "-10" "10d" "5min" ".s"; do
+  b_out=$("$DELEGATE" --timeout "$bad_to" --print-command "hi" 2>&1); b_rc=$?
+  if [ "$b_rc" -ne 1 ] || ! has 'invalid --timeout' "$b_out"; then
+    echo "FAIL: --timeout '$bad_to' expected exit 1 + invalid --timeout, got rc=$b_rc ($b_out)"; FAIL=$((FAIL+1))
+  else
+    PASS=$((PASS+1))
+  fi
+done
+echo "ok: upfront --timeout validation rejects empty, negative, and non-Go-duration values with exit 1"
+
+out=$(AGY_TIMEOUT=900 CLAUDE_PLUGIN_OPTION_TIMEOUT=7m "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
+check "AGY_TIMEOUT=900 overrides CLAUDE_PLUGIN_OPTION_TIMEOUT and normalizes to 900s" 0 "$rc" "--print-timeout 900s" "$out"
+out=$(AGY_TIMEOUT=900 "$DELEGATE" --timeout 4m --print-command "hi" 2>/dev/null); rc=$?
+check "explicit --timeout overrides AGY_TIMEOUT" 0 "$rc" "--print-timeout 4m" "$out"
+out=$(AGY_TIMEOUT=bogus "$DELEGATE" --print-command "hi" 2>&1); rc=$?
+check "invalid AGY_TIMEOUT warns and falls back to 5m default" 0 "$rc" "--print-timeout 5m" "$out"
+check "invalid AGY_TIMEOUT emits stderr warning" 0 "$rc" "invalid AGY_TIMEOUT" "$out"
+out=$(CLAUDE_PLUGIN_OPTION_TIMEOUT=bogus "$DELEGATE" --yolo --print-command "hi" 2>&1); rc=$?
+check "invalid CLAUDE_PLUGIN_OPTION_TIMEOUT warns and falls back to 25m write default" 0 "$rc" "--print-timeout 25m" "$out"
+
+ots_1h30m="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 1h30m')"
+ots_2m30s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 2m30s')"
+ots_1p5m="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 1.5m')"
+ots_500ms="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 500ms')"
+ots_900="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 900')"
+ots_0m0s="$(bash -c 'eval "$(sed -n "/^outer_timeout_secs()/,/^}/p" "'"$DELEGATE"'")"; outer_timeout_secs 0m0s')"
+check "standalone outer_timeout_secs 1h30m -> 5520 (not 375)" 0 0 "5520" "$ots_1h30m"
+check "standalone outer_timeout_secs 2m30s -> 187" 0 0 "187" "$ots_2m30s"
+check "standalone outer_timeout_secs 1.5m -> 125" 0 0 "125" "$ots_1p5m"
+check "standalone outer_timeout_secs 500ms -> 36 (rounds up to 1s + 35s pad, never 0)" 0 0 "36" "$ots_500ms"
+check "standalone outer_timeout_secs 900 -> 1020" 0 0 "1020" "$ots_900"
+check "standalone outer_timeout_secs 0m0s -> 0" 0 0 "0" "$ots_0m0s"
+
+# 4. Issue #123 Item 3: mode-scaled 25m write-run default vs 5m read/plan default
+out=$("$DELEGATE" --mode accept-edits --print-command "hi" 2>/dev/null); rc=$?
+check "--mode accept-edits defaults unset timeout to 25m" 0 "$rc" "--print-timeout 25m" "$out"
+out=$("$DELEGATE" --mode auto --print-command "hi" 2>/dev/null); rc=$?
+check "--mode auto defaults unset timeout to 25m" 0 "$rc" "--print-timeout 25m" "$out"
+out=$("$DELEGATE" --yolo --print-command "hi" 2>/dev/null); rc=$?
+check "--yolo defaults unset timeout to 25m" 0 "$rc" "--print-timeout 25m" "$out"
+out=$("$DELEGATE" --yolo --read-only --print-command "hi" 2>/dev/null); rc=$?
+check "--yolo --read-only keeps 5m read default" 0 "$rc" "--print-timeout 5m" "$out"
+out=$("$DELEGATE" --yolo --mode plan --print-command "hi" 2>/dev/null); rc=$?
+check "--yolo --mode plan keeps 5m plan default" 0 "$rc" "--print-timeout 5m" "$out"
+out=$("$DELEGATE" --mode plan --print-command "hi" 2>/dev/null); rc=$?
+check "--mode plan keeps 5m plan default" 0 "$rc" "--print-timeout 5m" "$out"
+
+# 5. Issue #123 Item 4: diagnostic-only extract_denied_actions() + .denied_actions precedence
+sd_cmd_err=$(STUB_MODE=softdeny_1125 "$DELEGATE" "run ls" 2>&1 >/dev/null); sd_cmd_rc=$?
+check "softdeny_1125 (no JSON) extracts denied: command from stderr" 15 "$sd_cmd_rc" "denied: command)" "$sd_cmd_err"
+sd_wf_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_softdeny_1125 "$DELEGATE" "write f" 2>&1 >/dev/null); sd_wf_rc=$?
+check "json_softdeny_1125 (no denied_actions field) extracts denied: write_file from stderr" 15 "$sd_wf_rc" "denied: write_file)" "$sd_wf_err"
+hd_wf_err=$(STUB_MODE=harddeny "$DELEGATE" "write f" 2>&1 >/dev/null); hd_wf_rc=$?
+check "harddeny extracts denied: write_file from stderr" 15 "$hd_wf_rc" "denied: write_file)" "$hd_wf_err"
+hd_sig_line="$(printf '%s\n' "$hd_wf_err" | grep '^AGY_SIGNAL ')"
+if has '/tmp/x/probe.txt' "$hd_sig_line"; then
+  echo "FAIL: AGY_SIGNAL leaked file path from stderr: $hd_sig_line"; FAIL=$((FAIL+1))
+else echo "ok: extract_denied_actions never leaks target paths into AGY_SIGNAL"; PASS=$((PASS+1)); fi
+
+sd_multi_err=$(STUB_MODE=softdeny_multi_15x "$DELEGATE" "build" 2>&1 >/dev/null); sd_multi_rc=$?
+check "multi-tool stderr extracts denied: command write_file" 15 "$sd_multi_rc" "denied: command write_file)" "$sd_multi_err"
+sd_app_err=$(STUB_MODE=softdeny_approval_15x "$DELEGATE" "send" 2>&1 >/dev/null); sd_app_rc=$?
+check "approval-only tool stderr extracts denied: SendInput (ignoring tool(s))" 15 "$sd_app_rc" "denied: SendInput)" "$sd_app_err"
+
+prec_err=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_denied_precedence "$DELEGATE" "call mcp" 2>&1 >/dev/null); prec_rc=$?
+check ".denied_actions (mcp_tool) takes precedence over stderr (write_file)" 15 "$prec_rc" "denied: mcp_tool)" "$prec_err"
+if has 'denied: write_file' "$prec_err"; then
+  echo "FAIL: stderr overwrote .denied_actions precedence: $prec_err"; FAIL=$((FAIL+1))
+else echo "ok: .denied_actions precedence preserved when non-empty"; PASS=$((PASS+1)); fi
 
 echo ""
 if [ "$SKIP" -gt 0 ]; then
