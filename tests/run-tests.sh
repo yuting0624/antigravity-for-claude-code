@@ -3328,6 +3328,9 @@ chmod +x "$TMP/vfy16.sh"
 ho16_out=$(STUB_MODE=flag_undef_plural "$HANDOFF" --dir "$HREPO16" --new-project off --verify "$TMP/vfy16.sh" "do x" 2>&1); ho16_rc=$?
 check "agy-handoff fast-aborts with exit 16 on CLI_FLAG_ERROR" 16 "$ho16_rc" "executor unavailable (agy-delegate exit 16)" "$ho16_out"
 [ ! -e "$TMP/vcount16" ] && { echo "ok: agy-handoff did not run verify on exit 16"; PASS=$((PASS+1)); } || { echo "FAIL: agy-handoff ran verify after exit 16"; FAIL=$((FAIL+1)); }
+ho1_out=$("$HANDOFF" --dir "$HREPO16" --new-project off --timeout bogus --verify "$TMP/vfy16.sh" "do x" 2>&1); ho1_rc=$?
+check "agy-handoff fast-aborts with exit 1 on delegate usage error (--timeout bogus)" 1 "$ho1_rc" "executor unavailable (agy-delegate exit 1)" "$ho1_out"
+[ ! -e "$TMP/vcount16" ] && { echo "ok: agy-handoff did not run verify on delegate exit 1"; PASS=$((PASS+1)); } || { echo "FAIL: agy-handoff ran verify after delegate exit 1"; FAIL=$((FAIL+1)); }
 
 # 3. Issue #123 Item 2: unit-less --timeout normalization, upfront Go duration validation, and standalone outer_timeout_secs
 out=$("$DELEGATE" --timeout 900 --print-command "hi" 2>/dev/null); rc=$?

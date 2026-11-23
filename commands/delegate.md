@@ -35,8 +35,8 @@ Do this:
 Remember the break-even: only delegate if the offloaded volume clearly exceeds the
 spec + round-trip + verification overhead. Tiny tasks are cheaper to just do yourself.
 
-**Long task, interactive session?** A sync delegation can also hit Claude Code's ~2-min
-Bash-tool limit — start it in the background and keep working (this also keeps the prompt
+**Long task, interactive session?** A sync delegation can hit Claude Code's ~2-min default / 10-min max
+Bash-tool limit (notably write runs now default `--print-timeout` to `25m`) — start long interactive writes in the background via `agy-job start` (or raise Bash's `timeout` up to `600000` ms) and keep working (this also keeps the prompt
 cache warm and frees you to do other turns):
 `ID=$(agy-job start --tier pro --dir . "<task>")`
 then check `/antigravity:status` and collect with `/antigravity:result <id>`.

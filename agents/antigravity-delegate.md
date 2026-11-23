@@ -73,7 +73,7 @@ Options: `--tier flash|flash-lo|pro|neon|carbon|argon|flash-38` (`flash` = Gemin
 terminal on `agy 1.5.7+`) · `--yolo` (approves all tools and shell commands — a grant over the machine,
 not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert under
 `--yolo`) · `--json-schema '<schema>'` ·
-`--timeout <dur>` (e.g. `10m`, `900s`, or bare seconds `900`; defaults to `5m` read/plan, `25m` write runs) · `-c`/`--continue` to hold state on the cheap side.
+`--timeout <dur>` (e.g. `10m`, `900s`, or bare seconds `900`; defaults to `5m` read/plan, `25m` write runs — note `25m` exceeds Claude Code's 10m synchronous Bash cap, so pass `timeout: 600000` on Bash and detach multi-minute interactive write jobs with `agy-job start`) · `-c`/`--continue` to hold state on the cheap side.
 
 ## Cost discipline (why this subagent exists)
 

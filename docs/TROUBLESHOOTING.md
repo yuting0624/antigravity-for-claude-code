@@ -206,7 +206,7 @@ command the task never needed.
    export GOOGLE_CLOUD_PROJECT=<your-gcp-project-id>
    export GOOGLE_CLOUD_LOCATION=global
    ```
-   Measured manually on Linux across `agy 1.5.9` and `1.5.14`: `AGY_ADC_AUTH=true` exposes the full Vertex catalog directly (33 models on `agy 1.5.9`, expanded in `agy 1.5.13+` — 38 models on `1.5.14` — with `Gemini 4 Neon (High/XHigh/Medium/Low)` alongside `Gemini 4 Hydrogen (High/Low/XHigh)`, `Gemini 4 Carbon (High/Medium/Low)`, and `Gemini 4 Argon (High/Medium/Low)`; `agy < 1.5.13` ADC automatically falls back in 1 hop from `Neon` to `Gemini 4 Carbon (High)`), and `~/.cache/antigravity-claude/tier-models-v1.tsv` isolates ADC and OAuth cache keys automatically.
+   Measured manually on Linux on `agy 1.5.9` and `1.5.14`: `AGY_ADC_AUTH=true` exposes the full Vertex catalog directly (33 models on `agy 1.5.9`, where `pro` fell back in 1 hop from `Neon` to `Gemini 4 Carbon (High)`; 38 models on `agy 1.5.14`, including `Gemini 4 Neon (High/XHigh/Medium/Low)` alongside `Gemini 4 Hydrogen (High/Low/XHigh)`, `Gemini 4 Carbon (High/Medium/Low)`, and `Gemini 4 Argon (High/Medium/Low)` — upstream's changelog notes ADC Neon support started in `1.5.13`), and `~/.cache/antigravity-claude/tier-models-v1.tsv` isolates ADC and OAuth cache keys automatically.
 
 ---
 
