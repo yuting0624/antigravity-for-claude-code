@@ -1,6 +1,6 @@
 {
   "name": "antigravity",
-  "version": "0.31.1",
+  "version": "0.31.2",
   "description": "Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the SDLC. Claude conducts — requirements, architecture, the hard 20%, verification, review — and routes deterministic, high-volume work (scaffolding, tests, first-pass review, migrations, web/Vertex AI Search) to Antigravity. Hybrid agentic engineering; lower token cost as a financial lever.",
   "author": {
     "name": "linyuting"
@@ -28,8 +28,8 @@
     "timeout": {
       "type": "string",
       "title": "Default delegation timeout",
-      "description": "Default agy print-mode timeout when --timeout is not passed, e.g. 5m, 10m, 300s.",
-      "default": "5m"
+      "description": "Override the default agy print-mode timeout when --timeout is not passed, e.g. 5m, 25m, 900s, bare seconds like 900, or 0 for unbounded. Empty = mode-aware default (5m for read/plan, 25m for write runs with --mode accept-edits, --mode auto, or --yolo).",
+      "default": ""
     },
     "coding_policy": {
       "type": "string",
@@ -64,7 +64,13 @@
     "tier_neon": {
       "type": "string",
       "title": "Model for the 'neon' tier alias",
-      "description": "Override the exact agy model the 'neon' tier alias maps to (default: Gemini 4 Neon (High)). Use a name from `agy models`.",
+      "description": "Override the exact agy model the 'neon' tier alias maps to (default: Gemini 4 Neon (High); auto-falls-back through Gemini 4 Carbon (High), Gemini 4 Argon (High), and Gemini 3.1 Pro when Neon is unavailable on the plan). Use a name from `agy models`.",
+      "default": ""
+    },
+    "tier_carbon": {
+      "type": "string",
+      "title": "Model for the 'carbon' tier alias",
+      "description": "Override the exact agy model the 'carbon' tier alias maps to (default: Gemini 4 Carbon (High); auto-falls-back through Gemini 4 Neon (High), Gemini 4 Argon (High), and Gemini 3.1 Pro when Carbon is unavailable on the plan). Use a name from `agy models`.",
       "default": ""
     },
     "structured_output": {

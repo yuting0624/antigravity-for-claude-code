@@ -61,7 +61,7 @@
     "ai.google.dev/gemini-api/docs/pricing",
     "platform.claude.com/docs/en/about-claude/pricing"
   ],
-  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only (Opus 5.5 / Sonnet 5.5: 5-minute cache write = 1.25x input, cache read = 0.05x input — the Opus 4.x generation read at 0.10x). Gemini prices cached input at a flat rate (cached_in: 95% off on Gemini 4 Carbon/Argon/Hydrogen >= 4,096 tokens, 90% off on Gemini 3.x) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
+  "_cache_note": "cache_write_mult / cache_read_mult apply to the CLAUDE deck only (Opus 5.5 / Sonnet 5.5: 5-minute cache write = 1.25x input, cache read = 0.05x input — the Opus 4.x generation read at 0.10x). Gemini prices cached input at a flat rate (cached_in: 95% off on Gemini 4 Neon/Carbon/Argon/Hydrogen >= 4,096 tokens, 90% off on Gemini 3.x) and bills context-cache STORAGE by time, which agy does not report — so any Gemini-side figure you compute here is a LOWER BOUND.",
   "claude_opus": {
     "in": 4.0,
     "out": 20.0

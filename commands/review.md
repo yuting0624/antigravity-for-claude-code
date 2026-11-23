@@ -11,7 +11,7 @@ Scope/flags: $ARGUMENTS
 Do this:
 1. Capture the diff: `git diff` (or the range/paths in the scope above; default to
    uncommitted + last commit if unspecified).
-2. Delegate the review to agy (`pro` tier = Gemini 4 Carbon High, falling back automatically on plans without Carbon) — pipe the diff in on stdin with `--read-only`:
+2. Delegate the review to agy (`pro` tier = Gemini 4 Neon High, falling back automatically through Carbon, Argon, and 3.1 Pro on plans without Neon) — pipe the diff in on stdin with `--read-only`:
    `git diff | agy-delegate --read-only --tier pro -`
    (This runs as YOU, the conductor. The `antigravity-delegate` subagent cannot pipe —
    its PreToolUse gate refuses every pipeline since GHSA-hwv2-vjgj-8rcv, because `git`

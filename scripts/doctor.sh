@@ -173,7 +173,7 @@ first_present_fallback() {
 # Suggest up to 3 candidate models from $MODELS when a tier model is missing (#102, #104).
 # Ranks direct substring matches (either $n contains $want, e.g. "Gemini 4 Argon" ->
 # "Gemini 4 Argon (High)", or $want contains the normalized display name, e.g.
-# "Gemini 3.1 Pro (High)" -> "Gemini 3.1 Pro") AHEAD of generic family matches (carbon/argon/pro
+# "Gemini 3.1 Pro (High)" -> "Gemini 3.1 Pro") AHEAD of generic family matches (neon/carbon/argon/pro
 # or hydrogen/flash) across the entire model list, so earlier family rows never bury a direct match
 # that appears later in `agy models`. Specialist orchestrator/coordinator entries are
 # skipped on generic family matches.

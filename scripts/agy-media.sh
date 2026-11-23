@@ -35,7 +35,7 @@
 #
 # Exit codes: 0 ok | 1 usage | 4 file not found | 5 unsupported format (convert first)
 #             | otherwise the agy-delegate exit code (2 failed · 3 empty · 10 quota ·
-#               11 auth · 12 timeout · 13 agy missing · 14 model · 15 permission)
+#               11 auth · 12 timeout · 13 agy missing · 14 model · 15 permission · 16 cli flag)
 #
 set -uo pipefail
 
