@@ -48,11 +48,41 @@ resolve() {
   exit 2
 }
 
+# List up to $1 newest transcript paths under $BRAIN via Python os.scandir (portable across
+# macOS BSD and Linux, safe when $BRAIN contains spaces, and immune to shell glob ARG_MAX
+# limits when >500 conversations accumulate on agy 1.5.15+).
+recent_transcripts() {
+  local limit="${1:-10}"
+  [ -d "$BRAIN" ] || return 0
+  python3 - "$BRAIN" "$limit" <<'PY'
+import os, stat, sys
+brain, limit = sys.argv[1], int(sys.argv[2])
+items = []
+try:
+    it = os.scandir(brain)
+except OSError:
+    sys.exit(0)
+with it:
+    for entry in it:
+        try:
+            if not entry.is_dir():
+                continue
+            p = os.path.join(entry.path, ".system_generated", "logs", "transcript.jsonl")
+            st = os.stat(p)
+            if stat.S_ISREG(st.st_mode):
+                items.append((st.st_mtime_ns, entry.name, p))
+        except OSError:
+            continue
+items.sort(key=lambda x: (x[0], x[1]), reverse=True)
+for _, _, p in items[:limit]:
+    print(p)
+PY
+}
+
 # Newest transcript on disk. Used by --last and by '--audit --last'.
 latest() {
   local f
-  # shellcheck disable=SC2012
-  f="$(ls -t "$BRAIN"/*/.system_generated/logs/transcript.jsonl 2>/dev/null | head -1)"
+  f="$(recent_transcripts 1)"
   [ -n "$f" ] || { echo "agy-trace: no transcripts under $BRAIN" >&2; exit 2; }
   printf '%s\n' "$f"
 }
@@ -60,17 +90,21 @@ latest() {
 list_recent() {
   local n="${1:-10}"
   case "$n" in (*[!0-9]*|'') n=10 ;; esac
-  local found=0 f id when steps
-  # newest first; glob may match nothing -> nullglob-like guard via -f check
-  # shellcheck disable=SC2012
-  for f in $(ls -t "$BRAIN"/*/.system_generated/logs/transcript.jsonl 2>/dev/null | head -"$n"); do
-    [ -f "$f" ] || continue
-    found=1
-    id="${f#"$BRAIN"/}"; id="${id%%/*}"
-    steps="$(wc -l < "$f" | tr -d ' ')"
-    when="$(date -r "$f" '+%Y-%m-%d %H:%M' 2>/dev/null || echo '?')"
-    printf '%s  %s  %s steps\n' "$when" "$id" "$steps"
-  done
+  [ "$n" -gt 0 ] || n=10
+  local found=0 f id when steps recent_out
+  recent_out="$(recent_transcripts "$n")"
+  if [ -n "$recent_out" ]; then
+    while IFS= read -r f; do
+      [ -n "$f" ] && [ -f "$f" ] || continue
+      found=1
+      id="${f#"$BRAIN"/}"; id="${id%%/*}"
+      steps="$(wc -l < "$f" | tr -d ' ')"
+      when="$(date -r "$f" '+%Y-%m-%d %H:%M' 2>/dev/null || echo '?')"
+      printf '%s  %s  %s steps\n' "$when" "$id" "$steps"
+    done <<EOF
+$recent_out
+EOF
+  fi
   if [ "$found" -eq 0 ]; then
     echo "agy-trace: no transcripts under $BRAIN" >&2
     echo "agy-trace: (one is written per agy run — delegate something first)" >&2

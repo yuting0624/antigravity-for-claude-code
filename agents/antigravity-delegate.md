@@ -68,12 +68,12 @@ agy-delegate [options] "<task>"
 Options: `--tier flash|flash-lo|pro|neon|carbon|argon|flash-38` (`flash` = Gemini 4 Hydrogen High, `flash-lo` = Hydrogen Low,
 `pro` / `neon` = Gemini 4 Neon High, `carbon` = Gemini 4 Carbon High, `argon` = Gemini 4 Argon High, `flash-38` = Gemini 3.8 Flash High; plus `--effort low|medium|high|xhigh|max`) · `--dir .`
 (pass `.` or a literal subdirectory inside the current working directory — the `PreToolUse` gate blocks
-`--settings` and confines `-d`/`--dir`/`--add-dir` to `cwd`; always prefer `--dir .` over pasting code) · `--read-only` (`--allow-url` when URL reads are needed; neutralizes
-`agy 1.5.7+` default `Auto` mode) · `--mode accept-edits` (approves workspace file edits without
+`--settings` and confines `-d`/`--dir`/`--add-dir` to `cwd`; always prefer `--dir .` over pasting code) · `--read-only` (`--allow-url` when URL reads are needed; sets `agentMode: ""` and `allowNonWorkspaceAccess: false` to disable
+`agy 1.5.7+` default `Auto` mode, including `1.5.14+` outside-workspace reads and `1.5.16+` outside-workspace VCS-repo/additive writes; cannot be combined with `--yolo` or `--mode accept-edits|auto`) · `--mode accept-edits` (approves workspace file edits without
 terminal on `agy 1.5.7+`) · `--yolo` (approves all tools and shell commands — a grant over the machine,
 not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert under
 `--yolo`) · `--json-schema '<schema>'` ·
-`--timeout <dur>` (e.g. `10m`, `900s`, or bare seconds `900`; defaults to `5m` read/plan, `25m` write runs — note `25m` exceeds Claude Code's 10m synchronous Bash cap, so pass `timeout: 600000` on Bash and detach multi-minute interactive write jobs with `agy-job start`) · `-c`/`--continue` to hold state on the cheap side.
+`--timeout <dur>` (e.g. `10m`, `900s`, or bare seconds `900`; defaults to `5m` read/plan, `25m` write runs — note `25m` exceeds Claude Code's 10m synchronous Bash cap, so pass `timeout: 600000` on Bash and detach multi-minute interactive write jobs with `agy-job start`) · `-c`/`--continue` or `-r <id>`/`--resume <id>`/`--conversation <id>` to hold state on the cheap side.
 
 ## Cost discipline (why this subagent exists)
 
@@ -102,7 +102,8 @@ not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert unde
   `command(...)` rule naming no command, not to a mistyped `write_file()`.) Either way tell
   the caller to run on a dedicated branch/worktree and review the diff before merging.
 - **Read-only** (analysis, first-pass review, search): pass `--read-only` so `agy 1.5.7+`'s default
-  `Auto` mode cannot modify workspace files or run shell commands (add `--allow-url` if the task reads
+  `Auto` mode cannot modify workspace files, run shell commands, read files outside `--dir` (`1.5.14+`),
+  or create/edit files in outside VCS repositories / via additive writes (`1.5.16+`) (add `--allow-url` if the task reads
   URLs; Vertex AI Search or terminal commands still need explicit `permissions.allow` or `--yolo`). Ask agy to return
   findings + `file:line` only.
 

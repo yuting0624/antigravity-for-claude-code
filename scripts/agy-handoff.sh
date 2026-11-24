@@ -66,9 +66,32 @@ need() {
   [ $# -ge 2 ] || die "option $1 needs a value"
   case "$2" in -*) die "option $1 needs a value, got '$2'" ;; esac
 }
+on_windows_native() {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32*) return 0 ;; esac
+  [ -n "${MSYSTEM:-}" ] && return 0
+  case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
+  return 1
+}
+reject_unc_or_device_path() {
+  local flag="$1" p="$2"
+  case "$p" in
+    '\\'*)  die "option $flag rejects UNC or Win32 device path: $p" ;;
+    '\??'*) die "option $flag rejects NT object path: $p" ;;
+    '/??'*) die "option $flag rejects NT object path: $p" ;;
+    '//'*)
+      case "$p" in
+        '///'*) ;;
+        *)
+          if on_windows_native; then
+            die "option $flag rejects UNC path: $p"
+          fi ;;
+      esac ;;
+  esac
+}
 while [ $# -gt 0 ]; do
   case "$1" in
     -d|--dir) need "$@"; DIR="$2"; shift 2 ;;
+    --dir=*) DIR="${1#*=}"; [ -n "$DIR" ] || die "option --dir needs a value"; shift ;;
     -t|--tier) need "$@"; TIER="$2"; shift 2 ;;
     -e|--effort) need "$@"; EFFORT="$2"; shift 2 ;;
     -m|--model) need "$@"; MODEL="$2"; shift 2 ;;
@@ -94,6 +117,7 @@ done
 printf '%s' "$REQ" | grep -q '[^[:space:]]' || { usage >&2; exit 1; }
 case "$FIXUPS" in ''|*[!0-9]*) die "--fixups must be a number" ;; esac
 case "$VERIFY_TIMEOUT" in ''|*[!0-9]*) die "--verify-timeout must be seconds" ;; esac
+reject_unc_or_device_path "--dir" "$DIR"
 [ -d "$DIR" ] || die "no such directory: $DIR"
 DIR="$(cd "$DIR" && pwd -P)"
 HOME_P="$(cd "$HOME" 2>/dev/null && pwd -P || echo "$HOME")"

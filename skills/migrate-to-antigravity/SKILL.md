@@ -79,7 +79,7 @@ These are measured against agy 1.1.12, and none of them are documented.
    `agy --project <id>` there, or pick the project in the TUI. Global
    `~/.gemini/config/` loads regardless, which is why global memory goes to a plugin.
 3. **`~/` is not expanded in the global `skills.json`.** Entry paths must be absolute.
-   *(Note: since `agy 1.5.2`, workspace-local `.agents/skills.json` and `.agents/plugins.json` reject external paths and symlinks outside the workspace; global `~/.gemini/config/skills.json` — which `agy-migrate` writes — continues to load `~/.claude/skills` normally.)*
+   *(Note: since `agy 1.5.2`, workspace-local `.agents/skills.json` and `.agents/plugins.json` reject external paths and symlinks outside the workspace; global `~/.gemini/config/skills.json` — which `agy-migrate` writes — continues to load `~/.claude/skills` normally. Since `agy 1.5.16`, `agy` also auto-discovers unmanaged user-global skills in `~/.agents/skills`, with `~/.gemini/config/` winning on name collision.)*
 4. **Rules and workflows are capped at 12,000 characters per file.** Oversized memory
    is split into `-1.md`, `-2.md` parts on paragraph boundaries.
 
@@ -92,8 +92,8 @@ but:
   Claude Code 2.x's `plugins/cache/<marketplace>/<plugin>/<version>/` marketplace cache
   (`1.4.11+` added marketplace cache scanning, though symlinks are still skipped, so the
   staging HOME uses real copies across all versions). On enterprise machines where
-  `pluginControls` disables plugins (`agy 1.5.8+`), `agy plugin import claude` fails with
-  `plugins are disabled by your organization` — `agy-migrate` surfaces that policy block
+  `pluginControls` disables plugins (`agy 1.5.8+`; built-in plugins stay active on `1.5.16+`), `agy plugin import claude` fails with
+  `plugins are disabled by your organization` — `agy-migrate` and `agy-doctor` surface that policy block
   explicitly.
 - It **destroys remote MCP servers**: `{"type":"http","url":…}` becomes
   `{"command":"","args":null}` — the URL is dropped and no `serverUrl` is written.

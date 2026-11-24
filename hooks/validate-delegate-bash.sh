@@ -212,7 +212,7 @@ cwd_real = os.path.realpath(cwd_base)
 
 DELEGATE_VAL_OPTS = {
     "-t", "--tier", "-e", "--effort", "--timeout", "--json-schema",
-    "--mode", "--conversation", "-m", "--model",
+    "--mode", "-r", "--resume", "--conversation", "-m", "--model",
 }
 DELEGATE_BOOL_OPTS = {
     "--read-only", "--allow-url", "--yolo", "--sandbox", "--digest",
@@ -230,10 +230,27 @@ HANDOFF_BOOL_OPTS = {
 }
 DIR_OPTS = {"-d", "--dir", "--add-dir"}
 
+def is_windows_env():
+    if os.name == "nt":
+        return True
+    if sys.platform.lower().startswith(("win", "msys", "cygwin")):
+        return True
+    if os.environ.get("OSTYPE", "").lower().startswith(("msys", "cygwin", "win")):
+        return True
+    if os.environ.get("MSYSTEM", "").strip():
+        return True
+    return False
+
 def check_dir_val(flag_name, add_val):
     if not add_val:
         deny("%s requires a non-empty literal path inside the current working directory"
              % flag_name)
+    # Reject Windows UNC (\\server\share, //server/share on Windows/MSYS/Cygwin), Win32 device
+    # (\\.\, \\?\), and NT object (\??\, /??/) paths before os.path.realpath() so PreToolUse
+    # never triggers an outbound SMB/NTLM lookup (agy 1.5.14 parity; preserves POSIX ///foo).
+    if (add_val.startswith(("\\\\", "\\??", "/??"))
+            or (is_windows_env() and add_val.startswith("//") and not add_val.startswith("///"))):
+        deny("%s rejects UNC, Win32 device, and NT object paths" % flag_name)
     if add_val.startswith("~") or any(ch in add_val for ch in "$`*?[]{}"):
         deny("%s may not contain shell expansion, ~, globs, or braces "
              "($, backtick, ~, *, ?, [], {} are blocked from the antigravity-delegate "
@@ -290,6 +307,20 @@ def scan_opts(opt_toks, val_opts, bool_opts, stop_on_pos):
             schema_val = tok.split("=", 1)[1]
             if not is_json_object(schema_val):
                 check_dir_val("--json-schema", schema_val)
+            idx += 1
+            continue
+        if "--resume" in val_opts and tok in ("-r", "--resume", "--conversation"):
+            if idx + 1 >= len(opt_toks):
+                deny("option %s requires a conversation ID" % tok)
+            conv_val = opt_toks[idx + 1]
+            if not conv_val or any(ch.isspace() for ch in conv_val) or conv_val.startswith("-"):
+                deny("option %s requires a valid conversation ID" % tok)
+            idx += 2
+            continue
+        if "--resume" in val_opts and tok.startswith(("--resume=", "--conversation=")):
+            flag_name, conv_val = tok.split("=", 1)
+            if not conv_val or any(ch.isspace() for ch in conv_val) or conv_val.startswith("-"):
+                deny("option %s requires a valid conversation ID" % flag_name)
             idx += 1
             continue
         if tok in val_opts:
