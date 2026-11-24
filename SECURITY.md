@@ -30,19 +30,23 @@ do), and a **non-destructive** proof-of-concept (exit codes / policy decisions, 
   outbound SMB/NTLM lookups), and confines `-d` / `--dir` / `--add-dir` (plus file-path
   `--json-schema`) to literal paths without shell/glob metacharacters resolving inside `cwd`.
   Note that `-d` / `--dir` / `--add-dir` confinement bounds which workspace roots `agy`
-  mounts — on `agy 1.5.7+` with an active OS terminal sandbox, unflagged `agy` defaults to
-  `Auto` mode (approving workspace edits and vetted/sandboxed commands on `1.5.7+`,
-  outside-workspace file reads on `1.5.14+`, and outside-workspace VCS-repository or
-  additive writes on `1.5.16+`), whereas `--read-only` (and `--allow-url`) injects
-  `agentMode: ""`, `allowNonWorkspaceAccess: false`, `toolPermission: "request-review"`,
-  and `ask: ["write_file(*)","command(*)"]` (and rejects conflicting `--yolo`, `--settings`,
-  or `--mode accept-edits|auto`) to enforce strict workspace read-only scope. When `--yolo`
+  mounts — per upstream `agy` release notes, on `agy 1.5.7+` with an active OS terminal
+  sandbox, unflagged `agy` defaults to `Auto` mode (approving workspace edits and
+  vetted/sandboxed commands on `1.5.7+`, outside-workspace file reads on `1.5.14+`, and
+  outside-workspace VCS-repository or additive writes on `1.5.16+`), whereas `--read-only`
+  (and `--allow-url`) injects `agentMode: ""`, `allowNonWorkspaceAccess: false`,
+  `toolPermission: "request-review"`, and `ask: ["write_file(*)","command(*)"]` (and
+  rejects conflicting `--yolo`, `--settings`, or `--mode accept-edits|auto`) to enforce
+  workspace read-only scope (measured live on Linux with `agy 1.5.16`: denies external-Git
+  `write_file` and non-workspace host `read_file` with exit `15` even when `settings.json`
+  sets `allowNonWorkspaceAccess: true`, though `agy` itself still permits `read_file` under
+  `/tmp`). When `--yolo`
   is passed (or implied by `agy-handoff`), `--yolo` (`--dangerously-skip-permissions`) still
-  grants `agy` machine-wide tool execution (`--sandbox` is not containment; since `agy 1.5.10`,
-  the OS terminal sandbox denies access to `~/.config`, `%APPDATA%`, and `~/.git-credentials`
-  by default for sandboxed commands, which still does not contain `--yolo` file or network
-  actions). Bypasses of the Bash gate itself (arbitrary command execution under prompt
-  injection) are the highest-value reports.
+  grants `agy` machine-wide tool execution (`--sandbox` is not containment; per `agy 1.5.10`
+  release notes, the OS terminal sandbox denies access to `~/.config`, `%APPDATA%`, and
+  `~/.git-credentials` by default for sandboxed commands, which still does not contain
+  `--yolo` file or network actions). Bypasses of the Bash gate itself (arbitrary command
+  execution under prompt injection) are the highest-value reports.
 - **`scripts/agy-delegate.sh` / `agy-handoff.sh` / `agy-job.sh`** — the wrappers that invoke `agy`.
 - **`hooks/`** — anything injected into the model's context or run at session start.
 - Trust boundary reminder: `agy` output and repo contents are **untrusted** — the plugin

@@ -3482,10 +3482,16 @@ out=$("$DELEGATE" --allow-url --yolo --print-command "hi" 2>&1); rc=$?
 check "--allow-url --yolo rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --yolo" "$out"
 out=$("$DELEGATE" --read-only --settings '{}' --print-command "hi" 2>&1); rc=$?
 check "--read-only --settings rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --settings" "$out"
+out=$("$DELEGATE" --read-only --settings='{}' --print-command "hi" 2>&1); rc=$?
+check "--read-only --settings= rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --settings" "$out"
+out=$("$DELEGATE" --allow-url --settings '{}' --print-command "hi" 2>&1); rc=$?
+check "--allow-url --settings rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --settings" "$out"
 out=$("$DELEGATE" --allow-url --settings='{}' --print-command "hi" 2>&1); rc=$?
 check "--allow-url --settings= rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --settings" "$out"
 out=$("$DELEGATE" --read-only --mode accept-edits --print-command "hi" 2>&1); rc=$?
 check "--read-only --mode accept-edits rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --mode accept-edits" "$out"
+out=$("$DELEGATE" --allow-url --mode accept-edits --print-command "hi" 2>&1); rc=$?
+check "--allow-url --mode accept-edits rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --mode accept-edits" "$out"
 out=$("$DELEGATE" --read-only --mode auto --print-command "hi" 2>&1); rc=$?
 check "--read-only --mode auto rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --mode auto" "$out"
 out=$("$DELEGATE" --allow-url --mode auto --print-command "hi" 2>&1); rc=$?
@@ -3539,6 +3545,26 @@ out=$(MSYSTEM=MINGW64 "$HANDOFF" --dir '//evil/share/repo' "do x" 2>&1); rc=$?
 check "agy-handoff (MSYSTEM=MINGW64) rejects //evil/share/repo BEFORE [ -d ] stat (exit 1)" 1 "$rc" "UNC path" "$out"
 out=$("$HANDOFF" --dir '/??/C:/repo' "do x" 2>&1); rc=$?
 check "agy-handoff rejects /??/C:/repo BEFORE [ -d ] stat (exit 1)" 1 "$rc" "NT object path" "$out"
+
+# Pin 2-slash `//` UNC detection parity across validate-delegate-bash.sh (`is_windows_env`),
+# agy-delegate.sh (`on_windows_native`), and agy-handoff.sh (`on_windows_native`):
+unc_parity_bad=0
+for env_spec in "win:OSTYPE=msys:MSYSTEM=" "win:OSTYPE=cygwin:MSYSTEM=" "win:OSTYPE=win32:MSYSTEM=" "win:OSTYPE=linux-gnu:MSYSTEM=MINGW64" "posix:OSTYPE=linux-gnu:MSYSTEM=" "posix:OSTYPE=darwin23:MSYSTEM="; do
+  exp_kind="${env_spec%%:*}"; rest="${env_spec#*:}"
+  ost_kv="${rest%%:*}"; msys_kv="${rest#*:}"
+  ost_v="${ost_kv#OSTYPE=}"; msys_v="${msys_kv#MSYSTEM=}"
+  g_out=$(OSTYPE="$ost_v" MSYSTEM="$msys_v" gate_cmd_err 'agy-delegate --dir //evil/share/repo "hi"' || true)
+  d_out=$(OSTYPE="$ost_v" MSYSTEM="$msys_v" "$DELEGATE" --dir '//evil/share/repo' --print-command "hi" 2>&1 || true)
+  h_out=$(OSTYPE="$ost_v" MSYSTEM="$msys_v" "$HANDOFF" --dir '//evil/share/repo' "do x" 2>&1 || true)
+  g_unc=0; has 'UNC, Win32 device, and NT object paths' "$g_out" && g_unc=1
+  d_unc=0; has 'UNC path' "$d_out" && d_unc=1
+  h_unc=0; has 'UNC path' "$h_out" && h_unc=1
+  want_unc=0; [ "$exp_kind" = "win" ] && want_unc=1
+  if [ "$g_unc" -ne "$want_unc" ] || [ "$d_unc" -ne "$want_unc" ] || [ "$h_unc" -ne "$want_unc" ]; then
+    echo "FAIL: // UNC parity drift for $env_spec: want=$want_unc gate=$g_unc delegate=$d_unc handoff=$h_unc"; unc_parity_bad=1; FAIL=$((FAIL+1))
+  fi
+done
+[ "$unc_parity_bad" -eq 0 ] && { echo "ok: validate-delegate-bash, agy-delegate, and agy-handoff agree on // UNC classification across OSTYPE/MSYSTEM"; PASS=$((PASS+1)); }
 
 # 4. Date-aware effective_from pricing transitions (2026-12-01 Carbon/Argon, 2027-01-01 Flash 3.8)
 cc_cb_nov=$(AGY_PRICING_DATE=2026-11-30 STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier carbon "hi" 2>/dev/null)
