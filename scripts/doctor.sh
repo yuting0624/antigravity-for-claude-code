@@ -320,17 +320,26 @@ except Exception:
 gw = d.get("gateway") or {}
 ac = d.get("agentControls") or {}
 pr = d.get("proxy") or {}
+pc = d.get("pluginControls") or {}
 parts = []
 if isinstance(gw, dict) and gw.get("url"):
     parts.append("gateway=" + str(gw.get("url")))
 if isinstance(ac, dict) and ac.get("permissionPreset"):
     parts.append("permissionPreset=" + str(ac.get("permissionPreset")))
+if isinstance(pc, dict) and pc.get("pluginsDisabled") is True:
+    parts.append("pluginsDisabled=true")
+if isinstance(pc, dict) and pc.get("marketplaceDisabled") is True:
+    parts.append("marketplaceDisabled=true")
 suffix = (" (" + ", ".join(parts) + ")") if parts else ""
 print("info\tMDM policy active: " + path + suffix)
 if isinstance(gw, dict) and gw.get("url") and gw.get("routeWebFetch") is True:
     addr = str((pr.get("address") if isinstance(pr, dict) else "") or "").strip()
     if not addr:
         print("warn\tadmin_settings.json sets gateway.routeWebFetch=true without proxy.address — agy 1.5.8+ disables URL reads (read_url_content) fail-closed")
+if isinstance(pc, dict) and pc.get("pluginsDisabled") is True:
+    print("warn\tadmin_settings.json sets pluginControls.pluginsDisabled=true — user, workspace, and marketplace plugins (and agy plugin import) are disabled; built-in plugins stay active on agy 1.5.16+")
+elif isinstance(pc, dict) and pc.get("marketplaceDisabled") is True:
+    print("info\tadmin_settings.json sets pluginControls.marketplaceDisabled=true — marketplace installs are disabled by enterprise policy")
 ' "$p" 2>/dev/null
 }
 
@@ -553,7 +562,7 @@ if command -v agy >/dev/null 2>&1; then
   elif [ "$AGY_TIMED_OUT" -eq 0 ]; then
     # Empty WITHOUT a timeout kill: genuinely no models -> auth/network is the likely cause.
     bad "agy could not list models (not authenticated, or no network)"
-    info "fix: authenticate agy (run \`agy\` interactively, or \`agy acp --login\` over SSH/headless) and check GCP access"
+    info "fix: authenticate agy (run \`agy\` interactively, or \`agy acp --login\` over SSH/headless; on macOS SSH, agy 1.5.16+ reuses an unlocked login Keychain and falls back to file-stored OAuth when locked) and check GCP access"
     info "if agy works interactively but is empty here, suspect a headless/no-TTY hang instead (see above)"
   fi
 fi

@@ -34,9 +34,11 @@
 #       --timeout <dur>              Print-mode timeout, e.g. 10m, 900s, bare seconds 900, or 0 for
 #                                    unbounded (default: 5m for read/plan; 25m for write runs with
 #                                    --mode accept-edits, --mode auto, or --yolo)
-#       --read-only                  Enforce read-only session settings on agy >= 1.4.10
-#                                    (agentMode="", toolPermission="request-review", allow=[]);
-#                                    neutralizes agy 1.5.7+ default Auto mode
+#       --read-only                  Enforce strict workspace read-only session settings on agy >= 1.4.10
+#                                    (agentMode="", allowNonWorkspaceAccess=false, toolPermission="request-review",
+#                                    allow=[], ask=["write_file(*)","command(*)"]); disables agy 1.5.7+ default
+#                                    Auto mode (incl. 1.5.14+ outside-workspace reads and 1.5.16+ outside-workspace
+#                                    VCS-repo & additive writes). Conflicts with --yolo, --settings, or --mode accept-edits|auto
 #       --allow-url                  With --read-only (or standalone), permit URL fetches
 #                                    (read_url(*)) while keeping writes and shell commands blocked
 #       --settings <json>            Pass ephemeral per-session settings JSON (agy >= 1.4.10)
@@ -47,12 +49,14 @@
 #       --digest                     Append a digest-only output contract to the prompt
 #                                    (ingest digests, not raw dumps — the biggest cost lever)
 #       --mode <accept-edits|plan|auto> agy execution mode (agy >= 1.1.0; auto >= 1.3.5). On agy 1.5.7+,
-#                                    accept-edits auto-approves write_file inside --dir/--add-dir
+#                                    accept-edits auto-approves write_file inside --dir/--add-dir only
 #                                    (never shell commands or outside paths); on agy 1.1.13–1.5.6 it
 #                                    was not a headless write grant and denied like a plain write.
-#                                    plan: strategize only. auto: dynamic plan/execute.
+#                                    plan: strategize only. auto (default on agy 1.5.7+ when OS sandbox
+#                                    is active): workspace edits + sandboxed/vetted commands, plus outside-workspace
+#                                    reads (1.5.14+) and outside-workspace VCS-repo & additive writes (1.5.16+).
 #   -c, --continue                   Resume the most recent agy conversation (stateful)
-#       --conversation <id>          Resume a specific agy conversation by ID (stateful)
+#   -r, --resume, --conversation <id> Resume a specific agy conversation by ID (stateful)
 #   -m, --model <exact name>         Use an exact agy model (any from `agy models`: Gemini/Claude/GPT…)
 #       --allow-slash-commands       Keep agy's leading `/command` expansion enabled in print mode
 #                                    (by default --disable-slash-commands is passed when MODE != plan
@@ -104,6 +108,7 @@ EFFORT=""
 READ_ONLY=0
 ALLOW_URL=0
 CUSTOM_SETTINGS=""
+SETTINGS_EXPLICIT=0
 JSON_SCHEMA=""
 YOLO=0
 SANDBOX=0
@@ -539,9 +544,43 @@ model_for_tier() {
 on_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; }
 
 on_windows_native() {
-  case "${OSTYPE:-}" in msys*|cygwin*|win32) return 0 ;; esac
+  case "${OSTYPE:-}" in msys*|cygwin*|win32*) return 0 ;; esac
+  [ -n "${MSYSTEM:-}" ] && return 0
   case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
   return 1
+}
+
+# Reject Windows UNC (\\server\share, //server/share on Windows/MSYS/Cygwin), Win32 device
+# (\\.\, \\?\), and NT object (\??\, /??/) paths before any filesystem stat or CLI handoff
+# so path arguments never trigger outbound SMB/NTLM lookups (agy 1.5.14 parity; preserves POSIX ///foo).
+reject_unc_or_device_path() {
+  local flag="$1" p="$2"
+  case "$p" in
+    '\\'*)  die "option '$flag' rejects UNC or Win32 device path '$p'" ;;
+    '\??'*) die "option '$flag' rejects NT object path '$p'" ;;
+    '/??'*) die "option '$flag' rejects NT object path '$p'" ;;
+    '//'*)
+      case "$p" in
+        '///'*) ;;
+        *)
+          if on_windows_native; then
+            die "option '$flag' rejects UNC path '$p'"
+          fi ;;
+      esac ;;
+  esac
+}
+
+# Validate and record a conversation ID from -r / --resume / --conversation (normalizing to CONV_ID).
+set_conv_id() {
+  local flag="$1" val="$2"
+  case "$val" in
+    ''|*[[:space:]]*) die "option '$flag' requires a non-empty conversation ID without whitespace" ;;
+    -*) die "option '$flag' requires a conversation ID, got option '$val'" ;;
+  esac
+  if [ -n "$CONV_ID" ] && [ "$CONV_ID" != "$val" ]; then
+    die "conflicting conversation IDs: '$CONV_ID' vs '$val'"
+  fi
+  CONV_ID="$val"
 }
 
 timeout_cmd() {
@@ -685,7 +724,14 @@ while [ $# -gt 0 ]; do
                         case "$EFFORT" in low|medium|high|xhigh|max) ;;
                           *) die "invalid --effort '$EFFORT' (use low | medium | high | xhigh | max)" ;;
                         esac ;;
-    -d|--dir|--add-dir) need "$#" "$1"; ADD_DIRS+=("$2"); shift 2 ;;
+    -d|--dir|--add-dir) need "$#" "$1"
+                        [ -n "$2" ] || die "option '$1' needs a directory path"
+                        reject_unc_or_device_path "$1" "$2"
+                        ADD_DIRS+=("$2"); shift 2 ;;
+    --dir=*|--add-dir=*) d_flag="${1%%=*}"; d_val="${1#*=}"
+                        [ -n "$d_val" ] || die "option '$d_flag' needs a directory path"
+                        reject_unc_or_device_path "$d_flag" "$d_val"
+                        ADD_DIRS+=("$d_val"); shift ;;
     --timeout)          need "$#" "$1"
                         if ! TIMEOUT="$(normalize_timeout "$2")"; then
                           die "invalid --timeout '$2' (expected Go duration like 5m, 300s, 1h30m, bare seconds like 900, or 0 for unbounded)"
@@ -693,8 +739,11 @@ while [ $# -gt 0 ]; do
                         TIMEOUT_EXPLICIT=1; shift 2 ;;
     --read-only)        READ_ONLY=1; shift ;;
     --allow-url)        READ_ONLY=1; ALLOW_URL=1; shift ;;
-    --settings)         need "$#" "$1"; CUSTOM_SETTINGS="$2"; shift 2 ;;
-    --json-schema)      need "$#" "$1"; JSON_SCHEMA="$2"; shift 2 ;;
+    --settings)         need "$#" "$1"; CUSTOM_SETTINGS="$2"; SETTINGS_EXPLICIT=1; shift 2 ;;
+    --settings=*)       CUSTOM_SETTINGS="${1#*=}"; SETTINGS_EXPLICIT=1; shift ;;
+    --json-schema)      need "$#" "$1"; reject_unc_or_device_path "$1" "$2"; JSON_SCHEMA="$2"; shift 2 ;;
+    --json-schema=*)    s_val="${1#*=}"; [ -n "$s_val" ] || die "option '--json-schema' needs a value"
+                        reject_unc_or_device_path "--json-schema" "$s_val"; JSON_SCHEMA="$s_val"; shift ;;
     --yolo)             YOLO=1; shift ;;
     --sandbox)          SANDBOX=1; shift ;;
     --digest)           DIGEST=1; shift ;;
@@ -703,7 +752,8 @@ while [ $# -gt 0 ]; do
                           *) die "invalid --mode '$MODE' (use accept-edits | plan | auto; agy >= 1.1.0, auto >= 1.3.5)" ;;
                         esac ;;
     -c|--continue)      CONTINUE=1; shift ;;
-    --conversation)     need "$#" "$1"; CONV_ID="$2"; shift 2 ;;
+    -r|--resume|--conversation) need "$#" "$1"; set_conv_id "$1" "$2"; shift 2 ;;
+    --resume=*|--conversation=*) set_conv_id "${1%%=*}" "${1#*=}"; shift ;;
     -m|--model)         need "$#" "$1"; MODEL="$2"; shift 2 ;;
     --allow-slash-commands) ALLOW_SLASH=1; shift ;;
     --print-command)    PRINT_CMD=1; shift ;;
@@ -714,6 +764,19 @@ while [ $# -gt 0 ]; do
     *)                  PROMPT="$*"; break ;;
   esac
 done
+
+if [ "$CONTINUE" -eq 1 ] && [ -n "$CONV_ID" ]; then
+  die "cannot combine --continue (-c) with --conversation / --resume (-r)"
+fi
+if [ "$READ_ONLY" -eq 1 ]; then
+  ro_flag="--read-only"
+  [ "$ALLOW_URL" -eq 1 ] && ro_flag="--read-only/--allow-url"
+  [ "$YOLO" -eq 1 ] && die "cannot combine $ro_flag with --yolo (--dangerously-skip-permissions overrides read-only settings)"
+  [ "$SETTINGS_EXPLICIT" -eq 1 ] && die "cannot combine $ro_flag with --settings (custom session settings override read-only settings)"
+  case "$MODE" in
+    accept-edits|auto) die "cannot combine $ro_flag with --mode $MODE (agent mode overrides read-only settings)" ;;
+  esac
+fi
 
 [ -n "$PROMPT" ] || die "no prompt given (pass a string, or '-' to read stdin)"
 
@@ -789,13 +852,13 @@ if on_wsl; then
   done
 fi
 
-# Heads-up: a likely write task with no visible write grant (--yolo or agy 1.5.7+ --mode accept-edits).
+# Heads-up: a likely write task with no explicit write grant (--yolo, --mode auto, or agy 1.5.7+ --mode accept-edits).
 # Suppress when --read-only is explicitly requested.
-if [ "$YOLO" -eq 0 ] && [ "$MODE" != "accept-edits" ] && [ "$READ_ONLY" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
+if [ "$YOLO" -eq 0 ] && [ "$MODE" != "accept-edits" ] && [ "$MODE" != "auto" ] && [ "$READ_ONLY" -eq 0 ] && [ "$PRINT_CMD" -ne 1 ]; then
   shopt -s nocasematch
   case "$PROMPT" in
     *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-      echo "agy-delegate: note: this looks like a write task and no explicit write grant (--yolo or, on agy 1.5.7+, --mode accept-edits) is set. Without a write grant, headless agy will NOT touch your workspace (issue #10). Grants that work: a permissions.allow rule matching the target — write_file(<dir>), a recursive prefix, in ~/.gemini/antigravity-cli/settings.json — which needs no flag; --mode accept-edits on agy 1.5.7+ (workspace write_file only, no terminal; denied on 1.1.13–1.5.6); or --yolo, which auto-approves ALL tools. Verify with agy-doctor and git status." >&2 ;;
+      echo "agy-delegate: note: this looks like a write task and no explicit write grant (--yolo, --mode auto, or on agy 1.5.7+ --mode accept-edits) is set. Behavior depends on agy version and environment: on agy 1.5.7+ with an active OS terminal sandbox, default Auto mode edits workspace files and runs vetted/sandboxed commands (plus outside-workspace reads on 1.5.14+ and outside-workspace VCS-repo or additive writes on 1.5.16+), whereas on agy < 1.5.7 or without Auto mode ungranted writes are denied (issue #10). Pass --read-only for strict workspace read-only runs; for explicit grants use permissions.allow write_file(<dir>) in ~/.gemini/antigravity-cli/settings.json, --mode accept-edits (agy 1.5.7+, workspace write_file only, no terminal), --mode auto, or --yolo (all tools; 25m timeout). Verify with agy-doctor and git status." >&2 ;;
   esac
   shopt -u nocasematch
 fi
@@ -839,9 +902,9 @@ for d in "${ADD_DIRS[@]:-}"; do [ -n "$d" ] && ARGS+=(--add-dir "$d"); done
 
 # Ephemeral session settings (`--settings`, agy >= 1.4.10):
 # - Explicit `--settings <json>` wins; errors clearly if the installed agy lacks `--settings`.
-# - `--read-only` (`--allow-url`) injects `toolPermission="request-review"` + `agentMode=""`
-#   when agy supports `--settings`; on agy < 1.4.10 (before 1.5.7 default Auto mode existed),
-#   omit `--settings` cleanly and NEVER inject `--mode plan`.
+# - `--read-only` (`--allow-url`) injects `toolPermission="request-review"` + `agentMode=""` +
+#   `allowNonWorkspaceAccess=false` when agy supports `--settings`; on agy < 1.4.10 (before 1.5.7
+#   default Auto mode existed), omit `--settings` cleanly and NEVER inject `--mode plan`.
 if [ -n "$CUSTOM_SETTINGS" ]; then
   if [ "$PRINT_CMD" -eq 1 ]; then
     ARGS+=(--settings "$CUSTOM_SETTINGS")
@@ -854,14 +917,16 @@ if [ -n "$CUSTOM_SETTINGS" ]; then
 elif [ "$READ_ONLY" -eq 1 ]; then
   # Under `toolPermission: "request-review"`, agy auto-grants `read_file(<wsPath>)` for cwd
   # and every `--add-dir` (`PermissionGrantsFor`), while `read_file(*)` would match `*` across
-  # the entire host filesystem (`CoversPath`). On Gemini Enterprise / Gateway accounts running
-  # Permissions V1 (`!PermissionsV2`), `ApplySettingsToConfig` also appends `write_file(<wsPath>)`
-  # into `effectiveGrants.Allow` — add `"ask":["write_file(*)","command(*)"]` (`Ask > Allow`) so
-  # headless mode soft-denies both workspace writes and shell commands across V1 and V2 alike.
+  # the entire host filesystem (`CoversPath`), and `allowNonWorkspaceAccess: false` prevents a
+  # user's persisted `allowNonWorkspaceAccess: true` in settings.json from leaking outside reads.
+  # On Gemini Enterprise / Gateway accounts running Permissions V1 (`!PermissionsV2`),
+  # `ApplySettingsToConfig` also appends `write_file(<wsPath>)` into `effectiveGrants.Allow` —
+  # add `"ask":["write_file(*)","command(*)"]` (`Ask > Allow`) so headless mode soft-denies both
+  # workspace writes (plus 1.5.16+ outside-workspace VCS/additive writes) and shell commands.
   if [ "$ALLOW_URL" -eq 1 ]; then
-    RO_SETTINGS='{"agentMode":"","toolPermission":"request-review","permissions":{"allow":["read_url(*)"],"ask":["write_file(*)","command(*)"]}}'
+    RO_SETTINGS='{"agentMode":"","allowNonWorkspaceAccess":false,"toolPermission":"request-review","permissions":{"allow":["read_url(*)"],"ask":["write_file(*)","command(*)"]}}'
   else
-    RO_SETTINGS='{"agentMode":"","toolPermission":"request-review","permissions":{"allow":[],"ask":["write_file(*)","command(*)"]}}'
+    RO_SETTINGS='{"agentMode":"","allowNonWorkspaceAccess":false,"toolPermission":"request-review","permissions":{"allow":[],"ask":["write_file(*)","command(*)"]}}'
   fi
   if [ "$PRINT_CMD" -eq 1 ]; then
     ARGS+=(--settings "$RO_SETTINGS")

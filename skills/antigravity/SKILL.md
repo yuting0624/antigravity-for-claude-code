@@ -1,7 +1,7 @@
 ---
 name: antigravity
 description: Run the Antigravity CLI (Gemini) as a collaborating AI inside Claude Code, with intelligent model routing across the software development lifecycle. Claude is the conductor/orchestrator — requirements, architecture, the hard 20%, verification, and review — and routes deterministic, high-volume work (scaffolding, boilerplate, test generation, first-pass review, migrations, web/Vertex AI Search) to Antigravity (Gemini), the cheaper, faster model. Use when the user wants to "use Antigravity / agy", "vibe code / agentic engineering", "accelerate the SDLC", "delegate to Gemini", "scaffold / generate tests / migrate", "first-pass code review", "search web or internal/company data", "deep research / multi-source research report", "second-model cross-check", or "lower token cost on a big job". Claude always verifies Antigravity's output and re-checks itself if unsatisfied.
-version: 0.31.2
+version: 0.31.3
 ---
 
 # Antigravity for Claude Code — hybrid SDLC
@@ -75,7 +75,7 @@ the cross-model verification value (Claude executing Claude loses both).
 > it would actually run. Below 1.1.11 it does not probe, because there the slash command
 > falls through as prompt text and the model answers as though it had run.
 >
-> **Gemini 4 & 3.8 Flash pricing in `prices.json`:** **Gemini 4 Hydrogen** (`flash` / `flash-lo` default since 0.31.0) carries standard non-promotional list pricing of **$1.50 in / $7.50 out / $0.075 cached-in per 1M** (95% implicit prefix cache discount ≥ 4,096 tokens). **Gemini 4 Neon** (`pro` default and `--tier neon`) carries global list pricing of **$3.00 in / $15.00 out / $0.15 cached-in per 1M**. **Gemini 4 Carbon** (`--tier carbon`) and **Gemini 4 Argon** (`--tier argon`) carry introductory list pricing of **$2.00 in / $10.00 out / $0.10 cached-in per 1M through 2026-11-30**, settling at **$4.00 / $20.00 / $0.20 from 2026-12-01** (`gemini_carbon_post_2026_12` / `gemini_argon_post_2026_12`). **Gemini 3.8 Flash** (`--tier flash-38`, 0.26.0–0.30.x `flash` default) carries promotional pricing of **$0.75 in / $3.75 out / $0.075 cached-in per 1M through 2026-12-31**, settling at $1.50 / $7.50 / $0.15. `prices.json`'s `gemini_flash` mirrors `gemini_hydrogen`, and `agy-cost-compare` automatically selects the matching `prices.json` deck from `AGY_USAGE.model` after any runtime fallback.
+> **Gemini 4 & 3.8 Flash pricing in `prices.json` (and Consumer 3P sunset):** **Gemini 4 Hydrogen** (`flash` / `flash-lo` default since 0.31.0) carries standard non-promotional list pricing of **$1.50 in / $7.50 out / $0.075 cached-in per 1M** (95% implicit prefix cache discount ≥ 4,096 tokens). **Gemini 4 Neon** (`pro` default and `--tier neon`) carries global list pricing of **$3.00 in / $15.00 out / $0.15 cached-in per 1M**. **Gemini 4 Carbon** (`--tier carbon`) and **Gemini 4 Argon** (`--tier argon`) carry introductory list pricing of **$2.00 in / $10.00 out / $0.10 cached-in per 1M through 2026-11-30**, moving to **$4.00 / $20.00 / $0.20 from 2026-12-01** (`gemini_carbon_post_2026_12` / `gemini_argon_post_2026_12`, `effective_from: "2026-12-01"`). **Gemini 3.8 Flash** (`--tier flash-38`, 0.26.0–0.30.x `flash` default) carries promotional pricing of **$0.75 in / $3.75 out / $0.075 cached-in per 1M through 2026-12-31**, moving to $1.50 / $7.50 / $0.15 on `effective_from: "2027-01-01"`. `prices.json`'s `gemini_flash` mirrors `gemini_hydrogen`, and `agy-cost-compare` automatically selects the matching `prices.json` deck from `AGY_USAGE.model` and UTC date (overridable via `AGY_PRICING_DATE=YYYY-MM-DD`). On Consumer OAuth, legacy 3P models (`Claude Sonnet 4.6`, `Claude Opus 4.6 (Thinking)`, `GPT-OSS 120B`) sunset on **2026-11-30**, with paid Google AI Pro / Ultra plans moving to `Claude Sonnet 5.5` and `Claude Opus 5.5`.
 >
 > **Measured quirk on Gemini 3.8 Flash (High):** under
 > `--digest`, a prompt with nothing to inspect (a bare "reply OK") makes 3.8 High run a
@@ -101,18 +101,18 @@ the cross-model verification value (Claude executing Claude loses both).
 agy-delegate [options] "the task prompt"
 ```
 Options: `--tier flash|flash-lo|lite|pro|neon|carbon|argon|flash-38` · `--effort low|medium|high|xhigh|max` (rewrites `(Effort)` on display names, or passes `--effort` for effortless slugs/custom models) · `--dir <path>` / `--add-dir <path>` (workspace, repeatable) ·
-`--timeout <dur>` (Go duration like `10m`, `1h30m`, `300s`, unit-less seconds `900` → `900s`, or `0` for unbounded; when `--timeout`, `AGY_TIMEOUT`, and the `timeout` option are unset, defaults to `5m` for read/plan and `25m` for write runs under `--mode accept-edits`, `--mode auto`, or `--yolo` — note `25m` exceeds Claude Code's 10m synchronous Bash cap in interactive sessions, so detach long interactive write runs via `agy-job start` or pass `--timeout 9m`) · `--read-only` (and `--allow-url`: on agy ≥ 1.4.10 synthesizes `--settings` with `request-review`, `permissions.allow: []` — or `["read_url(*)"]` with `--allow-url` — and `permissions.ask: ["write_file(*)", "command(*)"]` so workspace `read_file` stays allowed while writes and shell commands are denied across both consumer and Gemini Enterprise accounts without `--yolo`) · `--settings <json|path>` · `--json-schema <json|path>` (forwards `--json-schema` and serializes `.structured_output` when `.response` is empty) · `--yolo` (auto-approve **ALL** tools — the blunt grant; needed for Vertex AI Search / terminal / subagent spawning, and on agy < 1.4.10 for web search / URL reads (agy 1.1.28+; or a `read_url(<target>)` rule) and for writes not covered by a `permissions.allow` rule. For a
+`--timeout <dur>` (Go duration like `10m`, `1h30m`, `300s`, unit-less seconds `900` → `900s`, or `0` for unbounded; when `--timeout`, `AGY_TIMEOUT`, and the `timeout` option are unset, defaults to `5m` for read/plan and `25m` for write runs under `--mode accept-edits`, `--mode auto`, or `--yolo` — note `25m` exceeds Claude Code's 10m synchronous Bash cap in interactive sessions, so detach long interactive write runs via `agy-job start` or pass `--timeout 9m`; on `agy 1.5.10+`, rate-limit backoff can wait up to `4m` — while spend-cap and enterprise weekly-quota exhaustion fail immediately — and silent-thinking stream idle timeout is `10m`, so pass `--timeout 15m` on read tasks when rate-limit retries or long thinking turns could clip the `5m` default; on `agy 1.5.15+`, `AGY_CLI_AUTO_COMPACT_OVERRIDE` accepts a token count, `K`/`M`, or `%` of the context window to tune automatic context compaction) · `--read-only` (and `--allow-url`: on agy ≥ 1.4.10 synthesizes `--settings` with `agentMode: ""`, `allowNonWorkspaceAccess: false`, `request-review`, `permissions.allow: []` — or `["read_url(*)"]` with `--allow-url` — and `permissions.ask: ["write_file(*)", "command(*)"]` so workspace `read_file` stays allowed while `1.5.7+`–`1.5.16+` default `Auto` mode, outside-workspace reads, writes, and shell commands are disabled across both consumer and Gemini Enterprise accounts without `--yolo`; rejects conflicting `--yolo`, `--settings`, or `--mode accept-edits|auto`, while `--read-only --mode plan` remains valid) · `--settings <json|path>` · `--json-schema <json|path>` (forwards `--json-schema` and serializes `.structured_output` when `.response` is empty) · `--yolo` (auto-approve **ALL** tools — the blunt grant; needed for Vertex AI Search / terminal / subagent spawning, and on agy < 1.4.10 for web search / URL reads (agy 1.1.28+; or a `read_url(<target>)` rule) and for writes not covered by a `permissions.allow` rule. For a
 file write the narrower grant is usually a `write_file(<dir>)` entry in
 `~/.gemini/antigravity-cli/settings.json`, which needs no flag — see below. Run write tasks
 on a branch) · `--mode accept-edits|plan|auto`
-(agy execution mode. `--mode accept-edits` is version-dependent: on **agy ≥ 1.5.7**, it grants in-workspace `write_file`/`edit_file` while denying every shell command (`run_command`) — so write prompts using `--mode accept-edits` without `--yolo` must instruct `agy` to edit files only and NOT run shell or test commands; on **agy 1.1.13–1.5.6**, `--mode accept-edits` was NOT a headless write grant and denied writes just like a plain call. Earlier notes here said "soft-denied on 1.1.3"; on a build before 1.1.12 where `--mode` was ignored in headless `-p` entirely, that observation could not tell a denial apart from the flag doing nothing. `plan` = strategize only; `auto` = dynamic plan/execute on agy ≥ 1.3.5) · `--sandbox` ·
+(agy execution mode. `--mode accept-edits` is version-dependent: on **agy ≥ 1.5.7**, it grants in-workspace `write_file`/`edit_file` while denying every shell command (`run_command`) and outside-workspace access — so write prompts using `--mode accept-edits` without `--yolo` must instruct `agy` to edit files only and NOT run shell or test commands; on **agy 1.1.13–1.5.6**, `--mode accept-edits` was NOT a headless write grant and denied writes just like a plain call. Earlier notes here said "soft-denied on 1.1.3"; on a build before 1.1.12 where `--mode` was ignored in headless `-p` entirely, that observation could not tell a denial apart from the flag doing nothing. `plan` = strategize only; `auto` = dynamic plan/execute on agy ≥ 1.3.5, and default on `agy 1.5.7+` when the OS terminal sandbox is active — approving workspace edits + vetted/sandboxed commands on `1.5.7+`, outside-workspace `read_file` on `1.5.14+`, and outside-workspace VCS-repo or additive writes on `1.5.16+`) · `-c`/`--continue` or `-r <id>`/`--resume <id>`/`--conversation <id>` (resume the latest or a specific conversation ID; `-r`/`--resume` normalizes to `--conversation <id>` across all `agy` versions and cannot be combined with `-c`/`--continue`) · `--sandbox` ·
 `--digest` (append a digest-only output contract — use it for any
 bulk read/analysis; the wrapper also warns on stderr when a reply comes back dump-sized,
 because ingesting digests instead of dumps is the single biggest cost lever) ·
 `--print-command` (dry run: show the resolved `agy` call without running or probing `agy --help`; capability-gated flags such as `--output-format json` and `--disable-slash-commands` are added on live runs) · `--allow-slash-commands` (re-enable leading `/command` or `/skill` expansion in print mode; by default `--disable-slash-commands` is passed when `MODE != plan` on agy builds that advertise it, measured on 1.5.9, so prompts starting with `/clear` or `/credits` are sent as literal prose) · pipe a long
 prompt with a trailing `-`.
 
-The wrapper handles agy's quirks (up to 64 KB, prompt is the value of `-p` with non-TTY stdin detached via `< /dev/null`; above 64 KB, prompt is passed via a rewindable temp file on stdin without `-p` to avoid Linux `E2BIG` — measured on agy 1.4.8 and 1.5.9 with `--output-format json`; `--continue`/`--conversation` + `> 64 KB` combinations are stub-tested). On **agy ≥ 1.1.8** it also runs agy with `--output-format json`
+The wrapper handles agy's quirks (up to 64 KB, prompt is the value of `-p` with non-TTY stdin detached via `< /dev/null`; above 64 KB, prompt is passed via a rewindable temp file on stdin without `-p` to avoid Linux `E2BIG` — measured on agy 1.4.8 and 1.5.9 with `--output-format json`; `--continue`/`-r`/`--resume`/`--conversation` + `> 64 KB` combinations are stub-tested). On **agy ≥ 1.1.8** it also runs agy with `--output-format json`
 internally: **stdout still gives you the model's text unchanged**, but failures are
 classified from the structured `error` instead of scraped prose, and the executor's real
 token usage (input / output / thinking / **cache_read**) is reported as an `AGY_USAGE
@@ -195,12 +195,14 @@ Claude owns correctness. For anything that ships:
    the gate passed.
 3. **Trajectory check** — did it take a sane path? (Limit: print mode returns only the
    final text. The per-conversation logs under `~/.gemini/antigravity-cli/conversations`
-   are **SQLite `.db` files with opaque blob columns, not human-readable** — don't rely
-   on reading them. Instead, have agy **summarize its own steps** as part of its output,
-   or keep a session with `--continue`/`--conversation` and ask it to recap.
+   are **SQLite `.db` files with opaque blob columns, not human-readable**, and `agy 1.5.15+`
+   no longer prunes past 500 conversations — don't rely
+   on reading `.db` files directly. Instead, have agy **summarize its own steps** as part of its output,
+   or keep a session with `--continue` / `-r` / `--resume` / `--conversation` and ask it to recap.
    **But every run leaves a readable trajectory:** `transcript.jsonl` under
    `~/.gemini/antigravity-cli/brain/<conversationId>/` — for plain delegations too, not
-   just internal-fan-out subagents. `agy-delegate` prints the `conversationId` in its
+   just internal-fan-out subagents (`agy-trace` scans via `os.scandir`, so >500 conversations
+   never hit shell glob `ARG_MAX`). `agy-delegate` prints the `conversationId` in its
    `AGY_USAGE` line, so cost and trajectory join 1:1. Audit with
    **`agy-trace --audit <conversationId>`** (or `--audit --last`): step-type counts plus
    every non-zero exit. A delegation can report SUCCESS while commands inside it failed —
@@ -223,15 +225,14 @@ If wrong: retry on `--tier pro`, sharpen the spec, or do that piece yourself.
 
 ## Safety for write tasks
 
-Read-only work (search, review, analysis) is low-risk. **When agy writes files or runs
+For read-only work (search, review, analysis), **pass `--read-only`** (and `--allow-url` when fetching URLs): per upstream `agy` release notes, on `agy 1.5.7+` with an active OS terminal sandbox, unflagged `agy` defaults to **`Auto` mode**, which auto-approves workspace edits + vetted/sandboxed commands (`1.5.7+`), outside-workspace `read_file` (`1.5.14+`), and outside-workspace VCS-repository or additive `write_file`/`edit_file` (`1.5.16+`); `--read-only` sets `agentMode: ""` and `allowNonWorkspaceAccess: false` alongside `ask: ["write_file(*)","command(*)"]` (measured on Linux with `agy 1.5.16`: denies external-Git `write_file` and non-workspace host `read_file` with exit `15` even when `settings.json` sets `"allowNonWorkspaceAccess": true`, though `agy` still allows `read_file` under `/tmp`). **When agy writes files or runs
 commands** (`--yolo` grants write + terminal):
-- **Write tasks need a grant — and it does not have to be `--yolo`.** Headless agy's no-permission behavior has shifted
+- **Write grants, `Auto` mode, and `request-review`.** Prior to `agy 1.5.7` (and whenever `Auto` mode is off or `request-review` / `--read-only` is active), headless agy's no-permission behavior shifted
   every few releases — describe-only (pre-1.1.0), scratch-divert (1.1.0–1.1.2), soft-deny
   with a stderr notice (1.1.3+), **hard error by 1.1.13**, soft again from **1.1.20**
-  (measured on 1.1.25; since 1.1.27 also named in the envelope's `denied_actions`, 1.2.0) — but **your workspace stays
-  untouched every time**; what varies is whether the run admits it (issue #10). The
-  wrapper maps the soft deny and the hard error alike to exit 15. **Two things grant a write, and `--yolo` is
-  the blunt one.** A `write_file(<dir>)` entry under `permissions.allow` in
+  (measured on 1.1.25; since 1.1.27 also named in the envelope's `denied_actions`, 1.2.0) — and without `Auto` mode **your workspace stays
+  untouched**; what varies is whether the run admits it (issue #10). The
+  wrapper maps the soft deny and the hard error alike to exit 15. **Explicit grants beyond `Auto` mode's vetted scope (`permissions.allow`, `--mode accept-edits`, or `--yolo`):** A `write_file(<dir>)` entry under `permissions.allow` in
   `~/.gemini/antigravity-cli/settings.json` allows writes **recursively beneath `<dir>`**
   with no flag at all — confirmed on agy 1.1.9 by a controlled A/B (#37): covered target
   wrote, uncovered target returned `PERMISSION_DENIED`, rule the only variable. agy's own
@@ -501,7 +502,7 @@ Verified behaviors (1.0.12 → 1.1.5):
   verification gates on the merged result; more autonomy = more surface for error.
 
 - **agy ≥ 1.5.9 — dynamic Python workflow orchestration (`run_workflow`) & `/swarm`:**
-  `agy 1.5.9` bundles `run_workflow` (a Python orchestrator script inside `agy` with `agent`, `parallel`, `pipeline`, and `phase` primitives for fanning out over files/modules and aggregating results in code), and `agy 1.5.6+` ships `/swarm` (multi-agent worktree board coordination). Invoke `run_workflow` inside a single `--yolo` delegation when the fan-out logic itself is code; if starting a prompt with a literal `/swarm` slash command, pass `--allow-slash-commands` (since `agy-delegate` passes `--disable-slash-commands` by default on `1.5.4+`).
+  `agy 1.5.9` bundles `run_workflow` (a Python orchestrator script inside `agy` with `agent`, `parallel`, `pipeline`, and `phase` primitives for fanning out over files/modules and aggregating results in code), and `agy 1.5.6+` ships `/swarm` (multi-agent worktree board coordination; since `1.5.13`, `agy` never enters swarm mode autonomously without `/swarm`). Invoke `run_workflow` inside a single `--yolo` delegation when the fan-out logic itself is code; if starting a prompt with a literal `/swarm` slash command, pass `--allow-slash-commands` (since `agy-delegate` passes `--disable-slash-commands` by default on `1.5.4+`).
 
 Caveats: neither pattern is a documented contract yet — `self`+Role works around the
 sandbox allowlist, and even the official docs' static agent-config paths don't match

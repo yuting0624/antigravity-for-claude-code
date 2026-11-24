@@ -11,7 +11,7 @@ Task: $ARGUMENTS
 Do this:
 1. Pick a tier (`flash` default = Gemini 4 Hydrogen High; `flash-lo` = Gemini 4 Hydrogen Low; `pro` = Gemini 4 Neon High, plus aliases `neon`/`carbon`/`argon`/`flash-38`; auto-falls-back on plans without Neon/Carbon/Hydrogen). If the task needs the repo,
    add `--dir <repo-root>` (or `--dir .` inside the `antigravity-delegate` subagent, whose gate confines `-d`/`--dir`/`--add-dir` to `cwd`) so agy reads the real files (don't paste them into context).
-   - **Read/analysis tasks**: pass `--read-only` (and `--allow-url` if reading web URLs) so `agy 1.5.7+` default `Auto` mode cannot edit files or run shell commands.
+   - **Read/analysis tasks**: pass `--read-only` (and `--allow-url` if reading web URLs) so `agy 1.5.7+` default `Auto` mode cannot edit files or run shell commands (`--read-only` / `--allow-url` conflicts with `--yolo`, `--settings`, and `--mode accept-edits|auto` — exit `1`).
    - **Workspace file-edit tasks** (no terminal needed): on `agy 1.5.7+`, `--mode accept-edits` auto-approves `write_file` inside `--dir` / `--add-dir` while denying every shell command (`run_command`) — so prompts using `--mode accept-edits` without `--yolo` must instruct `agy` to *edit files only and not run shell or test commands* (or use a `write_file(<dir>)` entry in `permissions.allow` in `~/.gemini/antigravity-cli/settings.json`).
    - **Full agentic tasks** (running tests/shell commands, Vertex AI Search): pass **`--yolo`**, which auto-approves all tools unless blocked by enterprise admin policy. Run
    write tasks on a dedicated branch — `--sandbox` is not containment, it was measured
@@ -19,7 +19,7 @@ Do this:
    **verify files actually changed** with `git status`. Claude Code may prompt for or block
    `--dangerously-skip-permissions` — approve it or pre-allow it; non-interactive
    (`claude -p`) without that permission can't run `--yolo` via agy. (If the wrapper
-   returns exit `15`, agy denied a tool interaction — covering both the soft deny back since
+   returns exit `1`, you passed invalid or conflicting wrapper flags — fix the flags rather than retrying; exit `15` means agy denied a tool interaction — covering both the soft deny back since
    agy 1.1.20 and 1.1.13's hard error — and names the refused tool from `denied_actions` or stderr; exit `16` `CLI_FLAG_ERROR` means `agy` rejected a CLI flag or option value.)
 2. Run **synchronously** (you may be headless — do not background-and-wait):
    `agy-delegate --tier <tier> [--read-only | --mode accept-edits | --yolo] [--dir .] [--digest] "<task>"`

@@ -1,5 +1,5 @@
 {
-  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh falls back to this key when no per-model match applies. Since 0.31.0 `flash` defaults to Gemini 4 Hydrogen (High), so gemini_flash mirrors gemini_hydrogen (1.50 in / 7.50 out / 0.075 cached_in — standard global rate, 95% implicit prefix cache discount >= 4,096 tokens, no promotional cliff). IMPORTANT: Gemini 3.6, 3.7 and 3.8 Flash remain on PROMOTIONAL pricing (0.75 / 3.75 / 0.075) through 2026-12-31 — on 2027-01-01 their rates move to _post_2026 (1.50 / 7.50 / 0.15). Re-verified 2026-11-15 against ai.google.dev/gemini-api/docs/pricing and cloud.google.com/vertex-ai/generative-ai/pricing (non-global endpoints are +10%).",
+  "_gemini_flash_note": "gemini_flash MUST track whatever the `flash` tier resolves to in agy-delegate.sh's model_for_tier(), because agy-cost-compare.sh falls back to this key when no per-model match applies. Since 0.31.0 `flash` defaults to Gemini 4 Hydrogen (High), so gemini_flash mirrors gemini_hydrogen (1.50 in / 7.50 out / 0.075 cached_in — standard global rate, 95% implicit prefix cache discount >= 4,096 tokens, no promotional cliff). IMPORTANT: Gemini 3.6, 3.7 and 3.8 Flash remain on PROMOTIONAL pricing (0.75 / 3.75 / 0.075) through 2026-12-31 — on effective_from 2027-01-01 agy-cost-compare.sh automatically selects their _post_2026 entries (1.50 / 7.50 / 0.15; override with AGY_PRICING_DATE=YYYY-MM-DD). Re-verified 2026-11-24 against ai.google.dev/gemini-api/docs/pricing and cloud.google.com/vertex-ai/generative-ai/pricing (non-global endpoints are +10%).",
   "gemini_flash": {
     "in": 1.5,
     "out": 7.5,
@@ -41,21 +41,24 @@
     "cached_in": 0.025
   },
   "gemini_flash_38_post_2026": {
+    "effective_from": "2027-01-01",
     "in": 1.5,
     "out": 7.5,
     "cached_in": 0.15
   },
   "gemini_flash_37_post_2026": {
+    "effective_from": "2027-01-01",
     "in": 1.5,
     "out": 7.5,
     "cached_in": 0.15
   },
   "gemini_flash_36_post_2026": {
+    "effective_from": "2027-01-01",
     "in": 1.5,
     "out": 7.5,
     "cached_in": 0.15
   },
-  "_comment": "Per-1M-token USD on Vertex AI / Gemini API (global endpoints; regional/multi-region carry a ~10% premium). Re-verified 2026-11-19 against cloud.google.com/vertex-ai/generative-ai/pricing and ai.google.dev/gemini-api/docs/pricing: Claude Opus 5.5 (4/20), Claude Sonnet 5.5 (2/10), Gemini 4 Neon (3/15, cached 0.15), Gemini 4 Carbon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Argon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Hydrogen (1.50/7.50, cached 0.075), Gemini 3.8 Flash (0.75/3.75 promo through 2026-12-31), Gemini 3.1 Pro (2/12, cached 0.20). VERIFY against your own invoice before quoting: some pay-as-you-go projects already bill standard 4/20 on Argon/Carbon, and promo end dates can move.",
+  "_comment": "Per-1M-token USD on Vertex AI / Gemini API (global endpoints; regional/multi-region carry a ~10% premium). Re-verified 2026-11-24 against cloud.google.com/vertex-ai/generative-ai/pricing and ai.google.dev/gemini-api/docs/pricing: Claude Opus 5.5 (4/20), Claude Sonnet 5.5 (2/10), Gemini 4 Neon (3/15, cached 0.15), Gemini 4 Carbon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Argon (2/10 intro, 4/20 standard from 2026-12-01), Gemini 4 Hydrogen (1.50/7.50, cached 0.075), Gemini 3.8 Flash (0.75/3.75 promo through 2026-12-31, 1.50/7.50 from 2027-01-01), Gemini 3.1 Pro (2/12, cached 0.20). VERIFY against your own invoice before quoting: some pay-as-you-go projects already bill standard 4/20 on Argon/Carbon, and promo end dates can move.",
   "_sources": [
     "cloud.google.com/vertex-ai/generative-ai/pricing",
     "ai.google.dev/gemini-api/docs/pricing",
@@ -81,13 +84,14 @@
     "out": 15.0,
     "cached_in": 0.15
   },
-  "_gemini_carbon_argon_note": "Gemini 4 Carbon (`carbon` alias and first `pro` fallback) and Gemini 4 Argon (`argon` alias and second `pro` fallback) carry identical global list prices: introductory 2.00 / 10.00 / 0.10 through 2026-11-30, moving to standard `_post_2026_12` (4.00 / 20.00 / 0.20) on 2026-12-01 — copy `_post_2026_12` over then.",
+  "_gemini_carbon_argon_note": "Gemini 4 Carbon (`carbon` alias and first `pro` fallback) and Gemini 4 Argon (`argon` alias and second `pro` fallback) carry identical global list prices: introductory 2.00 / 10.00 / 0.10 through 2026-11-30, moving to standard `_post_2026_12` (4.00 / 20.00 / 0.20) on `effective_from: 2026-12-01` — selected automatically by agy-cost-compare.sh from UTC date (or AGY_PRICING_DATE=YYYY-MM-DD).",
   "gemini_carbon": {
     "in": 2.0,
     "out": 10.0,
     "cached_in": 0.1
   },
   "gemini_carbon_post_2026_12": {
+    "effective_from": "2026-12-01",
     "in": 4.0,
     "out": 20.0,
     "cached_in": 0.2
@@ -98,6 +102,7 @@
     "cached_in": 0.1
   },
   "gemini_argon_post_2026_12": {
+    "effective_from": "2026-12-01",
     "in": 4.0,
     "out": 20.0,
     "cached_in": 0.2

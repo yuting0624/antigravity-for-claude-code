@@ -23,6 +23,8 @@
 #   GEMINI_IN_PER_M  GEMINI_OUT_PER_M     (default: prices.json gemini_flash,
 #                                          today 1.50 / 7.50 -- VERIFY against
 #                                          your own Vertex rates)
+#   AGY_PRICING_DATE                      (optional YYYY-MM-DD UTC override for
+#                                          effective_from rate transitions)
 #   CHARS_PER_TOKEN                       (default: 4, plain-text fallback only)
 #
 set -euo pipefail
@@ -108,9 +110,22 @@ ELAPSED=$(( END - START ))
 PRICES="$HERE/../prices.json"
 if [ -f "$PRICES" ] && command -v python3 >/dev/null 2>&1; then
   eval "$(python3 - "$PRICES" "$TIER" "$RESOLVED_MODEL" "$DEL_ERR" 2>/dev/null <<'PY'
+from datetime import datetime, timezone
 import json, os, re, shlex, sys
 
-def deck_for_model(pm, tier, d):
+def resolve_effective_deck(base_key, d, pricing_date):
+    best = d.get(base_key)
+    best_date = ""
+    prefix = base_key + "_post_"
+    for k, v in d.items():
+        if k.startswith(prefix) and isinstance(v, dict):
+            eff = str(v.get("effective_from") or "").strip()
+            if eff and eff <= pricing_date and eff >= best_date:
+                best = v
+                best_date = eff
+    return best
+
+def deck_for_model(pm, tier, d, pricing_date):
     s = (pm or "").lower()
     for check, key in (
         ("neon" in s, "gemini_neon"),
@@ -128,7 +143,7 @@ def deck_for_model(pm, tier, d):
         ("opus" in s, "claude_opus"),
     ):
         if check and key in d:
-            return d[key]
+            return resolve_effective_deck(key, d, pricing_date)
     tier_map = {
         "pro": "gemini_neon",
         "neon": "gemini_neon",
@@ -137,11 +152,14 @@ def deck_for_model(pm, tier, d):
         "flash-38": "gemini_flash_38",
     }
     tk = tier_map.get(tier, "gemini_flash")
-    return d.get(tk) or d["gemini_flash"]
+    return resolve_effective_deck(tk, d, pricing_date) or d["gemini_flash"]
 
 try:
     d = json.load(open(sys.argv[1]))
     t, pm, errf = sys.argv[2], sys.argv[3], sys.argv[4]
+    raw_pdate = (os.environ.get("AGY_PRICING_DATE") or "").strip()
+    pricing_date = (raw_pdate if re.match(r"^\d{4}-\d{2}-\d{2}$", raw_pdate)
+                    else datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     u_in = u_out = u_cr = 0
     if os.path.isfile(errf):
         for line in open(errf, encoding="utf-8", errors="replace").read().splitlines():
@@ -161,7 +179,7 @@ try:
             m = re.search(r"\bfell back to ([^(]+)", line)
             if m:
                 pm = m.group(1).strip()
-    g = deck_for_model(pm, t, d)
+    g = deck_for_model(pm, t, d, pricing_date)
     c = d["claude_opus"]
     ccrm = float(d.get("cache_read_mult", 0.05))
     gcrd = float(g.get("cached_in", 0.0))

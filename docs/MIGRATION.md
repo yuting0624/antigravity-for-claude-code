@@ -97,7 +97,10 @@ for the *same* six MCP servers under their own `mcp/` dirs, all derived from the
 
 Precedence (from agy's bundled `agy-customizations` skill), highest first:
 workspace `.agents/` → declared `skills.json`/`plugins.json` → `~/.gemini/config/` →
-built-ins → global declared.
+built-ins → global declared (`~/.agents/skills`, discovered automatically as unmanaged
+user-global skills since `agy 1.5.16`, resolves at lower priority than `~/.gemini/config/`
+— `~/.gemini` wins on name collision, so `agy-migrate`'s `~/.gemini/config/skills.json`
+continues to take precedence).
 
 ## 4. Measured behaviours the docs do not state
 

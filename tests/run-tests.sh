@@ -2221,16 +2221,16 @@ cc_neon=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/
 check "agy-cost-compare --tier pro uses gemini_neon (out 15.00) by default" 0 "$?" "15.00" "$cc_neon"
 cc_neon_alias=$(STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier neon "hi" 2>/dev/null)
 check "agy-cost-compare --tier neon uses gemini_neon (out 15.00)" 0 "$?" "15.00" "$cc_neon_alias"
-cc_carbon_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
-check "agy-cost-compare --tier pro uses gemini_carbon (out 10.00) after fallback from Neon to Carbon" 0 "$?" "10.00" "$cc_carbon_fb"
+cc_carbon_fb=$(AGY_PRICING_DATE=2026-11-24 STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro uses gemini_carbon intro (out 10.00) on 2026-11-24 after fallback from Neon to Carbon" 0 "$?" "10.00" "$cc_carbon_fb"
 cc_pro31=$(STUB_MODE=text CLAUDE_PLUGIN_OPTION_TIER_PRO="Gemini 3.1 Pro" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) when remapped to 3.1 Pro" 0 "$?" "12.00" "$cc_pro31"
 cc_pro31_pc=$(STUB_MODE=text CLAUDE_CONFIG_DIR="$PCDIR" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro reads tier_pro from settings.json pluginConfigs (#101)" 0 "$?" "12.00" "$cc_pro31_pc"
 cc_pro31_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO|Gemini 4 Carbon (High)|Gemini 4 Argon (High)" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
 check "agy-cost-compare --tier pro uses gemini_pro (out 12.00) after runtime fallback to 3.1 Pro (#104)" 0 "$?" "12.00" "$cc_pro31_fb"
-cc_fl38_fb=$(STUB_MODE=text STUB_REJECT_MODEL="$DEF_FLASH" "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
-check "agy-cost-compare --tier flash switches from Hydrogen (out 7.50) to 3.8 Flash (out 3.75) after fallback" 0 "$?" "3.75" "$cc_fl38_fb"
+cc_fl38_fb=$(AGY_PRICING_DATE=2026-11-24 STUB_MODE=text STUB_REJECT_MODEL="$DEF_FLASH" "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
+check "agy-cost-compare --tier flash switches from Hydrogen (out 7.50) to 3.8 Flash promo (out 3.75) on 2026-11-24 after fallback" 0 "$?" "3.75" "$cc_fl38_fb"
 cc_u_exact=$(STUB_JSON_CAPABLE=1 STUB_MODE=json_usage_big "$ROOT/scripts/agy-cost-compare.sh" --tier flash "hi" 2>/dev/null)
 check "agy-cost-compare prices exact AGY_USAGE tokens + additive cache_read ($0.3375)" 0 "$?" '$0.3375' "$cc_u_exact"
 check "agy-cost-compare marks AGY_USAGE run as measured rather than chars/4" 0 0 "measured from AGY_USAGE" "$cc_u_exact"
@@ -3067,6 +3067,7 @@ else echo "ok: auto tier cache skips <64KB stub agy binaries (Guardrail 4)"; PAS
 out=$(STUB_SETTINGS_CAPABLE=1 STUB_MODE=args "$DELEGATE" --read-only --allow-url "research x" 2>/dev/null); rc=$?
 check "--read-only --allow-url synthesizes --settings on agy >= 1.4.10" 0 "$rc" "--settings" "$out"
 check "--read-only --allow-url includes read_url(*) in permissions.allow" 0 "$rc" "read_url(*)" "$out"
+check "--read-only --allow-url sets allowNonWorkspaceAccess:false" 0 "$rc" '"allowNonWorkspaceAccess":false' "$out"
 check "--read-only --allow-url includes ask write_file(*) + command(*) for Enterprise V1" 0 "$rc" '"ask":["write_file(*)","command(*)"]' "$out"
 if has '--dangerously-skip-permissions' "$out" || has '--mode plan' "$out"; then
   echo "FAIL: --read-only injected --yolo or --mode plan"; FAIL=$((FAIL+1));
@@ -3076,6 +3077,7 @@ if has 'read_file(*)' "$out" || has 'list_dir' "$out" || has 'search_web' "$out"
 else echo "ok: --read-only never emits host-wide read_file(*) or invalid grant actions"; PASS=$((PASS+1)); fi
 out_ro_nourl=$(STUB_SETTINGS_CAPABLE=1 STUB_MODE=args "$DELEGATE" --read-only "review x" 2>/dev/null); rc_ro_nourl=$?
 check "--read-only without --allow-url sets empty permissions.allow []" 0 "$rc_ro_nourl" '"allow":[]' "$out_ro_nourl"
+check "--read-only without --allow-url sets allowNonWorkspaceAccess:false" 0 "$rc_ro_nourl" '"allowNonWorkspaceAccess":false' "$out_ro_nourl"
 check "--read-only without --allow-url sets ask write_file(*) + command(*)" 0 "$rc_ro_nourl" '"ask":["write_file(*)","command(*)"]' "$out_ro_nourl"
 
 # Guardrail 1: on agy < 1.4.10 (no --settings in --help), --read-only omits --settings AND never injects --mode plan
@@ -3275,14 +3277,14 @@ pjson_chk=$(ROOT="$ROOT" python3 - <<'PY'
 import json, os
 pj = json.load(open(os.path.join(os.environ["ROOT"], ".claude-plugin", "plugin.json")))
 uc = pj["userConfig"]
-assert pj["version"] == "0.31.2", pj["version"]
+assert pj["version"] == "0.31.3", pj["version"]
 assert uc["timeout"]["default"] == "", uc["timeout"]["default"]
 assert uc["tier_neon"]["default"] == "", uc["tier_neon"]["default"]
 assert uc["tier_carbon"]["default"] == "", uc["tier_carbon"]["default"]
 print("OK")
 PY
 )
-check "plugin.json 0.31.2 has empty default for timeout, tier_neon, and tier_carbon" 0 "$?" "OK" "$pjson_chk"
+check "plugin.json 0.31.3 has empty default for timeout, tier_neon, and tier_carbon" 0 "$?" "OK" "$pjson_chk"
 
 # 2. Issue #123 Item 1: CLI flag / option errors -> exit 16 CLI_FLAG_ERROR (never exit 15 or 12)
 fl1_out=$(STUB_MODE=flag_undef_singular "$DELEGATE" "hi" 2>&1); fl1_rc=$?
@@ -3386,8 +3388,10 @@ out=$("$DELEGATE" --mode auto --print-command "hi" 2>/dev/null); rc=$?
 check "--mode auto defaults unset timeout to 25m" 0 "$rc" "--print-timeout 25m" "$out"
 out=$("$DELEGATE" --yolo --print-command "hi" 2>/dev/null); rc=$?
 check "--yolo defaults unset timeout to 25m" 0 "$rc" "--print-timeout 25m" "$out"
-out=$("$DELEGATE" --yolo --read-only --print-command "hi" 2>/dev/null); rc=$?
-check "--yolo --read-only keeps 5m read default" 0 "$rc" "--print-timeout 5m" "$out"
+out=$("$DELEGATE" --yolo --read-only --print-command "hi" 2>&1); rc=$?
+check "--yolo --read-only rejected as conflicting flags (exit 1)" 1 "$rc" "cannot combine --read-only with --yolo" "$out"
+out=$("$DELEGATE" --read-only --mode plan --print-command "hi" 2>/dev/null); rc=$?
+check "--read-only --mode plan stays valid and keeps 5m read/plan default" 0 "$rc" "--print-timeout 5m" "$out"
 out=$("$DELEGATE" --yolo --mode plan --print-command "hi" 2>/dev/null); rc=$?
 check "--yolo --mode plan keeps 5m plan default" 0 "$rc" "--print-timeout 5m" "$out"
 out=$("$DELEGATE" --mode plan --print-command "hi" 2>/dev/null); rc=$?
@@ -3415,6 +3419,215 @@ check ".denied_actions (mcp_tool) takes precedence over stderr (write_file)" 15 
 if has 'denied: write_file' "$prec_err"; then
   echo "FAIL: stderr overwrote .denied_actions precedence: $prec_err"; FAIL=$((FAIL+1))
 else echo "ok: .denied_actions precedence preserved when non-empty"; PASS=$((PASS+1)); fi
+
+echo "== v0.31.3 agy 1.5.10–1.5.16 Catch-Up (-r/--resume, Auto/--read-only hardening, UNC pre-stat, effective_from pricing, doctor & trace) =="
+
+# 1. agy 1.5.16 -r / --resume <id> + --conversation=<id> normalization & validation
+out=$("$DELEGATE" -r conv-123 --print-command "hi" 2>/dev/null); rc=$?
+check "-r conv-123 normalizes to --conversation conv-123" 0 "$rc" "--conversation conv-123" "$out"
+out=$("$DELEGATE" --resume conv-456 --print-command "hi" 2>/dev/null); rc=$?
+check "--resume conv-456 normalizes to --conversation conv-456" 0 "$rc" "--conversation conv-456" "$out"
+out=$("$DELEGATE" --resume=conv-789 --print-command "hi" 2>/dev/null); rc=$?
+check "--resume=conv-789 normalizes to --conversation conv-789" 0 "$rc" "--conversation conv-789" "$out"
+out=$("$DELEGATE" --conversation=conv-abc --print-command "hi" 2>/dev/null); rc=$?
+check "--conversation=conv-abc normalizes to --conversation conv-abc" 0 "$rc" "--conversation conv-abc" "$out"
+out=$("$DELEGATE" --conversation conv-same -r conv-same --print-command "hi" 2>/dev/null); rc=$?
+check "duplicate identical --conversation + -r succeeds" 0 "$rc" "--conversation conv-same" "$out"
+
+for bad_cid in "" "   " "id with space" "-p" "--yolo"; do
+  case "$bad_cid" in
+    -*) exp_msg="requires a conversation ID, got option" ;;
+    *)  exp_msg="requires a non-empty conversation ID without whitespace" ;;
+  esac
+  b_out=$("$DELEGATE" -r "$bad_cid" --print-command "hi" 2>&1); b_rc=$?
+  if [ "$b_rc" -ne 1 ] || ! has "$exp_msg" "$b_out"; then
+    echo "FAIL: -r '$bad_cid' expected exit 1 + '$exp_msg', got rc=$b_rc ($b_out)"; FAIL=$((FAIL+1))
+  else
+    PASS=$((PASS+1))
+  fi
+  b_out2=$("$DELEGATE" "--resume=$bad_cid" --print-command "hi" 2>&1); b_rc2=$?
+  if [ "$b_rc2" -ne 1 ] || ! has "$exp_msg" "$b_out2"; then
+    echo "FAIL: --resume='$bad_cid' expected exit 1 + '$exp_msg', got rc=$b_rc2 ($b_out2)"; FAIL=$((FAIL+1))
+  else
+    PASS=$((PASS+1))
+  fi
+done
+echo "ok: -r and --resume= reject empty, whitespace, and flag-shaped conversation IDs via set_conv_id"
+
+out=$("$DELEGATE" --conversation conv-1 -r conv-2 --print-command "hi" 2>&1); rc=$?
+check "conflicting --conversation vs -r rejected (exit 1)" 1 "$rc" "conflicting conversation IDs" "$out"
+out=$("$DELEGATE" -c -r conv-1 --print-command "hi" 2>&1); rc=$?
+check "-c combined with -r rejected (exit 1)" 1 "$rc" "cannot combine --continue" "$out"
+out=$("$DELEGATE" --continue --conversation conv-1 --print-command "hi" 2>&1); rc=$?
+check "--continue combined with --conversation rejected (exit 1)" 1 "$rc" "cannot combine --continue" "$out"
+
+# PreToolUse gate parity for -r / --resume / --resume= / --conversation=
+( cd "$GATE_WS" && gate_cmd_err 'agy-delegate -r conv-123 "hi"' >/dev/null ); rc=$?
+check "gate: allows agy-delegate -r conv-123" 0 "$rc"
+( cd "$GATE_WS" && gate_cmd_err 'agy-delegate --resume conv-123 "hi"' >/dev/null ); rc=$?
+check "gate: allows agy-delegate --resume conv-123" 0 "$rc"
+( cd "$GATE_WS" && gate_cmd_err 'agy-delegate --resume=conv-123 "hi"' >/dev/null ); rc=$?
+check "gate: allows agy-delegate --resume=conv-123" 0 "$rc"
+( cd "$GATE_WS" && gate_cmd_err 'agy-delegate --conversation=conv-123 "hi"' >/dev/null ); rc=$?
+check "gate: allows agy-delegate --conversation=conv-123" 0 "$rc"
+( cd "$GATE_WS" && gate_cmd_err 'agy-job start -r conv-123 --dir sub "hi"' >/dev/null ); rc=$?
+check "gate: allows agy-job start -r conv-123 --dir sub" 0 "$rc"
+out=$(gate_cmd_err 'agy-handoff -r conv-123 "do x"'); rc=$?
+check "gate: blocks -r on agy-handoff (HANDOFF_VAL_OPTS unchanged)" 2 "$rc" "unknown or disallowed option for agy-handoff" "$out"
+out=$(gate_cmd_err 'agy-delegate -r -p "hi"'); rc=$?
+check "gate: blocks flag-shaped -r -p value" 2 "$rc" "requires a valid conversation ID" "$out"
+out=$(gate_cmd_err 'agy-delegate --resume= "hi"'); rc=$?
+check "gate: blocks empty --resume= value" 2 "$rc" "requires a valid conversation ID" "$out"
+out=$(gate_cmd_err 'agy-delegate -r conv-123 --dir /etc "hi"'); rc=$?
+check "gate: still blocks out-of-cwd --dir /etc after -r conv-123" 2 "$rc" "outside the current working directory" "$out"
+
+# 2. Auto mode vs --read-only / --allow-url mutual exclusion + write-note accuracy
+out=$("$DELEGATE" --allow-url --yolo --print-command "hi" 2>&1); rc=$?
+check "--allow-url --yolo rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --yolo" "$out"
+out=$("$DELEGATE" --read-only --settings '{}' --print-command "hi" 2>&1); rc=$?
+check "--read-only --settings rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --settings" "$out"
+out=$("$DELEGATE" --read-only --settings='{}' --print-command "hi" 2>&1); rc=$?
+check "--read-only --settings= rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --settings" "$out"
+out=$("$DELEGATE" --allow-url --settings '{}' --print-command "hi" 2>&1); rc=$?
+check "--allow-url --settings rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --settings" "$out"
+out=$("$DELEGATE" --allow-url --settings='{}' --print-command "hi" 2>&1); rc=$?
+check "--allow-url --settings= rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --settings" "$out"
+out=$("$DELEGATE" --read-only --mode accept-edits --print-command "hi" 2>&1); rc=$?
+check "--read-only --mode accept-edits rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --mode accept-edits" "$out"
+out=$("$DELEGATE" --allow-url --mode accept-edits --print-command "hi" 2>&1); rc=$?
+check "--allow-url --mode accept-edits rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --mode accept-edits" "$out"
+out=$("$DELEGATE" --read-only --mode auto --print-command "hi" 2>&1); rc=$?
+check "--read-only --mode auto rejected (exit 1)" 1 "$rc" "cannot combine --read-only with --mode auto" "$out"
+out=$("$DELEGATE" --allow-url --mode auto --print-command "hi" 2>&1); rc=$?
+check "--allow-url --mode auto rejected (exit 1)" 1 "$rc" "cannot combine --read-only/--allow-url with --mode auto" "$out"
+out=$(STUB_SETTINGS_CAPABLE=1 STUB_MODE=args "$DELEGATE" --allow-url --mode plan "hi" 2>/dev/null); rc=$?
+check "--allow-url --mode plan stays valid (exit 0 + allowNonWorkspaceAccess:false)" 0 "$rc" '"allowNonWorkspaceAccess":false' "$out"
+check "--allow-url --mode plan forwards --mode plan" 0 "$rc" '--mode plan' "$out"
+
+out_auto_wn=$(STUB_MODE=args "$DELEGATE" --mode auto "implement the parser module" 2>&1); rc_auto_wn=$?
+if grep -qF "write grant" <<<"$out_auto_wn"; then
+  echo "FAIL: warned about missing write grant even with --mode auto"; FAIL=$((FAIL+1))
+else echo "ok: no write-warning when --mode auto is explicitly set"; PASS=$((PASS+1)); fi
+out_def_wn=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc_def_wn=$?
+if has 'will NOT touch your workspace' "$out_def_wn"; then
+  echo "FAIL: write-note still contains stale pre-1.5.7 'will NOT touch your workspace' claim"; FAIL=$((FAIL+1))
+else echo "ok: write-note explains 1.5.7+–1.5.16+ Auto mode without stale 'will NOT touch' claim"; PASS=$((PASS+1)); fi
+check "write-note mentions 1.5.16+ outside-workspace VCS-repo/additive writes" 0 "$rc_def_wn" "1.5.16+" "$out_def_wn"
+
+# 3. agy 1.5.14 Windows UNC, Win32 device, and NT object pre-stat rejection
+for unc_p in '\\\\evil\\share\\repo' '\\\\.\\pipe\\agy' '\\\\?\\C:\\repo' '\\??\\C:\\repo' '/??/C:/repo'; do
+  u_out=$(python3 -c 'import json,sys; print(json.dumps({"tool_input":{"command":"agy-delegate --dir \"" + sys.argv[1] + "\" \"hi\""}}))' "$unc_p" | "$GATE" 2>&1); u_rc=$?
+  if [ "$u_rc" -ne 2 ] || ! has 'UNC, Win32 device, and NT object paths' "$u_out"; then
+    echo "FAIL: gate did not pre-reject '$unc_p' as UNC/device/NT path: rc=$u_rc ($u_out)"; FAIL=$((FAIL+1))
+  else
+    PASS=$((PASS+1))
+  fi
+done
+echo "ok: gate rejects \\\\server\\share, \\\\.\\, \\\\?\\, \\??\\, and /??/ before realpath()"
+
+out=$(OSTYPE=msys gate_cmd_err 'agy-delegate --dir //evil/share/repo "hi"'); rc=$?
+check "gate (OSTYPE=msys): blocks 2-slash UNC //evil/share/repo before realpath()" 2 "$rc" "UNC, Win32 device, and NT object paths" "$out"
+out=$(MSYSTEM=MINGW64 gate_cmd_err 'agy-delegate --json-schema //evil/share/s.json "hi"'); rc=$?
+check "gate (MSYSTEM=MINGW64): blocks 2-slash UNC on --json-schema" 2 "$rc" "UNC, Win32 device, and NT object paths" "$out"
+( cd "$GATE_WS" && OSTYPE=msys python3 -c 'import json,sys; print(json.dumps({"cwd": sys.argv[1], "tool_input": {"command": "agy-delegate --dir \"///" + sys.argv[1].lstrip("/") + "/sub\" \"hi\""}}))' "$GATE_WS" | "$GATE" >/dev/null 2>&1 ); rc=$?
+check "gate (OSTYPE=msys): preserves POSIX 3-slash ///path inside cwd" 0 "$rc"
+
+out=$("$DELEGATE" --dir '\\evil\share\repo' --print-command "hi" 2>&1); rc=$?
+check "agy-delegate rejects \\\\evil\\share\\repo on --dir (exit 1)" 1 "$rc" "UNC or Win32 device path" "$out"
+out=$("$DELEGATE" --add-dir '/??/C:/repo' --print-command "hi" 2>&1); rc=$?
+check "agy-delegate rejects /??/C:/repo on --add-dir (exit 1)" 1 "$rc" "NT object path" "$out"
+out=$("$DELEGATE" --json-schema '\\.\pipe\schema' --print-command "hi" 2>&1); rc=$?
+check "agy-delegate rejects Win32 device path on --json-schema (exit 1)" 1 "$rc" "UNC or Win32 device path" "$out"
+out=$(OSTYPE=msys "$DELEGATE" --dir '//evil/share/repo' --print-command "hi" 2>&1); rc=$?
+check "agy-delegate (OSTYPE=msys) rejects //evil/share/repo (exit 1)" 1 "$rc" "UNC path" "$out"
+out=$(OSTYPE=msys "$DELEGATE" --dir '///tmp' --print-command "hi" 2>/dev/null); rc=$?
+check "agy-delegate (OSTYPE=msys) preserves POSIX 3-slash ///tmp" 0 "$rc" "--add-dir ///tmp" "$out"
+
+out=$("$HANDOFF" --dir '\\evil\share\repo' "do x" 2>&1); rc=$?
+check "agy-handoff rejects \\\\evil\\share\\repo BEFORE [ -d ] stat (exit 1)" 1 "$rc" "UNC or Win32 device path" "$out"
+out=$(MSYSTEM=MINGW64 "$HANDOFF" --dir '//evil/share/repo' "do x" 2>&1); rc=$?
+check "agy-handoff (MSYSTEM=MINGW64) rejects //evil/share/repo BEFORE [ -d ] stat (exit 1)" 1 "$rc" "UNC path" "$out"
+out=$("$HANDOFF" --dir '/??/C:/repo' "do x" 2>&1); rc=$?
+check "agy-handoff rejects /??/C:/repo BEFORE [ -d ] stat (exit 1)" 1 "$rc" "NT object path" "$out"
+
+# Pin 2-slash `//` UNC detection parity across validate-delegate-bash.sh (`is_windows_env`),
+# agy-delegate.sh (`on_windows_native`), and agy-handoff.sh (`on_windows_native`) using direct
+# self-contained invocations (no helper indirection across file slices):
+unc_parity_bad=0
+for env_spec in "win:OSTYPE=msys:MSYSTEM=" "win:OSTYPE=cygwin:MSYSTEM=" "win:OSTYPE=win32:MSYSTEM=" "win:OSTYPE=linux-gnu:MSYSTEM=MINGW64" "posix:OSTYPE=linux-gnu:MSYSTEM=" "posix:OSTYPE=darwin23:MSYSTEM="; do
+  exp_kind="${env_spec%%:*}"; rest="${env_spec#*:}"
+  ost_kv="${rest%%:*}"; msys_kv="${rest#*:}"
+  ost_v="${ost_kv#OSTYPE=}"; msys_v="${msys_kv#MSYSTEM=}"
+  g_out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --dir //evil/share/repo \"hi\""}}' | env OSTYPE="$ost_v" MSYSTEM="$msys_v" "$ROOT/hooks/validate-delegate-bash.sh" 2>&1); g_rc=$?
+  d_out=$(env OSTYPE="$ost_v" MSYSTEM="$msys_v" "$ROOT/scripts/agy-delegate.sh" --dir '//evil/share/repo' --print-command "hi" 2>&1); d_rc=$?
+  h_out=$(env OSTYPE="$ost_v" MSYSTEM="$msys_v" "$ROOT/scripts/agy-handoff.sh" --dir '//evil/share/repo' "do x" 2>&1); h_rc=$?
+  g_unc=0; [ "$g_rc" -eq 2 ] && has 'UNC, Win32 device, and NT object paths' "$g_out" && g_unc=1
+  d_unc=0; [ "$d_rc" -eq 1 ] && has 'UNC path' "$d_out" && d_unc=1
+  h_unc=0; [ "$h_rc" -eq 1 ] && has 'UNC path' "$h_out" && h_unc=1
+  want_unc=0; [ "$exp_kind" = "win" ] && want_unc=1
+  if [ "$g_unc" -ne "$want_unc" ] || [ "$d_unc" -ne "$want_unc" ] || [ "$h_unc" -ne "$want_unc" ]; then
+    echo "FAIL: // UNC parity drift for $env_spec: want=$want_unc gate=$g_unc(rc=$g_rc) delegate=$d_unc(rc=$d_rc) handoff=$h_unc(rc=$h_rc)"; unc_parity_bad=1; FAIL=$((FAIL+1))
+  fi
+done
+[ "$unc_parity_bad" -eq 0 ] && { echo "ok: validate-delegate-bash, agy-delegate, and agy-handoff agree on // UNC classification across OSTYPE/MSYSTEM"; PASS=$((PASS+1)); }
+
+# 4. Date-aware effective_from pricing transitions (2026-12-01 Carbon/Argon, 2027-01-01 Flash 3.8)
+cc_cb_nov=$(AGY_PRICING_DATE=2026-11-30 STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier carbon "hi" 2>/dev/null)
+check "agy-cost-compare --tier carbon uses intro 10.00 through 2026-11-30" 0 "$?" "10.00" "$cc_cb_nov"
+cc_cb_dec=$(AGY_PRICING_DATE=2026-12-01 STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier carbon "hi" 2>/dev/null)
+check "agy-cost-compare --tier carbon switches to standard 20.00 on 2026-12-01" 0 "$?" "20.00" "$cc_cb_dec"
+cc_ar_dec=$(AGY_PRICING_DATE=2026-12-01 STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier argon "hi" 2>/dev/null)
+check "agy-cost-compare --tier argon switches to standard 20.00 on 2026-12-01" 0 "$?" "20.00" "$cc_ar_dec"
+cc_fb_dec=$(AGY_PRICING_DATE=2026-12-01 STUB_MODE=text STUB_REJECT_MODEL="$DEF_PRO" "$ROOT/scripts/agy-cost-compare.sh" --tier pro "hi" 2>/dev/null)
+check "agy-cost-compare --tier pro Neon->Carbon fallback prices at 20.00 on 2026-12-01" 0 "$?" "20.00" "$cc_fb_dec"
+cc_f38_dec=$(AGY_PRICING_DATE=2026-12-01 STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier flash-38 "hi" 2>/dev/null)
+check "agy-cost-compare --tier flash-38 keeps promo 3.75 on 2026-12-01" 0 "$?" "3.75" "$cc_f38_dec"
+cc_f38_jan=$(AGY_PRICING_DATE=2027-01-01 STUB_MODE=text "$ROOT/scripts/agy-cost-compare.sh" --tier flash-38 "hi" 2>/dev/null)
+check "agy-cost-compare --tier flash-38 switches to standard 7.50 on 2027-01-01" 0 "$?" "7.50" "$cc_f38_jan"
+
+# 5. agy-trace.sh >500 conversations + spaces in $BRAIN (os.scandir helper) & doctor.sh pluginControls + Keychain hint
+BIGBRAIN="$TMP/brain with spaces"
+python3 - "$BIGBRAIN" <<'PY'
+import os, sys
+base = sys.argv[1]
+t0 = 1700000000
+for i in range(550):
+    d = os.path.join(base, f"conv-{i:04d}", ".system_generated", "logs")
+    os.makedirs(d, exist_ok=True)
+    p = os.path.join(d, "transcript.jsonl")
+    with open(p, "w", encoding="utf-8") as fh:
+        fh.write(f'{{"step_index":0,"type":"PLANNER_RESPONSE","status":"DONE","content":"run-{i:04d}"}}\n')
+    os.utime(p, (t0 + i, t0 + i))
+PY
+tr_last=$(AGY_BRAIN_DIR="$BIGBRAIN" "$TRACE" --last 2>&1); tr_last_rc=$?
+check "agy-trace --last across 550 conversations + spaced BRAIN resolves newest conv-0549" 0 "$tr_last_rc" "run-0549" "$tr_last"
+tr_list=$(AGY_BRAIN_DIR="$BIGBRAIN" "$TRACE" --list 3 2>&1); tr_list_rc=$?
+check "agy-trace --list 3 across 550 conversations lists conv-0549 first" 0 "$tr_list_rc" "conv-0549" "$tr_list"
+check "agy-trace --list 3 across 550 conversations lists conv-0547 third" 0 "$tr_list_rc" "conv-0547" "$tr_list"
+if has 'conv-0546' "$tr_list"; then
+  echo "FAIL: agy-trace --list 3 returned more than 3 conversations"; FAIL=$((FAIL+1))
+else echo "ok: agy-trace --list 3 honors exact limit across >500 conversations"; PASS=$((PASS+1)); fi
+
+cat > "$TMP/admin_plugins_off.json" <<'JSON'
+{
+  // MDM comment line
+  "pluginControls": {"pluginsDisabled": true, "marketplaceDisabled": true}
+}
+JSON
+doc_pc_out="$(HOME="$DOC159_H" AGY_ADMIN_SETTINGS_PATH="$TMP/admin_plugins_off.json" AGY_TIER_CACHE_DIR="$DOC159_C" PATH="$DOC159:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1)"
+check "doctor surfaces pluginControls.pluginsDisabled=true warning" 0 0 "pluginControls.pluginsDisabled=true" "$doc_pc_out"
+check "doctor notes built-in plugins stay active on agy 1.5.16+" 0 0 "built-in plugins stay active on agy 1.5.16+" "$doc_pc_out"
+
+DOC_UNAUTH="$TMP/doc-unauth"; mkdir -p "$DOC_UNAUTH"
+cat > "$DOC_UNAUTH/agy" <<'STUB'
+#!/usr/bin/env bash
+[ "$1" = --version ] && { echo "1.5.16"; exit 0; }
+[ "$1" = models ] && exit 0
+exit 0
+STUB
+chmod +x "$DOC_UNAUTH/agy"
+doc_kc_out="$(HOME="$DOC159_H" PATH="$DOC_UNAUTH:$PATH" bash "$ROOT/scripts/doctor.sh" 2>&1 || true)"
+check "doctor unauthenticated hint notes agy 1.5.16+ macOS SSH unlocked Keychain reuse" 0 0 "unlocked login Keychain" "$doc_kc_out"
 
 echo ""
 if [ "$SKIP" -gt 0 ]; then
