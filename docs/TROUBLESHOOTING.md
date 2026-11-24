@@ -159,7 +159,7 @@ On classifiable failures the wrapper prints a machine-readable line to stderr:
 | exit | meaning | what to do |
 |---|---|---|
 | 0 | success | — |
-| 1 | usage error | check flags (`agy-delegate --help`) |
+| 1 | usage error (incl. conflicting flags such as `--read-only`/`--allow-url` combined with `--yolo`, `--settings`, or `--mode accept-edits|auto`, or `-c`/`--continue` combined with `-r`/`--resume`/`--conversation`) | fix the conflicting or invalid flags (`agy-delegate --help`) |
 | 2 | agy failed (unclassified, incl. `agy 1.5.11+` `error: ... not available with a Gemini API key` on commands unsupported under `GEMINI_API_KEY`) | read the stderr it relayed |
 | 3 | agy returned empty output | retry; check model availability (`agy models`). Before agy 1.1.18 a dropped agent stream also landed here as a false clean success; from 1.1.18 it exits non-zero (exit 2 here) — per agy's changelog, not reproduced |
 | 4 | verification still failing after the allowed fix-ups (`agy-handoff` only) | read the failing verification output in the report; re-run with a sharper requirement or take over |

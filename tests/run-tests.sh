@@ -3435,20 +3435,24 @@ out=$("$DELEGATE" --conversation conv-same -r conv-same --print-command "hi" 2>/
 check "duplicate identical --conversation + -r succeeds" 0 "$rc" "--conversation conv-same" "$out"
 
 for bad_cid in "" "   " "id with space" "-p" "--yolo"; do
+  case "$bad_cid" in
+    -*) exp_msg="requires a conversation ID, got option" ;;
+    *)  exp_msg="requires a non-empty conversation ID without whitespace" ;;
+  esac
   b_out=$("$DELEGATE" -r "$bad_cid" --print-command "hi" 2>&1); b_rc=$?
-  if [ "$b_rc" -ne 1 ]; then
-    echo "FAIL: -r '$bad_cid' expected exit 1, got rc=$b_rc ($b_out)"; FAIL=$((FAIL+1))
+  if [ "$b_rc" -ne 1 ] || ! has "$exp_msg" "$b_out"; then
+    echo "FAIL: -r '$bad_cid' expected exit 1 + '$exp_msg', got rc=$b_rc ($b_out)"; FAIL=$((FAIL+1))
   else
     PASS=$((PASS+1))
   fi
   b_out2=$("$DELEGATE" "--resume=$bad_cid" --print-command "hi" 2>&1); b_rc2=$?
-  if [ "$b_rc2" -ne 1 ]; then
-    echo "FAIL: --resume='$bad_cid' expected exit 1, got rc=$b_rc2 ($b_out2)"; FAIL=$((FAIL+1))
+  if [ "$b_rc2" -ne 1 ] || ! has "$exp_msg" "$b_out2"; then
+    echo "FAIL: --resume='$bad_cid' expected exit 1 + '$exp_msg', got rc=$b_rc2 ($b_out2)"; FAIL=$((FAIL+1))
   else
     PASS=$((PASS+1))
   fi
 done
-echo "ok: -r and --resume= reject empty, whitespace, and flag-shaped conversation IDs"
+echo "ok: -r and --resume= reject empty, whitespace, and flag-shaped conversation IDs via set_conv_id"
 
 out=$("$DELEGATE" --conversation conv-1 -r conv-2 --print-command "hi" 2>&1); rc=$?
 check "conflicting --conversation vs -r rejected (exit 1)" 1 "$rc" "conflicting conversation IDs" "$out"
@@ -3504,11 +3508,11 @@ out_auto_wn=$(STUB_MODE=args "$DELEGATE" --mode auto "implement the parser modul
 if grep -qF "write grant" <<<"$out_auto_wn"; then
   echo "FAIL: warned about missing write grant even with --mode auto"; FAIL=$((FAIL+1))
 else echo "ok: no write-warning when --mode auto is explicitly set"; PASS=$((PASS+1)); fi
-out_def_wn=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1)
+out_def_wn=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc_def_wn=$?
 if has 'will NOT touch your workspace' "$out_def_wn"; then
   echo "FAIL: write-note still contains stale pre-1.5.7 'will NOT touch your workspace' claim"; FAIL=$((FAIL+1))
 else echo "ok: write-note explains 1.5.7+–1.5.16+ Auto mode without stale 'will NOT touch' claim"; PASS=$((PASS+1)); fi
-check "write-note mentions 1.5.16+ outside-workspace VCS-repo/additive writes" 0 0 "1.5.16+" "$out_def_wn"
+check "write-note mentions 1.5.16+ outside-workspace VCS-repo/additive writes" 0 "$rc_def_wn" "1.5.16+" "$out_def_wn"
 
 # 3. agy 1.5.14 Windows UNC, Win32 device, and NT object pre-stat rejection
 for unc_p in '\\\\evil\\share\\repo' '\\\\.\\pipe\\agy' '\\\\?\\C:\\repo' '\\??\\C:\\repo' '/??/C:/repo'; do
@@ -3547,21 +3551,22 @@ out=$("$HANDOFF" --dir '/??/C:/repo' "do x" 2>&1); rc=$?
 check "agy-handoff rejects /??/C:/repo BEFORE [ -d ] stat (exit 1)" 1 "$rc" "NT object path" "$out"
 
 # Pin 2-slash `//` UNC detection parity across validate-delegate-bash.sh (`is_windows_env`),
-# agy-delegate.sh (`on_windows_native`), and agy-handoff.sh (`on_windows_native`):
+# agy-delegate.sh (`on_windows_native`), and agy-handoff.sh (`on_windows_native`) using direct
+# self-contained invocations (no helper indirection across file slices):
 unc_parity_bad=0
 for env_spec in "win:OSTYPE=msys:MSYSTEM=" "win:OSTYPE=cygwin:MSYSTEM=" "win:OSTYPE=win32:MSYSTEM=" "win:OSTYPE=linux-gnu:MSYSTEM=MINGW64" "posix:OSTYPE=linux-gnu:MSYSTEM=" "posix:OSTYPE=darwin23:MSYSTEM="; do
   exp_kind="${env_spec%%:*}"; rest="${env_spec#*:}"
   ost_kv="${rest%%:*}"; msys_kv="${rest#*:}"
   ost_v="${ost_kv#OSTYPE=}"; msys_v="${msys_kv#MSYSTEM=}"
-  g_out=$(OSTYPE="$ost_v" MSYSTEM="$msys_v" gate_cmd_err 'agy-delegate --dir //evil/share/repo "hi"' || true)
-  d_out=$(OSTYPE="$ost_v" MSYSTEM="$msys_v" "$DELEGATE" --dir '//evil/share/repo' --print-command "hi" 2>&1 || true)
-  h_out=$(OSTYPE="$ost_v" MSYSTEM="$msys_v" "$HANDOFF" --dir '//evil/share/repo' "do x" 2>&1 || true)
-  g_unc=0; has 'UNC, Win32 device, and NT object paths' "$g_out" && g_unc=1
-  d_unc=0; has 'UNC path' "$d_out" && d_unc=1
-  h_unc=0; has 'UNC path' "$h_out" && h_unc=1
+  g_out=$(printf '%s' '{"tool_input":{"command":"agy-delegate --dir //evil/share/repo \"hi\""}}' | env OSTYPE="$ost_v" MSYSTEM="$msys_v" "$ROOT/hooks/validate-delegate-bash.sh" 2>&1); g_rc=$?
+  d_out=$(env OSTYPE="$ost_v" MSYSTEM="$msys_v" "$ROOT/scripts/agy-delegate.sh" --dir '//evil/share/repo' --print-command "hi" 2>&1); d_rc=$?
+  h_out=$(env OSTYPE="$ost_v" MSYSTEM="$msys_v" "$ROOT/scripts/agy-handoff.sh" --dir '//evil/share/repo' "do x" 2>&1); h_rc=$?
+  g_unc=0; [ "$g_rc" -eq 2 ] && has 'UNC, Win32 device, and NT object paths' "$g_out" && g_unc=1
+  d_unc=0; [ "$d_rc" -eq 1 ] && has 'UNC path' "$d_out" && d_unc=1
+  h_unc=0; [ "$h_rc" -eq 1 ] && has 'UNC path' "$h_out" && h_unc=1
   want_unc=0; [ "$exp_kind" = "win" ] && want_unc=1
   if [ "$g_unc" -ne "$want_unc" ] || [ "$d_unc" -ne "$want_unc" ] || [ "$h_unc" -ne "$want_unc" ]; then
-    echo "FAIL: // UNC parity drift for $env_spec: want=$want_unc gate=$g_unc delegate=$d_unc handoff=$h_unc"; unc_parity_bad=1; FAIL=$((FAIL+1))
+    echo "FAIL: // UNC parity drift for $env_spec: want=$want_unc gate=$g_unc(rc=$g_rc) delegate=$d_unc(rc=$d_rc) handoff=$h_unc(rc=$h_rc)"; unc_parity_bad=1; FAIL=$((FAIL+1))
   fi
 done
 [ "$unc_parity_bad" -eq 0 ] && { echo "ok: validate-delegate-bash, agy-delegate, and agy-handoff agree on // UNC classification across OSTYPE/MSYSTEM"; PASS=$((PASS+1)); }

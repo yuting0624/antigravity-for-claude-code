@@ -120,6 +120,7 @@ not over `--dir`) · `--sandbox` (does NOT contain anything; measured inert unde
 
 The wrapper exits non-zero and prints an `AGY_SIGNAL {...}` line on failure:
 
+- `1` wrapper usage / conflicting flags (e.g. combining `--read-only`/`--allow-url` with `--yolo` or `--mode accept-edits|auto`, or combining `-c`/`--continue` with `-r`/`--resume`/`--conversation`) → fix the invocation immediately; do not retry the conflicting flags.
 - `10` quota / rate limit → report it; suggest the caller retry later with `--continue`.
 - `11` auth required → tell the caller to run `agy` once interactively to sign in.
 - `12` timeout → suggest a larger `--timeout` or a narrower task (and tell the caller to check `git status` / `git diff` on write tasks).
